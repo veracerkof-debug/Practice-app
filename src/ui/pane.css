@@ -101,3 +101,5 @@
 .stycard.on{box-shadow:0 0 0 2px var(--tint)}
 .sprev{width:64px;height:40px;position:relative;display:flex;align-items:center;justify-content:center;gap:3px}
 @keyframes tin{from{opacity:0;transform:translateY(10px)}}
+/* Полоса: подпись на кнопке («Текст ›», «Круг ›») не помещалась в квадрат 34 px */
+.comp.strip .cswb.txt{width:auto;padding:0 8px!important;white-space:nowrap}

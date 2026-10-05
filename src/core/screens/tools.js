@@ -1,11 +1,10 @@
 // Экран «Инструменты»: карточки модулей и окно отдельного инструмента (время идёт в статистику).
-// Перенесено из legacy/practice.html (toolsHTML, openToolView). Переключатель размера окна — временный,
-// для проверки модулей до переноса рабочего пространства сессии.
+// Перенесено из legacy/practice.html (toolsHTML, openToolView).
 import '../../ui/screens.css';
 import { t } from '../../i18n/index.js';
 import { ui, esc, icons } from '../../ui/index.js';
 import { isOn } from '../settings.js';
-import { mountModule, makeCtx, moduleName, trackToolTime, SIZES, fmtDur } from '../modules.js';
+import { mountModule, makeCtx, moduleName, trackToolTime, fmtDur } from '../modules.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { topbar } from './common.js';
 
@@ -25,15 +24,12 @@ export function renderTools(app, root) {
 
 export function openToolView(app, id, onClose) {
   const mod = moduleById(id), name = moduleName(mod);
-  let size = 'full';
   const layer = document.createElement('div');
   layer.innerHTML = '<div class="tview" role="dialog" aria-modal="true" aria-label="' + esc(name) + '"><div class="tvhd">' +
     ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(name) + '</div><span style="width:36px"></span></div>' +
-    '<div class="tvsize">' + ui.seg('size', SIZES.filter((s) => mod.sizes.includes(s)).map((s) => [s, t('size.' + s)]), size, t('tools.size')) + '</div>' +
-    '<div class="tvbody" data-size="full"><div class="toolhost tvhost"></div></div></div>';
+    '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>';
   document.body.appendChild(layer);
-  const hostEl = layer.querySelector('.tvhost'), body = layer.querySelector('.tvbody');
-  const inst = mountModule(app, mod, hostEl, size);
+  const inst = mountModule(app, mod, layer.querySelector('.tvhost'), 'full');
   const track = trackToolTime(app, id);
 
   const close = (next) => {
@@ -51,14 +47,7 @@ export function openToolView(app, id, onClose) {
   const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('#sheetLayer .scrim')) close(); };
   document.addEventListener('keydown', onKey);
   layer.addEventListener('click', (e) => {
-    if (e.target.closest('[data-tv="close"]')) { close(); return; }
-    const sb = e.target.closest('[data-seg="size"] [data-v]');
-    if (sb) {
-      size = sb.dataset.v;
-      body.dataset.size = size;
-      layer.querySelectorAll('[data-seg="size"] button').forEach((x) => x.setAttribute('aria-pressed', x === sb));
-      inst.resize(size);
-    }
+    if (e.target.closest('[data-tv="close"]')) close();
   });
   return close;
 }

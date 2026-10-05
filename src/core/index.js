@@ -1,5 +1,4 @@
 // Ядро: песни, сессии, статистика, цели, ударный режим, хранение.
-// Экран сессии пока в legacy/practice.html — переносится вместе с рабочим пространством (ROADMAP, этап 1).
 import { t, initI18n } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
@@ -9,6 +8,8 @@ import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
 import { applyTheme } from './settings.js';
 import { createShell } from './screens/shell.js';
+import { createSessionScreen } from './screens/session.js';
+import { createMixerDrawer } from './screens/mixer.js';
 import { createShared } from './modules.js';
 import { createPomodoro, pomoDefaults } from './pomodoro.js';
 import { pause as pauseActive, resume as resumeActive } from './session.js';
@@ -82,9 +83,12 @@ export function boot(root) {
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },
   };
-  // Экран сессии и рабочее пространство переносятся следующим шагом (ROADMAP, этап 1)
-  app.startSession = () => toast(t('session.soon'));
+  const session = createSessionScreen(app);
+  app.startSession = (type, songId, tool) => session.start(type, songId, tool);
   createShell(app, root);
+  createMixerDrawer(app);
+  // Сессия, начатая до перезагрузки страницы, продолжается
+  session.resume();
   // Статус медиатеки и табов зависит от файлов, которые читаются из базы асинхронно
   files.ready.then(() => { if (!app.openTool) app.render(); });
   return app;

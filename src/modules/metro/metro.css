@@ -32,6 +32,9 @@
 .pane.quarter .bpm{font-size:clamp(30px,30cqw,72px)}
 .pane.strip .bpm{font-size:clamp(26px,36cqh,64px)}
 .pane.half .beats{max-height:18cqh}
+.pane .mcard .bpm{font-size:clamp(52px,24cqmin,170px)}
+.pane .mcard .beats{max-height:20cqh;min-height:44px}
+.pane.quarter .vq .bpm{font-size:clamp(34px,32cqw,80px)}
 .mv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,3cqh,22px);min-height:0;min-width:0}
 .mwheel{position:relative;width:min(100%,calc(100cqh - 150px));aspect-ratio:1;touch-action:none;flex:none;max-width:560px;outline:none}
 .mv.quarter .mwheel{width:min(100%,calc(100cqh - 130px))}
@@ -45,6 +48,7 @@
 .wcenter{position:absolute;inset:24%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:50%;background:var(--cell);box-shadow:0 2px 14px rgba(0,0,0,.08);pointer-events:none}
 .wcenter>*{pointer-events:auto}
 .mwheel .bpm{font-size:clamp(28px,11cqmin,96px)!important;line-height:1}
+.mwheel .bpmlbl{font-size:clamp(10px,2.8cqmin,15px)!important}
 .mwheel .bigplay{width:clamp(38px,11cqmin,84px)!important;height:clamp(38px,11cqmin,84px)!important;margin-top:4px;box-shadow:none}
 .mside{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none;width:100%}
 .mctl{display:grid;gap:clamp(6px,2cqw,14px);justify-items:center;align-items:center;width:100%;max-width:520px}
@@ -114,12 +118,14 @@
 .pane.strip .vs .mtile b{font-size:16px!important}
 .pane.strip .bpmbox{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
 .pane.strip .bpmbox .bpm{font-size:clamp(24px,30cqh,46px)!important;line-height:1}
+.pane.strip .bpmbox .bpmlbl{font-size:11px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .pane.strip .beats.mini{justify-content:center}
 .pane.quarter .mv.quarter .mwheel{width:min(100%,calc(100cqh - 175px))!important}
 .pane.quarter .mv.quarter{gap:8px}
 .mwheel{container-type:inline-size}
 .mwheel .wcenter{inset:27.5%!important;gap:0!important;padding:0}
 .mwheel .wcenter .bpm{font-size:15cqw!important;line-height:1!important;font-weight:300;letter-spacing:-.03em;padding:0 1cqw;min-width:0}
+.mwheel .wcenter .bpmlbl{font-size:3.5cqw!important;margin-top:.6cqw;min-height:0!important;white-space:nowrap}
 .mwheel .wcenter .bigplay{width:13cqw!important;height:13cqw!important;min-width:0!important;aspect-ratio:1;margin-top:2.2cqw;flex:none;box-shadow:0 1.5cqw 4cqw color-mix(in srgb,var(--tint) 35%,transparent)!important}
 .mwheel .wcenter .bigplay svg{width:44%!important;height:44%!important}
 .mwheel .wcenter .wrow{gap:0}

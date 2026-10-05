@@ -521,6 +521,7 @@ export default {
   color: '#34C759',
   // В прототипе тренажёр открывался только целиком; компактные виды для четверти и полосы — не сделаны (см. DECISIONS.md)
   sizes: ['full', 'half'],
+  session: false, // как в прототипе: тренажёр открывается во вкладке «Инструменты», не в окнах сессии
   status(c) {
     const d = (normalizeEarData(c.data()).days || {})[dayKey(Date.now())];
     return d && d.t ? c.tn('statusToday', d.t, { p: Math.round((d.c / d.t) * 100) }) : c.t('statusIdle');

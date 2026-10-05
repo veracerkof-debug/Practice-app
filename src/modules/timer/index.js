@@ -163,6 +163,7 @@ export default {
   icon: ICON,
   color: '#FF3B30',
   sizes: ['full', 'half', 'quarter', 'strip'],
+  session: false, // в сессии помодоро — значок в заголовке и шторка
   status(c) {
     const po = c.pomodoro;
     return po.running ? c.t('statusRun', { phase: c.t('ph.' + po.phase), time: fmtClock(po.rem()) }) : c.t('statusIdle', { n: c.store.all().work });

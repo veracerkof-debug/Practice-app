@@ -1,0 +1,80 @@
+import { describe, it, expect } from 'vitest';
+import { runLegacy } from './legacy.js';
+import {
+  lsizes, lpos, getWS, fixWS, halves, setLayout, closePane, dropTool, addPane, assign, sizeOf, wsKey, visible,
+} from '../src/core/workspace.js';
+
+const L = runLegacy([/^const LMAP=/, /^function lsizes\(/, /^function lpos\(/, /^function sizeOf\(/], '{lsizes,lpos,sizeOf}',
+  { WS: () => ({ layout: globalThis.__lay }), __lay: 'HH' });
+const ALL = ['rhythm', 'keys', 'theory', 'audio', 'notes'];
+const LAYOUTS = ['F', 'HH', 'HQ', 'HS', 'QH', 'QQ', 'QS', 'SH', 'SQ', 'SS', 'L1', 'L2', 'L12', 'L21', 'L4'];
+
+describe('рабочее пространство — как в прототипе', () => {
+  it('размеры и положение окон в раскладках', () => {
+    for (const l of LAYOUTS) {
+      expect(lsizes(l), l).toEqual(L.lsizes(l));
+      expect(lpos(l), l).toEqual(L.lpos(l));
+    }
+  });
+  it('размер окна по пикселям', () => {
+    const W = 380, H = 700;
+    for (const [w, h] of [[380, 700], [380, 340], [185, 340], [380, 160], [185, 700], [300, 500], [370, 470], [220, 340]]) {
+      expect(sizeOf('HH', w, h, W, H), w + '×' + h).toBe(L.sizeOf({ offsetWidth: w, offsetHeight: h }, W, H));
+    }
+    expect(sizeOf('F', 10, 10, W, H)).toBe('full');
+  });
+});
+
+describe('рабочее пространство — действия', () => {
+  const ws = (layout, panes = ALL.slice(), focus = 0) => ({ layout, panes, focus, sub: {}, ratio: 0.5 });
+  it('новая сессия берёт раскладку свободной практики; ключи сессий', () => {
+    const dev = { wsMap: { free: { layout: 'L2', panes: ['keys', 'rhythm'], focus: 0 } } };
+    const w = getWS(dev, { type: 'song', songId: 's1' });
+    expect(w.layout).toBe('HH');
+    expect(dev.wsMap['song:s1']).toBe(w);
+    expect(w.sub).toEqual({ rhythm: 'metro', keys: 'piano' });
+    expect([null, { type: 'free' }, { type: 'tool', tool: 'metro' }].map(wsKey)).toEqual(['free', 'free', 'tool:metro']);
+    expect(getWS({}, null).panes).toEqual(ALL);
+  });
+  it('выключенные инструменты убираются, старые окна переименовываются', () => {
+    const w = fixWS(ws('QQ', ['metro', 'circle', 'audio', 'tuner'], 3), ['rhythm', 'theory', 'audio']);
+    expect(w.panes).toEqual(['rhythm', 'theory', 'audio', 'rhythm']);
+    expect(w.focus).toBe(3);
+    expect(fixWS(ws('QQ', ['rhythm'], 3), ['rhythm']).panes).toEqual(['rhythm', 'rhythm', 'rhythm', 'rhythm']);
+  });
+  it('бросить инструмент: весь экран делится, половина — на четверти или полосы', () => {
+    let w = ws('F');
+    expect(dropTool(w, 'keys', 0, 'bottom')).toBe(1);
+    expect([w.layout, visible(w)]).toEqual(['HH', ['rhythm', 'keys']]);
+    expect(dropTool(w, 'theory', 1, 'right')).toBe(2);
+    expect([w.layout, visible(w)]).toEqual(['HQ', ['rhythm', 'keys', 'theory']]);
+    expect(dropTool(w, 'audio', 0, 'top')).toBe(0);
+    expect([w.layout, visible(w)]).toEqual(['SQ', ['audio', 'rhythm', 'keys', 'theory']]);
+    // уже на экране — окна меняются местами
+    expect(dropTool(w, 'theory', 0, 'center')).toBe(0);
+    expect(visible(w)).toEqual(['theory', 'rhythm', 'keys', 'audio']);
+    // в четверть — замена
+    expect(dropTool(w, 'notes', 2, 'top')).toBe(2);
+    expect(visible(w)).toEqual(['theory', 'rhythm', 'notes', 'audio']);
+  });
+  it('закрыть окно и добавить окно', () => {
+    const w = ws('HQ', ['rhythm', 'keys', 'theory', 'audio', 'notes']);
+    closePane(w, 1);
+    expect([w.layout, visible(w)]).toEqual(['HH', ['rhythm', 'theory']]);
+    closePane(w, 0);
+    expect([w.layout, visible(w)]).toEqual(['F', ['theory']]);
+    expect(addPane(w, 0, 'bottom')).toBe(1);
+    expect(visible(w)).toEqual(['theory', 'rhythm']);
+    const full = ws('QQ', ['a', 'b', 'c', 'd']);
+    expect(addPane(full, 0, 'bottom')).toBe(null);
+    expect(halves(ws('QH')).bot).toEqual(['theory']);
+  });
+  it('инструмент в окно в фокусе; смена раскладки сбрасывает фокус', () => {
+    const w = ws('HH', ALL.slice(), 1);
+    expect(assign(w, 'rhythm')).toBe(1);
+    expect(visible(w)).toEqual(['keys', 'rhythm']);
+    expect(assign(w, 'rhythm')).toBe(-1);
+    setLayout(w, 'F', ['notes']);
+    expect([w.focus, w.panes[0], w.panes.length]).toEqual([0, 'notes', 5]);
+  });
+});

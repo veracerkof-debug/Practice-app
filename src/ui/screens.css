@@ -187,9 +187,3 @@
 .fsep{font-size:clamp(26px,10cqmin,70px);font-weight:700;color:var(--l2);margin:0 2px;animation:fblink 2s steps(1) infinite}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
 @keyframes fblink{50%{opacity:.25}}
-/* Временно: переключатель размера окна в предпросмотре (до переноса рабочего пространства сессии) */
-.tvsize{max-width:900px;width:100%;margin:0 auto;padding:4px 12px 0}
-.tvbody[data-size="half"] .tvhost{flex:none;width:100%;height:50%;align-self:flex-start}
-.tvbody[data-size="quarter"] .tvhost{flex:none;width:50%;height:50%;align-self:flex-start}
-.tvbody[data-size="strip"] .tvhost{flex:none;width:100%;height:clamp(84px,14vh,120px);align-self:flex-start}
-.tvbody{flex-wrap:wrap}

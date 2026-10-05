@@ -12,5 +12,3 @@
 .pane.quarter .ntools{flex-wrap:wrap;justify-content:center}
 .atbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 0 6px}
 .atpl{width:44px!important;height:44px!important;box-shadow:none}
-/* Полоса: подпись «Текст ›» на кнопке не помещалась в квадрат 34 px */
-.pane[data-tool="notes"] .comp.strip .cswb{width:auto;padding:0 8px!important;white-space:nowrap}

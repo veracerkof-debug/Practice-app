@@ -409,7 +409,8 @@ export default {
   unmount() {
     cancelAnimationFrame(raf);
     offs.splice(0).forEach((f) => f());
-    if (M().running) M().stop();
+    // В сессии окно могут перестроить или свернуть — метроном продолжает играть
+    if (M().running && !ctx.session) M().stop();
     host = null;
   },
 };

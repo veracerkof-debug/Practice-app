@@ -315,7 +315,7 @@ export default {
   unmount() {
     offs.splice(0).forEach((f) => (typeof f === 'function' ? f() : null));
     if (input) { input.remove(); input = null; }
-    if (AT.api && ATP.sf) AT.api.pause();
+    if (AT.api && ATP.sf && !ctx.session) AT.api.pause();
     if (AT.el) AT.el.remove();
     host = null;
   },

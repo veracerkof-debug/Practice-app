@@ -106,20 +106,22 @@ export function makeCtx(app, mod) {
 
 export const moduleName = (mod) => mod.name[getLang()] || mod.name.ru;
 
-// Смонтировать модуль в host с размером size; возвращает { resize, unmount }
-export function mountModule(app, mod, host, size = 'full') {
+// Смонтировать модуль в host с размером size; возвращает { resize, unmount }.
+// frame — окно (.pane) с классом размера; по умолчанию сам host. В сессии модуль рисует внутри окна,
+// где есть ещё полоска перетаскивания и переключатель «метроном / тюнер».
+export function mountModule(app, mod, host, size = 'full', frame = host) {
   const ctx = makeCtx(app, mod);
-  host.classList.add('pane', size);
-  host.dataset.tool = mod.id;
-  host.dataset.size = size;
-  host.style.setProperty('--mod', mod.color);
+  frame.classList.add('pane', size);
+  frame.dataset.tool = mod.id;
+  frame.dataset.size = size;
+  frame.style.setProperty('--mod', mod.color);
   mod.mount(host, ctx, size);
   return {
     ctx,
     resize(next) {
-      host.classList.remove(...SIZES);
-      host.classList.add(next);
-      host.dataset.size = next;
+      frame.classList.remove(...SIZES);
+      frame.classList.add(next);
+      frame.dataset.size = next;
       mod.resize(next);
     },
     unmount() {

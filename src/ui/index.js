@@ -44,9 +44,9 @@ export const snav = (title, { left = '<span></span>', right = '<button class="li
 let layer = null;
 const stack = [];
 
-// Открыть нижнюю шторку. render() → html; init(el, api) — один раз после открытия.
+// Открыть нижнюю шторку. render() → html; init(el, api) — один раз после открытия; onClose — после закрытия.
 // Возвращает api: { el, close(), update() } — update перерисовывает, сохраняя прокрутку
-export function sheet(render, init) {
+export function sheet(render, init, { onClose } = {}) {
   if (!layer) {
     layer = document.createElement('div');
     layer.id = 'sheetLayer';
@@ -70,6 +70,7 @@ export function sheet(render, init) {
       stack.splice(stack.indexOf(api), 1);
       document.removeEventListener('keydown', onKey);
       if (prevFocus && prevFocus.focus) prevFocus.focus();
+      if (onClose) onClose();
     },
   };
   const onKey = (e) => { if (e.key === 'Escape' && stack.at(-1) === api) api.close(); };
