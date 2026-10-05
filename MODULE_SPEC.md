@@ -42,6 +42,10 @@ export default {
   Общая клавиатура — `src/ui/keyboard.js`.
 - `ctx.pomodoro` — таймер помодоро ядра (идёт и при закрытом окне, ставит сессию на паузу в перерыв):
   `phase`, `running`, `done`, `rem()`, `total()`, `toggle()`, `reset()`, `next(manual)`, `release()`, `subscribe(fn)`.
+- `ctx.files` — файлы пользователя на устройстве (IndexedDB): `ready` (промис), `noDb`, `list('audio'|'tab')`, `get(id)`,
+  `add(rec)`, `save(rec)`, `remove(id)`, `subscribe(fn)`. Привязка к песням — `fileSongs`, `inSong`, `linkSong` из `src/core/files.js`.
+- `ctx.confirmUpload()` — перед выбором файла: один раз показывает предупреждение о правах на файлы, промис `true/false`.
+- `ctx.songs()` — список песен `{ id, title }`, только чтение.
 - `ctx.session` — текущая сессия (песня, если есть), только чтение.
 - `ctx.data()` / `ctx.saveData()` — данные модуля в общем состоянии (`state.settings[id]`, попадают в резервную копию),
   например статистика ответов тренажёра слуха. Время в модуле ядро считает само.

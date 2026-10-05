@@ -71,6 +71,11 @@ export function makeCtx(app, mod) {
     audio: app.audio,
     mic: { request: () => app.audio.openMic() },
     presets: (kind) => presetsApi(app, kind),
+    // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
+    files: app.files,
+    confirmUpload: () => app.confirmUpload(),
+    // Песни библиотеки — только чтение: [{ id, title }]
+    songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title })),
     // Данные модуля в общем состоянии (попадают в резервную копию): state.settings[id]
     data: () => (app.store.state.settings[mod.id] ??= {}),
     saveData: () => app.store.settingsChanged(),

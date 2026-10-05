@@ -12,7 +12,8 @@ import { renderTools } from './screens/tools.js';
 import { createShared } from './modules.js';
 import { createPomodoro, pomoDefaults } from './pomodoro.js';
 import { pause as pauseActive, resume as resumeActive } from './session.js';
-import { toast } from '../ui/index.js';
+import { toast, confirm } from '../ui/index.js';
+import { createFiles } from './files.js';
 
 export function boot(root) {
   const store = createStore();
@@ -27,6 +28,7 @@ export function boot(root) {
   device.theory.scale ??= device.scale || { pc: 9, type: 'minor' };
   // Помодоро: настройки прототипа (tools.pomo) и вид (tools.ui.pomo) — в настройки модуля timer
   device.timer ??= { ...pomoDefaults(), ...device.pomo, style: device.ui?.pomo === 'flip' ? 'flip' : 'ring' };
+  device.audio ??= { last: device.lastAudio || {}, style: device.ui?.audio === 'vinyl' ? 'vinyl' : 'wave' };
 
   // Звук создаётся сразу, но AudioContext — только на первом жесте пользователя
   const audio = createAudio({
@@ -59,8 +61,19 @@ export function boot(root) {
   pomodoro.subscribe = (fn) => { pomoSubs.add(fn); return () => pomoSubs.delete(fn); };
   setInterval(() => pomodoro.tick(), 500);
 
+  const files = createFiles();
+
+  // Перед первой загрузкой файла — предупреждение о правах (прототип: uploadGuard)
+  async function confirmUpload() {
+    if (store.state.settings.upOk) return true;
+    if (!(await confirm(t('upload.title'), t('upload.text'), t('upload.ok')))) return false;
+    store.state.settings.upOk = 1;
+    store.settingsChanged();
+    return true;
+  }
+
   const app = {
-    store, device, audio, modules, pomodoro,
+    store, device, audio, modules, pomodoro, files, confirmUpload,
     shared: createShared(),
     saveDevice: () => saveDevice(device),
     get active() { return active; },
@@ -68,6 +81,8 @@ export function boot(root) {
   };
   // Пока перенесены только инструменты — показываем их экран
   renderTools(app, root);
+  // Статус медиатеки зависит от файлов, которые читаются из базы асинхронно
+  files.ready.then(() => { if (!app.openTool) renderTools(app, root); });
   return app;
 }
 

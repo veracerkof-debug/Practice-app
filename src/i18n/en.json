@@ -50,5 +50,8 @@
   "preset.saved": "Preset saved",
   "ui.close": "Close",
   "pomo.breakOver": "Break is over",
-  "pomo.breakTime": "Time for a break"
+  "pomo.breakTime": "Time for a break",
+  "upload.title": "Only your own files",
+  "upload.text": "Upload only recordings and tabs you have the rights to: your own recordings, licensed or public-domain material. Files stay on this device only, and you are responsible for them.",
+  "upload.ok": "Got it"
 }

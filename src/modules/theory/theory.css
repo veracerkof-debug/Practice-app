@@ -22,8 +22,6 @@
 .cwrap.h .csvg{height:100%;aspect-ratio:1;max-width:58%;display:flex;align-items:center}
 .cwrap.h .circle{width:100%;height:auto;max-height:100%}
 .cside{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;max-height:100%;overflow:auto}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{display:inline-flex;align-items:center;gap:6px;background:var(--fill);border-radius:10px;padding:4px 8px 4px 4px;font-weight:600;font-size:14px}
 .chip .fnb{width:auto;padding:0 5px;min-width:24px}
 .cwrap.f .csvg{display:flex;justify-content:center}
 .cwrap.f .circle{max-height:52cqh;width:auto;max-width:100%}
@@ -34,9 +32,6 @@
 .pane.quarter .scnotes span{font-size:10px}
 .ktitle{display:flex;flex-direction:column;align-items:center;font-weight:600;font-size:16px;flex:none;min-width:84px}
 .ktitle span{font-size:11px;font-weight:400}
-.chips.nowrap{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;justify-content:flex-start}
-.chips.nowrap::-webkit-scrollbar{display:none}
-.chips.nowrap .chip{flex:none}
 .pane.strip .scnotes{margin-top:4px;flex-wrap:nowrap}
 .pane.strip .scnotes div{min-width:0;padding:3px 1px}
 .pane.strip .scnotes b{font-size:14px}
@@ -76,7 +71,6 @@
 .cname.sm{font-size:20px}
 .igrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:100%}
 .ibtn{background:var(--fill);border-radius:8px;min-height:30px;font-weight:600;font-size:13px}
-.chip.on{background:var(--tint);color:var(--on-tint)}
 .fretwrap{overflow-x:auto;margin-top:8px;-webkit-overflow-scrolling:touch}
 .fret{display:block;min-width:520px;width:100%;height:auto}
 .fbg{fill:color-mix(in srgb,#c8a26b 18%,var(--cell))}
@@ -99,7 +93,6 @@
 .comp.quarter .cswb{height:28px!important;padding:0 8px!important}
 .comp.strip>.cbody{min-width:0}
 .pane.strip .ktitle{min-width:70px;font-size:14px}
-.pane.strip .chips.nowrap .chip{font-size:13px;padding:3px 7px 3px 3px}
 .swrap{flex:1;overflow:auto;min-height:0;display:flex;flex-direction:column;gap:8px;scrollbar-width:none}
 .swrap::-webkit-scrollbar{display:none}
 .swrap>*{flex:none}

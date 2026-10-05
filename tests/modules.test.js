@@ -27,6 +27,9 @@ import timerEn from '../src/modules/timer/i18n/en.json';
 import earRu from '../src/modules/ear/i18n/ru.json';
 import earUz from '../src/modules/ear/i18n/uz.json';
 import earEn from '../src/modules/ear/i18n/en.json';
+import audioRu from '../src/modules/audio/i18n/ru.json';
+import audioUz from '../src/modules/audio/i18n/uz.json';
+import audioEn from '../src/modules/audio/i18n/en.json';
 
 const L = runLegacy([/^const SH=/, /^const LETTERS=/, /^const accOf=/, /^const TUNINGS=/, /^const parseN=/, /^const mName=/, /^const splitN=/],
   '{TUNINGS,parseN,mName}');
@@ -64,7 +67,7 @@ describe('тюнер', () => {
 
 describe('переводы', () => {
   const sets = { core: [ruCore, uzCore, enCore], metro: [metroRu, metroUz, metroEn], tuner: [tunerRu, tunerUz, tunerEn],
-    piano: [pianoRu, pianoUz, pianoEn], drone: [droneRu, droneUz, droneEn], theory: [theoryRu, theoryUz, theoryEn], timer: [timerRu, timerUz, timerEn], ear: [earRu, earUz, earEn] };
+    piano: [pianoRu, pianoUz, pianoEn], drone: [droneRu, droneUz, droneEn], theory: [theoryRu, theoryUz, theoryEn], timer: [timerRu, timerUz, timerEn], ear: [earRu, earUz, earEn], audio: [audioRu, audioUz, audioEn] };
   it.each(Object.keys(sets))('%s: все ключи есть в uz и en, подстановки совпадают', (k) => {
     const [ru, uz, en] = sets[k];
     for (const d of [uz, en]) {
