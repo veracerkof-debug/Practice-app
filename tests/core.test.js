@@ -206,6 +206,19 @@ describe('библиотека', () => {
   });
 });
 
+describe('настройки устройства', () => {
+  it('разделы новых модулей сохраняются между запусками', async () => {
+    const { loadDevice, saveDevice } = await import('../src/core/device.js');
+    const st = memStorage();
+    const d = loadDevice(st);
+    d.timer = { work: 30, style: 'flip' };
+    d.metro = { adj: 'arrows' };
+    saveDevice(d, st);
+    const again = loadDevice(st);
+    expect([again.timer, again.metro]).toEqual([{ work: 30, style: 'flip' }, { adj: 'arrows' }]);
+  });
+});
+
 describe('настройки', () => {
   it('функции, цель, дни', () => {
     const { store } = mk();

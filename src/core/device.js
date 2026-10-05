@@ -24,6 +24,8 @@ export function loadDevice(storage = globalThis.localStorage) {
   try {
     const s = JSON.parse(storage.getItem(LS_T)) || {};
     Object.keys(d).forEach((k) => Object.assign(d[k], s[k] || {}));
+    // Разделы, которых не было в прототипе (настройки новых модулей), — как есть
+    Object.keys(s).forEach((k) => { if (!(k in d) && s[k] && typeof s[k] === 'object') d[k] = s[k]; });
   } catch { /* по умолчанию */ }
   if (!DRONE_SOUNDS.includes(d.drone.sound)) d.drone.sound = 'soft';
   d.piano.start = 0;
