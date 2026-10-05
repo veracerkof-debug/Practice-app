@@ -30,7 +30,8 @@ export function openToolView(app, id, onClose) {
     '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>';
   document.body.appendChild(layer);
   const inst = mountModule(app, mod, layer.querySelector('.tvhost'), 'full');
-  const track = trackToolTime(app, id);
+  // Рабочие инструменты (stats: false, например шумомер) в статистику не пишут
+  const track = mod.stats === false ? { stop: () => 0 } : trackToolTime(app, id);
 
   const close = (next) => {
     app.openTool = null;
