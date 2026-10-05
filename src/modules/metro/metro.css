@@ -133,3 +133,11 @@
 .mwheel .wcenter .ic.warr{width:7.5cqw!important;height:7.5cqw!important;min-width:0!important}
 @keyframes bpop{from{transform:scaleY(1.14);filter:brightness(1.3)}}
 @keyframes tick{from{transform:scale(1.06)}}
+/* Окно сессии: круг занимает всю высоту, кроме ряда кнопок; кнопка «играть» не меньше 40 px (цель касания) */
+@container (max-aspect-ratio: 5/4){
+  .pane.half .mv .mwheel{width:min(100%,calc(100cqh - 92px))!important}
+  .pane.quarter .mv.quarter .mwheel{width:min(100%,calc(100cqh - 120px))!important}
+}
+.pane.half .mv,.pane.quarter .mv{gap:10px!important}
+.mwheel .wcenter .bigplay{width:max(40px,13cqw)!important;height:max(40px,13cqw)!important}
+.mwheel .wcenter .bpm{font-size:max(26px,15cqw)!important}

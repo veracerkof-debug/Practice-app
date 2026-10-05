@@ -76,7 +76,7 @@ export function mInput(p, settings) {
     ? '<div style="display:flex;align-items:center;gap:14px"><span data-mring>' + mRing(p, 44, n) + '</span><input type="range" class="range" data-mrange min="0" max="100" step="5" value="' + Math.round(p) +
       '" style="margin:0;flex:1" aria-label="' + esc(t('mastery.rangeAria')) + '"></div>'
     : seg('mpick', Array.from({ length: n }, (_, i) => [i + 1, i + 1]), toScale(p, n), t('mastery.title'));
-  return '<div data-mwrap data-pct="' + p + '">' + inner + '<div class="cap" data-mcap>' + esc(mCap(p, n)) + '</div></div>';
+  return '<div data-mwrap data-pct="' + p + '">' + inner + '<div class="segcap" data-mcap>' + esc(mCap(p, n)) + '</div></div>';
 }
 
 // Оживить mInput внутри root; возвращает функцию чтения процента

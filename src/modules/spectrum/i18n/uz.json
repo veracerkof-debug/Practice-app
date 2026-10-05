@@ -5,11 +5,8 @@
   "view.spl": "Shovqin oʻlchagich",
   "view.aria": "Koʻrinish",
   "settings": "Sozlamalar",
-  "micOn": "Mikrofonni yoqish",
-  "micStop": "Mikrofonni oʻchirish",
-  "micDenied": "Mikrofonga ruxsat berilmagan",
+  "micDenied": "Mikrofonga ruxsat yoʻq. Uni telefon sozlamalarida berish mumkin.",
   "micNone": "Mikrofon mavjud emas",
-  "hint": "Ovoz faqat qurilmada tahlil qilinadi va hech qayerga yozilmaydi. Bu yerdagi vaqt statistikaga tushmaydi.",
   "dom": "{f} Hz · {note}",
   "specAria": "Mikrofon ovozi spektri",
   "freeze": "Tasvirni toʻxtatish",
@@ -35,5 +32,7 @@
   "set.offset": "Tuzatish",
   "set.calReset": "Tuzatishni bekor qilish",
   "set.calHint": "Telefonni namunaviy shovqin oʻlchagich yoniga qoʻying (yoki 94 dB kalibratorni kiying) va koʻrsatkichlar mos kelguncha tuzatishni 0,5 dB dan oʻzgartiring.",
-  "set.hold": "Spektrdagi choʻqqilar"
+  "set.hold": "Spektrda choʻqqilarni ushlab turish",
+  "micRetry": "Qayta urinish",
+  "privacy": "Ovoz faqat qurilmada qayta ishlanadi va yozib olinmaydi. Bu moduldagi vaqt statistikaga kirmaydi."
 }

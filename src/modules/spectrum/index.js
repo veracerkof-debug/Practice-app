@@ -20,7 +20,8 @@ const F_MIN = 20, DB_LO = -110, DB_HI = -10, TAU = { fast: 0.125, slow: 1 };
 
 let host = null, ctx = null, size = 'full', mic = null, raf = 0, onClick = null, ro = null;
 // Текущее измерение (не сохраняется): уровень, мин, макс, среднее (Leq), пики спектра
-const M = { avg: 0, last: 0, min: Infinity, max: -Infinity, sum: 0, n: 0, clip: 0, frozen: false, hold: null, dom: null, shown: 0 };
+const M = { avg: 0, last: 0, min: Infinity, max: -Infinity, sum: 0, n: 0, clip: 0, frozen: false, hold: null, dom: null, shown: NaN };
+let micErr = null, starting = false; // микрофон: причина отказа ('denied' | 'unavailable'), идёт запрос
 let freq = null, time = null, wts = null;
 
 const st = () => ctx.store.all();
@@ -113,7 +114,7 @@ function updateNumbers() {
   const lv = q('#splv');
   if (lv) { lv.textContent = fmtDb(v); lv.className = 'splv num ' + zone(v); }
   const bar = q('#splbar');
-  if (bar) bar.style.width = Math.max(0, Math.min(100, ((v - 20) / 100) * 100)) + '%';
+  if (bar) bar.style.width = (Number.isFinite(v) ? Math.max(0, Math.min(100, v - 20)) : 0) + '%';
   const leq = M.n ? 10 * Math.log10(M.sum / M.n) : NaN;
   const set = (id, x) => { const e = q(id); if (e) e.textContent = fmtDb(x); };
   set('#splmin', M.min); set('#splmax', M.max); set('#splleq', leq);
@@ -135,28 +136,29 @@ function loop(now) {
 
 /* ---------- разметка ---------- */
 
-function micButton() {
-  const { t, ui } = ctx, on = !!mic;
-  return '<button class="bigplay spmic" data-x="spmic" aria-pressed="' + on + '" aria-label="' + t(on ? 'micStop' : 'micOn') + '">' + (on ? ui.icons.stop : ui.icons.mic) + '</button>';
+// Микрофон включается сам, как только модуль открыт. Кнопка нужна, только если доступ не дали
+function micNote() {
+  if (!micErr) return '';
+  const { t } = ctx;
+  return '<div class="spnomic" role="alert"><span>' + t(micErr === 'denied' ? 'micDenied' : 'micNone') + '</span><button class="link" data-x="spretry">' + t('micRetry') + '</button></div>';
 }
 
 function splHTML() {
   const { t } = ctx, c = cfg();
   const stats = '<div class="splst num"><span>' + t('min') + '<b id="splmin">—</b></span><span>' + t('leq') + '<b id="splleq">—</b></span><span>' + t('max') + '<b id="splmax">—</b></span></div>';
-  if (size === 'strip') return '<div class="srow2">' + micButton() + '<b class="splv num" id="splv">—</b><span class="l2" id="splw">' + t('unit.' + c.weight) + '</span><span class="sgrow"></span><div class="splmeter sm"><i id="splbar"></i></div></div>';
+  if (size === 'strip') return '<div class="srow2">' + '<b class="splv num" id="splv">—</b><span class="l2" id="splw">' + t('unit.' + c.weight) + '</span><span class="sgrow"></span><div class="splmeter sm"><i id="splbar"></i></div></div>';
   return '<div class="splwrap"><div class="splbig"><b class="splv num" id="splv">—</b><span class="l2" id="splw">' + t('unit.' + c.weight) + '</span></div>' +
     '<div class="splmeter" aria-hidden="true"><i id="splbar"></i><em style="left:50%"></em><em style="left:65%"></em></div>' +
-    (big() ? '<div class="splscale l2">' + [20, 70, 85, 120].map((v) => '<span style="left:' + (v - 20) + '%">' + v + '</span>').join('') + '</div>' + stats : '') +
+    (big() ? '<div class="splscale l2">' + [20, 70, 85, 120].map((v) => '<span style="left:' + (v - 20) + '%">' + v + '</span>').join('') + '</div>' + stats : stats) +
     '<div class="spclip" id="spclip" hidden>' + t('clip') + '</div>' +
-    '<div class="vrow tight spctl">' + (big() ? ctx.ui.icb('data-x="spreset"', I.reset, t('resetStats'), 'sm') : '') + micButton() + '</div>' +
-    (big() ? '<p class="ftr spnote">' + t('approx') + '</p>' : '') + '</div>';
+    (big() ? '<div class="vrow tight spctl">' + ctx.ui.icb('data-x="spreset"', I.reset, t('resetStats'), 'sm') + '</div><p class="ftr spnote">' + t('approx') + '</p>' : '') + '</div>';
 }
 
 function specHTML() {
   const { t, ui } = ctx;
   const cv = '<div class="spbox"><canvas id="spcv" role="img" aria-label="' + t('specAria') + '"></canvas><span class="spdom num" id="spdom"></span></div>';
-  if (size === 'strip') return '<div class="srow2">' + micButton() + cv + '</div>';
-  return '<div class="spwrap">' + cv + '<div class="vrow tight spctl">' + (big() ? ui.icb('data-x="spfreeze"', M.frozen ? I.play : I.pause, t(M.frozen ? 'unfreeze' : 'freeze'), 'sm') : '') + micButton() + '</div></div>';
+  if (size === 'strip') return '<div class="srow2">' + cv + '</div>';
+  return '<div class="spwrap">' + cv + (big() ? '<div class="vrow tight spctl">' + ui.icb('data-x="spfreeze"', M.frozen ? I.play : I.pause, t(M.frozen ? 'unfreeze' : 'freeze'), 'sm') + '</div>' : '') + '</div>';
 }
 
 function render() {
@@ -164,7 +166,7 @@ function render() {
   const { t, ui } = ctx, c = cfg();
   const head = big() ? '<div class="sphead">' + ui.seg('spview', [['spec', t('view.spec')], ['spl', t('view.spl')]], c.view, t('view.aria')) +
     ui.icb('data-x="spset"', ui.icons.gear, t('settings'), 'sm') + '</div>' : '';
-  host.innerHTML = '<div class="spmod ' + size + '">' + head + (c.view === 'spl' ? splHTML() : specHTML()) + (mic ? '' : big() ? '<p class="l2 sphint">' + t('hint') + '</p>' : '') + '</div>';
+  host.innerHTML = '<div class="spmod ' + size + '">' + head + (c.view === 'spl' ? splHTML() : specHTML()) + micNote() + '</div>';
   updateNumbers();
 }
 
@@ -174,12 +176,13 @@ function settingsSheet() {
   const { t, ui } = ctx, c = cfg();
   const body = () => ui.snav(t('settings')) +
     '<div class="hdr">' + t('set.weight') + '</div><div class="group"><div class="cellcol">' + ui.seg('spw', [['A', 'A'], ['C', 'C'], ['Z', 'Z']], c.weight, t('set.weight')) +
-    '<div class="cap">' + t('set.weight.' + c.weight) + '</div></div></div>' +
+    '<div class="segcap">' + t('set.weight.' + c.weight) + '</div></div></div>' +
     '<div class="hdr">' + t('set.speed') + '</div><div class="group"><div class="cellcol">' + ui.seg('sps', [['fast', t('set.fast')], ['slow', t('set.slow')]], c.speed, t('set.speed')) + '</div></div>' +
     '<div class="hdr">' + t('set.cal') + '</div><div class="group"><div class="cell"><span class="grow">' + t('set.offset') + '</span><span class="val num" style="color:var(--ink);margin-right:6px">' +
     (c.cal > 0 ? '+' : '') + ctx.num(c.cal, 1) + ' ' + t('db') + '</span>' + ui.stepper('cal', t('set.offset')) + '</div>' +
     '<div class="cell"><button class="link" data-x="calreset">' + t('set.calReset') + '</button></div></div><p class="ftr">' + t('set.calHint') + '</p>' +
-    '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('set.hold') + '</span>' + ui.sw('sphold', c.hold, t('set.hold')) + '</div></div>';
+    '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('set.hold') + '</span>' + ui.sw('sphold', c.hold, t('set.hold')) + '</div></div>' +
+    '<p class="ftr">' + t('privacy') + '</p>';
   ui.sheet(body, (el, sh) => {
     const done = () => { ctx.store.save(); sh.update(); render(); };
     el.addEventListener('click', (e) => {
@@ -195,18 +198,26 @@ function settingsSheet() {
 
 /* ---------- микрофон ---------- */
 
-async function micToggle() {
-  const { t, ui } = ctx;
-  if (mic) { micStop(); render(); return; }
+async function micStart() {
+  if (mic || starting) return;
+  starting = true;
+  micErr = null;
   try {
-    mic = await ctx.mic.request();
+    const m = await ctx.mic.request();
+    starting = false;
+    // окно успели закрыть, пока система спрашивала разрешение
+    if (!host) { m.stop(); return; }
+    mic = m;
     mic.analyser.smoothingTimeConstant = 0.6;
     resetStats();
     M.last = 0;
+    M.shown = NaN;
     render();
     if (!raf) raf = requestAnimationFrame(loop);
   } catch (e) {
-    ui.toast(t(e.reason === 'denied' ? 'micDenied' : 'micNone'));
+    starting = false;
+    micErr = e.reason === 'denied' ? 'denied' : 'unavailable';
+    render();
   }
 }
 
@@ -235,7 +246,7 @@ export default {
       const x = e.target.closest('[data-x]');
       if (!x) return;
       const a = x.dataset.x;
-      if (a === 'spmic') micToggle();
+      if (a === 'spretry') micStart();
       else if (a === 'spset') settingsSheet();
       else if (a === 'spreset') { resetStats(); updateNumbers(); }
       else if (a === 'spfreeze') { M.frozen = !M.frozen; render(); }
@@ -243,6 +254,7 @@ export default {
     host.addEventListener('click', onClick);
     render();
     if (mic && !raf) raf = requestAnimationFrame(loop);
+    else micStart();
   },
   resize(sz) { size = sz; render(); },
   // Микрофон — только пока окно открыто

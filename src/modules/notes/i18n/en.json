@@ -46,7 +46,7 @@
   "textShort": "Text",
   "toText": "Switch to text",
   "toTabs": "Switch to tabs",
-  "needsRoom": "Tabs need more room",
+  "needsRoom": "Tabs are shown in a half-screen or larger window",
   "cancel": "Cancel",
   "save": "Save",
   "textPh": "Am        F\nA line of the song...\n\nor inline: [Am]A line [F]of the song",

@@ -155,7 +155,7 @@ function setSheet() {
       SOUNDS.map((k) => '<button class="lchip pick glck' + (s.sound === k ? ' on' : '') + '" data-gs="' + k + '" aria-pressed="' + (s.sound === k) + '" style="--c:var(--tint);--t:var(--on-tint)">' + t('pre.' + k) + '</button>').join('') +
       '</div></div><div class="cell"><span class="grow">' + t('hold') + '</span>' + ui.sw('ghold', s.hold, t('hold')) + '</div></div><p class="ftr">' + t('soundHint') + '</p>' +
       '<div class="hdr">' + t('snap') + '</div><div class="group"><div class="cellcol">' + ui.seg('gsnap', SNAPS.map((k) => [k, t('snap.' + k)]), s.snap, t('snap')) +
-      '<div class="cap">' + t('snapHint.' + s.snap) + '</div></div>' +
+      '<div class="segcap">' + t('snapHint.' + s.snap) + '</div></div>' +
       (s.snap === 'note' ? '<div class="cellcol"><div class="l2" style="font-size:13px;margin-bottom:6px">' + t('port') + '</div>' + ui.seg('gport', [[0, t('port0')], [60, '60 ' + t('ms')], [150, '150 ' + t('ms')], [300, '300 ' + t('ms')]], s.port, t('port')) + '</div>' : '') + '</div>' +
       '<div class="hdr">' + t('notes') + '</div><div class="group"><div class="cellcol"><select class="sortsel glsel" data-gsc aria-label="' + t('notes') + '"><option value="chrom"' + (chrom ? ' selected' : '') + '>' + t('chrom') + '</option>' +
       SCALE_TYPES.map((k) => '<option value="' + k + '"' + (s.scale === k ? ' selected' : '') + '>' + t('scale.' + k) + '</option>').join('') + '</select>' +
@@ -163,7 +163,7 @@ function setSheet() {
       '</div></div>' +
       '<div class="hdr">' + t('range') + '</div><div class="group"><div class="cell"><span class="grow">' + t('from') + '</span>' + ui.icb('data-glo2="-1"', I.left, t('lower'), 'sm') + '<b class="num glv">' + mName(s.lo) + '</b>' + ui.icb('data-glo2="1"', I.right, t('higher'), 'sm') + '</div>' +
       '<div class="cellcol"><div class="l2" style="font-size:13px;margin-bottom:6px">' + t('width') + ' · ' + rangeTxt(s) + '</div>' + ui.seg('gw', WIDTHS.map((w) => [w, t('w.' + w)]), s.width, t('width')) + '</div></div><p class="ftr">' + t('widthHint') + '</p>' +
-      '<div class="hdr">' + t('vertical') + '</div><div class="group"><div class="cellcol">' + ui.seg('gfx', FX.map((k) => [k, t('fx.' + k)]), s.fx, t('vertical')) + '<div class="cap">' + t('fxHint.' + s.fx) + '</div></div>' +
+      '<div class="hdr">' + t('vertical') + '</div><div class="group"><div class="cellcol">' + ui.seg('gfx', FX.map((k) => [k, t('fx.' + k)]), s.fx, t('vertical')) + '<div class="segcap">' + t('fxHint.' + s.fx) + '</div></div>' +
       '<div class="cell"><span class="grow">' + t('labels') + '</span>' + ui.sw('glab', s.labels, t('labels')) + '</div></div>';
   };
   ui.sheet(body, (el, sh) => {

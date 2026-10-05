@@ -5,11 +5,8 @@
   "view.spl": "Sound meter",
   "view.aria": "View",
   "settings": "Settings",
-  "micOn": "Turn on microphone",
-  "micStop": "Turn off microphone",
-  "micDenied": "Microphone access denied",
+  "micDenied": "No microphone access. It can be allowed in the phone settings.",
   "micNone": "Microphone unavailable",
-  "hint": "Sound is analysed on the device only and never recorded. Time here doesn’t count in statistics.",
   "dom": "{f} Hz · {note}",
   "specAria": "Spectrum of the microphone sound",
   "freeze": "Freeze",
@@ -35,5 +32,7 @@
   "set.offset": "Correction",
   "set.calReset": "Reset correction",
   "set.calHint": "Place the phone next to a reference meter (or fit a 94 dB calibrator) and adjust the correction in 0.5 dB steps until the readings match.",
-  "set.hold": "Peaks on the spectrum"
+  "set.hold": "Hold peaks on the spectrum",
+  "micRetry": "Try again",
+  "privacy": "Sound is processed on the device only and never recorded. Time in this module isn’t counted in statistics."
 }

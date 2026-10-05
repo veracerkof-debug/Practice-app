@@ -7,7 +7,7 @@
 .spbox canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .spdom{position:absolute;top:6px;right:8px;font-size:13px;font-weight:600;color:var(--ink)}
 .spctl{justify-content:center;flex:none}
-.spmic{flex:none}
+.spnomic{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;font-size:14px;color:var(--l2);text-align:center}
 .sphint{font-size:13px;text-align:center;margin:0}
 .splwrap{justify-content:center}
 .splbig{display:flex;align-items:baseline;justify-content:center;gap:8px}
@@ -30,3 +30,4 @@
 .spmod.strip .spbox{min-height:0;align-self:stretch}
 .spmod.quarter .splv{font-size:clamp(30px,24cqw,56px)}
 @container (max-height:400px){.spmod .spnote{display:none}.spmod .splv{font-size:clamp(40px,18cqmin,80px)}}
+.spmod.quarter .splst{gap:2px}.spmod.quarter .splst b{font-size:15px}

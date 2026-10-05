@@ -108,7 +108,7 @@ export function songForm(app, id, onSaved) {
     '<div class="hdr">' + t('form.genre') + '</div><div class="group"><div class="cellcol" id="pk-genres">' + pickHTML(L, 'genres', pick.genres) + '</div></div>' +
     '<div class="hdr">' + t('form.tags') + '</div><div class="group"><div class="cellcol" id="pk-tags">' + pickHTML(L, 'tags', pick.tags, true) + '</div></div>' +
     '<div class="hdr">' + t('form.difficulty') + '</div><div class="group"><div class="cellcol">' + seg('difficulty', [1, 2, 3, 4, 5].map((i) => [i, i]), pick.difficulty, t('form.difficulty')) +
-    '<div class="cap" data-hint="difficulty">' + diffLabel(pick.difficulty) + '</div></div></div>' +
+    '<div class="segcap" data-hint="difficulty">' + diffLabel(pick.difficulty) + '</div></div></div>' +
     '<div class="hdr">' + t('mastery.title') + '</div><div class="group"><div class="cellcol">' + mInput(getPct(s), settings) + '</div></div>' +
     '<div class="hdr">' + t('form.tempo') + '</div><div class="group"><label class="cell"><span>' + t('form.current') + '</span><input class="inp num" name="currentBpm" type="number" inputmode="numeric" min="20" max="300" placeholder="—" value="' + esc(s.currentBpm ?? '') + '"></label>' +
     '<label class="cell"><span>' + t('form.target') + '</span><input class="inp num" name="targetBpm" type="number" inputmode="numeric" min="20" max="300" placeholder="—" value="' + esc(s.targetBpm ?? '') + '"></label></div>' +
