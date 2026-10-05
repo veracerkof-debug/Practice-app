@@ -510,9 +510,12 @@ function act(a, el) {
       else if (AU.el.currentTime > AU.a) { AU.b = AU.el.currentTime; AU.loop = true; }
       else AU.a = AU.el.currentTime;
       if (host.querySelector('#vdisc')) {
+        // Пластинку не перерисовываем (она крутится), но волну под ней — да: иначе на ней остаются старые A и B
         const ab = AU.b != null ? 'on' : AU.a != null ? 'a' : '';
         el.classList.toggle('act', ab === 'on');
         el.textContent = ab === 'a' ? 'B?' : 'A–B';
+        const wf = host.querySelector('#wform');
+        if (wf) wf.outerHTML = wformHTML([...wf.classList].find((c) => c !== 'wform' && c !== 'wait') || 's');
       } else render();
       break;
     case 'astep': AU.step = !AU.step; if (AU.step && AU.b == null) ui.toast(t('stepHint')); render(); break;

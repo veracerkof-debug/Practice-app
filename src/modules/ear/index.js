@@ -298,7 +298,8 @@ function drillHTML(sec) {
     t('sessStreak', { n: ss.st }) + '">' + FLAME + ss.st + '</span>' + ui.icb('data-x="eset"', ui.icons.gear, t('settings'), 'sm') + '</div>';
   const lvl = t('lvl.' + e.level);
   const playBtn = (lab) => '<button class="eplay" id="eplay" data-x="eplay" aria-label="' + (lab || t('replay')) + '" style="--c:' + color + '">' + (sec === 'pt' ? I.speaker : I.play) + '<i></i><i></i></button>';
-  const next = res && !(res.ok && e.auto) ? '<button class="btn fill block enext" data-x="enext">' + t('next') + '</button>' : '';
+  // «Дальше» — всегда после ответа: сравнение вариантов на слух отменяет автопереход (на телефоне упражнение застревало)
+  const next = res ? '<button class="btn fill block enext" data-x="enext">' + t('next') + '</button>' : '';
   const fb = () => (res ? '<div class="efb ' + (res.ok ? 'ok' : 'bad') + '" aria-live="polite">' + t(res.ok ? 'right' : 'answer') + '<b>' + esc(label(sec, q.ans)) + '</b>' +
     (sec === 'dg' ? ' — ' + spell((q.minor ? MIN_NAMES : MAJ_NAMES)[q.pc], [q.ans], [EDG.find((d) => d[0] === q.ans)[3]])[0] : '') + '</div>' : '<div class="efb" aria-live="polite"></div>');
 

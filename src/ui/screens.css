@@ -184,6 +184,4 @@
 .tosbox h2{margin:0 0 10px;font-size:22px}
 .tosbox p{font-size:15px;line-height:1.45;margin:0 0 10px}
 .mring{vertical-align:middle;flex:none;display:inline-block}
-.fsep{font-size:clamp(26px,10cqmin,70px);font-weight:700;color:var(--l2);margin:0 2px;animation:fblink 2s steps(1) infinite}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
-@keyframes fblink{50%{opacity:.25}}

@@ -50,7 +50,7 @@ const flapCard = (ch, i) => '<span class="fd" data-fi="' + i + '" data-v="' + ch
 function flipHTML() {
   const { t, ui } = ctx, po = PO(), rem = po.rem(), s = fmtClock(rem).padStart(5, '0'), brk = po.phase !== 'work', { play, rs, sk } = buttons();
   const clock = '<div class="fclock' + (brk ? ' brk' : '') + '" id="pflip" role="timer" aria-label="' + fmtClock(rem) + '">' + flapCard(s[0], 0) + flapCard(s[1], 1) +
-    '<span class="fsep" aria-hidden="true">:</span>' + flapCard(s[3], 3) + flapCard(s[4], 4) + '</div>';
+    '<span class="fcolon" aria-hidden="true"><i></i><i></i></span>' + flapCard(s[3], 3) + flapCard(s[4], 4) + '</div>';
   const prog = '<div class="fprog" aria-hidden="true"><b id="pfprog" style="width:' + (1 - rem / po.total()) * 100 + '%"></b></div>';
   const phase = '<div class="fphase' + (brk ? ' brk' : '') + '">' + t('ph.' + po.phase) + '</div>';
   if (size === 'strip') return '<div class="srow2 fstrip">' + phase + clock + '<span class="sgrow"></span>' + play + sk + '</div>';

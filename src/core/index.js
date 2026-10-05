@@ -31,6 +31,8 @@ export function boot(root) {
   device.theory.scale ??= device.scale || { pc: 9, type: 'minor' };
   // Помодоро: настройки прототипа (tools.pomo) и вид (tools.ui.pomo) — в настройки модуля timer
   device.timer ??= { ...pomoDefaults(), ...device.pomo, style: device.ui?.pomo === 'flip' ? 'flip' : 'ring' };
+  // Недостающие длительности (старые или неполные настройки) — по умолчанию, иначе часы показывают NaN
+  device.timer = { ...pomoDefaults(), ...device.timer };
   device.notes ??= { ...device.tab };
   device.audio ??= { last: device.lastAudio || {}, style: device.ui?.audio === 'vinyl' ? 'vinyl' : 'wave' };
 
