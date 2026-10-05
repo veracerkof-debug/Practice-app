@@ -1,12 +1,14 @@
-// Медиатека: минусы, партии, уроки и записи — только на устройстве. Плеер с волной или винилом,
-// замедление без изменения высоты, повтор A–B, тренер темпа (+5 % с каждым повтором), привязка к песням.
+// Медиатека: минусы, партии, уроки и записи (аудио и видео) — только на устройстве. Плеер с волной или винилом,
+// замедление без изменения высоты, повтор A–B, тренер темпа (+5 % с каждым повтором), тайм-коды, привязка к песням.
 // Перенесено из legacy/practice.html (AU, auLoad, audioHTML, wformHTML, medLibHTML, trackSheet, mlMenu, vinylHTML, VIN).
 import './audio.css';
+import './media.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import { fileSongs, inSong, linkSong } from '../../core/files.js';
 import { fmtDur } from '../../core/format.js';
+import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>';
 const I = {
@@ -20,13 +22,18 @@ const I = {
   more: '<svg viewBox="0 0 24 24" class="f"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
   disc: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/></svg>',
   search: '<svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>',
+  film: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9.5h3M3 14.5h3M18 9.5h3M18 14.5h3M10 9.5l4.5 2.5-4.5 2.5z"/></svg>',
+  flag: '<svg viewBox="0 0 24 24"><path d="M6 21V4M6 4h10l-2 3.5 2 3.5H6"/></svg>',
+  full: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  sel: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8 12.3 2.8 2.7L16.2 9.5"/></svg>',
+  trash: '<svg viewBox="0 0 24 24"><path d="M4.5 7h15M10 7V4.5h4V7M6.5 7l1 12.5h9l1-12.5"/></svg>',
 };
 const MB = 1048576;
 
 /* ---------- плеер (один на приложение, играет и при закрытом окне) ---------- */
 
 const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0 };
-const ML = { q: '', sort: 'date', f: 'all', view: 'lib' };
+const ML = { q: '', sort: 'date', f: 'all', view: 'lib', sel: null }; // sel — выбранные файлы (Set id) в режиме выбора
 let host = null, ctx = null, size = 'full', input = null, uiTimer = 0, offs = [], app = null;
 
 const fmtT = (s) => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -38,11 +45,36 @@ const style = () => (st().style === 'vinyl' ? 'vinyl' : 'wave');
 const rateTxt = () => ctx.num(AU.rate, AU.rate * 100 % 10 ? 2 : AU.rate % 1 ? 1 : 0) + '×';
 const sizeMb = (r) => ctx.t('mb', { n: ctx.num((r.size || 0) / MB, 1) });
 
+// Один элемент на всё: <video> играет и аудио. Он всегда в документе — в окне плеера или в скрытом
+// хранилище: браузер ставит на паузу медиа, вынутое из документа, а музыка должна идти и при закрытом окне.
+function holder() {
+  let h = document.getElementById('medHold');
+  if (!h) { h = document.createElement('div'); h.id = 'medHold'; h.hidden = true; document.body.appendChild(h); }
+  return h;
+}
+const park = () => { if (AU.el && AU.el.parentNode !== holder()) holder().appendChild(AU.el); };
+
 function ensureEl(c) {
   if (AU.el) return;
-  AU.el = new Audio();
+  AU.el = document.createElement('video');
+  AU.el.playsInline = true;
+  AU.el.setAttribute('playsinline', '');
+  AU.el.preload = 'auto';
+  holder().appendChild(AU.el);
   ['preservesPitch', 'webkitPreservesPitch', 'mozPreservesPitch'].forEach((k) => { try { AU.el[k] = true; } catch { /* ignore */ } });
-  AU.el.addEventListener('loadedmetadata', () => { AU.el.playbackRate = AU.rate; render(); });
+  AU.el.addEventListener('loadedmetadata', () => {
+    AU.el.playbackRate = AU.rate;
+    const t = AU.cur;
+    // Длительность и вид файла уточняем по самому файлу (mp4 бывает и без картинки)
+    if (t) {
+      const v = AU.el.videoWidth > 0, d = AU.el.duration;
+      if (t.video !== v || (!t.dur && Number.isFinite(d))) { t.video = v; if (!t.dur && Number.isFinite(d)) t.dur = d; ctx.files.save(t); }
+    }
+    render();
+  });
+  // Во весь экран — со стандартными кнопками браузера; пока так, окно не перерисовываем
+  AU.el.addEventListener('fullscreenchange', () => { AU.el.controls = document.fullscreenElement === AU.el; if (!AU.el.controls) render(); });
+  AU.el.addEventListener('webkitendfullscreen', () => render());
   AU.el.addEventListener('error', () => { if (AU.cur && ctx) ctx.ui.toast(ctx.t('cantPlay')); });
   AU.el.addEventListener('play', () => { loopStart(); if (document.querySelector('.mlist') && !document.activeElement?.hasAttribute?.('data-mlq')) render(); });
   AU.el.addEventListener('pause', () => { if (document.querySelector('.mlist') && !document.activeElement?.hasAttribute?.('data-mlq')) render(); });
@@ -108,6 +140,8 @@ function autoAudio() {
 
 async function computePeaks(t) {
   if (t.peaks || t._busy) return;
+  // У видео волну не строим: файл большой, а целиком декодировать звук ради картинки дорого — вместо волны шкала
+  if (isVideo(t)) { t.peaks = []; ctx.files.save(t); return; }
   t._busy = true;
   try {
     const C = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext, oc = new C(1, 8000, 8000);
@@ -142,19 +176,23 @@ async function queuePeaks() {
 function wformHTML(cls) {
   const t = AU.cur, d = AU.el.duration || 0, { t: tr } = ctx;
   if (!t.peaks) { computePeaks(t); return '<div class="wform ' + cls + ' wait" id="wform"><span class="l2">' + tr('waveWait') + '</span><i class="wfhead" id="wfhead"></i></div>'; }
-  const pk = t.peaks.length ? t.peaks : Array(120).fill(0.15), N = pk.length;
+  const flat = !t.peaks.length, pk = flat ? Array(120).fill(0.15) : t.peaks, N = pk.length;
   let p = '';
   pk.forEach((v, i) => { const hh = Math.max(1.5, v * 46); p += 'M' + (i + 0.5) + ' ' + (50 - hh) + 'V' + (50 + hh); });
   const ax = d && AU.a != null ? (AU.a / d) * N : null, bx = d && AU.b != null ? (AU.b / d) * N : null;
-  return '<div class="wform ' + cls + '" id="wform" role="slider" tabindex="0" aria-label="' + tr('waveAria') + '" aria-valuemin="0" aria-valuemax="' + Math.round(d) +
+  const mk = d ? (t.marks || []).map((m, i) => '<i class="wfm" style="left:' + (m.t / d) * 100 + '%"><b>' + (i + 1) + '</b></i>').join('') : '';
+  return '<div class="wform ' + cls + (flat ? ' flat' : '') + '" id="wform" role="slider" tabindex="0" aria-label="' + tr('waveAria') + '" aria-valuemin="0" aria-valuemax="' + Math.round(d) +
     '" aria-valuenow="' + Math.round(AU.el.currentTime) + '"><svg viewBox="0 0 ' + N + ' 100" preserveAspectRatio="none" aria-hidden="true"><defs><clipPath id="wfc"><rect id="wfclip" x="0" y="0" width="' +
     (d ? (AU.el.currentTime / d) * N : 0) + '" height="100"/></clipPath></defs>' +
     (ax != null ? '<rect class="wfloop" x="' + ax + '" y="0" width="' + ((bx != null ? bx : ax + 0.6) - ax) + '" height="100"/>' : '') +
     '<path class="wfbase" d="' + p + '"/><path class="wfplayed" d="' + p + '" clip-path="url(#wfc)"/></svg>' +
     (ax != null ? '<i class="wfh a" data-h="a" style="left:' + (ax / N) * 100 + '%"><b>A</b></i>' : '') +
-    (bx != null ? '<i class="wfh b" data-h="b" style="left:' + (bx / N) * 100 + '%"><b>B</b></i>' : '') +
+    (bx != null ? '<i class="wfh b" data-h="b" style="left:' + (bx / N) * 100 + '%"><b>B</b></i>' : '') + mk +
     '<i class="wfhead" id="wfhead" style="left:' + (d ? (AU.el.currentTime / d) * 100 : 0) + '%"></i></div>';
 }
+
+// Класс размера волны (f, h2, s, q) — чтобы перерисовать её на том же месте
+const wfCls = (w) => [...w.classList].find((c) => !['wform', 'wait', 'flat'].includes(c)) || 's';
 
 /* ---------- разметка ---------- */
 
@@ -169,8 +207,21 @@ function artHTML(t, cls) {
     const N = 28, s = pk.length / N;
     for (let i = 0; i < N; i++) { const v = pk[Math.floor(i * s)] || 0, hh = Math.max(1, v * 12); p += 'M' + (4 + i * 1.15).toFixed(2) + ' ' + (20 - hh).toFixed(1) + 'V' + (20 + hh).toFixed(1); }
   }
-  return '<span class="mlart ' + (cls || '') + '" style="--h:' + hueOf(t.name) + '">' + (pk ? '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="' + p + '"/></svg>' : ICON) +
+  return '<span class="mlart ' + (cls || '') + '" style="--h:' + hueOf(t.name) + '">' + (isVideo(t) ? I.film : pk ? '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="' + p + '"/></svg>' : ICON) +
     (AU.cur && AU.cur.id === t.id && !AU.el.paused ? '<i class="eq"><b></b><b></b><b></b></i>' : '') + '</span>';
+}
+
+// Окно видео: сам элемент вставляется после перерисовки (place). Нажатие — играть или пауза
+const vidbox = (cls) => '<div class="vidbox ' + cls + '" data-x="aplay" aria-label="' + ctx.t('playPause') + '" role="button" tabindex="0">' +
+  (cls === 'f' || cls === 'h' ? '<button class="ic sm vfs" data-x="afs" aria-label="' + ctx.t('fullscreen') + '">' + I.full + '</button>' : '') + '</div>';
+
+// Тайм-коды: «+ метка», метки (нажать — перейти), «все» — список с названиями и повтором
+function marksHTML() {
+  const { t } = ctx, ms = AU.cur.marks || [], k = currentMark(ms, AU.el.currentTime);
+  return '<div class="chips nowrap amarks" role="group" aria-label="' + t('marks') + '"><button class="chip amadd" data-x="amadd" aria-label="' + t('markAdd') + '">' + I.flag + t('mark') + '</button>' +
+    ms.map((m, i) => '<button class="chip amk' + (i === k ? ' on' : '') + '" data-x="amj" data-i="' + i + '" aria-label="' + esc(t('markGo', { n: i + 1, time: fmtT(m.t) })) + '"><b>' + (i + 1) + '</b>' +
+      esc(m.name || fmtT(m.t)) + '</button>').join('') +
+    (ms.length ? '<button class="chip amall" data-x="amlist" aria-label="' + t('marksAll') + '">' + I.list + '</button>' : '') + '</div>';
 }
 
 function songTitles(t, except) {
@@ -187,9 +238,13 @@ function libHTML() {
   else if (ML.f === 'free') list = list.filter((x) => !fileSongs(x).length);
   const so = { date: (a, b) => (b.created || 0) - (a.created || 0), name: (a, b) => a.name.localeCompare(b.name, ctx.lang()), size: (a, b) => (b.size || 0) - (a.size || 0), dur: (a, b) => (b.dur || 0) - (a.dur || 0) };
   list.sort(so[ML.sort] || so.date);
-  const all = tracks(), tot = all.reduce((s, x) => s + (x.size || 0), 0), totd = all.reduce((s, x) => s + (x.dur || 0), 0);
-  let h = '<div class="medlib"><div class="mlhead"><label class="mlsearch">' + I.search + '<input type="search" data-mlq placeholder="' + t('search') + '" aria-label="' + t('search') +
-    '" value="' + esc(ML.q) + '"></label>' + icb('data-x="aadd"', I.plus, t('addFile'), 'sm') + '</div>' +
+  const all = tracks(), tot = all.reduce((s, x) => s + (x.size || 0), 0), totd = all.reduce((s, x) => s + (x.dur || 0), 0), sel = ML.sel;
+  if (sel) [...sel].forEach((id) => { if (!ctx.files.get(id)) sel.delete(id); });
+  const allOn = sel && list.length && list.every((x) => sel.has(x.id));
+  let h = '<div class="medlib"><div class="mlhead">' + (sel
+    ? '<button class="link mlsall" data-x="mlsall">' + t(allOn ? 'selNone' : 'selAll') + '</button><b class="mlselt" aria-live="polite">' + t('selN', { n: sel.size }) + '</b><button class="link b" data-x="mlseloff">' + t('done') + '</button>'
+    : '<label class="mlsearch">' + I.search + '<input type="search" data-mlq placeholder="' + t('search') + '" aria-label="' + t('search') + '" value="' + esc(ML.q) + '"></label>' +
+      (all.length > 1 ? icb('data-x="mlselon"', I.sel, t('select'), 'sm') : '') + icb('data-x="aadd"', I.plus, t('addFile'), 'sm')) + '</div>' +
     '<div class="mlbar"><div class="mlfil" role="group">' + [['all', t('f.all')], ['songs', t('f.songs')], ['free', t('f.free')]].map(([k, n]) => '<button class="' + (ML.f === k ? 'on' : '') +
       '" data-x="mlf" data-v="' + k + '" aria-pressed="' + (ML.f === k) + '">' + n + '</button>').join('') + '</div><select class="sortsel" data-mls aria-label="' + t('sort') + '">' +
     [['date', t('s.date')], ['name', t('s.name')], ['dur', t('s.dur')], ['size', t('s.size')]].map(([v, l]) => '<option value="' + v + '"' + (ML.sort === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div>';
@@ -197,16 +252,25 @@ function libHTML() {
   else if (!list.length) h += '<div class="aempty"><div class="ael">' + t('notFound') + '</div></div>';
   else {
     h += '<div class="mlist">' + list.map((x) => {
-      const sn = songTitles(x), cur = AU.cur && AU.cur.id === x.id;
+      const sn = songTitles(x), cur = AU.cur && AU.cur.id === x.id, mk = (x.marks || []).length;
+      const info = [x.dur ? fmtT(x.dur) : '', sizeMb(x), mk ? t('marksN', { n: mk }) : '', sn.join(', ')].filter(Boolean).join(' · ');
+      if (sel) {
+        const on = sel.has(x.id);
+        return '<div class="mlrow' + (on ? ' cur' : '') + '"><button class="mlmain" data-x="mlsel" data-id="' + x.id + '" role="checkbox" aria-checked="' + on + '"><span class="mlchk' + (on ? ' on' : '') + '">' +
+          (on ? ctx.ui.icons.check : '') + '</span>' + artHTML(x) + '<span class="mltxt"><b>' + esc(x.name) + '</b><small>' + info + '</small></span></button></div>';
+      }
       return '<div class="mlrow' + (cur ? ' cur' : '') + '"><button class="mlmain" data-x="mlplay" data-id="' + x.id + '" aria-label="' + t(cur && !AU.el.paused ? 'pauseX' : 'playX', { name: x.name }) +
-        '">' + artHTML(x) + '<span class="mltxt"><b>' + esc(x.name) + '</b><small>' + [x.dur ? fmtT(x.dur) : '', sizeMb(x), sn.join(', ')].filter(Boolean).join(' · ') +
+        '">' + artHTML(x) + '<span class="mltxt"><b>' + esc(x.name) + '</b><small>' + info +
         '</small></span></button><button class="ic sm plain mlmore" data-x="mlmenu" data-id="' + x.id + '" aria-label="' + t('fileActions', { name: x.name }) + '">' + I.more + '</button></div>';
     }).join('') + '</div>';
   }
   if (all.length) h += '<p class="ftr" style="text-align:center">' + tn('files', all.length) + (totd ? ' · ' + fmtDur(totd) : '') + ' · ' + t('onDevice', { mb: ctx.num(tot / MB, 1) }) + '</p>';
   h += '</div>';
-  if (AU.cur) {
-    h += '<div class="mlmini"><button class="mlmmain" data-x="mlopen" aria-label="' + t('openPlayer') + '">' + artHTML(AU.cur, 'sm') + '<span class="mltxt"><b>' + esc(AU.cur.name) +
+  if (sel) {
+    const n = sel.size ? '' : ' disabled';
+    h += '<div class="mlselbar"><button class="cell act" data-x="mlsong"' + n + '>' + t('toSongs') + '</button><button class="ic sm mldel" data-x="mldel" aria-label="' + t('delSel') + '"' + n + '>' + I.trash + '</button></div>';
+  } else if (AU.cur) {
+    h += '<div class="mlmini"><button class="mlmmain" data-x="mlopen" aria-label="' + t('openPlayer') + '">' + (isVideo(AU.cur) ? '<span class="vidbox mini"></span>' : artHTML(AU.cur, 'sm')) + '<span class="mltxt"><b>' + esc(AU.cur.name) +
       '</b><small><span id="acur" class="num">' + fmtT(AU.el.currentTime) + '</span>' + (AU.rate !== 1 ? ' · ' + rateTxt() : '') + '</small></span></button><button class="bigplay mlpl" data-x="aplay" id="aplay" aria-label="' +
       t('playPause') + '">' + (AU.el.paused ? I.play : I.pause) + '</button><i class="mlprog"><b id="mlprog" style="width:' + (AU.el.duration ? (AU.el.currentTime / AU.el.duration) * 100 : 0) + '%"></b></i></div>';
   }
@@ -242,7 +306,7 @@ function vinylHTML() {
   if (size === 'strip') return '<div class="srow2 vstrip">' + disc + '<div class="sgrow" style="min-width:0;text-align:left"><div class="aname">' + esc(tr.name) + '</div>' + time + '</div><div class="vrow tight">' + c.rate + '</div></div>';
   if (size === 'quarter') return '<div class="vq vqv">' + disc + time + '<div class="vrow tight">' + c.rate + '</div></div>';
   return '<div class="vwrap ' + size + '">' + c.back2 + '<div class="vtop"><div class="aname sgrow" style="text-align:left">' + esc(tr.name) + '</div>' + c.sty('sm') + '</div><div class="vbody">' + disc +
-    '<div class="vside">' + time + wformHTML('s') + '<div class="vrow tight vrate">' + c.rate + '</div><div class="ctrl5 vctl">' + c.list + c.back + c.fwd + c.abb + '</div></div></div></div>';
+    '<div class="vside">' + time + wformHTML('s') + marksHTML() + '<div class="vrow tight vrate">' + c.rate + '</div><div class="ctrl5 vctl">' + c.list + c.back + c.fwd + c.abb + '</div></div></div></div>';
 }
 
 function playerHTML() {
@@ -260,6 +324,7 @@ function playerHTML() {
       '<button class="cell act" data-x="aadd">' + t('upload') + '</button>' + (all.length && sid ? '<button class="cell act" data-x="apick">' + t('pickFromLib') + '</button>' : '') + '</div></div>';
   }
   const c = controls(), d = AU.el.duration || 0, name = '<div class="aname">' + esc(AU.cur.name) + '</div>';
+  if (isVideo(AU.cur)) return videoHTML(c, name, all, sid);
   if (size === 'quarter') return '<div class="vq">' + name + wformHTML('q') + '<div class="l2" style="font-size:12px">' + c.time + '</div>' + c.play + '<div class="vrow tight">' + c.rate + '</div></div>';
   if (size === 'strip') {
     return '<div class="vs"><div class="srow2" style="flex:none">' + name + '<span class="sgrow"></span><span class="l2" style="font-size:12px">' + c.time + '</span></div>' + wformHTML('s') +
@@ -270,17 +335,42 @@ function playerHTML() {
   const chips = (cls) => '<div class="chips nowrap afiles' + cls + '">' + sf.map((x) => '<button class="chip' + (x.id === AU.cur.id ? ' on' : '') + '" data-x="aload2" data-id="' + x.id + '">' + esc(x.name) + '</button>').join('') + '</div>';
   if (size === 'half') {
     return '<div class="ah2">' + c.back2 + '<div class="arow3">' + (sf.length > 1 ? chips(' sgrow') : '<div class="aname sgrow" style="text-align:left">' + esc(AU.cur.name) + '</div>') +
-      '<div class="vrow tight">' + c.rate + c.sty('sm') + '</div></div><div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div><div class="ctrl5">' +
+      '<div class="vrow tight">' + c.rate + c.sty('sm') + '</div></div><div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' +
       c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
   return '<div class="mcard av" style="position:relative">' + c.sty('corner') + c.back2 + (sf.length > 1 ? chips('') : name) + wformHTML('f') +
-    '<div class="num l2 atimes">' + c.time + '<span>' + (AU.a != null ? 'A ' + fmtT(AU.a) + (AU.b != null ? ' – B ' + fmtT(AU.b) : '') : t('dragHint')) + '</span><span id="adur">' + fmtT(d) + '</span></div>' +
-    '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
+    atimes(c, d) + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
+}
+
+const atimes = (c, d) => '<div class="num l2 atimes">' + c.time + '<span>' + (AU.a != null ? 'A ' + fmtT(AU.a) + (AU.b != null ? ' – B ' + fmtT(AU.b) : '') : ctx.t('dragHint')) +
+  '</span><span id="adur">' + fmtT(d) + '</span></div>';
+
+// Видео: картинка вместо волны и винила, под ней — шкала с A–B и метками
+function videoHTML(c, name, all, sid) {
+  const d = AU.el.duration || 0, sf = sid ? all.filter((x) => inSong(x, sid)) : [];
+  const head = sf.length > 1 ? '<div class="chips nowrap afiles">' + sf.map((x) => '<button class="chip' + (x.id === AU.cur.id ? ' on' : '') + '" data-x="aload2" data-id="' + x.id + '">' + esc(x.name) + '</button>').join('') + '</div>' : name;
+  if (size === 'strip') return '<div class="srow2 vidstrip">' + vidbox('s') + '<div class="sgrow" style="min-width:0;text-align:left">' + name + '<div class="l2 num vst">' + c.time + ' / ' + fmtT(d) + '</div></div>' + c.back + c.play + '</div>';
+  if (size === 'quarter') return '<div class="vq vidq">' + vidbox('q') + wformHTML('s') + '<div class="srow2" style="flex:none">' + c.play + '<span class="l2 num" style="font-size:12px">' + c.time + '</span></div></div>';
+  if (size === 'half') {
+    return '<div class="ah2 vidh">' + c.back2 + '<div class="arow3"><div class="sgrow" style="min-width:0">' + head + '</div><div class="vrow tight">' + c.rate + '</div></div>' + vidbox('h') +
+      '<div class="wfbox vt">' + wformHTML('s') + '<span class="wft num">' + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
+  }
+  return '<div class="mcard av vidf">' + c.back2 + head + vidbox('f') + wformHTML('s') + atimes(c, d) + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="ctrl5">' +
+    c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
 function render() {
   if (!host || !ctx) return;
+  // Во весь экран — элемент не трогаем, перерисуем по выходу
+  if (AU.el && document.fullscreenElement === AU.el) return;
   host.innerHTML = playerHTML();
+  place();
+}
+
+// Видео — в окно плеера (или в мини-плеер медиатеки), иначе — обратно в скрытое хранилище
+function place() {
+  const box = host && AU.cur && isVideo(AU.cur) && host.querySelector('.vidbox');
+  if (box) box.prepend(AU.el); else park();
 }
 
 /* ---------- обновление по ходу воспроизведения ---------- */
@@ -301,6 +391,8 @@ function uiTick() {
   }
   const c1 = q('#acur');
   if (c1) c1.textContent = fmtT(AU.el.currentTime);
+  const mks = host.querySelectorAll('.amk');
+  if (mks.length) { const k = currentMark(AU.cur.marks, AU.el.currentTime); mks.forEach((b, i) => b.classList.toggle('on', i === k)); }
   const c2 = q('#adur');
   if (c2) c2.textContent = fmtT(d);
   const ap = q('#aplay');
@@ -453,6 +545,91 @@ function menuSheet(id) {
   }));
 }
 
+// Тайм-коды текущего файла: добавить на текущее место, перейти, назвать, повторять отрезок до следующей, удалить
+function marksSheet() {
+  const { t, ui } = ctx, x = AU.cur;
+  if (!x) return;
+  const body = () => {
+    const ms = x.marks || [];
+    return ui.snav(t('marks')) + '<div class="group"><button class="cell act" data-mk="add">' + t('markAddAt', { time: fmtT(AU.el.currentTime) }) + '</button></div>' +
+      (ms.length ? '<div class="group">' + ms.map((m, i) => '<div class="cell mkrow"><button class="mkt num" data-mk="go" data-i="' + i + '" aria-label="' + esc(t('markGo', { n: i + 1, time: fmtT(m.t) })) + '"><b>' + (i + 1) +
+        '</b>' + fmtT(m.t) + '</button><input class="inp left grow" data-mn="' + i + '" maxlength="40" placeholder="' + esc(t('markName')) + '" aria-label="' + esc(t('markNameN', { n: i + 1 })) + '" value="' + esc(m.name || '') + '">' +
+        '<button class="ic txt sm" data-mk="loop" data-i="' + i + '" aria-label="' + t('markLoop') + '">A–B</button><button class="ic sm" data-mk="del" data-i="' + i + '" aria-label="' + t('markDel') + '" style="color:var(--red)">' + I.minus + '</button></div>').join('') + '</div>' : '') +
+      '<p class="ftr">' + t('marksInfo') + '</p>';
+  };
+  ui.sheet(body, (el, sh) => {
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-mk]');
+      if (!b) return;
+      const i = +b.dataset.i, ms = x.marks || [];
+      if (b.dataset.mk === 'add') { markAdd(); sh.update(); return; }
+      if (b.dataset.mk === 'go') { seekMark(i); sh.close(); return; }
+      if (b.dataset.mk === 'loop') { loopMark(i); sh.close(); return; }
+      if (b.dataset.mk === 'del') { x.marks = ms.filter((_, k) => k !== i); ctx.files.save(x); sh.update(); }
+    });
+    el.addEventListener('change', (e) => {
+      const n = e.target.closest('[data-mn]');
+      if (!n || !x.marks || !x.marks[+n.dataset.mn]) return;
+      x.marks[+n.dataset.mn].name = n.value.trim();
+      ctx.files.save(x);
+    });
+  }, { onClose: () => render() });
+}
+
+function markAdd() {
+  const x = AU.cur;
+  if (!x) return;
+  const r = addMark(x.marks, AU.el.currentTime);
+  x.marks = r.marks;
+  if (r.added) ctx.files.save(x); else render();
+  ctx.ui.toast(ctx.t(r.added ? 'markAdded' : 'markExists', { n: r.i + 1, time: fmtT(x.marks[r.i].t) }));
+}
+function seekMark(i) {
+  const m = AU.cur && (AU.cur.marks || [])[i];
+  if (!m) return;
+  AU.el.currentTime = m.t;
+  render();
+}
+function loopMark(i) {
+  if (!AU.cur || !AU.cur.marks || !AU.cur.marks[i]) return;
+  const [a, b] = markSpan(AU.cur.marks, i, AU.el.duration || AU.cur.dur || 0);
+  if (!(b > a)) return;
+  AU.a = a; AU.b = b; AU.loop = true;
+  AU.el.currentTime = a;
+  if (AU.el.paused) playEl();
+  render();
+}
+
+// Выбранные файлы — в песни: песня отмечена, если в ней все выбранные; нажатие добавляет все или убирает все
+function selSongsSheet() {
+  const { t, ui } = ctx, picked = () => [...ML.sel].map((id) => ctx.files.get(id)).filter(Boolean);
+  const body = () => {
+    const songs = ctx.songs(), xs = picked();
+    return ui.snav(t('toSongsN', { n: xs.length })) + '<div class="group">' + (songs.length ? songs.map((s) => {
+      const on = xs.length && xs.every((x) => inSong(x, s.id)), some = !on && xs.some((x) => inSong(x, s.id));
+      return '<button class="cell" data-sg="' + s.id + '" aria-pressed="' + !!on + '"><span class="grow">' + esc(s.title) + '</span>' + (some ? '<span class="l2" style="font-size:13px">' + t('some') + '</span>' : '') + (on ? ui.icons.check : '') + '</button>';
+    }).join('') : '<div class="cell l2">' + t('noSongs') + '</div>') + '</div><p class="ftr">' + t('toSongsInfo') + '</p>';
+  };
+  ui.sheet(body, (el, sh) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-sg]');
+    if (!b) return;
+    const xs = picked(), sid = b.dataset.sg, on = !xs.every((x) => inSong(x, sid));
+    xs.forEach((x) => { linkSong(x, sid, on); ctx.files.save(x); });
+    sh.update();
+  }), { onClose: () => render() });
+}
+
+async function removeSelected() {
+  const { t, ui, tn } = ctx, xs = [...ML.sel].map((id) => ctx.files.get(id)).filter(Boolean);
+  if (!xs.length || !(await ui.confirm(t('delSelTitle', { files: tn('files', xs.length) }), t('delText'), t('delete')))) return;
+  for (const x of xs) {
+    if (AU.cur && AU.cur.id === x.id) { AU.el.pause(); AU.cur = null; }
+    await ctx.files.remove(x.id);
+  }
+  ML.sel = null;
+  render();
+}
+
 function renameSheet(x, after) {
   const { t, ui } = ctx;
   ui.sheet(() => ui.snav(t('nameTitle'), { left: '<button class="link l" data-close>' + t('cancel') + '</button>', right: '<button class="link b r" id="rnok">' + t('save') + '</button>' }) +
@@ -485,14 +662,44 @@ async function addFile() {
   if (await ctx.confirmUpload()) input.click();
 }
 
+// Длительность и есть ли картинка — по самому файлу (без загрузки целиком); не вышло — по типу и расширению
+function probe(f) {
+  return new Promise((res) => {
+    const v = document.createElement('video'), url = URL.createObjectURL(f);
+    let done = false;
+    const end = (r) => { if (done) return; done = true; clearTimeout(tm); URL.revokeObjectURL(url); v.removeAttribute('src'); res(r); };
+    const tm = setTimeout(() => end(null), 6000);
+    v.preload = 'metadata';
+    v.muted = true;
+    v.onloadedmetadata = () => end({ dur: Number.isFinite(v.duration) ? v.duration : null, video: v.videoWidth > 0 });
+    v.onerror = () => end(null);
+    v.src = url;
+  });
+}
+
+// Можно выбрать сразу много файлов — аудио и видео вперемешку
 async function onFile(e) {
-  const f = e.target.files[0];
+  const fs = [...e.target.files];
   e.target.value = '';
-  if (!f) return;
-  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  const rec = { id, name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type, songs: curSong() ? [curSong()] : [], created: Date.now(), blob: f };
-  if (!(await ctx.files.add(rec))) ctx.ui.toast(ctx.t('notSaved'));
-  load(rec);
+  if (!fs.length) return;
+  const sid = curSong(), ids = [];
+  let lost = false, first = null;
+  for (const f of fs) {
+    if (!/^(audio|video)\//.test(f.type) && !VIDEO_EXT.test(f.name) && !/\.(mp3|m4a|aac|wav|ogg|oga|opus|flac)$/i.test(f.name)) continue;
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), p = await probe(f);
+    const rec = { id, name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type, songs: sid ? [sid] : [], created: Date.now(), blob: f,
+      video: p ? p.video : /^video\//.test(f.type) || VIDEO_EXT.test(f.name) };
+    if (p && p.dur) rec.dur = p.dur;
+    if (!(await ctx.files.add(rec))) lost = true;
+    ids.push(id);
+    first = first || rec;
+  }
+  if (!first) { ctx.ui.toast(ctx.t('notMedia')); return; }
+  if (lost) ctx.ui.toast(ctx.t('notSaved'));
+  else if (ids.length > 1) ctx.ui.toast(ctx.t('addedN', { files: ctx.tn('files', ids.length) }));
+  if (!AU.cur || ids.length === 1 || sid) load(first);
+  // Много файлов в медиатеку — сразу режим выбора с ними: удобно разложить по песням
+  if (ids.length > 1 && !sid) { ML.sel = new Set(ids); ML.view = 'lib'; ML.f = 'all'; ML.q = ''; }
   render();
 }
 
@@ -515,7 +722,7 @@ function act(a, el) {
         el.classList.toggle('act', ab === 'on');
         el.textContent = ab === 'a' ? 'B?' : 'A–B';
         const wf = host.querySelector('#wform');
-        if (wf) wf.outerHTML = wformHTML([...wf.classList].find((c) => c !== 'wform' && c !== 'wait') || 's');
+        if (wf) wf.outerHTML = wformHTML(wfCls(wf));
       } else render();
       break;
     case 'astep': AU.step = !AU.step; if (AU.step && AU.b == null) ui.toast(t('stepHint')); render(); break;
@@ -537,6 +744,26 @@ function act(a, el) {
     case 'mllib': ML.view = 'lib'; render(); break;
     case 'mlmenu': menuSheet(el.dataset.id); break;
     case 'mlf': ML.f = el.dataset.v; render(); break;
+    case 'mlselon': ML.sel = new Set(); render(); break;
+    case 'mlseloff': ML.sel = null; render(); break;
+    case 'mlsel': { const id = el.dataset.id; ML.sel.has(id) ? ML.sel.delete(id) : ML.sel.add(id); render(); break; }
+    case 'mlsall': {
+      const vis = [...host.querySelectorAll('[data-x="mlsel"]')].map((b) => b.dataset.id), on = !vis.every((id) => ML.sel.has(id));
+      vis.forEach((id) => (on ? ML.sel.add(id) : ML.sel.delete(id)));
+      render();
+      break;
+    }
+    case 'mlsong': if (ML.sel && ML.sel.size) selSongsSheet(); break;
+    case 'mldel': if (ML.sel && ML.sel.size) removeSelected(); break;
+    case 'amadd': markAdd(); break;
+    case 'amj': seekMark(+el.dataset.i); break;
+    case 'amlist': marksSheet(); break;
+    case 'afs': {
+      const v = AU.el, rq = v.requestFullscreen || v.webkitRequestFullscreen;
+      if (rq) { v.controls = true; Promise.resolve(rq.call(v)).catch(() => { v.controls = false; }); }
+      else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+      break;
+    }
   }
 }
 
@@ -567,7 +794,10 @@ function bind() {
     e.preventDefault();
     const x = e.clientX - r.left, near = (k) => AU[k] != null && Math.abs((AU[k] / d) * r.width - x) < 18, h = near('b') ? 'b' : near('a') ? 'a' : null;
     wf = { pid: e.pointerId, r, d, h };
-    if (!h) AU.el.currentTime = Math.max(0, Math.min(d, (x / r.width) * d));
+    // Нажатие рядом с меткой — точно на метку
+    const mi = h ? -1 : nearMark(AU.cur.marks, (x / r.width) * d, (12 / r.width) * d);
+    if (mi >= 0) { AU.el.currentTime = AU.cur.marks[mi].t; wf = null; }
+    else if (!h) AU.el.currentTime = Math.max(0, Math.min(d, (x / r.width) * d));
   }, true);
   on(window, 'pointermove', (e) => {
     if (!wf || e.pointerId !== wf.pid) return;
@@ -575,13 +805,14 @@ function bind() {
     if (wf.h === 'a') AU.a = Math.min(tt, AU.b != null ? AU.b - 0.2 : tt);
     else if (wf.h === 'b') AU.b = Math.max(tt, (AU.a || 0) + 0.2);
     else AU.el.currentTime = tt;
-    if (wf.h) { const w = host.querySelector('#wform'); if (w) w.outerHTML = wformHTML(w.className.replace('wform', '').replace('wait', '').trim()); }
+    if (wf.h) { const w = host.querySelector('#wform'); if (w) w.outerHTML = wformHTML(wfCls(w)); }
   }, { passive: true });
   const wfUp = (e) => { if (wf && e.pointerId === wf.pid) wf = null; };
   on(window, 'pointerup', wfUp, true);
   on(window, 'pointercancel', wfUp, true);
   // Волна с клавиатуры: стрелки — ±5 с
   on(host, 'keydown', (e) => {
+    if (e.target.classList.contains('vidbox') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); act('aplay', e.target); return; }
     if (e.target.id !== 'wform') return;
     if (e.key === 'ArrowRight') { AU.el.currentTime = Math.min(AU.el.duration || 0, AU.el.currentTime + 5); e.preventDefault(); }
     if (e.key === 'ArrowLeft') { AU.el.currentTime = Math.max(0, AU.el.currentTime - 5); e.preventDefault(); }
@@ -651,7 +882,8 @@ export default {
     ensureEl(c);
     input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'audio/*';
+    input.accept = 'audio/*,video/*';
+    input.multiple = true;
     input.hidden = true;
     input.addEventListener('change', onFile);
     document.body.appendChild(input);
@@ -668,6 +900,7 @@ export default {
     offs.splice(0).forEach((f) => (typeof f === 'function' ? f() : null));
     if (input) { input.remove(); input = null; }
     if (AU.el && !ctx.session) AU.el.pause();
+    park();
     cancelAnimationFrame(VIN.raf);
     VIN.raf = 0;
     host = null;
