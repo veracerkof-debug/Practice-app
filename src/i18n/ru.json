@@ -556,5 +556,7 @@
   "cal.kind.recording": "Запись",
   "cal.kind.deadline": "Дедлайн",
   "cal.kind.goal": "Цель по песне",
-  "cal.showMore": "Показать ещё"
+  "cal.showMore": "Показать ещё",
+  "lic.cap.sub": "Приложение для Android · версия 8.5.2",
+  "lic.cap.text": "Распространяется по лицензии MIT (github.com/ionic-team/capacitor). В приложение для Android входят также библиотеки AndroidX (Apache License 2.0, © The Android Open Source Project)."
 }

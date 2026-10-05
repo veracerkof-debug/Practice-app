@@ -85,3 +85,4 @@
 - `npm run preview` — посмотреть собранную версию
 - `npm test` — тесты (Vitest). `tests/parity.test.js` сверяет ядро с функциями из `legacy/practice.html`
 - `npx cap sync android` / `npx cap run android -l --external` — Android с живой перезагрузкой
+- Бета-APK собирает GitHub Actions (`.github/workflows/android-beta.yml`) при каждом пуше → релиз «beta», файл `Practice-Beta.apk`

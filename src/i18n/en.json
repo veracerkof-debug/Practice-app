@@ -547,5 +547,7 @@
   "cal.kind.recording": "Recording",
   "cal.kind.deadline": "Deadline",
   "cal.kind.goal": "Song goal",
-  "cal.showMore": "Show more"
+  "cal.showMore": "Show more",
+  "lic.cap.sub": "Android app · version 8.5.2",
+  "lic.cap.text": "Distributed under the MIT License (github.com/ionic-team/capacitor). The Android app also includes AndroidX libraries (Apache License 2.0, © The Android Open Source Project)."
 }

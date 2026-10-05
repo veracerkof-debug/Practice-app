@@ -538,5 +538,7 @@
   "cal.kind.recording": "Yozuv",
   "cal.kind.deadline": "Muddat",
   "cal.kind.goal": "Qoʻshiq maqsadi",
-  "cal.showMore": "Yana koʻrsatish"
+  "cal.showMore": "Yana koʻrsatish",
+  "lic.cap.sub": "Android uchun ilova · 8.5.2 versiya",
+  "lic.cap.text": "MIT litsenziyasi boʻyicha tarqatiladi (github.com/ionic-team/capacitor). Android ilovasiga AndroidX kutubxonalari ham kiradi (Apache License 2.0, © The Android Open Source Project)."
 }

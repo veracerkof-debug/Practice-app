@@ -1,0 +1,8 @@
+{
+  "appId": "app.practice.beta",
+  "appName": "Beta",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}

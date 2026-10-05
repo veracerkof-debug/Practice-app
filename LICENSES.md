@@ -13,6 +13,8 @@
 | ↳ внутри alphaTab: libvorbis (через NVorbis) — © Xiph.org Foundation | Декодирование Vorbis | BSD-3-Clause |
 | Bravura — © 2013 Steinberg Media Technologies GmbH, Reserved Font Name «Bravura» | Нотный шрифт (SMuFL) для alphaTab, файл `Bravura.woff2` из пакета alphaTab | SIL OFL 1.1 |
 | SONiVOX EAS — © 2004–2006 Sonic Network Inc. | Звуковой банк для воспроизведения табулатур, файл `sonivox.sf3` из пакета alphaTab без изменений | Apache-2.0 |
+| [Capacitor](https://github.com/ionic-team/capacitor) 8.5.2 (`@capacitor/core`, `@capacitor/android`) — © Ionic и участники | Приложение для Android: оболочка WebView и мост к системе | MIT |
+| AndroidX (appcompat, coordinatorlayout, core-splashscreen, webkit и др.) — © The Android Open Source Project | Библиотеки Android, входят в APK через Capacitor | Apache-2.0 |
 
 Все остальные звуки (метроном, пианино, дрон, пэды, клики) синтезируются в реальном времени, чужих записей нет.
 
@@ -20,5 +22,5 @@
 
 | Компонент | Лицензия |
 |---|---|
-| Vite, Vitest | MIT |
+| Vite, Vitest, @capacitor/cli | MIT |
 | @coderline/alphatab-vite — подключение воркеров alphaTab при сборке | MPL-2.0 |

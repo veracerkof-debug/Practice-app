@@ -1,0 +1,68 @@
+# Бета-версия для Android: собирает APK и кладёт его в релиз «beta» (ссылка не меняется:
+# releases/download/beta/Practice-Beta.apk). Сборка — на серверах GitHub, там уже есть Android SDK.
+name: Android beta APK
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths-ignore: ['**.md', 'docs/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-beta
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Зависимости
+        run: npm ci
+
+      - name: Тесты
+        run: npm test
+
+      - name: Веб-сборка и перенос в Android
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Сборка APK
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk ../Practice-Beta.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Practice-Beta-${{ github.run_number }}
+          path: Practice-Beta.apk
+
+      - name: Выложить в релиз «beta»
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Beta 1.0, сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ветка ${GITHUB_REF_NAME}). Скачать на телефон: Practice-Beta.apk"
+          if ! gh release view beta >/dev/null 2>&1; then
+            gh release create beta --prerelease --title "Beta 1.0" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+          gh release edit beta --notes "$NOTES"
+          gh release upload beta Practice-Beta.apk --clobber
