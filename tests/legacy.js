@@ -4,7 +4,8 @@ import vm from 'node:vm';
 
 const html = readFileSync(new URL('../legacy/practice.html', import.meta.url), 'utf8');
 const lines = html.slice(html.indexOf('<script>'), html.lastIndexOf('</script>')).split('\n');
-const STMT = /^(function |const |let |\/\*|document\.|\$\(|\(function|applyTheme\(|fixSettings\(|try\{)/;
+// В прототипе продолжения операторов начинаются с отступа; новая строка без отступа — новый оператор
+const STMT = /^[^\s}]/;
 
 // Оператор верхнего уровня, начинающийся со строки, подходящей под re (до следующего оператора)
 function grab(re) {
@@ -13,6 +14,14 @@ function grab(re) {
   let j = i + 1;
   while (j < lines.length && !STMT.test(lines[j])) j++;
   return lines.slice(i, j).join('\n');
+}
+
+// Запустить выбранные куски прототипа; exportsCode — выражение-объект с нужными функциями
+export function runLegacy(res, exportsCode, globals = {}) {
+  const code = 'let S=globalThis.__S0;\n' + res.map(grab).join('\n') + '\nglobalThis.__L=' + exportsCode + ';';
+  const ctx = vm.createContext({ Date, Math, JSON, Object, Array, Map, Set, String, Number, Float32Array, ...globals });
+  vm.runInContext(code, ctx);
+  return ctx.__L;
 }
 
 export function loadLegacy() {
