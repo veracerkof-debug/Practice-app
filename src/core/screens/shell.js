@@ -6,7 +6,7 @@ import { confirm } from '../../ui/index.js';
 import { deleteSong } from '../library.js';
 import { TAB_ICONS, TAB_IDS } from './common.js';
 import { visibleTabs } from '../settings.js';
-import { homeHTML, quickEdit, streakSheet } from './home.js';
+import { homeHTML, quickEdit, streakSheet, gemSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { createPanel, donateSheet, legalSheet, tosGate } from './panel.js';
@@ -68,6 +68,7 @@ export function createShell(app, root) {
     else if (d.act === 'donate') donateSheet();
     else if (d.act === 'legal') legalSheet(d.v);
     else if (d.act === 'streak') streakSheet(app);
+    else if (d.act === 'gem') gemSheet(app);
     else if (d.cat !== undefined) { view.cat = d.cat; view.genre = ''; view.tag = ''; render(); }
     else if (d.fg !== undefined) { view.genre = view.genre === d.fg ? '' : d.fg; render(); }
     else if (d.ft !== undefined) { view.tag = view.tag === d.ft ? '' : d.ft; render(); }

@@ -17,6 +17,7 @@ import { moduleName } from '../modules.js';
 import { AVATAR, CHEV, BACK, IC, TAB_IDS, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
 import { freeTagName, trackMode } from '../session.js';
+import { gemSVG } from '../../ui/gems.js';
 
 const PAGES = {
   feat: ['#34C759', '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="15" cy="12" r="3.5"/></svg>'],
@@ -147,7 +148,7 @@ function featHTML(app) {
   return '<div class="large">' + t('feat.title') + '</div><p class="sub" style="margin:0 4px 12px">' + t('feat.hint') + '</p>' +
     '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
     modules.map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '')).join('') + '</div>' +
-    '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, FLAME, '#FF9500', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>' +
+    '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : FLAME, k === 'mastery' ? '#5856D6' : '#FF9500', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>' +
     '<p class="ftr">' + t('feat.own') + '</p>' +
     (skippedModules.length ? '<p class="ftr" style="color:var(--red)">' + esc(t('feat.skipped', { list: skippedModules.map((x) => x.path.split('/').slice(-2, -1)[0] + ' (' + x.err + ')').join(', ') })) + '</p>' : '');
 }

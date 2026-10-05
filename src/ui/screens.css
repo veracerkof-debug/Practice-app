@@ -189,3 +189,20 @@
 .tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:900px){.tgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .tcard2{min-width:0}
+/* Значок мастерства: строка на главной и шторка ступеней */
+.gemrow{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:8px 14px 8px 10px;border-radius:18px;background:var(--cell);text-align:left;min-height:64px}
+.gemrow .gtxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.gemrow .gtxt b{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.gemrow .gtxt .l2{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gemrow .chev{width:8px;height:13px;stroke:var(--l3);fill:none;stroke-width:2;flex:none}
+.gem{flex:none;display:block}
+.gem .gsp{animation:gtw 2.6s ease-in-out infinite}
+@keyframes gtw{50%{opacity:.2}}
+.gemhero{display:flex;flex-direction:column;align-items:center;gap:6px;margin:4px 0 16px;text-align:center}
+.gemhero .gname{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.gbar{width:min(100%,280px);height:8px;border-radius:4px;background:var(--fill);overflow:hidden;margin-top:6px}
+.gbar i{display:block;height:100%;background:var(--tint);border-radius:4px}
+.gemli{gap:12px}
+.gemli.locked .gem{filter:grayscale(1);opacity:.35}
+.gemli.locked .grow{color:var(--l2)}
+.gemli.cur{background:color-mix(in srgb,var(--tint) 8%,var(--cell))}

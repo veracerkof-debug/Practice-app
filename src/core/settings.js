@@ -1,7 +1,7 @@
 // Настройки ядра: цель недели, дни практики, тема, функции (вкл/выкл).
 
 // Функции ядра, которые можно выключить (модули выключаются так же — по id); данные при этом сохраняются
-export const CORE_FEATURES = ['streak'];
+export const CORE_FEATURES = ['streak', 'mastery'];
 
 export const isOn = (settings, id) => !((settings.off || {})[id]);
 
