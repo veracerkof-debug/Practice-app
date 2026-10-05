@@ -8,6 +8,8 @@ android/app/build/
 android/.gradle/
 android/local.properties
 *.keystore
+# Ключ бета-сборки — намеренно в репозитории (см. DECISIONS.md); ключ для Google Play сюда не попадает
+!android/beta.keystore
 *.jks
 
 # окружение и система
