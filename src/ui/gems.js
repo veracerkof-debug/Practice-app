@@ -20,7 +20,7 @@ function stone(id, f) {
   const shape = '12,58 18,34 36,18 60,16 80,28 88,52 78,76 54,86 28,80';
   return '<defs><radialGradient id="' + id + 's" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="' + hsl(30, 4, 70 + f * 10) + '"/><stop offset="1" stop-color="' + hsl(30, 4, 36) + '"/></radialGradient></defs>' +
     '<polygon points="' + shape + '" fill="url(#' + id + 's)" stroke="' + hsl(30, 4, 30) + '" stroke-width="1.2" stroke-linejoin="round"/>' +
-    '<polyline points="36,18 44,44 18,34 M44,44 60,16 M44,44 54,86 M44,44 88,52" fill="none" stroke="' + hsl(30, 4, 30, 0.35) + '" stroke-width="1"/>' +
+    '<path d="M36 18L44 44L18 34M44 44L60 16M44 44L54 86M44 44L88 52" fill="none" stroke="' + hsl(30, 4, 30, 0.35) + '" stroke-width="1"/>' +
     [[30, 50], [62, 58], [50, 34], [68, 42]].map(([x, y]) => '<circle cx="' + x + '" cy="' + y + '" r="1.6" fill="' + hsl(30, 4, 25, 0.5) + '"/>').join('');
 }
 
@@ -28,7 +28,7 @@ function rough(id, f) {
   const out = '50,8 82,32 74,78 50,92 24,76 16,34', o = 0.75 + f * 0.2;
   return '<defs><linearGradient id="' + id + 'r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + hsl(200, 20, 92, o) + '"/><stop offset="1" stop-color="' + hsl(210, 15, 62, o) + '"/></linearGradient></defs>' +
     '<polygon points="' + out + '" fill="url(#' + id + 'r)" stroke="' + hsl(210, 15, 45) + '" stroke-width="1.2" stroke-linejoin="round"/>' +
-    '<polyline points="16,34 50,44 82,32 M50,44 50,8 M50,44 50,92 M50,44 24,76 M50,44 74,78" fill="none" stroke="' + hsl(210, 20, 100, 0.55 + f * 0.3) + '" stroke-width="1.1"/>';
+    '<path d="M16 34L50 44L82 32M50 44L50 8M50 44L50 92M50 44L24 76M50 44L74 78" fill="none" stroke="' + hsl(210, 20, 100, 0.55 + f * 0.3) + '" stroke-width="1.1"/>';
 }
 
 function cut(id, gem, f) {
