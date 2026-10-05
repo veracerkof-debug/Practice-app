@@ -54,19 +54,6 @@
 .cwrap.f .cgrid{grid-template-columns:repeat(4,1fr);margin-top:6px}
 .cwrap.h .csvg{max-width:52%}
 .cside{justify-content:center}
-.comp{flex:1;display:flex;flex-direction:column;min-height:0;gap:6px}
-.cbody{flex:1;display:flex;flex-direction:column;min-height:0}
-.csw{display:flex;gap:4px;justify-content:center;flex:none}
-.cswb{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:600;color:var(--l2)}
-.cswb svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.cswb.on{background:var(--fill);color:var(--ink)}
-.cswb.txt{font-size:12px}
-.comp.quarter .csw,.comp.strip .csw{position:absolute;top:2px;left:6px;z-index:3}
-.comp.quarter .cswb,.comp.strip .cswb{height:24px;padding:0 6px}
-.comp.strip .csw{flex-direction:row}
-.tsw{display:flex;gap:2px;background:var(--fill);border-radius:10px;padding:2px;flex:none;overflow-x:auto;scrollbar-width:none}
-.tswb{flex:1;min-height:30px;border-radius:8px;font-size:13px;font-weight:600;color:var(--l2);white-space:nowrap;padding:0 8px}
-.tswb.on{background:var(--cell);color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.08)}
 .cname{font-size:clamp(24px,14cqmin,56px);font-weight:700;letter-spacing:-.02em}
 .cname.sm{font-size:20px}
 .igrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:100%}
@@ -85,13 +72,6 @@
 .fn{cursor:pointer}
 .fnum{font:500 9px var(--font);fill:var(--l2)}
 .vtog{display:flex;justify-content:center;margin-top:8px}
-.comp.strip{flex-direction:row!important;gap:8px}
-.comp.strip>.csw,.comp.quarter>.csw{position:static!important}
-.comp.strip>.csw{flex-direction:column!important;justify-content:center;gap:4px;flex:none}
-.comp.strip .cswb{width:34px;height:34px!important;padding:0!important;justify-content:center;border-radius:10px}
-.comp.quarter>.csw{justify-content:center;gap:2px}
-.comp.quarter .cswb{height:28px!important;padding:0 8px!important}
-.comp.strip>.cbody{min-width:0}
 .pane.strip .ktitle{min-width:70px;font-size:14px}
 .swrap{flex:1;overflow:auto;min-height:0;display:flex;flex-direction:column;gap:8px;scrollbar-width:none}
 .swrap::-webkit-scrollbar{display:none}

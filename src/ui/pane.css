@@ -63,11 +63,31 @@
 .pane.strip .bigplay{width:clamp(42px,44cqh,68px);height:clamp(42px,44cqh,68px)}
 .pane.strip .srow2{gap:8px}
 .pane.strip .vs .srow2{flex:none}
+.comp{flex:1;display:flex;flex-direction:column;min-height:0;gap:6px}
+.cbody{flex:1;display:flex;flex-direction:column;min-height:0}
+.csw{display:flex;gap:4px;justify-content:center;flex:none}
+.cswb{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:600;color:var(--l2)}
+.cswb svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.cswb.on{background:var(--fill);color:var(--ink)}
+.cswb.txt{font-size:12px}
+.comp.quarter .csw,.comp.strip .csw{position:absolute;top:2px;left:6px;z-index:3}
+.comp.quarter .cswb,.comp.strip .cswb{height:24px;padding:0 6px}
+.comp.strip .csw{flex-direction:row}
+.tsw{display:flex;gap:2px;background:var(--fill);border-radius:10px;padding:2px;flex:none;overflow-x:auto;scrollbar-width:none}
+.tswb{flex:1;min-height:30px;border-radius:8px;font-size:13px;font-weight:600;color:var(--l2);white-space:nowrap;padding:0 8px}
+.tswb.on{background:var(--cell);color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.08)}
 .pane.quarter .vq .ic.round{width:clamp(44px,30cqw,64px);height:clamp(44px,30cqw,64px)}
 .pane.quarter .vq .bigplay{width:clamp(56px,40cqw,88px);height:clamp(56px,40cqw,88px)}
 .pane.strip .vs .ic.round{width:clamp(42px,40cqh,62px);height:clamp(42px,40cqh,62px)}
 .pane.strip .vs .bigplay{width:clamp(50px,54cqh,80px);height:clamp(50px,54cqh,80px)}
 .chip.on{background:var(--tint);color:var(--on-tint)}
+.comp.strip{flex-direction:row!important;gap:8px}
+.comp.strip>.csw,.comp.quarter>.csw{position:static!important}
+.comp.strip>.csw{flex-direction:column!important;justify-content:center;gap:4px;flex:none}
+.comp.strip .cswb{width:34px;height:34px!important;padding:0!important;justify-content:center;border-radius:10px}
+.comp.quarter>.csw{justify-content:center;gap:2px}
+.comp.quarter .cswb{height:28px!important;padding:0 8px!important}
+.comp.strip>.cbody{min-width:0}
 .pane.strip .vs{gap:4px;justify-content:center}
 .pane.strip .srow2{gap:8px;min-width:0}
 .pane.strip .vs .ic.round,.pane.strip .srow2>.ic.round{width:clamp(34px,28cqh,46px)!important;height:clamp(34px,28cqh,46px)!important;flex:none}

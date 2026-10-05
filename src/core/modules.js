@@ -86,6 +86,20 @@ export function makeCtx(app, mod) {
     peek: (id) => JSON.parse(JSON.stringify(app.device[id] || {})),
     shared: app.shared,
     get session() { return app.active ? { type: app.active.type, songId: app.active.songId } : null; },
+    // Песня текущей сессии (копия): { id, title, notes, tr } или null
+    song() {
+      const s = app.active && app.active.songId && app.store.songById(app.active.songId);
+      return s ? { id: s.id, title: s.title, notes: s.notes || '', tr: s.tr || 0 } : null;
+    },
+    // Правка песни текущей сессии: только текст с аккордами (notes) и транспонирование (tr)
+    updateSong(patch) {
+      const s = app.active && app.active.songId && app.store.songById(app.active.songId);
+      if (!s) return;
+      if ('notes' in patch) s.notes = String(patch.notes);
+      if ('tr' in patch) s.tr = Math.max(-11, Math.min(11, Math.round(+patch.tr || 0)));
+      s.updatedAt = app.store.now();
+      app.store.save();
+    },
     ui,
   };
 }

@@ -1,0 +1,16 @@
+/* Табы и текст. Перенесено из legacy/practice.html (порядок правил сохранён). */
+.ntools{display:flex;align-items:center;gap:6px;justify-content:space-between;flex:none;margin-bottom:6px}
+.trv{min-width:2.4ch;text-align:center;font-weight:700}
+.lyr{flex:1;overflow:auto;white-space:pre-wrap;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;line-height:1.55;padding:4px 2px;min-height:0}
+.chd{color:var(--tint-text);font-weight:700}
+.atwrap{flex:1;overflow:auto;min-height:0;background:#fff;border-radius:12px;position:relative;-webkit-overflow-scrolling:touch}
+.atsurf{min-height:100%}
+.atload{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+.tablist{flex:1;overflow:auto;min-height:0}
+.pane.strip .lyr{font-size:12px!important}
+.pane.strip .ntools{display:none}
+.pane.quarter .ntools{flex-wrap:wrap;justify-content:center}
+.atbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 0 6px}
+.atpl{width:44px!important;height:44px!important;box-shadow:none}
+/* Полоса: подпись «Текст ›» на кнопке не помещалась в квадрат 34 px */
+.pane[data-tool="notes"] .comp.strip .cswb{width:auto;padding:0 8px!important;white-space:nowrap}

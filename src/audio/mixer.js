@@ -87,8 +87,9 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
     elementVolume: (bus) => Math.min(1, value(bus)),
 
     // Играет ли источник сейчас — для подсветки в шторке
-    probe(bus, fn) { probes[bus] = fn; },
-    isActive: (bus) => !!(probes[bus] && probes[bus]()),
+    // (на шину могут смотреть несколько источников: медиатека и табы — обе на 'media')
+    probe(bus, fn) { (probes[bus] ??= new Set()).add(fn); },
+    isActive: (bus) => !!probes[bus] && [...probes[bus]].some((fn) => fn()),
 
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
     apply,
