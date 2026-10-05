@@ -5,6 +5,8 @@ import en from './en.json';
 
 const dicts = { ru, uz, en };
 export const LANGS = Object.keys(dicts);
+// Название языка на нём самом
+export const LANG_NAMES = { ru: 'Русский', uz: 'Oʻzbekcha', en: 'English' };
 let lang = 'ru';
 
 export function initI18n(preferred) {

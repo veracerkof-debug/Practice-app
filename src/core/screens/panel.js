@@ -2,7 +2,7 @@
 // поддержать разработчика, правовые тексты, соглашение при первом запуске.
 // Перенесено из legacy/practice.html (panelRoot, renderPanel, PPAGES, weekHTML, lookHTML, dataHTML, featHTML, statsHTML,
 // barsSVG, hbars, legalSheet, tosGate, donateSheet, doExport, импорт копии).
-import { t, tn, getLang, LANGS } from '../../i18n/index.js';
+import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm } from '../../ui/index.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
@@ -17,9 +17,11 @@ import { moduleName } from '../modules.js';
 import { AVATAR, CHEV, BACK, IC, TAB_IDS, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
 import { freeTagName, trackMode } from '../session.js';
+import { INSTRUMENTS, LEVELS, PRIOR_MAX, lifetimeSec, saveProfile, newProfile } from '../profile.js';
 import { gemSVG } from '../../ui/gems.js';
 
 const PAGES = {
+  me: ['#FF9500', '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M5 19.5c1.4-3.2 4-4.6 7-4.6s5.6 1.4 7 4.6"/></svg>'],
   feat: ['#34C759', '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="15" cy="12" r="3.5"/></svg>'],
   tabs: ['#8E8E93', '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 15.5h17M9.2 15.5v4M14.8 15.5v4"/></svg>'],
   stats: ['#007AFF', '<svg viewBox="0 0 24 24"><path d="M5 20v-6M10 20V9M15 20v-8M20 20V5"/></svg>'],
@@ -28,7 +30,6 @@ const PAGES = {
   data: ['#34C759', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
 const HEART = '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
-const LANG_NAMES = { ru: 'Русский', uz: 'Oʻzbekcha', en: 'English' };
 const VERSION = '0.0.1';
 
 /* ---------- статистика ---------- */
@@ -103,6 +104,19 @@ export { freeTagName };
 
 const psw = (key, on, label) => '<label class="sw"><input type="checkbox" data-psw="' + key + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(label) + '"><i></i></label>';
 
+// Обо мне: имя, инструменты, уровень, опыт до приложения (то же, что при регистрации)
+function meHTML(app) {
+  const p = { ...newProfile(), ...(app.store.state.settings.profile || {}) };
+  const chip = (attr, on, label) => '<button class="lchip pick mech' + (on ? ' on' : '') + '" ' + attr + ' aria-pressed="' + on + '" style="--c:var(--tint);--t:var(--on-tint)">' + esc(label) + '</button>';
+  return '<div class="large">' + t('page.me') + '</div>' +
+    '<div class="group"><label class="cell"><span class="grow">' + t('ob.name') + '</span><input class="inp" data-me="name" maxlength="40" placeholder="' + t('ob.namePh') + '" aria-label="' + t('ob.name') + '" value="' + esc(p.name) + '"></label></div>' +
+    '<div class="hdr">' + t('ob.instTitle') + '</div><div class="group"><div class="cellcol"><div class="pickrow">' + INSTRUMENTS.map((k) => chip('data-meinst="' + k + '"', p.instruments.includes(k), t('inst.' + k))).join('') + '</div></div></div>' +
+    '<div class="hdr">' + t('ob.levelTitle') + '</div><div class="group"><div class="cellcol">' + seg('melevel', LEVELS.map((k) => [k, t('level.' + k)]), p.level, t('ob.levelTitle')).replace('class="seg"', 'class="seg g2"') +
+    '<div class="segcap">' + t('level.' + p.level + '.text') + '</div></div></div>' +
+    '<div class="hdr">' + t('ob.expTitle') + '</div><div class="group"><label class="cell"><span class="grow">' + t('ob.hours') + '</span><input class="inp num" data-me="priorHours" type="number" inputmode="numeric" min="0" max="' + PRIOR_MAX + '" placeholder="0" aria-label="' + t('ob.hours') + '" value="' + (p.priorHours || '') + '"></label></div>' +
+    '<p class="ftr">' + t('me.hint') + '</p>';
+}
+
 function weekHTML(app) {
   const st = app.store.state.settings, WD = weekdays();
   return '<div class="large">' + t('week.title') + '</div>' +
@@ -168,8 +182,10 @@ function tabsHTML(app) {
 
 function rootHTML(app) {
   const all = app.store.sessions(), n = app.store.songs().length, weeks = streakInfo(all, app.store.state.settings).weeks;
-  return '<div class="phero"><div class="pav">' + AVATAR + '</div><div class="large" style="margin:12px 0 2px;text-align:center">' + t('panel.title') + '</div></div>' +
-    '<div class="tiles num"><div class="tile"><b>' + fmtDur(totalTime(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
+  const pr = app.store.state.settings.profile || {}, sub = (pr.instruments || []).map((k) => t('inst.' + k)).join(', ');
+  return '<div class="phero"><div class="pav">' + AVATAR + '</div><div class="large" style="margin:12px 0 2px;text-align:center">' + esc(pr.name || t('panel.title')) + '</div>' +
+    (sub ? '<div class="l2" style="text-align:center;font-size:15px">' + esc(sub) + (pr.level ? ' · ' + t('level.' + pr.level) : '') + '</div>' : '') + '</div>' +
+    '<div class="tiles num"><div class="tile"><b>' + fmtDur(lifetimeSec(all, app.store.state.settings)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>' +
     '<div class="group" style="margin-top:20px">' + Object.entries(PAGES).map(([k, [c, ic]]) => '<button class="cell" data-pp="' + k + '"><span class="ticon" style="background:' + c + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="background:#FF2D55">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button></div>' +
@@ -195,7 +211,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const body = { root: rootHTML, stats: statsHTML, week: weekHTML, look: lookHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML }[page](app);
+    const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML }[page](app);
     layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="link" data-pp="root">' + BACK + t('panel.back') + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
     layer.scrollTop = y;
@@ -213,6 +229,12 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
       if ((b = g('[data-acc]'))) { app.store.state.settings.accent = b.dataset.acc; applyTheme(app.store.state.settings); changed(); return; }
+      if ((b = g('[data-meinst]'))) {
+        const p = { ...newProfile(), ...(app.store.state.settings.profile || {}) }, k = b.dataset.meinst;
+        p.instruments = p.instruments.includes(k) ? p.instruments.filter((x) => x !== k) : [...p.instruments, k];
+        saveProfile(app.store, p); render(); onChange(); return;
+      }
+      if ((b = g('[data-seg="melevel"] [data-v]'))) { saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), level: b.dataset.v }); render(); onChange(); return; }
       if ((b = g('[data-seg="track"] [data-v]'))) { app.store.state.settings.trackMode = b.dataset.v; changed(); return; }
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); setTimeout(() => location.reload(), 150); return; }
@@ -236,6 +258,7 @@ export function createPanel(app, onChange) {
       const d = e.target.dataset;
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); return; }
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); }
+      if (d.me) { saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value }); onChange(); }
     });
   }
   // Выбор файла копии живёт вне панели: панель перерисовывается целиком
@@ -314,9 +337,11 @@ export function legalSheet(kind) {
 }
 
 // Соглашение при первом запуске (и при смене редакции)
-export function tosGate(app) {
+// then() — после согласия (или сразу, если оно уже дано): дальше регистрация
+export function tosGate(app, then = () => {}) {
   const st = app.store.state.settings;
-  if (st.tosOk === TOS_VER || document.getElementById('tosGate')) return;
+  if (document.getElementById('tosGate')) return;
+  if (st.tosOk === TOS_VER) { then(); return; }
   const l = document.createElement('div');
   l.id = 'tosGate';
   l.className = 'ask';
@@ -326,7 +351,7 @@ export function tosGate(app) {
   document.body.appendChild(l);
   l.addEventListener('click', (e) => {
     if (e.target.closest('[data-tos-read]')) legalSheet('tos');
-    else if (e.target.closest('[data-tos-ok]')) { st.tosOk = TOS_VER; app.store.settingsChanged(); l.remove(); }
+    else if (e.target.closest('[data-tos-ok]')) { st.tosOk = TOS_VER; app.store.settingsChanged(); l.remove(); then(); }
   });
 }
 

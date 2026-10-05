@@ -1,0 +1,57 @@
+// Профиль музыканта: имя, инструменты, уровень, опыт до приложения. Хранится только на устройстве (settings.profile,
+// попадает в резервную копию). Без DOM.
+import { totalTime } from './stats.js';
+
+// Порядок — как в списке при регистрации. Названия — ключи i18n inst.<id>
+export const INSTRUMENTS = ['guitar', 'egtr', 'bass', 'uke', 'piano', 'vocal', 'drums', 'violin', 'viola', 'cello', 'dbass',
+  'flute', 'sax', 'trumpet', 'clarinet', 'mando', 'banjo', 'other'];
+export const LEVELS = ['beginner', 'amateur', 'advanced', 'pro'];
+// Цель недели по уровню (минуты) — подсказка на шаге «Цель», её можно поменять
+export const GOAL_BY_LEVEL = { beginner: 180, amateur: 300, advanced: 600, pro: 900 };
+export const PRIOR_MAX = 100000;
+
+// Строй тюнера для инструмента (первый из выбранных, у которого есть строй)
+const TUNING = { guitar: 'g_std', egtr: 'g_std', bass: 'b4', dbass: 'b4', uke: 'u_std', violin: 'violin', viola: 'viola', cello: 'cello', mando: 'mando', banjo: 'banjo' };
+export function tuningFor(instruments = []) {
+  const i = instruments.find((x) => TUNING[x]);
+  return i ? TUNING[i] : null;
+}
+
+export const priorHours = (settings) => Math.max(0, Math.min(PRIOR_MAX, +((settings.profile || {}).priorHours) || 0));
+
+// Всё время музыканта, с: записанные занятия плюс опыт до приложения (для значка мастерства и «всего»)
+export const lifetimeSec = (sessions, settings) => totalTime(sessions) + priorHours(settings) * 3600;
+
+// Оценка опыта: годы занятий × часов в неделю × 52 недели
+export const estimateHours = (years, perWeek) => Math.max(0, Math.round((+years || 0) * 52 * (+perWeek || 0)));
+
+export function newProfile() {
+  return { name: '', instruments: [], level: 'amateur', priorHours: 0 };
+}
+
+// Сохранить профиль; done — регистрация пройдена (её больше не показывать)
+export function saveProfile(store, p, { done = false } = {}) {
+  const st = store.state.settings;
+  st.profile = {
+    name: String(p.name || '').trim().slice(0, 40),
+    instruments: INSTRUMENTS.filter((x) => (p.instruments || []).includes(x)),
+    level: LEVELS.includes(p.level) ? p.level : 'amateur',
+    priorHours: Math.round(Math.max(0, Math.min(PRIOR_MAX, +p.priorHours || 0))),
+    createdAt: (st.profile && st.profile.createdAt) || store.now(),
+  };
+  if (done) st.configured = true;
+  store.settingsChanged();
+  return st.profile;
+}
+
+// Настройки инструментов под уровень (применяются при регистрации). Новичку: тюнер в режиме новичка со строем
+// его инструмента, глайдер — только ноты в одной октаве. Остальным уровням ничего не навязываем
+export function applyLevelDefaults(device, profile) {
+  const tun = tuningFor(profile.instruments);
+  if (tun) device.tuner.tuning = tun;
+  if (profile.level !== 'beginner') return device;
+  device.tuner.beginner = true;
+  device.tuner.useTuning = !!tun;
+  device.glider = { ...(device.glider || {}), snap: 'note', width: 12, lo: 60 };
+  return device;
+}

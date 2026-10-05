@@ -6,6 +6,7 @@ import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
 import { weekData, goalProgress, songStats, streakInfo, strictTime, totalTime } from '../stats.js';
 import { GEMS, gemOf } from '../mastery.js';
+import { lifetimeSec, priorHours } from '../profile.js';
 import { gemSVG } from '../../ui/gems.js';
 import { weekStart } from '../time.js';
 import { genreOf, ensureLib } from '../library.js';
@@ -115,16 +116,17 @@ const hoursText = (h) => fmtDur(h * 3600);
 function gemRow(app) {
   const st = app.store.state.settings;
   if (!isOn(st, 'mastery')) return '';
-  const total = totalTime(app.store.sessions()), g = gemOf(total / 3600), name = t('gem.' + g.gem.id);
+  const total = lifetimeSec(app.store.sessions(), st), g = gemOf(total / 3600), name = t('gem.' + g.gem.id);
   return '<button class="gemrow" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(total) })) + '">' + gemSVG(g.gem.id, g.frac, 50) +
     '<span class="gtxt"><b class="num">' + fmtDur(total) + '</b><span class="l2">' + esc(name) + (g.next ? ' · ' + esc(t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) })) : '') + '</span></span>' +
     '<svg class="chev" viewBox="0 0 8 13"><path d="M1.5 1.5 6.5 6.5 1.5 11.5"/></svg></button>';
 }
 
 export function gemSheet(app) {
-  const total = totalTime(app.store.sessions()), g = gemOf(total / 3600);
+  const st = app.store.state.settings, total = lifetimeSec(app.store.sessions(), st), g = gemOf(total / 3600), prior = priorHours(st);
   sheet(() => snav(t('gem.title')) +
     '<div class="gemhero">' + gemSVG(g.gem.id, g.frac, 150, t('gem.' + g.gem.id)) + '<div class="gname">' + t('gem.' + g.gem.id) + '</div><div class="l2 num">' + t('gem.total', { total: fmtDur(total) }) + '</div>' +
+    (prior ? '<div class="l2 num" style="font-size:13px">' + t('gem.prior', { h: hoursText(prior) }) + '</div>' : '') +
     (g.next ? '<div class="gbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(g.frac * 100) + '"><i style="width:' + g.frac * 100 + '%"></i></div><div class="l2" style="font-size:13px">' +
       t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) }) + '</div>' : '<div class="l2" style="font-size:13px">' + t('gem.top') + '</div>') + '</div>' +
     '<div class="group">' + GEMS.map((x, i) => '<div class="cell gemli' + (i > g.i ? ' locked' : '') + (i === g.i ? ' cur' : '') + '">' + gemSVG(x.id, i < g.i ? 1 : i === g.i ? g.frac : 0, 40) +

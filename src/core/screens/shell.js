@@ -11,6 +11,7 @@ import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { createPanel, donateSheet, legalSheet, tosGate } from './panel.js';
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
+import { onboarding } from './onboard.js';
 
 export function createShell(app, root) {
   const tabsNow = () => visibleTabs(app.store.state.settings, TAB_IDS);
@@ -101,6 +102,7 @@ export function createShell(app, root) {
   app.render = render;
   app.shellAct = act;
   render();
-  setTimeout(() => tosGate(app), 400);
+  // Соглашение, затем регистрация (у кого ещё нет профиля — в том числе у тех, кто пользовался прототипом)
+  setTimeout(() => tosGate(app, () => { if (!app.store.state.settings.profile) onboarding(app, render); }), 400);
   return { render, go, panel };
 }

@@ -22,3 +22,5 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 
 /* Пояснение под переключателем: обычный текст, без плашки (класс .cap из прототипа — это «пилюля» для других мест) */
 .segcap{display:block;font-size:13px;line-height:1.4;color:var(--l2);margin:8px 2px 0}
+/* Переключатель в две колонки — когда подписи длинные (уровень в «Обо мне») */
+.seg.g2{display:grid!important;grid-template-columns:1fr 1fr;row-gap:2px}
