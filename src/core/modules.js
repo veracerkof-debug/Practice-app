@@ -2,7 +2,8 @@
 // учитывает время инструмента, открытого вне сессии.
 import { getLang, makeT, makeTn, fmtNum, t as coreT } from '../i18n/index.js';
 import { ui } from '../ui/index.js';
-import { createToolView, toolViewMs, toolViewVisibility, saveToolView, recordToolTime } from './session.js';
+import { createToolView, toolViewMs, toolViewVisibility, saveToolView, recordToolTime, trackMode, countsWhileHidden, FREE_TAGS, freeTagName } from './session.js';
+import { overlapMs, mergeSegs } from './stopwatch.js';
 import { fmtDur } from './format.js';
 import '../ui/pane.css';
 
@@ -80,6 +81,19 @@ export function makeCtx(app, mod) {
     data: () => (app.store.state.settings[mod.id] ??= {}),
     saveData: () => app.store.settingsChanged(),
     pomodoro: app.pomodoro,
+    // Секундомер «сколько я играю» (ядро; второй режим «Помодоро»). commit — записать в статистику как свободную
+    // практику; время, уже учтённое сессией или инструментами, не засчитывается дважды
+    stopwatch: app.stopwatch && {
+      get running() { return app.stopwatch.running; },
+      elapsed: () => app.stopwatch.elapsed(),
+      active: () => app.stopwatch.active(),
+      toggle: () => app.stopwatch.toggle(),
+      reset: () => app.stopwatch.reset(),
+      subscribe: (fn) => app.stopwatch.subscribe(fn),
+      credit: () => app.stopwatch.credit(app.store.sessions(), app.active),
+      commit: (o) => app.stopwatch.commit(app.store, app.active, o),
+      tags: () => FREE_TAGS.map((v) => ({ value: v, label: freeTagName(v) })),
+    },
     // Открыть другой инструмент (например, пианино с подсветкой гаммы)
     openTool: (id) => app.openTool && app.openTool(id),
     // Настройки другого модуля — только чтение (копия)
@@ -131,13 +145,16 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
   };
 }
 
-// Инструмент вне сессии: время идёт, пока страница видна; при закрытии — в статистику (от 10 с)
+// Инструмент вне сессии: время идёт, пока страница видна (в обычном режиме учёта — и при погасшем экране,
+// пока что-то звучит); при закрытии — в статистику (от 10 с)
 export function trackToolTime(app, toolId) {
-  const tv = createToolView(toolId, { visible: document.visibilityState === 'visible' });
-  const onVis = () => { toolViewVisibility(tv, document.visibilityState === 'visible'); saveToolView(tv); };
+  const mode = trackMode(app.store.state.settings);
+  const counting = () => document.visibilityState === 'visible' || countsWhileHidden(mode, app.sounding ? app.sounding() : false);
+  const tv = createToolView(toolId, { visible: counting() });
+  const onVis = () => { toolViewVisibility(tv, counting()); saveToolView(tv); };
   document.addEventListener('visibilitychange', onVis);
   saveToolView(tv);
-  const hb = setInterval(() => saveToolView(tv), 5000);
+  const hb = setInterval(onVis, 5000);
   return {
     // Возвращает секунды, если записано в статистику, иначе 0
     stop() {
@@ -145,7 +162,10 @@ export function trackToolTime(app, toolId) {
       document.removeEventListener('visibilitychange', onVis);
       const ms = toolViewMs(tv);
       saveToolView(null);
-      return recordToolTime(app.store, toolId, tv.start, ms) ? ms / 1000 : 0;
+      // То, что уже записал секундомер, второй раз не засчитывается
+      const now = Date.now(), sw = mergeSegs(app.store.sessions().filter((s) => s.src === 'stopwatch').map((s) => [s.start, s.end]));
+      const ov = overlapMs([[tv.start, now]], sw);
+      return recordToolTime(app.store, toolId, tv.start, ms, now, { mode, overlapMs: ov }) ? Math.max(0, ms - ov) / 1000 : 0;
     },
   };
 }

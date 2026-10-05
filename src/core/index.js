@@ -12,7 +12,8 @@ import { createSessionScreen } from './screens/session.js';
 import { createMixerDrawer } from './screens/mixer.js';
 import { createShared } from './modules.js';
 import { createPomodoro, pomoDefaults } from './pomodoro.js';
-import { pause as pauseActive, resume as resumeActive } from './session.js';
+import { pause as pauseActive, resume as resumeActive, awayStart, awayEnd, countsWhileHidden } from './session.js';
+import { createStopwatch } from './stopwatch.js';
 import { toast, confirm } from '../ui/index.js';
 import { createFiles } from './files.js';
 
@@ -42,7 +43,7 @@ export function boot(root) {
     metroCfg: store.state.settings.metro,
     save: () => saveDevice(device),
     onTempo: (bpm, sec) => {
-      if (!active || active.pausedAt) return;
+      if (!active || active.pausedAt || active.awaySince) return;
       addBpmTime(active, bpm, sec);
       saveActive(active);
     },
@@ -67,6 +68,26 @@ export function boot(root) {
   pomodoro.subscribe = (fn) => { pomoSubs.add(fn); return () => pomoSubs.delete(fn); };
   setInterval(() => pomodoro.tick(), 500);
 
+  // Секундомер «сколько я играю» — в ядре: идёт и при закрытом окне, переживает перезагрузку
+  device.watch ??= {};
+  const watchSubs = new Set();
+  const stopwatch = createStopwatch(device.watch, { onChange: () => { saveDevice(device); watchSubs.forEach((fn) => fn()); } });
+  stopwatch.subscribe = (fn) => { watchSubs.add(fn); return () => watchSubs.delete(fn); };
+
+  // Звучит ли что-то (метроном, пианино, пэды, медиа, теория) или идёт помодоро / секундомер —
+  // в обычном режиме учёта время при погасшем экране идёт только тогда
+  const sounding = () => ['metro', 'piano', 'drone', 'media', 'theory'].some((b) => audio.mixer.isActive(b)) || pomodoro.running || stopwatch.running;
+
+  // Экран погас или вкладка скрыта: по режиму учёта сессии время «вдали» засчитывается или нет
+  const awayCheck = () => {
+    if (!active || active.pausedAt) return;
+    const counts = document.visibilityState === 'visible' || countsWhileHidden(active.mode, sounding());
+    if (!counts && !active.awaySince) { audio.metro.flush(); awayStart(active); saveActive(active); }
+    else if (counts && active.awaySince) { audio.metro.flush(); awayEnd(active); saveActive(active); }
+  };
+  document.addEventListener('visibilitychange', awayCheck);
+  setInterval(awayCheck, 15000);
+
   const files = createFiles();
 
   // Перед первой загрузкой файла — предупреждение о правах (прототип: uploadGuard)
@@ -79,7 +100,7 @@ export function boot(root) {
   }
 
   const app = {
-    store, device, audio, modules, pomodoro, files, confirmUpload,
+    store, device, audio, modules, pomodoro, stopwatch, sounding, files, confirmUpload,
     shared: createShared(),
     saveDevice: () => saveDevice(device),
     get active() { return active; },

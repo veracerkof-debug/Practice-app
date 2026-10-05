@@ -158,3 +158,8 @@ export function byFreeTag(sessions) {
   sessions.filter((s) => s.type === 'free').forEach((s) => { const k = s.tag || ''; m[k] = (m[k] || 0) + s.dur; });
   return toList(m);
 }
+
+/* ---------- строгие часы ---------- */
+
+// Время, записанное в строгом режиме учёта (только при включённом экране), с момента from
+export const strictTime = (sessions, from = 0) => sum(sessions.filter((s) => s.mode === 'strict' && s.start >= from));

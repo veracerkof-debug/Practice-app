@@ -410,5 +410,17 @@
   "tabs.up": "{name}: move up",
   "tabs.off": "{name}: remove",
   "tabs.on": "{name}: add back",
-  "tool.ear": "Ear training"
+  "tool.ear": "Ear training",
+  "track.title": "Time tracking",
+  "track.mode.normal": "Normal",
+  "track.mode.strict": "Strict",
+  "track.hint.normal": "With the screen off, time runs while the metronome, pads or audio play, or a pomodoro or stopwatch runs.",
+  "track.hint.strict": "Time runs only while the screen is on and the app is open. These hours are gold.",
+  "track.hint": "The mode applies to new sessions and tools; recorded time doesn’t change. Stopwatch time is always normal.",
+  "track.strictTitle": "Strict tracking: only with the screen on",
+  "track.strictOf": "★ strict {d}",
+  "track.strictCard": "Strict hours",
+  "track.strictWeek": "this week {d} · {p}% of all time",
+  "track.strict": "Strict, {d}",
+  "track.normal": "Normal, {d}"
 }

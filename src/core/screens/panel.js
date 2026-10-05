@@ -6,9 +6,9 @@ import { t, tn, getLang, LANGS } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm } from '../../ui/index.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
-import { dayKey, weekday } from '../time.js';
+import { dayKey, weekday, weekStart } from '../time.js';
 import {
-  weekData, goalProgress, goalPerDay, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag,
+  weekData, goalProgress, goalPerDay, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag, strictTime,
 } from '../stats.js';
 import { CORE_FEATURES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, applyTheme, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
@@ -16,6 +16,7 @@ import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { AVATAR, CHEV, BACK, IC, TAB_IDS, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
+import { freeTagName, trackMode } from '../session.js';
 
 const PAGES = {
   feat: ['#34C759', '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="15" cy="12" r="3.5"/></svg>'],
@@ -62,6 +63,14 @@ function statsHTML(app) {
     '</div><div class="l2" style="font-size:14px">' + (pw > 1 ? t('stats.over', { p: Math.round((pw - 1) * 100) }) : pw >= 1 ? t('stats.met') : t('stats.left', { d: fmtDur(goal - w.total) })) + '</div>' +
     (isOn(st, 'streak') ? '<button class="spill" data-act="streak" style="margin-top:6px">' + FLAME + '<b class="num">' + sk.weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', sk.weeks) })) + '</span></button>' : '') +
     '</div></div>' + barsSVG(w.per, weekdays(), goalPerDay(st), weekday(now), t('stats.byDayAria')));
+  // Строгие часы — только при включённом экране; всегда золотые
+  const sAll = strictTime(all), sWeek = strictTime(all, weekStart(now)), tot = totalTime(all);
+  if (sAll || trackMode(st) === 'strict') {
+    h += card('<span class="gold">' + t('track.strictCard') + '</span>', t('track.mode.' + trackMode(st)),
+      '<div class="cv num gold">' + fmtDur(sAll) + '</div><div class="l2" style="font-size:14px">' + t('track.strictWeek', { d: fmtDur(sWeek), p: tot ? Math.round((sAll / tot) * 100) : 0 }) + '</div>' +
+      '<div class="split"><i style="width:' + (tot ? (sAll / tot) * 100 : 0) + '%;background:var(--gold)"></i><i style="flex:1;background:var(--l3)"></i></div>' +
+      '<div class="legend"><span><i style="background:var(--gold)"></i>' + t('track.strict', { d: fmtDur(sAll) }) + '</span><span><i style="background:var(--l3)"></i>' + t('track.normal', { d: fmtDur(tot - sAll) }) + '</span></div>');
+  }
   const hm = heatmap(all, now), loc = getLang() === 'en' ? 'en-GB' : getLang() === 'uz' ? 'uz-Latn' : 'ru-RU';
   h += card(t('stats.12w'), tn('stats.activeDays', hm.active), '<div class="heat" role="img" aria-label="' + t('stats.heatAria') + '">' + hm.cells.map((c) =>
     '<i title="' + esc(new Date(c.t).toLocaleDateString(loc) + ': ' + (c.v ? fmtDur(c.v) : t('stats.none'))) + '" style="' + (c.future ? 'opacity:.35;' : '') +
@@ -87,9 +96,7 @@ function statsHTML(app) {
   return h + '</div>';
 }
 
-// Метки свободной практики хранятся по-русски (как в прототипе) — показываем на языке интерфейса
-const FREE_TAG_KEYS = { 'Упражнения': 'exercises', 'Джем': 'jam', 'Импровизация': 'impro', 'Разогрев': 'warmup', 'Другое': 'other' };
-export const freeTagName = (n) => (FREE_TAG_KEYS[n] ? t('freeTag.' + FREE_TAG_KEYS[n]) : n);
+export { freeTagName };
 
 /* ---------- страницы настроек ---------- */
 
@@ -101,6 +108,8 @@ function weekHTML(app) {
     '<div class="group"><div class="cell"><span class="grow">' + t('week.autoTrack') + '</span>' + psw('autoTrack', st.autoTrack !== false, t('week.autoTrack')) + '</div>' +
     '<div class="cell"><span class="grow">' + t('week.showClock') + '</span>' + psw('showClock', st.showClock !== false, t('week.showClock')) + '</div></div>' +
     '<p class="ftr">' + t('week.autoHint') + '</p>' +
+    '<div class="hdr">' + t('track.title') + '</div><div class="group"><div class="cellcol">' + seg('track', [['normal', t('track.mode.normal')], ['strict', t('track.mode.strict')]], trackMode(st), t('track.title')) +
+    '<div class="cap">' + t('track.hint.' + trackMode(st)) + '</div></div></div><p class="ftr">' + t('track.hint') + '</p>' +
     '<div class="hdr">' + t('week.days') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" aria-label="' + t('week.days') + '">' +
     WD.map((d, i) => '<button data-day="' + i + '" aria-pressed="' + !!st.days[i] + '">' + d + '</button>').join('') + '</div></div></div>' +
     '<p class="ftr">' + t('week.restHint') + '</p>' +
@@ -203,6 +212,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
       if ((b = g('[data-acc]'))) { app.store.state.settings.accent = b.dataset.acc; applyTheme(app.store.state.settings); changed(); return; }
+      if ((b = g('[data-seg="track"] [data-v]'))) { app.store.state.settings.trackMode = b.dataset.v; changed(); return; }
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); setTimeout(() => location.reload(), 150); return; }
       if (g('[data-act="export"]')) { exportBackup(app); return; }

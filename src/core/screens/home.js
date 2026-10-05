@@ -4,7 +4,8 @@ import { t, tn } from '../../i18n/index.js';
 import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
-import { weekData, goalProgress, songStats, streakInfo } from '../stats.js';
+import { weekData, goalProgress, songStats, streakInfo, strictTime } from '../stats.js';
+import { weekStart } from '../time.js';
 import { genreOf, ensureLib } from '../library.js';
 import { isOn } from '../settings.js';
 import { weekday } from '../time.js';
@@ -29,10 +30,11 @@ export function streakPill(app, extra = '') {
 
 export function homeHTML(app) {
   const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
-  const today = weekday(Date.now()), plan = st.days, WD = weekdays();
+  const today = weekday(Date.now()), plan = st.days, WD = weekdays(), strictW = strictTime(app.store.sessions(), weekStart(Date.now()));
   let h = topbar() + '<div class="large">' + t('home.title') + '</div><div class="hcols"><div>';
   h += '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
     '</div><div class="big num">' + fmtDur(w.total) + '</div><div class="l2" style="font-size:14px">' + t('home.of', { goal: fmtDur(goal) }) + (p > 1 ? t('home.over') : p >= 1 ? t('home.met') : '') + '</div>' +
+    (strictW ? '<div class="gold num" style="font-size:13px;font-weight:600" title="' + esc(t('track.strictTitle')) + '">' + esc(t('track.strictOf', { d: fmtDur(strictW) })) + '</div>' : '') +
     streakPill(app) + '</div></div>' +
     '<div class="days hdays">' + WD.map((d, i) => '<div class="day ' + (w.per[i] > 0 ? 'done' : plan[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '" title="' +
       esc(w.per[i] ? fmtDur(w.per[i]) : plan[i] ? t('home.dayPlan') : t('home.dayRest')) + '"><span class="d"></span>' + d + '</div>').join('') + '</div>' +

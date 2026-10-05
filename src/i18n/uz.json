@@ -403,5 +403,17 @@
   "tabs.up": "{name}: yuqoriga",
   "tabs.off": "{name}: olib tashlash",
   "tabs.on": "{name}: qaytarish",
-  "tool.ear": "Eshitish"
+  "tool.ear": "Eshitish",
+  "track.title": "Vaqtni hisoblash",
+  "track.mode.normal": "Oddiy",
+  "track.mode.strict": "Qatʼiy",
+  "track.hint.normal": "Ekran oʻchganda vaqt metronom, pedlar, audio chalayotgan yoki pomodoro, sekundomer ishlayotgan paytda yuradi.",
+  "track.hint.strict": "Vaqt faqat ekran yoniq va ilova ochiq paytda yuradi. Bunday soatlar — oltin.",
+  "track.hint": "Rejim yangi mashgʻulot va asboblarga taʼsir qiladi; yozilgan vaqt oʻzgarmaydi. Sekundomer vaqti doim oddiy.",
+  "track.strictTitle": "Qatʼiy hisob: faqat ekran yoniq paytda",
+  "track.strictOf": "★ qatʼiy {d}",
+  "track.strictCard": "Qatʼiy soatlar",
+  "track.strictWeek": "shu hafta {d} · jami vaqtning {p}%",
+  "track.strict": "Qatʼiy, {d}",
+  "track.normal": "Oddiy, {d}"
 }

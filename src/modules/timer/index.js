@@ -1,5 +1,6 @@
 // Помодоро: кольцо или перекидные часы, работа и перерывы, точки циклов, настройки.
-// Таймер — в ядре (ctx.pomodoro), модуль только показывает его.
+// Второй режим — секундомер «сколько я играю» в том же виде; его время можно записать в статистику.
+// Таймер и секундомер — в ядре (ctx.pomodoro, ctx.stopwatch), модуль только показывает их.
 // Перенесено из legacy/practice.html (pomoHTML, flipHTML, flapCard, flipTick, pomoSheet, styleCards).
 import './timer.css';
 import ru from './i18n/ru.json';
@@ -13,13 +14,16 @@ const I = {
   pause: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.4"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4"/></svg>',
   reset: '<svg viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v3.5H8"/></svg>',
   skip: '<svg viewBox="0 0 24 24"><path d="M6 5.5l9 6.5-9 6.5zM18.5 5.5v13"/></svg>',
+  save: '<svg viewBox="0 0 24 24"><path d="M5 20v-6M10 20V10M15 20v-8"/><path d="M19.5 3.5v7M16 7h7"/></svg>', // в статистику
 };
 const R = 98, C = 2 * Math.PI * R;
 
 let host = null, ctx = null, size = 'full', timer = 0, unsub = () => {}, onClick = null;
 
 const PO = () => ctx.pomodoro;
+const SW = () => ctx.stopwatch;
 const cfg = () => ctx.store.all();
+const watch = () => cfg().mode === 'watch';
 const pad2 = (n) => String(n).padStart(2, '0');
 // 1500 → '25:00', 3725 → '1:02:05'
 export function fmtClock(sec) {
@@ -30,16 +34,33 @@ export function fmtClock(sec) {
 
 /* ---------- разметка ---------- */
 
+// Что показывать: помодоро — оставшееся время этапа; секундомер — прошедшее (кольцо обходит круг за минуту)
+function view() {
+  const { t } = ctx;
+  if (watch()) {
+    const sw = SW(), el = sw.elapsed();
+    return { running: sw.running, shown: el, frac: (el % 60) / 60, brk: false, label: t(sw.running || !el ? 'w.label' : 'w.paused'),
+      // до часа — минуты:секунды, дальше — часы:минуты
+      flip: el < 3600 ? fmtClock(el).padStart(5, '0') : String(Math.floor(el / 3600)).padStart(2, '0') + ':' + pad2(Math.floor((el % 3600) / 60)) };
+  }
+  const po = PO(), rem = po.rem(), tot = po.total();
+  return { running: po.running, shown: rem, frac: 1 - rem / tot, brk: po.phase !== 'work', label: t('ph.' + po.phase), flip: fmtClock(rem).padStart(5, '0') };
+}
+
 function buttons() {
-  const { t, ui } = ctx, po = PO();
+  const { t, ui } = ctx, v = view();
   return {
-    play: '<button class="bigplay" data-x="ptoggle" aria-label="' + t(po.running ? 'pause' : 'start') + '">' + (po.running ? I.pause : I.play) + '</button>',
-    rs: ui.icb('data-x="preset"', I.reset, t('reset')),
-    sk: ui.icb('data-x="pskip"', I.skip, t('skip')),
+    play: '<button class="bigplay" data-x="ptoggle" aria-label="' + t(v.running ? 'pause' : 'start') + '">' + (v.running ? I.pause : I.play) + '</button>',
+    rs: ui.icb('data-x="preset"', I.reset, t(watch() ? 'w.reset' : 'reset')),
+    sk: watch() ? ui.icb('data-x="wsave"', I.save, t('w.save')) : ui.icb('data-x="pskip"', I.skip, t('skip')),
   };
 }
 
+// Переключатель режима — в большом окне
+const modeSeg = () => '<div class="tmode">' + ctx.ui.seg('tmode', [['pomo', ctx.t('mode.pomo')], ['watch', ctx.t('mode.watch')]], watch() ? 'watch' : 'pomo', ctx.t('mode.aria')) + '</div>';
+
 function dots() {
+  if (watch()) return '<div class="pdots wnote l2">' + ctx.t('w.hint') + '</div>';
   const po = PO(), n = cfg().every, done = po.done % n;
   return '<div class="pdots" role="img" aria-label="' + ctx.t('progress', { done, n }) + '">' + Array.from({ length: n }, (_, i) => '<i class="' + (i < done ? 'on' : '') + '"></i>').join('') + '</div>';
 }
@@ -48,26 +69,26 @@ function dots() {
 const flapCard = (ch, i) => '<span class="fd" data-fi="' + i + '" data-v="' + ch + '"><span class="fh t"><b>' + ch + '</b></span><span class="fh b"><b>' + ch + '</b></span></span>';
 
 function flipHTML() {
-  const { t, ui } = ctx, po = PO(), rem = po.rem(), s = fmtClock(rem).padStart(5, '0'), brk = po.phase !== 'work', { play, rs, sk } = buttons();
-  const clock = '<div class="fclock' + (brk ? ' brk' : '') + '" id="pflip" role="timer" aria-label="' + fmtClock(rem) + '">' + flapCard(s[0], 0) + flapCard(s[1], 1) +
+  const { t, ui } = ctx, v = view(), s = v.flip, brk = v.brk, { play, rs, sk } = buttons();
+  const clock = '<div class="fclock' + (brk ? ' brk' : '') + '" id="pflip" role="timer" aria-label="' + fmtClock(v.shown) + '">' + flapCard(s[0], 0) + flapCard(s[1], 1) +
     '<span class="fcolon" aria-hidden="true"><i></i><i></i></span>' + flapCard(s[3], 3) + flapCard(s[4], 4) + '</div>';
-  const prog = '<div class="fprog" aria-hidden="true"><b id="pfprog" style="width:' + (1 - rem / po.total()) * 100 + '%"></b></div>';
-  const phase = '<div class="fphase' + (brk ? ' brk' : '') + '">' + t('ph.' + po.phase) + '</div>';
+  const prog = '<div class="fprog" aria-hidden="true"><b id="pfprog" style="width:' + v.frac * 100 + '%"></b></div>';
+  const phase = '<div class="fphase' + (brk ? ' brk' : '') + '" id="pphase">' + v.label + '</div>';
   if (size === 'strip') return '<div class="srow2 fstrip">' + phase + clock + '<span class="sgrow"></span>' + play + sk + '</div>';
   if (size === 'quarter') return '<div class="vq fq">' + phase + clock + prog + '<div class="vrow tight">' + play + sk + '</div></div>';
-  return '<div class="fwrap ' + size + '">' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'corner') + phase + clock + prog + dots() + '<div class="ctrl3">' + rs + play + sk + '</div></div>';
+  return '<div class="fwrap ' + size + '">' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'corner') + modeSeg() + phase + clock + prog + dots() + '<div class="ctrl3">' + rs + play + sk + '</div></div>';
 }
 
 function ringHTML() {
-  const { t, ui } = ctx, po = PO(), rem = po.rem(), { play, rs, sk } = buttons();
+  const { t, ui } = ctx, v = view(), { play, rs, sk } = buttons();
   const ring = '<div class="pring"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="' + R + '" fill="none" stroke="var(--fill)" stroke-width="12"/>' +
-    '<circle id="parc" cx="110" cy="110" r="' + R + '" fill="none" stroke="' + (po.phase === 'work' ? 'var(--tint)' : '#34C759') + '" stroke-width="12" stroke-linecap="round" stroke-dasharray="' +
-    C * (1 - rem / po.total()) + ' ' + C + '" transform="rotate(-90 110 110)"/></svg><div id="ptime" class="num ptime" role="timer">' + fmtClock(rem) + '</div></div>';
-  const phase = '<div class="bpmlbl ph">' + t('ph.' + po.phase) + '</div>';
+    '<circle id="parc" cx="110" cy="110" r="' + R + '" fill="none" stroke="' + (v.brk ? '#34C759' : 'var(--tint)') + '" stroke-width="12" stroke-linecap="round" stroke-dasharray="' +
+    C * v.frac + ' ' + C + '" transform="rotate(-90 110 110)"/></svg><div id="ptime" class="num ptime" role="timer">' + fmtClock(v.shown) + '</div></div>';
+  const phase = '<div class="bpmlbl ph" id="pphase">' + v.label + '</div>';
   if (size === 'quarter') return '<div class="vq">' + phase + ring + '<div class="vrow">' + rs + play + sk + '</div></div>';
   if (size === 'strip') return '<div class="srow2"><div class="sgrow" style="text-align:left">' + phase + '<div id="ptime" class="num pstrip" role="timer">' + fmtClock(rem) + '</div></div>' + rs + play + sk + '</div>';
-  if (size === 'half') return '<div class="ph2">' + ring + '<div class="ph2side">' + phase + dots() + '<div class="vrow">' + rs + play + sk + '</div>' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'sm') + '</div></div>';
-  return '<div class="mcard" style="text-align:center;position:relative">' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'corner') + phase + ring + dots() + '<div class="ctrl3">' + rs + play + sk + '</div></div>';
+  if (size === 'half') return '<div class="ph2">' + ring + '<div class="ph2side">' + modeSeg() + phase + dots() + '<div class="vrow">' + rs + play + sk + '</div>' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'sm') + '</div></div>';
+  return '<div class="mcard" style="text-align:center;position:relative">' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'corner') + modeSeg() + phase + ring + dots() + '<div class="ctrl3">' + rs + play + sk + '</div></div>';
 }
 
 function render() {
@@ -78,15 +99,15 @@ function render() {
 
 function tick() {
   if (!host) return;
-  const po = PO(), rem = po.rem(), tot = po.total();
+  const v = view();
   const pt = host.querySelector('#ptime');
-  if (pt) pt.textContent = fmtClock(rem);
+  if (pt) pt.textContent = fmtClock(v.shown);
   const arc = host.querySelector('#parc');
-  if (arc) arc.setAttribute('stroke-dasharray', C * (1 - rem / tot) + ' ' + C);
+  if (arc) arc.setAttribute('stroke-dasharray', C * v.frac + ' ' + C);
   const f = host.querySelector('#pflip');
   if (!f) return;
-  const s = fmtClock(rem).padStart(5, '0'), reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  f.setAttribute('aria-label', fmtClock(rem));
+  const s = v.flip, reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  f.setAttribute('aria-label', fmtClock(v.shown));
   f.querySelectorAll('.fd').forEach((el) => {
     const nv = s[+el.dataset.fi], ov = el.dataset.v;
     if (nv === ov) return;
@@ -104,7 +125,7 @@ function tick() {
     setTimeout(() => { if (el.dataset.v === nv) bot.textContent = nv; ft.remove(); fb.remove(); }, 560);
   });
   const pr = host.querySelector('#pfprog');
-  if (pr) pr.style.width = (1 - rem / tot) * 100 + '%';
+  if (pr) pr.style.width = v.frac * 100 + '%';
 }
 
 /* ---------- настройки ---------- */
@@ -143,17 +164,54 @@ function settingsSheet() {
   });
 }
 
+/* ---------- секундомер: сбросить, записать в статистику ---------- */
+
+function resetWatch() {
+  const { t, ui } = ctx;
+  if (SW().elapsed() < 60) { SW().reset(); return; }
+  ui.confirm(t('w.resetTitle'), t('w.resetText'), t('w.reset')).then((ok) => { if (ok) SW().reset(); });
+}
+
+function saveSheet() {
+  const { t, ui } = ctx, sw = SW(), dur = sw.credit(), short = dur < 60;
+  let tag = '';
+  ui.sheet(() => ui.snav(t('w.saveTitle'), { left: '<button class="link l" data-close>' + t('w.cancel') + '</button>', right: short ? '<span></span>' : '<button class="link b r" data-k="save">' + t('w.saveBtn') + '</button>' }) +
+    '<div style="text-align:center;margin:4px 0 18px"><div class="num" style="font-size:44px;font-weight:300;letter-spacing:-.03em">' + fmtClock(dur) + '</div><div class="l2" style="font-size:15px">' + t('w.freePractice') + '</div></div>' +
+    (short ? '<p class="ftr" style="text-align:center">' + t(sw.elapsed() >= 60 ? 'w.counted' : 'w.short') + '</p>'
+      : (dur < sw.elapsed() - 30 ? '<p class="ftr">' + t('w.partly') + '</p>' : '') +
+        '<div class="hdr">' + t('w.what') + '</div><div class="group"><div class="cellcol"><div class="hscroll" style="padding:0;flex-wrap:wrap">' +
+        SW().tags().map((x) => '<button type="button" class="pill" aria-pressed="false" data-t="' + x.value + '">' + ui.esc(x.label) + '</button>').join('') + '</div></div></div>' +
+        '<div class="hdr">' + t('w.note') + '</div><div class="group"><textarea class="ta" id="wnt" style="min-height:70px;font-family:var(--font);font-size:16px" aria-label="' + t('w.noteLabel') + '"></textarea></div>'),
+  (el, sh) => el.addEventListener('click', (e) => {
+    const tg = e.target.closest('[data-t]');
+    if (tg) { tag = tag === tg.dataset.t ? '' : tg.dataset.t; el.querySelectorAll('[data-t]').forEach((c) => c.setAttribute('aria-pressed', c.dataset.t === tag)); return; }
+    if (!e.target.closest('[data-k="save"]')) return;
+    const rec = SW().commit({ tag, note: el.querySelector('#wnt').value });
+    sh.close();
+    if (rec) ui.toast(t('w.saved', { time: fmtClock(rec.dur) }));
+  }));
+}
+
 function bind() {
   onClick = (e) => {
     const x = e.target.closest('[data-x]');
     if (!x) return;
     const a = x.dataset.x, po = PO();
-    if (a === 'ptoggle') { ctx.audio.unlock(); po.toggle(); }  // звук сигнала разрешаем заранее
-    else if (a === 'preset') po.reset();
+    if (a === 'ptoggle') { ctx.audio.unlock(); if (watch()) SW().toggle(); else po.toggle(); }  // звук сигнала разрешаем заранее
+    else if (a === 'preset') { if (watch()) resetWatch(); else po.reset(); }
     else if (a === 'pskip') po.next(true);
+    else if (a === 'wsave') saveSheet();
     else if (a === 'psettings') settingsSheet();
   };
   host.addEventListener('click', onClick);
+  // Переключатель «Помодоро / Секундомер»
+  host.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-seg="tmode"] [data-v]');
+    if (!b) return;
+    cfg().mode = b.dataset.v;
+    ctx.store.save();
+    render();
+  });
 }
 
 export default {
@@ -166,6 +224,8 @@ export default {
   sizes: ['full', 'half', 'quarter', 'strip'],
   session: false, // в сессии помодоро — значок в заголовке и шторка
   status(c) {
+    const sw = c.stopwatch;
+    if (c.store.all().mode === 'watch') return sw.active() ? c.t(sw.running ? 'w.statusRun' : 'w.statusPaused', { time: fmtClock(sw.elapsed()) }) : c.t('mode.watch');
     const po = c.pomodoro;
     return po.running ? c.t('statusRun', { phase: c.t('ph.' + po.phase), time: fmtClock(po.rem()) }) : c.t('statusIdle', { n: c.store.all().work });
   },
@@ -173,7 +233,8 @@ export default {
     host = el; ctx = c; size = sz;
     render();
     bind();
-    unsub = PO().subscribe(render);
+    const u1 = PO().subscribe(render), u2 = SW().subscribe(render);
+    unsub = () => { u1(); u2(); };
     timer = setInterval(tick, 200);
   },
   resize(sz) { size = sz; render(); },

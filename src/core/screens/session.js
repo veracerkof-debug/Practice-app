@@ -11,7 +11,7 @@ import { getPct, ensureLib } from '../library.js';
 import { isOn } from '../settings.js';
 import {
   createActive, isSameActive, elapsed, togglePause, touch, shouldAskIdle, confirmPlaying, summarize, buildRecord,
-  metroForSession, commitSession, saveActive, FREE_TAGS,
+  metroForSession, commitSession, saveActive, FREE_TAGS, trackMode,
 } from '../session.js';
 import {
   getWS, fixWS, lsizes, lpos, halves, setLayout, closePane, swapHalves, assign, swapPanes, dropTool, addPane, sizeOf, clampFrac, visible,
@@ -88,7 +88,7 @@ export function createSessionScreen(app) {
       return;
     }
     const s = songId ? store.songById(songId) : null;
-    app.active = createActive({ type, songId, tool });
+    app.active = createActive({ type, songId, tool, mode: trackMode(st()) });
     audio.metro.cfg = metroForSession(s, st().metro);
     lockWake();
     open();
@@ -111,7 +111,7 @@ export function createSessionScreen(app) {
     layer = document.createElement('div');
     layer.innerHTML = '<div class="session' + (tm ? ' toolmode' : '') + '" role="dialog" aria-modal="true" aria-label="' + esc(t('ses.aria')) + '"><div class="sin">' +
       '<div class="shd">' + icb('data-s="hide"', IC.down, t('ses.hide'), 'sm') +
-      '<button class="stime" data-s="pause" id="stime" aria-label="' + esc(t('ses.pause')) + '"><i class="sdot"></i>' + (hide ? '' : '<span id="clk" class="num">00:00</span>') + '</button>' +
+      '<button class="stime' + (a.mode === 'strict' ? ' gold' : '') + '" data-s="pause" id="stime" aria-label="' + esc(t('ses.pause')) + '"' + (a.mode === 'strict' ? ' title="' + esc(t('track.strictTitle')) + '"' : '') + '><i class="sdot"></i>' + (hide ? '' : '<span id="clk" class="num">00:00</span>') + '</button>' +
       (tm || !isOn(st(), 'timer') ? '<span></span>' : '<button class="pchip" data-s="pomo" id="pchip" aria-label="' + esc(t('ses.pomo')) + '">' + pchipHTML() + '</button>') +
       '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + icb('data-s="finish"', IC.check, t('ses.finish'), 'sm done') + '</div>' +
       '<div class="ws"></div></div>' +
@@ -431,7 +431,7 @@ export function createSessionScreen(app) {
     }
     let tag = '', readM = null;
     sheet(() => snav(t('fin.title'), { left: '<button class="link l" data-k="back">' + t('ui.back') + '</button>', right: '<button class="link b r" data-k="save">' + t('fin.save') + '</button>' }) +
-      '<div style="text-align:center;margin:4px 0 18px"><div class="num" style="font-size:44px;font-weight:300;letter-spacing:-.03em">' + fmtDur(sum.dur) + '</div><div class="l2" style="font-size:15px">' +
+      '<div style="text-align:center;margin:4px 0 18px"><div class="num' + (a.mode === 'strict' ? ' gold' : '') + '" style="font-size:44px;font-weight:300;letter-spacing:-.03em">' + fmtDur(sum.dur) + '</div><div class="l2" style="font-size:15px">' +
       esc(titleOf(a)) + (sum.best ? t('fin.upTo', { bpm: sum.best }) : '') + '</div></div>' +
       (s ? '<div class="hdr">' + t('fin.songNow') + '</div><div class="group"><div class="cellcol">' + mInput(getPct(s), st()) + '</div><label class="cell"><span class="grow">' + t('fin.confident') +
         '</span><input class="inp num" id="cb" type="number" inputmode="numeric" min="20" max="300" placeholder="bpm" aria-label="' + t('fin.confident') + '" value="' + (sum.best || s.currentBpm || '') + '"></label></div>'

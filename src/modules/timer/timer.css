@@ -76,3 +76,9 @@
 .fh.fb{opacity:0}
 @keyframes ffold{0%{transform:rotateX(0)}99%{opacity:1}to{transform:rotateX(-90deg);filter:brightness(.7);opacity:0}}
 @keyframes funfold{0%{transform:rotateX(90deg);filter:brightness(1.3);opacity:0}1%{opacity:1}to{transform:rotateX(0);opacity:1}}
+/* Переключатель «Помодоро / Секундомер» (в большом окне) */
+.tmode{display:flex;justify-content:center;margin:0 auto 6px;max-width:300px;width:100%}
+.tmode .seg{width:100%}
+.pdots.wnote{font-size:13px;text-align:center}
+.mcard .tmode,.ph2side .tmode{padding:0 46px}
+.ph2side .tmode{padding:0}

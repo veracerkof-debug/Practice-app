@@ -4,6 +4,7 @@
   --bg: #F2F2F7; --cell: #FFFFFF; --ink: #000000; --l2: #8A8A8E; --l3: #C4C4C7;
   --sep: rgba(60,60,67,.16); --fill: rgba(120,120,128,.12); --fill2: rgba(120,120,128,.2);
   --tint: #FF9500; --tint-text: #C46A00; --on-tint: #FFFFFF; --red: #FF3B30; --bar: rgba(249,249,251,.82);
+  --gold: #A87A00; --gold-bg: rgba(212,160,23,.14); /* строгие часы */
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   color-scheme: light;
 }
@@ -13,6 +14,7 @@
     --bg: #000000; --cell: #1C1C1E; --ink: #FFFFFF; --l2: #8D8D93; --l3: #48484A;
     --sep: rgba(84,84,88,.55); --fill: rgba(118,118,128,.24); --fill2: rgba(118,118,128,.36);
     --tint: #FF9F0A; --tint-text: #FF9F0A; --on-tint: #1A0E00; --red: #FF453A; --bar: rgba(22,22,24,.8);
+    --gold: #FFD43B; --gold-bg: rgba(255,212,59,.16);
     color-scheme: dark;
   }
 }
@@ -21,6 +23,7 @@
   --bg: #000000; --cell: #1C1C1E; --ink: #FFFFFF; --l2: #8D8D93; --l3: #48484A;
   --sep: rgba(84,84,88,.55); --fill: rgba(118,118,128,.24); --fill2: rgba(118,118,128,.36);
   --tint: #FF9F0A; --tint-text: #FF9F0A; --on-tint: #1A0E00; --red: #FF453A; --bar: rgba(22,22,24,.8);
+    --gold: #FFD43B; --gold-bg: rgba(255,212,59,.16);
   color-scheme: dark;
 }
 
@@ -34,5 +37,6 @@
   --bg: #000; --cell: #0E0E10; --ink: #fff; --l2: #8D8D93; --l3: #3A3A3C;
   --sep: rgba(84,84,88,.45); --fill: rgba(118,118,128,.18); --fill2: rgba(118,118,128,.28);
   --tint: #FF9F0A; --tint-text: #FF9F0A; --on-tint: #1A0E00; --red: #FF453A; --bar: rgba(0,0,0,.85);
+  --gold: #FFD43B; --gold-bg: rgba(255,212,59,.16);
   color-scheme: dark;
 }

@@ -54,6 +54,9 @@ export default {
   Общая клавиатура — `src/ui/keyboard.js`.
 - `ctx.pomodoro` — таймер помодоро ядра (идёт и при закрытом окне, ставит сессию на паузу в перерыв):
   `phase`, `running`, `done`, `rem()`, `total()`, `toggle()`, `reset()`, `next(manual)`, `release()`, `subscribe(fn)`.
+- `ctx.stopwatch` — секундомер ядра (второй режим «Помодоро»; идёт при закрытом окне): `running`, `elapsed()`, `active()`,
+  `toggle()`, `reset()`, `subscribe(fn)`, `credit()` — сколько секунд попадёт в статистику, `commit({ tag, note })` — записать
+  как свободную практику (уже учтённое сессией или инструментами время не засчитывается дважды), `tags()` — метки практики.
 - `ctx.files` — файлы пользователя на устройстве (IndexedDB): `ready` (промис), `noDb`, `list('audio'|'tab')`, `get(id)`,
   `add(rec)`, `save(rec)`, `remove(id)`, `subscribe(fn)`. Привязка к песням — `fileSongs`, `inSong`, `linkSong` из `src/core/files.js`.
 - `ctx.confirmUpload()` — перед выбором файла: один раз показывает предупреждение о правах на файлы, промис `true/false`.
