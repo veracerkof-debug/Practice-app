@@ -21,5 +21,22 @@
   "lib.tags.warmup": "Разогрев",
   "lib.tags.exercise": "Упражнение",
   "lib.tags.learning": "Учу сейчас",
-  "lib.tags.repeat": "Повторить"
+  "lib.tags.repeat": "Повторить",
+  "ui.less": "Меньше",
+  "ui.more": "Больше",
+  "ui.done": "Готово",
+  "ui.cancel": "Отмена",
+  "ui.back": "Назад",
+  "time.h": "{n} ч",
+  "time.hm": "{h} ч {m} мин",
+  "time.m": "{n} мин",
+  "time.lt1m": "<1 мин",
+  "tools.title": "Инструменты",
+  "tools.preview": "Предпросмотр модулей: окно можно переключить на любой размер, как в сессии.",
+  "tools.size": "Размер окна",
+  "size.full": "Весь экран",
+  "size.half": "Половина",
+  "size.quarter": "Четверть",
+  "size.strip": "Полоса",
+  "tools.recorded": "{tool}: {dur} в статистике"
 }

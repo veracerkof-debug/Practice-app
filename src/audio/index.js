@@ -9,12 +9,13 @@ import { openMic } from './mic.js';
 
 // device — настройки устройства (src/core/device.js); metroCfg — настройки метронома;
 // onTempo(bpm, sec) — учёт темпа для активной сессии; save() — сохранить device
-export function createAudio({ device, metroCfg, onTempo, onBpmChange, save = () => {} }) {
+// saveMetro(cfg) — сохранить настройки метронома
+export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro, save = () => {} }) {
   const a4 = () => device.tuner.a4 || 440;
   const mixer = createMixer(device.mix, { onChange: save });
   const synth = createSynth({ mixer, getPatch: () => pianoPatch(device.piano), getA4: a4 });
   const drone = createDrone({ mixer, getSettings: () => device.drone, getA4: a4 });
-  const metro = createMetronome({ mixer, cfg: metroCfg, onTempo, onBpmChange });
+  const metro = createMetronome({ mixer, cfg: metroCfg, onTempo, onBpmChange, onSave: saveMetro });
   mixer.probe('piano', () => synth.active('piano'));
   mixer.probe('theory', () => synth.active('theory'));
   mixer.probe('drone', () => drone.on);
@@ -38,6 +39,27 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, save = () 
     try { navigator.vibrate && navigator.vibrate([120, 80, 120]); } catch { /* ignore */ }
   }
 
+  // Опорная нота тюнера: чистый тон 2,4 с
+  function refTone(m) {
+    const c = getContext(device.mix.mode);
+    if (!c) return;
+    const t = c.currentTime, f = midiFreq(m, a4()), g = c.createGain();
+    g.connect(masterNode());
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.3, t + 0.03);
+    g.gain.setValueAtTime(0.3, t + 1.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+    [['sine', 1, 1], ['triangle', 1, 0.35], ['sine', 2, 0.12]].forEach(([ty, mul, amp]) => {
+      const o = c.createOscillator(), og = c.createGain();
+      o.type = ty;
+      o.frequency.value = f * mul;
+      og.gain.value = amp;
+      o.connect(og).connect(g);
+      o.start(t);
+      o.stop(t + 2.5);
+    });
+  }
+
   let n = 0;
   const audio = {
     mixer, synth, drone, metro,
@@ -55,6 +77,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, save = () 
     playChord: (midis, opts) => playChord(synth, midis, opts),
     playSeq: (midis, opts) => playSeq(synth, midis, opts),
     chime,
+    refTone,
     openMic: () => openMic(device.mix.mode),
     // Остановить всё (выход из сессии)
     stopAll() {

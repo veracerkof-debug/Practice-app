@@ -109,7 +109,8 @@ function makeNoise(c) {
 
 // onTempo(bpm, seconds) — сколько секунд сыграно на темпе (для «лучшего темпа» в сессии);
 // onBpmChange(bpm) — тренер поднял темп
-export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = () => {} }) {
+// onSave() — сохранить настройки (если это общие настройки, а не копия песни)
+export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = () => {}, onSave = () => {} }) {
   let c = null, noise = null, timer = null, next = 0, pos = newPosition(), lastTick = 0;
 
   const m = {
@@ -162,6 +163,14 @@ export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = 
     },
 
     toggle() { return m.running ? (m.stop(), false) : m.start(); },
+
+    // После смены дробления — с начала доли; после смены размера — с начала такта
+    restartBeat({ bar = false } = {}) {
+      pos.subI = 0;
+      if (bar) pos.beat = 0;
+    },
+
+    save() { onSave(m.cfg); },
 
     setBpm(v) {
       m.flush();

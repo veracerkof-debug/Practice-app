@@ -21,5 +21,22 @@
   "lib.tags.warmup": "Qizish",
   "lib.tags.exercise": "Mashq",
   "lib.tags.learning": "Hozir o‘rganyapman",
-  "lib.tags.repeat": "Takrorlash"
+  "lib.tags.repeat": "Takrorlash",
+  "ui.less": "Kamroq",
+  "ui.more": "Ko‘proq",
+  "ui.done": "Tayyor",
+  "ui.cancel": "Bekor qilish",
+  "ui.back": "Orqaga",
+  "time.h": "{n} soat",
+  "time.hm": "{h} soat {m} daq",
+  "time.m": "{n} daq",
+  "time.lt1m": "<1 daq",
+  "tools.title": "Asboblar",
+  "tools.preview": "Modullarni ko‘rib chiqish: oynani sessiyadagidek istalgan o‘lchamga o‘tkazish mumkin.",
+  "tools.size": "Oyna o‘lchami",
+  "size.full": "To‘liq ekran",
+  "size.half": "Yarim",
+  "size.quarter": "Chorak",
+  "size.strip": "Chiziq",
+  "tools.recorded": "{tool}: {dur} statistikada"
 }

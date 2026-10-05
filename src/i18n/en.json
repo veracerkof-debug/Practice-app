@@ -21,5 +21,22 @@
   "lib.tags.warmup": "Warm-up",
   "lib.tags.exercise": "Exercise",
   "lib.tags.learning": "Learning now",
-  "lib.tags.repeat": "Review"
+  "lib.tags.repeat": "Review",
+  "ui.less": "Less",
+  "ui.more": "More",
+  "ui.done": "Done",
+  "ui.cancel": "Cancel",
+  "ui.back": "Back",
+  "time.h": "{n} h",
+  "time.hm": "{h} h {m} min",
+  "time.m": "{n} min",
+  "time.lt1m": "<1 min",
+  "tools.title": "Tools",
+  "tools.preview": "Module preview: switch the window to any size, as in a session.",
+  "tools.size": "Window size",
+  "size.full": "Full screen",
+  "size.half": "Half",
+  "size.quarter": "Quarter",
+  "size.strip": "Strip",
+  "tools.recorded": "{tool}: {dur} added to stats"
 }

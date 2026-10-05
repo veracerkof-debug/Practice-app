@@ -8,12 +8,13 @@
 export default {
   id: 'metronome',              // латиница, уникально
   name: { ru: 'Метроном', uz: 'Metronom', en: 'Metronome' },
+  i18n: { ru, uz, en },         // словари модуля (импорт из ./i18n/*.json)
   icon: '<svg …/>',             // монохромный SVG, цвет через currentColor
   color: '#FF9500',             // цвет карточки и значка
   sizes: ['full', 'half', 'quarter', 'strip'], // какие размеры окна поддерживает
   group: 'rhythm',              // необязательно: объединение в сессии (метроном + тюнер)
   status: (ctx) => '120 bpm · 4/4', // строка для карточки в «Инструментах»
-  mount(host, ctx) {},          // нарисовать модуль в host (DOM-элемент), подписаться на события
+  mount(host, ctx, size) {},    // нарисовать модуль в host (DOM-элемент) в размере size, подписаться на события
   resize(size) {},              // окно поменяло размер: 'full' | 'half' | 'quarter' | 'strip'
   unmount() {},                 // снять подписки, остановить звук
   settings: (ctx) => [],        // необязательно: описание настроек для общего экрана
@@ -21,14 +22,18 @@ export default {
 ```
 
 ## Что ядро даёт модулю (`ctx`)
-- `ctx.t(key)` — перевод строк модуля (`src/modules/<id>/i18n/{ru,uz,en}.json`).
-- `ctx.store` — хранение настроек модуля в своём пространстве имён (get / set / subscribe).
-- `ctx.audio` — доступ к общему звуковому движку: `ctx.audio.bus('piano' | 'metro' | 'drone' | 'theory' | 'media')`,
-  `playNote(midi, opts)`, `playChord(midis, opts)`, `now()`. Громкость шины управляется микшером ядра.
+- `ctx.t(key, vars)` — перевод строк модуля (`src/modules/<id>/i18n/{ru,uz,en}.json`), `{name}` → `vars.name`.
+  `ctx.tn(key, n)` — строка с числом и склонением (в словаре — массив форм). `ctx.num(n, digits)` — число по правилам языка.
+- `ctx.store` — настройки модуля на устройстве, пространство имён `device[id]` (`practice.v1.tools`):
+  `get(k, def)`, `set(k, v)`, `all()` (сам объект — можно менять и вызвать `save()`), `subscribe(fn)`.
+- `ctx.audio` — общий звуковой движок: `bus('piano' | 'metro' | 'drone' | 'theory' | 'media')`,
+  `playNote(midi, opts)`, `playChord(midis, opts)`, `playSeq(midis, opts)`, `refTone(midi)`, `now()`, `mf(midi)`;
+  общие инструменты `metro`, `drone`, `synth`, `mixer`. Громкость шины управляется микшером ядра.
 - `ctx.mic.request()` — микрофон по явному разрешению пользователя; поток только для анализа.
+  Возвращает `{ read(), sampleRate, stop() }`, ошибка — с `reason: 'denied' | 'unavailable'`.
 - `ctx.session` — текущая сессия (песня, если есть), только чтение.
-- `ctx.stats.log(event, data)` — записать результат модуля (например, ответ в тренажёре слуха).
-  Время в модуле ядро считает само.
+- `ctx.stats.log(event, data)` — записать результат модуля (например, ответ в тренажёре слуха). *Появится вместе
+  с тренажёром слуха.* Время в модуле ядро считает само.
 - `ctx.ui` — общие элементы: `toast`, `sheet` (нижняя шторка), `confirm`, `icons`, токены темы (CSS-переменные).
 - `ctx.pro`/флаги — не используются в публичной версии (приложение бесплатное).
 

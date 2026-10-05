@@ -1,0 +1,26 @@
+/* Экран «Инструменты» и окно отдельного инструмента. Перенесено из legacy/practice.html. */
+.large{font-size:34px;font-weight:700;letter-spacing:-.025em;margin:28px 4px 14px;line-height:1.1}
+.stitle2{font-size:19px;font-weight:700;letter-spacing:-.02em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.tview{position:fixed;inset:0;z-index:33;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);animation:up .28s cubic-bezier(.2,.8,.2,1)}
+.tvhd{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px;padding:6px 12px 0;max-width:900px;width:100%;margin:0 auto}
+.tvbody{flex:1;display:flex;min-height:0;padding:8px 6px 8px;max-width:900px;width:100%;margin:0 auto}
+.tvhost{flex:1;margin:0!important;padding:12px 10px 10px!important;min-width:0;min-height:0}
+.tgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;grid-auto-rows:minmax(112px,1fr);min-height:calc(100dvh - 260px)}
+@media (min-width:900px){.tgrid{grid-template-columns:repeat(4,1fr);min-height:0;grid-auto-rows:170px}}
+.tcard2{border-radius:20px;padding:14px 16px 16px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;text-align:left;background:var(--cell);color:var(--ink);transition:transform .12s;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.tcard2:active{transform:scale(.97)}
+.tcard2.wide{grid-column:span 2}
+.tci2{width:48px;height:48px;border-radius:14px;background:var(--c);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px color-mix(in srgb,var(--c) 35%,transparent)}
+.tci2 svg{width:27px;height:27px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tcb{display:flex;flex-direction:column;gap:2px;min-width:0;max-width:100%}
+.tcn2{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.tcs2{font-size:13px;color:var(--l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tgrid{grid-auto-rows:minmax(120px,1fr)!important}
+.tgrid .tcard2:last-child:nth-child(odd){grid-column:span 2}
+@keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
+/* Временно: переключатель размера окна в предпросмотре (до переноса рабочего пространства сессии) */
+.tvsize{max-width:900px;width:100%;margin:0 auto;padding:4px 12px 0}
+.tvbody[data-size="half"] .tvhost{flex:none;width:100%;height:50%;align-self:flex-start}
+.tvbody[data-size="quarter"] .tvhost{flex:none;width:50%;height:50%;align-self:flex-start}
+.tvbody[data-size="strip"] .tvhost{flex:none;width:100%;height:clamp(84px,14vh,120px);align-self:flex-start}
+.tvbody{flex-wrap:wrap}
