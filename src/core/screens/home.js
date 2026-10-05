@@ -14,6 +14,7 @@ import { weekday } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
+import { nextEventsHTML } from './calendar.js';
 
 // Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
 export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
@@ -50,6 +51,7 @@ export function homeHTML(app) {
     ? q.map((id) => { const m = moduleById(id); return '<button class="qbtn" data-open-tool="' + id + '" style="--c:' + m.color + '"><span class="qic">' + m.icon + '</span><span class="qn">' + esc(moduleName(m)) + '</span></button>'; }).join('')
     : '<button class="qbtn add" data-act="quickedit"><span class="qic">' + IC.plus + '</span><span class="qn">' + t('home.add') + '</span></button>') + '</div>';
   h += '</div><div>';
+  h += nextEventsHTML(app);
   const songs = app.store.songs(), L = ensureLib(app.store.state, t);
   const rec = songs.map((s) => ({ s, st: songStats(app.store.sessions(), s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 4);
   h += '<div class="hhdr"><span>' + t('home.continue') + '</span>' + (songs.length > 4 ? '<button class="link" data-tab="library">' + t('home.allSongs') + '</button>' : '') + '</div>';

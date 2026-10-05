@@ -53,7 +53,7 @@ export function setTheme(store, theme) {
 
 /* ---------- вкладки ---------- */
 
-export const DEFAULT_TABS = ['home', 'library', 'tools'];
+export const DEFAULT_TABS = ['home', 'library', 'calendar', 'tools'];
 
 // Видимые вкладки по порядку. settings.tabs — порядок видимых, settings.tabsOff — убранные.
 // Вкладка, которой нет ни там, ни там (новая в обновлении), появляется в конце. Хотя бы одна остаётся всегда.

@@ -21,10 +21,11 @@ export const IC = {
   notes: '<svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>',
 };
 // Вкладки приложения (экраны ядра); порядок и видимость — settings.tabs / settings.tabsOff
-export const TAB_IDS = ['home', 'library', 'tools'];
+export const TAB_IDS = ['home', 'library', 'calendar', 'tools'];
 export const TAB_ICONS = {
   home: '<svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="10"/><path d="M14 8.5V14l3.6 2.4"/></svg>',
   library: '<svg viewBox="0 0 28 28"><path d="M11 20V7.5l11-2.5V17.5"/><circle cx="8" cy="20" r="3"/><circle cx="19" cy="17.5" r="3"/></svg>',
+  calendar: '<svg viewBox="0 0 28 28"><rect x="4.5" y="6" width="19" height="17.5" rx="3.5"/><path d="M4.5 11.5h19M9.5 3.5v4.5M18.5 3.5v4.5"/><circle cx="10" cy="16.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="14" cy="16.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="18" cy="16.5" r="1.3" fill="currentColor" stroke="none"/></svg>',
   tools: '<svg viewBox="0 0 28 28"><path d="M7 6v16M14 6v16M21 6v16"/><rect x="4.5" y="9" width="5" height="3.5" rx="1"/><rect x="11.5" y="15" width="5" height="3.5" rx="1"/><rect x="18.5" y="11" width="5" height="3.5" rx="1"/></svg>',
 };
 

@@ -10,6 +10,7 @@ import {
 } from '../library.js';
 import { topbar, relDay, mRing, mBadge, mInput, bindM, BACK, CHEV, IC, PLAY } from './common.js';
 import { scaleOf } from '../library.js';
+import { songEventsHTML } from './calendar.js';
 
 const chipHTML = (it, cls, attrs) => '<span class="lchip ' + (cls || '') + '" style="--c:' + it.color + ';--t:' + textColor(it) + '" ' + (attrs || '') + '>' + esc(it.name) + '</span>';
 const diffLabel = (d) => t('diff.' + d);
@@ -79,6 +80,7 @@ export function songHTML(app, id) {
     '<div class="srow">' + IC.bolt + '<span class="dots" role="img" aria-label="' + esc(t('song.diffAria', { n: s.difficulty })) + '">' + [1, 2, 3, 4, 5].map((i) => '<i class="' + (i <= s.difficulty ? 'on' : '') + '"></i>').join('') + '</span></div></div></div>';
   if (st.tempo.length >= 2) h += '<div class="card">' + tempoChart(st.tempo, s.targetBpm) + '</div>';
   if (s.notes) h += '<div class="group" style="margin-top:12px"><div class="notes">' + esc(s.notes) + '</div></div>';
+  h += songEventsHTML(app, s.id);
   h += '<div style="text-align:center;margin-top:28px"><button class="link" data-del="' + s.id + '" style="color:var(--red);font-size:15px">' + t('song.delete') + '</button></div>';
   h += '<div class="fab"><button class="btn fill" data-play="' + s.id + '" aria-label="' + t('song.playAria') + '">' + PLAY + '<span>' + t('song.play') + '</span></button></div>';
   return h;

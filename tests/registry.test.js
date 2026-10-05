@@ -26,23 +26,26 @@ describe('реестр модулей', () => {
 
 describe('вкладки', () => {
   const KNOWN = ['home', 'library', 'tools', 'calendar'];
+  const T3 = ['home', 'library', 'tools'];
   const mk = (st = {}) => ({ state: { settings: st }, settingsChanged() {} });
   it('по умолчанию — все; новая вкладка появляется в конце, убранная не возвращается', () => {
+    expect(DEFAULT_TABS).toEqual(['home', 'library', 'calendar', 'tools']);
     expect(visibleTabs({}, DEFAULT_TABS)).toEqual(DEFAULT_TABS);
-    expect(visibleTabs({}, KNOWN)).toEqual(KNOWN);
+    // у тех, кто ещё не настраивал вкладки, новая встаёт на своё место по умолчанию
+    expect(visibleTabs({}, KNOWN)).toEqual(DEFAULT_TABS);
     expect(visibleTabs({ tabs: ['tools', 'home'], tabsOff: ['library'] }, KNOWN)).toEqual(['tools', 'home', 'calendar']);
     expect(hiddenTabs({ tabs: ['tools', 'home'], tabsOff: ['library'] }, KNOWN)).toEqual(['library']);
   });
   it('переставить, убрать, вернуть; последнюю не убрать', () => {
     const s = mk();
-    expect(editTabs(s, DEFAULT_TABS, 'tools', 'up')).toBe(true);
-    expect(visibleTabs(s.state.settings, DEFAULT_TABS)).toEqual(['home', 'tools', 'library']);
-    editTabs(s, DEFAULT_TABS, 'home', 'off');
-    editTabs(s, DEFAULT_TABS, 'library', 'off');
-    expect(editTabs(s, DEFAULT_TABS, 'tools', 'off')).toBe(false);
-    expect(visibleTabs(s.state.settings, DEFAULT_TABS)).toEqual(['tools']);
-    editTabs(s, DEFAULT_TABS, 'home', 'on');
-    expect(visibleTabs(s.state.settings, DEFAULT_TABS)).toEqual(['tools', 'home']);
-    expect(visibleTabs({ tabs: ['x'], tabsOff: DEFAULT_TABS }, DEFAULT_TABS)).toEqual(['home']);
+    expect(editTabs(s, T3, 'tools', 'up')).toBe(true);
+    expect(visibleTabs(s.state.settings, T3)).toEqual(['home', 'tools', 'library']);
+    editTabs(s, T3, 'home', 'off');
+    editTabs(s, T3, 'library', 'off');
+    expect(editTabs(s, T3, 'tools', 'off')).toBe(false);
+    expect(visibleTabs(s.state.settings, T3)).toEqual(['tools']);
+    editTabs(s, T3, 'home', 'on');
+    expect(visibleTabs(s.state.settings, T3)).toEqual(['tools', 'home']);
+    expect(visibleTabs({ tabs: ['x'], tabsOff: T3 }, T3)).toEqual(['home']);
   });
 });

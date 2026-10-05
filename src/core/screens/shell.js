@@ -10,10 +10,11 @@ import { homeHTML, quickEdit, streakSheet, gemSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { createPanel, donateSheet, legalSheet, tosGate } from './panel.js';
+import { calendarHTML, bindCalendar, calAct } from './calendar.js';
 
 export function createShell(app, root) {
   const tabsNow = () => visibleTabs(app.store.state.settings, TAB_IDS);
-  const view = { tab: tabsNow()[0], song: null, q: '', genre: '', tag: '', cat: '', sort: 'recent' };
+  const view = { tab: tabsNow()[0], song: null, q: '', genre: '', tag: '', cat: '', sort: 'recent', cal: {} };
   root.innerHTML = '<main class="wrap" id="main"></main><nav class="tabbar" aria-label="' + t('nav.aria') + '"><div class="in" id="tabs"></div></nav>';
   const main = root.querySelector('#main'), tabs = root.querySelector('#tabs');
 
@@ -27,6 +28,7 @@ export function createShell(app, root) {
     renderTabs();
     if (view.tab === 'tools') { renderTools(app, main); return; }
     main.onclick = null;
+    if (view.tab === 'calendar') { main.innerHTML = calendarHTML(app, view.cal); bindCalendar(app, main, view.cal, render); return; }
     if (view.tab === 'library') {
       const h = view.song && songHTML(app, view.song);
       if (!h) view.song = null;
@@ -76,6 +78,7 @@ export function createShell(app, root) {
     else if (d.openTool) openToolView(app, d.openTool, render);
     else if (d.act === 'free') app.startSession('free');
     else if (d.act === 'addSong') songForm(app, null, (id) => go('library', id));
+    else if (calAct(app, b, view.tab === 'calendar' ? view.cal : null, render)) { /* календарь и строки событий */ }
     else return false;
     return true;
   }
