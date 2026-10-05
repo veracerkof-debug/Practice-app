@@ -9,6 +9,7 @@ import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
 import { applyTheme } from './settings.js';
 import { renderTools } from './screens/tools.js';
+import { createShared } from './modules.js';
 
 export function boot(root) {
   const store = createStore();
@@ -38,6 +39,7 @@ export function boot(root) {
 
   const app = {
     store, device, audio, modules,
+    shared: createShared(),
     saveDevice: () => saveDevice(device),
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },

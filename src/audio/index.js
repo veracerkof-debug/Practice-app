@@ -60,6 +60,20 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     });
   }
 
+  // Анализатор общего выхода (осциллограмма «живой сигнал»); создаётся по первому запросу
+  let ana = null;
+  function analyser() {
+    const c = peekContext();
+    if (!c) return null;
+    if (!ana) {
+      ana = c.createAnalyser();
+      ana.fftSize = 4096;
+      ana.smoothingTimeConstant = 0.6;
+      masterNode().connect(ana);
+    }
+    return ana;
+  }
+
   let n = 0;
   const audio = {
     mixer, synth, drone, metro,
@@ -78,6 +92,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     playSeq: (midis, opts) => playSeq(synth, midis, opts),
     chime,
     refTone,
+    analyser,
     openMic: () => openMic(device.mix.mode),
     // Остановить всё (выход из сессии)
     stopAll() {

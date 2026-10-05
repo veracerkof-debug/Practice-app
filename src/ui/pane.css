@@ -7,6 +7,7 @@
 .pane.quarter{padding:6px}
 .pane .ftr{margin:6px 4px 0}
 .pane .group{background:var(--bg)}
+.pane .range{margin:4px 0}
 .pane .ic{width:clamp(40px,11cqmin,64px);height:clamp(40px,11cqmin,64px)}
 .pane.full .ic{width:clamp(44px,14cqmin,84px);height:clamp(44px,14cqmin,84px)}
 .pane .ic svg{width:46%;height:46%}

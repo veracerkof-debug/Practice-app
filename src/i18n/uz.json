@@ -38,5 +38,15 @@
   "size.half": "Yarim",
   "size.quarter": "Chorak",
   "size.strip": "Chiziq",
-  "tools.recorded": "{tool}: {dur} statistikada"
+  "tools.recorded": "{tool}: {dur} statistikada",
+  "preset.save": "Saqlash",
+  "preset.saveBtn": "Saqlash",
+  "preset.mine": "Mening presetlarim",
+  "preset.name": "Nomi",
+  "preset.needName": "Nomini kiriting",
+  "preset.rename": "Nomini o‘zgartirish",
+  "preset.delete": "O‘chirish",
+  "preset.empty": "Hozircha bo‘sh",
+  "preset.saved": "Preset saqlandi",
+  "ui.close": "Yopish"
 }

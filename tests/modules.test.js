@@ -12,6 +12,12 @@ import tunerRu from '../src/modules/tuner/i18n/ru.json';
 import tunerUz from '../src/modules/tuner/i18n/uz.json';
 import tunerEn from '../src/modules/tuner/i18n/en.json';
 import { pluralForm } from '../src/i18n/index.js';
+import pianoRu from '../src/modules/piano/i18n/ru.json';
+import pianoUz from '../src/modules/piano/i18n/uz.json';
+import pianoEn from '../src/modules/piano/i18n/en.json';
+import droneRu from '../src/modules/drone/i18n/ru.json';
+import droneUz from '../src/modules/drone/i18n/uz.json';
+import droneEn from '../src/modules/drone/i18n/en.json';
 
 const L = runLegacy([/^const SH=/, /^const LETTERS=/, /^const accOf=/, /^const TUNINGS=/, /^const parseN=/, /^const mName=/, /^const splitN=/],
   '{TUNINGS,parseN,mName}');
@@ -48,7 +54,8 @@ describe('тюнер', () => {
 });
 
 describe('переводы', () => {
-  const sets = { core: [ruCore, uzCore, enCore], metro: [metroRu, metroUz, metroEn], tuner: [tunerRu, tunerUz, tunerEn] };
+  const sets = { core: [ruCore, uzCore, enCore], metro: [metroRu, metroUz, metroEn], tuner: [tunerRu, tunerUz, tunerEn],
+    piano: [pianoRu, pianoUz, pianoEn], drone: [droneRu, droneUz, droneEn] };
   it.each(Object.keys(sets))('%s: все ключи есть в uz и en, подстановки совпадают', (k) => {
     const [ru, uz, en] = sets[k];
     for (const d of [uz, en]) {

@@ -38,5 +38,15 @@
   "size.half": "Half",
   "size.quarter": "Quarter",
   "size.strip": "Strip",
-  "tools.recorded": "{tool}: {dur} added to stats"
+  "tools.recorded": "{tool}: {dur} added to stats",
+  "preset.save": "Save",
+  "preset.saveBtn": "Save",
+  "preset.mine": "My presets",
+  "preset.name": "Name",
+  "preset.needName": "Enter a name",
+  "preset.rename": "Rename",
+  "preset.delete": "Delete",
+  "preset.empty": "Nothing here yet",
+  "preset.saved": "Preset saved",
+  "ui.close": "Close"
 }

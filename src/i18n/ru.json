@@ -38,5 +38,15 @@
   "size.half": "Половина",
   "size.quarter": "Четверть",
   "size.strip": "Полоса",
-  "tools.recorded": "{tool}: {dur} в статистике"
+  "tools.recorded": "{tool}: {dur} в статистике",
+  "preset.save": "Сохранить",
+  "preset.saveBtn": "Сохранить",
+  "preset.mine": "Мои пресеты",
+  "preset.name": "Название",
+  "preset.needName": "Введи название",
+  "preset.rename": "Переименовать",
+  "preset.delete": "Удалить",
+  "preset.empty": "Пока пусто",
+  "preset.saved": "Пресет сохранён",
+  "ui.close": "Закрыть"
 }
