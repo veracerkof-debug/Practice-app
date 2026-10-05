@@ -1,4 +1,25 @@
 {
   "app.title": "Mashq",
-  "app.wip": "Prototip loyihaga ko‘chirilmoqda."
+  "app.wip": "Prototip loyihaga ko‘chirilmoqda.",
+  "lib.cats.work": "Ish",
+  "lib.cats.church": "Cherkov",
+  "lib.cats.growth": "O‘z-o‘zini rivojlantirish",
+  "lib.cats.memes": "Memlar",
+  "lib.genres.rock": "Rok",
+  "lib.genres.pop": "Pop",
+  "lib.genres.classical": "Klassika",
+  "lib.genres.jazz": "Jaz",
+  "lib.genres.blues": "Blyuz",
+  "lib.genres.metal": "Metal",
+  "lib.genres.folk": "Folk",
+  "lib.genres.hiphop": "Xip-xop",
+  "lib.genres.electronic": "Elektronika",
+  "lib.genres.country": "Kantri",
+  "lib.genres.worship": "Worship",
+  "lib.genres.indie": "Indi",
+  "lib.tags.stage": "Chiqish uchun",
+  "lib.tags.warmup": "Qizish",
+  "lib.tags.exercise": "Mashq",
+  "lib.tags.learning": "Hozir o‘rganyapman",
+  "lib.tags.repeat": "Takrorlash"
 }

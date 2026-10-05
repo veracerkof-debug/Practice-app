@@ -1,4 +1,25 @@
 {
   "app.title": "Practice",
-  "app.wip": "The prototype is being moved into the project."
+  "app.wip": "The prototype is being moved into the project.",
+  "lib.cats.work": "Work",
+  "lib.cats.church": "Church",
+  "lib.cats.growth": "Self-study",
+  "lib.cats.memes": "Memes",
+  "lib.genres.rock": "Rock",
+  "lib.genres.pop": "Pop",
+  "lib.genres.classical": "Classical",
+  "lib.genres.jazz": "Jazz",
+  "lib.genres.blues": "Blues",
+  "lib.genres.metal": "Metal",
+  "lib.genres.folk": "Folk",
+  "lib.genres.hiphop": "Hip-hop",
+  "lib.genres.electronic": "Electronic",
+  "lib.genres.country": "Country",
+  "lib.genres.worship": "Worship",
+  "lib.genres.indie": "Indie",
+  "lib.tags.stage": "For a gig",
+  "lib.tags.warmup": "Warm-up",
+  "lib.tags.exercise": "Exercise",
+  "lib.tags.learning": "Learning now",
+  "lib.tags.repeat": "Review"
 }

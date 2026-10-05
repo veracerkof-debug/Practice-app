@@ -1,4 +1,25 @@
 {
   "app.title": "Практика",
-  "app.wip": "Идёт перенос прототипа в проект."
+  "app.wip": "Идёт перенос прототипа в проект.",
+  "lib.cats.work": "Работа",
+  "lib.cats.church": "Церковь",
+  "lib.cats.growth": "Саморазвитие",
+  "lib.cats.memes": "Мемы",
+  "lib.genres.rock": "Рок",
+  "lib.genres.pop": "Поп",
+  "lib.genres.classical": "Классика",
+  "lib.genres.jazz": "Джаз",
+  "lib.genres.blues": "Блюз",
+  "lib.genres.metal": "Метал",
+  "lib.genres.folk": "Фолк",
+  "lib.genres.hiphop": "Хип-хоп",
+  "lib.genres.electronic": "Электроника",
+  "lib.genres.country": "Кантри",
+  "lib.genres.worship": "Worship",
+  "lib.genres.indie": "Инди",
+  "lib.tags.stage": "Для выступления",
+  "lib.tags.warmup": "Разогрев",
+  "lib.tags.exercise": "Упражнение",
+  "lib.tags.learning": "Учу сейчас",
+  "lib.tags.repeat": "Повторить"
 }
