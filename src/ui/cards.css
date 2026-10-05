@@ -5,6 +5,8 @@
 .card{background:var(--cell);border-radius:12px;padding:14px 16px 16px;margin-top:12px}
 .card .ch{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:600;color:var(--tint-text)}
 .card .ch span:last-child{color:var(--l2);font-weight:400;font-size:14px}
+.card .cv{font-size:28px;font-weight:600;letter-spacing:-.02em;margin-top:6px}
+.card .cv small{font-size:15px;color:var(--l2);font-weight:500;letter-spacing:0}
 .hrow{display:grid;grid-template-columns:minmax(0,1fr) 1.6fr auto;gap:12px;align-items:center;padding:7px 0;font-size:15px}
 .hrow .hb{height:7px;background:var(--fill);border-radius:4px;overflow:hidden}
 .hrow .hb i{display:block;height:100%;background:var(--tint);border-radius:4px}

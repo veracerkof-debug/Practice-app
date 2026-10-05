@@ -7,10 +7,11 @@ import { ui, esc, icons } from '../../ui/index.js';
 import { isOn } from '../settings.js';
 import { mountModule, makeCtx, moduleName, trackToolTime, SIZES, fmtDur } from '../modules.js';
 import { modules, moduleById } from '../../modules/index.js';
+import { topbar } from './common.js';
 
 export function renderTools(app, root) {
   const list = modules.filter((m) => isOn(app.store.state.settings, m.id));
-  root.innerHTML = '<div class="large">' + t('tools.title') + '</div><div class="tgrid">' + list.map((m) => {
+  root.innerHTML = topbar() + '<div class="large">' + t('tools.title') + '</div><div class="tgrid">' + list.map((m) => {
     let st = '';
     try { st = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ }
     return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + '"><span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +

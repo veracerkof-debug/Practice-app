@@ -1,0 +1,297 @@
+// Профиль и настройки (полноэкранная панель): статистика, неделя и цель, оформление, данные, функции;
+// поддержать разработчика, правовые тексты, соглашение при первом запуске.
+// Перенесено из legacy/practice.html (panelRoot, renderPanel, PPAGES, weekHTML, lookHTML, dataHTML, featHTML, statsHTML,
+// barsSVG, hbars, legalSheet, tosGate, donateSheet, doExport, импорт копии).
+import { t, tn, getLang, LANGS } from '../../i18n/index.js';
+import { esc, seg, sheet, snav, toast, confirm } from '../../ui/index.js';
+import { goalRing, FLAME } from '../../ui/cards.js';
+import { fmtDur } from '../format.js';
+import { dayKey, weekday } from '../time.js';
+import {
+  weekData, goalProgress, goalPerDay, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag,
+} from '../stats.js';
+import { FEATURES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, applyTheme } from '../settings.js';
+import { scaleOf } from '../library.js';
+import { moduleById } from '../../modules/index.js';
+import { moduleName } from '../modules.js';
+import { AVATAR, CHEV, BACK, weekdays, mBadge } from './common.js';
+import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
+
+const PAGES = {
+  feat: ['#34C759', '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="15" cy="12" r="3.5"/></svg>'],
+  stats: ['#007AFF', '<svg viewBox="0 0 24 24"><path d="M5 20v-6M10 20V9M15 20v-8M20 20V5"/></svg>'],
+  week: ['#FF9500', '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg>'],
+  look: ['#5856D6', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="#fff"/></svg>'],
+  data: ['#34C759', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
+};
+const HEART = '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
+const LANG_NAMES = { ru: 'Русский', uz: 'Oʻzbekcha', en: 'English' };
+const VERSION = '0.0.1';
+
+/* ---------- статистика ---------- */
+
+function barsSVG(vals, labels, goalLine, hl, aria) {
+  const W = 320, H = 120, n = vals.length, bw = Math.min(30, (W - 8 * (n - 1)) / n), gap = (W - n * bw) / (n - 1);
+  const top = Math.max(...vals, goalLine || 0, 1);
+  let s = '<svg class="chart" viewBox="0 0 ' + W + ' ' + (H + 18) + '" role="img" aria-label="' + esc(aria) + '">';
+  for (let i = 0; i <= 2; i++) { const y = H - ((H - 6) * i) / 2; s += '<line x1="0" x2="' + W + '" y1="' + y + '" y2="' + y + '" stroke="var(--sep)"/>'; }
+  if (goalLine) { const gy = H - (goalLine / top) * (H - 6); s += '<line x1="0" x2="' + W + '" y1="' + gy + '" y2="' + gy + '" stroke="var(--l2)" stroke-dasharray="3 4"/>'; }
+  vals.forEach((v, i) => {
+    const bh = v ? Math.max(4, (v / top) * (H - 6)) : 0, x = i * (bw + gap);
+    s += '<rect x="' + x + '" y="' + (H - bh) + '" width="' + bw + '" height="' + bh + '" rx="' + Math.min(5, bw / 2) + '" fill="' + (hl === undefined || hl === i ? 'var(--tint)' : 'var(--l3)') + '"/><text x="' + (x + bw / 2) + '" y="' + (H + 15) + '" text-anchor="middle">' + esc(labels[i]) + '</text>';
+  });
+  return s + '</svg>';
+}
+
+const hbars = (arr) => {
+  const mx = Math.max(...arr.map((x) => x.v), 1);
+  return '<div style="margin-top:6px">' + arr.map((x) => '<div class="hrow"><span class="n">' + esc(x.n) + '</span><span class="hb"><i style="width:' + (x.v / mx) * 100 + '%"></i></span><span class="num l2" style="font-size:14px">' + fmtDur(x.v) + '</span></div>').join('') + '</div>';
+};
+const card = (title, right, body) => '<div class="card"><div class="ch"><span>' + title + '</span><span>' + right + '</span></div>' + body + '</div>';
+const ddmm = (ts) => { const d = new Date(ts); return d.getDate() + '.' + String(d.getMonth() + 1).padStart(2, '0'); };
+
+function statsHTML(app) {
+  const all = app.store.sessions(), st = app.store.state.settings, now = Date.now();
+  let h = '<div class="large">' + t('stats.title') + '</div>';
+  if (!all.length) return h + '<div class="empty"><b>' + t('stats.emptyTitle') + '</b>' + t('stats.emptyText') + '<br><button class="btn fill" data-go="home">' + t('stats.toPractice') + '</button></div>';
+  const w = weekData(all, now), m = monthSplit(all, now), goal = st.goalMin * 60, pw = goalProgress(w.total, st), sk = streakInfo(all, st, now);
+  h += '<div class="tiles num"><div class="tile"><b>' + fmtDur(w.total) + '</b><span>' + t('stats.week') + '</span></div><div class="tile"><b>' + fmtDur(m.total) + '</b><span>' + t('stats.month') +
+    '</span></div><div class="tile"><b>' + fmtDur(totalTime(all)) + '</b><span>' + t('stats.total') + '</span></div></div><div class="sgrid">';
+  h += card(t('stats.thisWeek'), t('streak.goal', { goal: fmtDur(goal) }), '<div class="wkhead">' + goalRing(pw, true, t('home.ringAria', { p: Math.round(pw * 100) })) + '<div><div class="cv num" style="margin:0">' + fmtDur(w.total) +
+    '</div><div class="l2" style="font-size:14px">' + (pw > 1 ? t('stats.over', { p: Math.round((pw - 1) * 100) }) : pw >= 1 ? t('stats.met') : t('stats.left', { d: fmtDur(goal - w.total) })) + '</div>' +
+    (isOn(st, 'streak') ? '<button class="spill" data-act="streak" style="margin-top:6px">' + FLAME + '<b class="num">' + sk.weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', sk.weeks) })) + '</span></button>' : '') +
+    '</div></div>' + barsSVG(w.per, weekdays(), goalPerDay(st), weekday(now), t('stats.byDayAria')));
+  const hm = heatmap(all, now), loc = getLang() === 'en' ? 'en-GB' : getLang() === 'uz' ? 'uz-Latn' : 'ru-RU';
+  h += card(t('stats.12w'), tn('stats.activeDays', hm.active), '<div class="heat" role="img" aria-label="' + t('stats.heatAria') + '">' + hm.cells.map((c) =>
+    '<i title="' + esc(new Date(c.t).toLocaleDateString(loc) + ': ' + (c.v ? fmtDur(c.v) : t('stats.none'))) + '" style="' + (c.future ? 'opacity:.35;' : '') +
+    (c.v ? 'background:color-mix(in srgb,var(--tint) ' + Math.round(c.level * 100) + '%,var(--fill))' : '') + '"></i>').join('') + '</div>');
+  const wk = weeklyTotals(all, now);
+  h += card(t('stats.byWeek'), t('stats.avg', { d: fmtDur(wk.avg) }), barsSVG(wk.weeks.map((x) => x.v), wk.weeks.map((x) => ddmm(x.a)), goal, 7, t('stats.byWeekAria')));
+  const pc = (v) => (m.total ? (v / m.total) * 100 : 0);
+  h += card(t('stats.thisMonth'), fmtDur(m.total), '<div class="split"><i style="width:' + pc(m.free) + '%;background:var(--ink)"></i><i style="width:' + pc(m.songs) + '%;background:var(--tint)"></i><i style="flex:1;background:#5856D6"></i></div>' +
+    '<div class="legend"><span><i style="background:var(--ink)"></i>' + t('stats.free', { d: fmtDur(m.free) }) + '</span><span><i style="background:var(--tint)"></i>' + t('stats.songs', { d: fmtDur(m.songs) }) +
+    '</span><span><i style="background:#5856D6"></i>' + t('stats.tools', { d: fmtDur(m.tool) }) + '</span></div>');
+  const tools = byTool(all).map((x) => ({ n: moduleById(x.n) ? moduleName(moduleById(x.n)) : x.n, v: x.v }));
+  if (tools.length) h += card(t('stats.toolsTitle'), t('stats.total'), hbars(tools));
+  const songs = app.store.songs(), byS = bySong(all, songs).map((x) => ({ n: songs.find((s) => s.id === x.n).title, v: x.v }));
+  if (byS.length) h += card(t('stats.songsTitle'), t('stats.byTime'), hbars(byS));
+  const g = bySongField(all, songs, 'genre').map((x) => ({ n: x.n || t('stats.noGenre'), v: x.v }));
+  if (g.length) h += card(t('stats.genres'), '', hbars(g));
+  const d = bySongField(all, songs, 'difficulty').map((x) => ({ n: x.n ? t('diff.' + x.n) : '—', v: x.v }));
+  if (d.length) h += card(t('stats.difficulty'), '', hbars(d));
+  const tags = byFreeTag(all).map((x) => ({ n: x.n ? freeTagName(x.n) : t('stats.noTag'), v: x.v }));
+  if (tags.length) h += card(t('stats.freeTitle'), t('stats.byTag'), hbars(tags));
+  return h + '</div>';
+}
+
+// Метки свободной практики хранятся по-русски (как в прототипе) — показываем на языке интерфейса
+const FREE_TAG_KEYS = { 'Упражнения': 'exercises', 'Джем': 'jam', 'Импровизация': 'impro', 'Разогрев': 'warmup', 'Другое': 'other' };
+export const freeTagName = (n) => (FREE_TAG_KEYS[n] ? t('freeTag.' + FREE_TAG_KEYS[n]) : n);
+
+/* ---------- страницы настроек ---------- */
+
+const psw = (key, on, label) => '<label class="sw"><input type="checkbox" data-psw="' + key + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(label) + '"><i></i></label>';
+
+function weekHTML(app) {
+  const st = app.store.state.settings, WD = weekdays();
+  return '<div class="large">' + t('week.title') + '</div>' +
+    '<div class="group"><div class="cell"><span class="grow">' + t('week.autoTrack') + '</span>' + psw('autoTrack', st.autoTrack !== false, t('week.autoTrack')) + '</div>' +
+    '<div class="cell"><span class="grow">' + t('week.showClock') + '</span>' + psw('showClock', st.showClock !== false, t('week.showClock')) + '</div></div>' +
+    '<p class="ftr">' + t('week.autoHint') + '</p>' +
+    '<div class="hdr">' + t('week.days') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" aria-label="' + t('week.days') + '">' +
+    WD.map((d, i) => '<button data-day="' + i + '" aria-pressed="' + !!st.days[i] + '">' + d + '</button>').join('') + '</div></div></div>' +
+    '<p class="ftr">' + t('week.restHint') + '</p>' +
+    '<div class="hdr">' + t('week.goal') + '</div><div class="group"><div class="cell"><span class="grow">' + t('week.perWeek') + '</span><span class="val num" style="color:var(--ink);margin-right:6px">' + fmtDur(st.goalMin * 60) +
+    '</span><span class="stepper"><button data-goal="-30" aria-label="' + t('week.minus30') + '">−</button><button data-goal="30" aria-label="' + t('week.plus30') + '">+</button></span></div></div>';
+}
+
+function lookHTML(app) {
+  const st = app.store.state.settings;
+  return '<div class="large">' + t('look.title') + '</div>' +
+    '<div class="hdr">' + t('look.lang') + '</div><div class="group"><div class="cellcol"><div class="seg uc" role="group" aria-label="' + t('look.lang') + '">' +
+    LANGS.map((k) => '<button data-lang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>' +
+    '<div class="hdr">' + t('look.theme') + '</div><div class="group"><div class="cellcol">' + seg('theme', [['system', t('look.auto')], ['light', t('look.light')], ['dark', t('look.dark')]], st.theme, t('look.theme')) + '</div></div>' +
+    '<div class="hdr">' + t('look.style') + '</div><div class="skins">' + [['paper', t('look.paper'), '#F4EFE6', '#2B2620'], ['oled', 'OLED', '#000', '#fff']].map(([k, n, bg, fg]) =>
+      '<button class="skin' + (st.theme === k ? ' on' : '') + '" data-skin="' + k + '" aria-pressed="' + (st.theme === k) + '" style="background:' + bg + ';color:' + fg + '">' + n + '</button>').join('') + '</div>' +
+    '<div class="hdr">' + t('look.accent') + '</div><div class="group"><div class="cellcol"><div class="swgrid">' + ACCENTS.map(([k, c]) =>
+      '<button class="swc' + ((st.accent || 'orange') === k ? ' on' : '') + '" data-acc="' + k + '" aria-pressed="' + ((st.accent || 'orange') === k) + '" style="background:' + c + '" aria-label="' + esc(t('look.accentAria', { c: t('accent.' + k) })) + '"></button>').join('') + '</div></div></div>' +
+    '<div class="hdr">' + t('look.scale') + '</div><div class="group"><div class="cellcol">' + seg('scale', [['5', '1–5'], ['10', '1–10'], ['100', '%']], String(scaleOf(st)), t('look.scale')) + '</div><div class="cell center" style="gap:12px">' +
+    [20, 60, 100].map((p) => mBadge(p, st)).join('') + '</div></div><p class="ftr">' + t('look.scaleHint') + '</p>';
+}
+
+function dataHTML() {
+  return '<div class="large">' + t('data.title') + '</div><div class="group"><button class="cell act" data-act="export">' + t('data.export') + '</button><button class="cell act" data-act="import">' + t('data.import') + '</button></div>' +
+    '<p class="ftr">' + t('data.hint') + '</p>' +
+    '<div class="group" style="margin-top:28px"><button class="cell danger center" data-act="reset">' + t('data.reset') + '</button></div>';
+}
+
+function featHTML(app) {
+  const st = app.store.state.settings;
+  return '<div class="large">' + t('feat.title') + '</div><p class="sub" style="margin:0 4px 12px">' + t('feat.hint') + '</p><div class="group">' + FEATURES.map((k) => {
+    const m = moduleById(k), name = m ? moduleName(m) : t('feat.' + k);
+    const icon = m ? '<span class="ticon" style="background:' + m.color + '">' + m.icon + '</span>' : '<span class="ticon" style="background:#FF9500">' + FLAME + '</span>';
+    return '<div class="cell">' + icon + '<span class="grow">' + esc(name) + '</span>' + '<label class="sw"><input type="checkbox" data-feat="' + k + '"' + (isOn(st, k) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
+  }).join('') + '</div>';
+}
+
+function rootHTML(app) {
+  const all = app.store.sessions(), n = app.store.songs().length, weeks = streakInfo(all, app.store.state.settings).weeks;
+  return '<div class="phero"><div class="pav">' + AVATAR + '</div><div class="large" style="margin:12px 0 2px;text-align:center">' + t('panel.title') + '</div></div>' +
+    '<div class="tiles num"><div class="tile"><b>' + fmtDur(totalTime(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
+    '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>' +
+    '<div class="group" style="margin-top:20px">' + Object.entries(PAGES).map(([k, [c, ic]]) => '<button class="cell" data-pp="' + k + '"><span class="ticon" style="background:' + c + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
+    '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="background:#FF2D55">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button></div>' +
+    '<div class="group" style="margin-top:12px">' + ['tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
+    '<div class="about"><b>Practice</b> · ' + t('panel.version', { v: VERSION }) + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
+}
+
+/* ---------- панель ---------- */
+
+// Полноэкранная панель профиля; page — 'root' или ключ PAGES
+export function createPanel(app, onChange) {
+  let page = null, layer = null, input = null;
+  const render = () => {
+    if (!page) { if (layer) { layer.remove(); layer = null; } return; }
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.id = 'panelLayer';
+      layer.className = 'panel';
+      layer.setAttribute('role', 'dialog');
+      layer.setAttribute('aria-modal', 'true');
+      layer.setAttribute('aria-label', t('panel.aria'));
+      document.body.appendChild(layer);
+      bind();
+    }
+    const sub = page !== 'root', y = layer.scrollTop;
+    const body = { root: rootHTML, stats: statsHTML, week: weekHTML, look: lookHTML, data: dataHTML, feat: featHTML }[page](app);
+    layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="link" data-pp="root">' + BACK + t('panel.back') + '</button>' : '<span></span>') +
+      '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
+    layer.scrollTop = y;
+  };
+  const changed = () => { app.store.settingsChanged(); render(); onChange(); };
+  function bind() {
+    layer.addEventListener('click', (e) => {
+      const g = (s) => e.target.closest(s);
+      let b;
+      if ((b = g('[data-pp]'))) { page = b.dataset.pp; render(); layer.scrollTop = 0; return; }
+      if (g('[data-act="pclose"]')) { panel.close(); return; }
+      if ((b = g('[data-day]'))) { toggleDay(app.store, +b.dataset.day); render(); onChange(); return; }
+      if ((b = g('[data-goal]'))) { changeGoal(app.store, +b.dataset.goal); render(); onChange(); return; }
+      if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
+      if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
+      if ((b = g('[data-acc]'))) { app.store.state.settings.accent = b.dataset.acc; applyTheme(app.store.state.settings); changed(); return; }
+      if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
+      if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); setTimeout(() => location.reload(), 150); return; }
+      if (g('[data-act="export"]')) { exportBackup(app); return; }
+      if (g('[data-act="import"]')) { input.click(); return; }
+      if (g('[data-act="reset"]')) {
+        confirm(t('data.resetTitle'), t('data.resetText'), t('data.resetYes')).then((ok) => {
+          if (!ok) return;
+          app.store.reset();
+          applyTheme(app.store.state.settings);
+          render();
+          onChange();
+          toast(t('data.resetDone'));
+        });
+        return;
+      }
+      if ((b = g('[data-go]'))) { panel.close(); app.go(b.dataset.go); return; }
+      app.shellAct(e); // общие действия: ударный режим, поддержать, правовые тексты
+    });
+    layer.addEventListener('change', (e) => {
+      const d = e.target.dataset;
+      if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); return; }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); }
+    });
+  }
+  // Выбор файла копии живёт вне панели: панель перерисовывается целиком
+  input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.hidden = true;
+  input.addEventListener('change', () => importBackup(app, input, () => { applyTheme(app.store.state.settings); render(); onChange(); }));
+  document.body.appendChild(input);
+  const onKey = (e) => { if (e.key === 'Escape' && page && !document.querySelector('#sheetLayer .scrim, .ask')) panel.close(); };
+  document.addEventListener('keydown', onKey);
+  const panel = {
+    open(p = 'root') { page = p; render(); if (layer) layer.scrollTop = 0; },
+    close() { page = null; render(); },
+    refresh() { if (page) render(); },
+    get page() { return page; },
+  };
+  return panel;
+}
+
+/* ---------- резервная копия ---------- */
+
+function exportBackup(app) {
+  const name = 'practice-backup-' + dayKey(Date.now()) + '.json';
+  const url = URL.createObjectURL(new Blob([app.store.exportBackup()], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast(t('data.saved'));
+}
+
+function importBackup(app, input, done) {
+  const f = input.files[0];
+  input.value = '';
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const n = app.store.importBackup(JSON.parse(r.result));
+      done();
+      toast(tn('data.imported', n));
+    } catch { toast(t('data.notBackup')); }
+  };
+  r.readAsText(f);
+}
+
+/* ---------- поддержать, правовые тексты, соглашение ---------- */
+
+export function donateSheet() {
+  sheet(() => snav(t('donate.title')) + '<div class="prohero"><div class="pav" style="color:#FF2D55">' + HEART.replace('<svg', '<svg style="width:40px;height:40px;fill:currentColor"') + '</div><p class="l2" style="text-align:center;margin:10px 16px 0">' + t('donate.text') + '</p></div>' +
+    '<div class="dongrid">' + [['1 $', 'coffee'], ['3 $', 'strings'], ['5 $', 'pick']].map(([a, k]) => '<button class="donb" data-don="' + a + '"><b>' + a + '</b><span>' + t('donate.' + k) + '</span></button>').join('') +
+    '</div><p class="ftr" style="text-align:center">' + t('donate.later') + '</p>',
+  (el) => el.addEventListener('click', (e) => { if (e.target.closest('[data-don]')) toast(t('donate.thanks')); }));
+}
+
+const ruOnly = () => (getLang() === 'ru' ? '' : '<p class="ftr">' + t('legal.ruOnly') + '</p>');
+
+export function legalSheet(kind) {
+  let body;
+  if (kind === 'priv') body = snav(t('legal.privShort')) + ruOnly() + '<div class="legal" lang="ru"><h2>Политика конфиденциальности</h2>' + PRIV_HTML + '</div>';
+  else if (kind === 'tos') body = snav(t('legal.tosShort')) + ruOnly() + '<div class="legal" lang="ru"><h2>Пользовательское соглашение</h2>' + TOS_HTML + '</div>';
+  else {
+    const lic = (title, sub, text) => '<div class="lic"><h3>' + title + '</h3><p class="l2">' + sub + '</p>' + text + '</div>';
+    body = snav(t('legal.lic')) + '<div class="legal"><p>' + t('lic.intro') + '</p>' +
+      lic('alphaTab', t('lic.at.sub'), '<p>© CoderLine (Daniel Kuschny) ' + t('lic.andContrib') + '</p><p>' + t('lic.at.text') + '</p><p>' + t('lic.at.inner') + '</p>') +
+      lic('Bravura', t('lic.brav.sub'), '<p>Copyright © 2013, Steinberg Media Technologies GmbH (http://www.steinberg.net/), with Reserved Font Name "Bravura".</p><p>This Font Software is licensed under the SIL Open Font License, Version 1.1.</p><pre>' + esc(OFL_TEXT) + '</pre>') +
+      lic('SONiVOX EAS', t('lic.sv.sub'), '<p>' + t('lic.sv.text') + '</p>') +
+      '<div class="lic"><h3>' + t('lic.snd.title') + '</h3><p>' + t('lic.snd.text') + '</p></div></div>';
+  }
+  sheet(() => body);
+}
+
+// Соглашение при первом запуске (и при смене редакции)
+export function tosGate(app) {
+  const st = app.store.state.settings;
+  if (st.tosOk === TOS_VER || document.getElementById('tosGate')) return;
+  const l = document.createElement('div');
+  l.id = 'tosGate';
+  l.className = 'ask';
+  l.style.zIndex = '39';
+  l.innerHTML = '<div class="askbox tosbox" role="dialog" aria-modal="true" aria-label="' + esc(t('legal.tos')) + '"><h2>' + t('tos.title') + '</h2><p>' + t('tos.p1') + '</p><p>' + t('tos.p2') + '</p>' +
+    '<button class="link" data-tos-read style="font-size:15px">' + t('tos.read') + '</button><button class="btn fill block" data-tos-ok style="margin-top:12px">' + t('tos.ok') + '</button></div>';
+  document.body.appendChild(l);
+  l.addEventListener('click', (e) => {
+    if (e.target.closest('[data-tos-read]')) legalSheet('tos');
+    else if (e.target.closest('[data-tos-ok]')) { st.tosOk = TOS_VER; app.store.settingsChanged(); l.remove(); }
+  });
+}
+

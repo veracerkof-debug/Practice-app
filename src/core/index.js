@@ -1,6 +1,6 @@
 // Ядро: песни, сессии, статистика, цели, ударный режим, хранение.
-// Экраны пока в legacy/practice.html — переносятся вместе с рабочим пространством (ROADMAP, этап 1).
-import { t } from '../i18n/index.js';
+// Экран сессии пока в legacy/practice.html — переносится вместе с рабочим пространством (ROADMAP, этап 1).
+import { t, initI18n } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
 import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.js';
@@ -8,7 +8,7 @@ import { loadDevice, saveDevice } from './device.js';
 import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
 import { applyTheme } from './settings.js';
-import { renderTools } from './screens/tools.js';
+import { createShell } from './screens/shell.js';
 import { createShared } from './modules.js';
 import { createPomodoro, pomoDefaults } from './pomodoro.js';
 import { pause as pauseActive, resume as resumeActive } from './session.js';
@@ -17,6 +17,8 @@ import { createFiles } from './files.js';
 
 export function boot(root) {
   const store = createStore();
+  // Язык из настроек (выбран в «Оформлении»), иначе — язык системы
+  initI18n(store.state.settings.lang);
   ensureLib(store.state, t);
   applyTheme(store.state.settings);
   recoverToolView(store);
@@ -80,10 +82,11 @@ export function boot(root) {
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },
   };
-  // Пока перенесены только инструменты — показываем их экран
-  renderTools(app, root);
-  // Статус медиатеки зависит от файлов, которые читаются из базы асинхронно
-  files.ready.then(() => { if (!app.openTool) renderTools(app, root); });
+  // Экран сессии и рабочее пространство переносятся следующим шагом (ROADMAP, этап 1)
+  app.startSession = () => toast(t('session.soon'));
+  createShell(app, root);
+  // Статус медиатеки и табов зависит от файлов, которые читаются из базы асинхронно
+  files.ready.then(() => { if (!app.openTool) app.render(); });
   return app;
 }
 
