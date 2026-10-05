@@ -392,6 +392,7 @@ function bind() {
 
 export default {
   id: 'metro',
+  order: 10,
   name: { ru: ru.name, uz: uz.name, en: en.name },
   i18n: { ru, uz, en },
   icon: ICON,

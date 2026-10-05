@@ -10,15 +10,16 @@ import { dayKey, weekday } from '../time.js';
 import {
   weekData, goalProgress, goalPerDay, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag,
 } from '../stats.js';
-import { FEATURES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, applyTheme } from '../settings.js';
+import { CORE_FEATURES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, applyTheme, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
-import { moduleById } from '../../modules/index.js';
+import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
-import { AVATAR, CHEV, BACK, weekdays, mBadge } from './common.js';
+import { AVATAR, CHEV, BACK, IC, TAB_IDS, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
 
 const PAGES = {
   feat: ['#34C759', '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="15" cy="12" r="3.5"/></svg>'],
+  tabs: ['#8E8E93', '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 15.5h17M9.2 15.5v4M14.8 15.5v4"/></svg>'],
   stats: ['#007AFF', '<svg viewBox="0 0 24 24"><path d="M5 20v-6M10 20V9M15 20v-8M20 20V5"/></svg>'],
   week: ['#FF9500', '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg>'],
   look: ['#5856D6', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="#fff"/></svg>'],
@@ -125,13 +126,32 @@ function dataHTML() {
     '<div class="group" style="margin-top:28px"><button class="cell danger center" data-act="reset">' + t('data.reset') + '</button></div>';
 }
 
+// Модули (встроенные и личные из src/modules-local) и функции ядра: включить и выключить
 function featHTML(app) {
-  const st = app.store.state.settings;
-  return '<div class="large">' + t('feat.title') + '</div><p class="sub" style="margin:0 4px 12px">' + t('feat.hint') + '</p><div class="group">' + FEATURES.map((k) => {
-    const m = moduleById(k), name = m ? moduleName(m) : t('feat.' + k);
-    const icon = m ? '<span class="ticon" style="background:' + m.color + '">' + m.icon + '</span>' : '<span class="ticon" style="background:#FF9500">' + FLAME + '</span>';
-    return '<div class="cell">' + icon + '<span class="grow">' + esc(name) + '</span>' + '<label class="sw"><input type="checkbox" data-feat="' + k + '"' + (isOn(st, k) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
-  }).join('') + '</div>';
+  const st = app.store.state.settings, lang = getLang();
+  const row = (id, icon, color, name, about, extra = '') => '<div class="cell"><span class="ticon" style="background:' + color + '">' + icon + '</span><span class="grow"><span>' + esc(name) + extra +
+    '</span>' + (about ? '<span class="st l2" style="display:block;font-size:13px">' + esc(about) + '</span>' : '') + '</span>' +
+    '<label class="sw"><input type="checkbox" data-feat="' + id + '"' + (isOn(st, id) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
+  const aboutOf = (m) => (m.i18n?.[lang]?.about ?? m.i18n?.ru?.about ?? (m.about && (m.about[lang] || m.about.ru)) ?? '');
+  return '<div class="large">' + t('feat.title') + '</div><p class="sub" style="margin:0 4px 12px">' + t('feat.hint') + '</p>' +
+    '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
+    modules.map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '')).join('') + '</div>' +
+    '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, FLAME, '#FF9500', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>' +
+    '<p class="ftr">' + t('feat.own') + '</p>' +
+    (skippedModules.length ? '<p class="ftr" style="color:var(--red)">' + esc(t('feat.skipped', { list: skippedModules.map((x) => x.path.split('/').slice(-2, -1)[0] + ' (' + x.err + ')').join(', ') })) + '</p>' : '');
+}
+
+// Вкладки внизу: порядок и состав
+function tabsHTML(app) {
+  const st = app.store.state.settings, vis = visibleTabs(st, TAB_IDS), hid = hiddenTabs(st, TAB_IDS);
+  const row = (k, on, i) => '<div class="cell"><span class="ticon" style="background:var(--tint)">' + TAB_ICONS[k] + '</span><span class="grow">' + t('nav.' + k) + '</span>' +
+    (on ? (i > 0 ? '<button class="ic sm plain" data-tabmv="up" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.up', { name: t('nav.' + k) })) + '">' + IC.up + '</button>' : '') +
+      (vis.length > 1 ? '<button class="ic sm plain" data-tabmv="off" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.off', { name: t('nav.' + k) })) + '" style="color:var(--red)">' + IC.minus + '</button>' : '')
+      : '<button class="ic sm plain" data-tabmv="on" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.on', { name: t('nav.' + k) })) + '" style="color:#34C759">' + IC.plus + '</button>') + '</div>';
+  return '<div class="large">' + t('tabs.title') + '</div>' +
+    '<div class="hdr">' + t('tabs.shown') + '</div><div class="group">' + vis.map((k, i) => row(k, true, i)).join('') + '</div>' +
+    (hid.length ? '<div class="hdr">' + t('tabs.hidden') + '</div><div class="group">' + hid.map((k) => row(k, false)).join('') + '</div>' : '') +
+    '<p class="ftr">' + t('tabs.hint') + '</p>';
 }
 
 function rootHTML(app) {
@@ -163,7 +183,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const body = { root: rootHTML, stats: statsHTML, week: weekHTML, look: lookHTML, data: dataHTML, feat: featHTML }[page](app);
+    const body = { root: rootHTML, stats: statsHTML, week: weekHTML, look: lookHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML }[page](app);
     layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="link" data-pp="root">' + BACK + t('panel.back') + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
     layer.scrollTop = y;
@@ -175,6 +195,7 @@ export function createPanel(app, onChange) {
       let b;
       if ((b = g('[data-pp]'))) { page = b.dataset.pp; render(); layer.scrollTop = 0; return; }
       if (g('[data-act="pclose"]')) { panel.close(); return; }
+      if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, TAB_IDS, b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
       if ((b = g('[data-day]'))) { toggleDay(app.store, +b.dataset.day); render(); onChange(); return; }
       if ((b = g('[data-goal]'))) { changeGoal(app.store, +b.dataset.goal); render(); onChange(); return; }
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }

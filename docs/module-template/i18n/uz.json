@@ -1,0 +1,10 @@
+{
+  "name": "Hisoblagich",
+  "about": "Mashq takrorlarini sanaydi",
+  "hint": "Takrorni chalganingizda bosing",
+  "add": "Bitta qoʻshish",
+  "reset": "Nolga tushirish",
+  "count": [
+    "{n} ta takror"
+  ]
+}

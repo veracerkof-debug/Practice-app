@@ -48,5 +48,6 @@
   "scope.live": "jonli signal",
   "scope.calc": "sozlamalar bo‘yicha shakl",
   "pre.new": "Yangi preset",
-  "pre.default": "Mening ovozim"
+  "pre.default": "Mening ovozim",
+  "about": "Ikki oktavagacha, tovushlar va oʻz presetlaringiz"
 }

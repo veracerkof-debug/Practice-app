@@ -20,7 +20,8 @@ export const IC = {
   metro: '<svg viewBox="0 0 24 24"><path d="M8 21h8l-3-17h-2zM12 14l5-7"/></svg>',
   notes: '<svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>',
 };
-// Значки вкладок
+// Вкладки приложения (экраны ядра); порядок и видимость — settings.tabs / settings.tabsOff
+export const TAB_IDS = ['home', 'library', 'tools'];
 export const TAB_ICONS = {
   home: '<svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="10"/><path d="M14 8.5V14l3.6 2.4"/></svg>',
   library: '<svg viewBox="0 0 28 28"><path d="M11 20V7.5l11-2.5V17.5"/><circle cx="8" cy="20" r="3"/><circle cx="19" cy="17.5" r="3"/></svg>',

@@ -59,7 +59,10 @@
   "tr.step": "Add",
   "tr.stepVal": "+{n} bpm",
   "tr.every": "Every",
-  "tr.everyVal": ["{n} bar", "{n} bars"],
+  "tr.everyVal": [
+    "{n} bar",
+    "{n} bars"
+  ],
   "tr.max": "Up to",
   "tr.maxVal": "{n} bpm",
   "tr.ftr": "The tempo rises on its own until it reaches the limit.",
@@ -73,5 +76,6 @@
   "gap.muteLbl": "Silent bars",
   "gap.ftr": "The metronome goes quiet for a few bars, so you can check whether you keep the tempo yourself.",
   "resetAcc": "Reset accents",
-  "resetAccDone": "Accents reset"
+  "resetAccDone": "Accents reset",
+  "about": "Meters, accents, subdivisions"
 }

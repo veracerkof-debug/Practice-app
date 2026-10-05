@@ -50,5 +50,6 @@
   "save": "Saqlash",
   "textPh": "Am        F\nQoʻshiq satri...\n\nyoki satr ichida: [Am]Qoʻshiq [F]satri",
   "textHint": "Faqat akkordlardan iborat satrlar ajratib koʻrsatiladi va transpozitsiya qilinadi. Akkordlarni matn ichida kvadrat qavsda yozish mumkin: [Am].",
-  "notSaved": "Fayl qayta yuklangandan keyin saqlanmaydi"
+  "notSaved": "Fayl qayta yuklangandan keyin saqlanmaydi",
+  "about": "Guitar Pro tabulaturalari va akkordli matn"
 }

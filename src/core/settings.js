@@ -1,7 +1,7 @@
 // Настройки ядра: цель недели, дни практики, тема, функции (вкл/выкл).
 
-// Функции, которые можно выключить; данные при этом сохраняются
-export const FEATURES = ['metro', 'tuner', 'piano', 'drone', 'theory', 'ear', 'timer', 'audio', 'notes', 'streak'];
+// Функции ядра, которые можно выключить (модули выключаются так же — по id); данные при этом сохраняются
+export const CORE_FEATURES = ['streak'];
 
 export const isOn = (settings, id) => !((settings.off || {})[id]);
 
@@ -49,4 +49,33 @@ export function applyTheme(settings, de = document.documentElement) {
 export function setTheme(store, theme) {
   store.state.settings.theme = theme;
   store.settingsChanged();
+}
+
+/* ---------- вкладки ---------- */
+
+export const DEFAULT_TABS = ['home', 'library', 'tools'];
+
+// Видимые вкладки по порядку. settings.tabs — порядок видимых, settings.tabsOff — убранные.
+// Вкладка, которой нет ни там, ни там (новая в обновлении), появляется в конце. Хотя бы одна остаётся всегда.
+export function visibleTabs(settings, known) {
+  const off = settings.tabsOff || [];
+  const list = (settings.tabs || DEFAULT_TABS).filter((k, i, a) => known.includes(k) && !off.includes(k) && a.indexOf(k) === i);
+  known.forEach((k) => { if (!list.includes(k) && !off.includes(k) && !(settings.tabs || DEFAULT_TABS).includes(k)) list.push(k); });
+  return list.length ? list : [known[0]];
+}
+
+export const hiddenTabs = (settings, known) => known.filter((k) => !visibleTabs(settings, known).includes(k));
+
+// Действия на экране «Вкладки»: 'up' — выше, 'off' — убрать, 'on' — вернуть в конец
+export function editTabs(store, known, id, action) {
+  const st = store.state.settings, vis = visibleTabs(st, known), off = new Set(st.tabsOff || []);
+  const i = vis.indexOf(id);
+  if (action === 'up' && i > 0) [vis[i - 1], vis[i]] = [vis[i], vis[i - 1]];
+  else if (action === 'off' && i >= 0 && vis.length > 1) { vis.splice(i, 1); off.add(id); }
+  else if (action === 'on' && i < 0) { vis.push(id); off.delete(id); }
+  else return false;
+  st.tabs = vis;
+  st.tabsOff = [...off];
+  store.settingsChanged();
+  return true;
 }

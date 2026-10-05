@@ -53,5 +53,6 @@
   "u.s": "{n} s",
   "xfade": "Smooth transition between notes",
   "pre.new": "New pad preset",
-  "pre.default": "My pad"
+  "pre.default": "My pad",
+  "about": "Sustained note and pads for intonation"
 }

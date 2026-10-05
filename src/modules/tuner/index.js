@@ -336,6 +336,7 @@ function bind() {
 
 export default {
   id: 'tuner',
+  order: 20,
   name: { ru: ru.name, uz: uz.name, en: en.name },
   i18n: { ru, uz, en },
   icon: ICON,

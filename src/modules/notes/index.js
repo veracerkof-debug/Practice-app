@@ -283,6 +283,7 @@ function act(a, el) {
 
 export default {
   id: 'notes',
+  order: 90,
   name: { ru: ru.name, uz: uz.name, en: en.name },
   i18n: { ru, uz, en },
   icon: ICON,

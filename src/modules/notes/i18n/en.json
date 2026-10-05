@@ -51,5 +51,6 @@
   "save": "Save",
   "textPh": "Am        F\nA line of the song...\n\nor inline: [Am]A line [F]of the song",
   "textHint": "Lines made only of chords are highlighted and transposed. You can also write chords inline in square brackets: [Am].",
-  "notSaved": "The file won’t be kept after reload"
+  "notSaved": "The file won’t be kept after reload",
+  "about": "Guitar Pro tabs and lyrics with chords"
 }

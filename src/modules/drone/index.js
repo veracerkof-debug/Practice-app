@@ -129,6 +129,7 @@ function bind() {
 
 export default {
   id: 'drone',
+  order: 40,
   name: { ru: ru.name, uz: uz.name, en: en.name },
   i18n: { ru, uz, en },
   icon: ICON,

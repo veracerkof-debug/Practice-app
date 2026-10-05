@@ -76,5 +76,6 @@
   "style.vinyl": "Vinil",
   "vinylHint": "Vinil: ijro yoki pauza uchun plastinkani bosing. Aylanish tezligi ijro tezligiga mos keladi.",
   "notSaved": "Fayl qayta yuklangandan keyin saqlanmaydi",
-  "stepHint": "A–B qismini belgilang, tezlik har takrorda 5% oshadi"
+  "stepHint": "A–B qismini belgilang, tezlik har takrorda 5% oshadi",
+  "about": "Minuslar va yozuvlar, tezlik, takror"
 }

@@ -48,5 +48,6 @@
   "scope.live": "live signal",
   "scope.calc": "shape from settings",
   "pre.new": "New preset",
-  "pre.default": "My sound"
+  "pre.default": "My sound",
+  "about": "Up to two octaves, sounds and your own presets"
 }

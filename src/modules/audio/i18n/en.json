@@ -77,5 +77,6 @@
   "style.vinyl": "Vinyl",
   "vinylHint": "Vinyl: tap the record to play or pause. Spin speed follows playback speed.",
   "notSaved": "The file won’t be kept after reload",
-  "stepHint": "Mark an A–B section and speed will rise 5% with each loop"
+  "stepHint": "Mark an A–B section and speed will rise 5% with each loop",
+  "about": "Backing tracks and recordings, speed, loop"
 }

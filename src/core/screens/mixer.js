@@ -19,7 +19,7 @@ export function createMixerDrawer(app) {
     return '<div class="mxf' + (mu ? ' mu' : '') + '" data-k="' + k + '" style="--c:' + c + '"><span class="mxv num">' + (mu ? '0' : pct) + '</span>' +
       '<div class="mxt" role="slider" aria-label="' + esc(t('mix.volume', { src: lab })) + '" aria-valuemin="0" aria-valuemax="' + MIX_MAX * 100 + '" aria-valuenow="' + pct + '" tabindex="0">' +
       '<b style="height:' + (v / MIX_MAX) * 100 + '%"></b><i style="bottom:' + (v / MIX_MAX) * 100 + '%"></i><em style="bottom:' + (1 / MIX_MAX) * 100 + '%"></em></div>' +
-      '<button class="mxi" data-mute="' + k + '" aria-label="' + esc(t(mu ? 'mix.unmute' : 'mix.mute', { src: lab })) + '" title="' + esc(lab) + '">' + (moduleById(icon) || {}).icon + '</button></div>';
+      '<button class="mxi" data-mute="' + k + '" aria-label="' + esc(t(mu ? 'mix.unmute' : 'mix.mute', { src: lab })) + '" title="' + esc(lab) + '">' + ((moduleById(icon) || {}).icon || '') + '</button></div>';
   };
   const render = () => { el.querySelector('.mxp').innerHTML = SRC.map(fader).join(''); tick(); };
   const setOpen = (o) => { open = o; el.classList.toggle('open', o); el.querySelector('.mxh').setAttribute('aria-expanded', o); if (o) render(); };

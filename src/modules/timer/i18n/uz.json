@@ -22,5 +22,6 @@
   "u.cycles": "{n} sikldan keyin",
   "auto": "Keyingi bosqich o‘zi boshlansin",
   "pauseSession": "Tanaffus mashqqa qo‘shilmasin",
-  "progress": "Uzun tanaffusgacha sikllar: {n} dan {done}"
+  "progress": "Uzun tanaffusgacha sikllar: {n} dan {done}",
+  "about": "Ish va tanaffuslar"
 }

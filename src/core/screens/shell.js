@@ -1,24 +1,26 @@
-// Каркас приложения: нижние вкладки «Практика / Песни / Инструменты», экраны, общие действия.
+// Каркас приложения: нижние вкладки (порядок и состав настраиваются — «Вкладки» в профиле), экраны, общие действия.
 // Перенесено из legacy/practice.html (view, renderTabs, go, render, глобальные обработчики нажатий).
 import '../../ui/screens.css';
 import { t } from '../../i18n/index.js';
 import { confirm } from '../../ui/index.js';
 import { deleteSong } from '../library.js';
-import { TAB_ICONS } from './common.js';
+import { TAB_ICONS, TAB_IDS } from './common.js';
+import { visibleTabs } from '../settings.js';
 import { homeHTML, quickEdit, streakSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { createPanel, donateSheet, legalSheet, tosGate } from './panel.js';
 
-const TABS = ['home', 'library', 'tools'];
-
 export function createShell(app, root) {
-  const view = { tab: 'home', song: null, q: '', genre: '', tag: '', cat: '', sort: 'recent' };
+  const tabsNow = () => visibleTabs(app.store.state.settings, TAB_IDS);
+  const view = { tab: tabsNow()[0], song: null, q: '', genre: '', tag: '', cat: '', sort: 'recent' };
   root.innerHTML = '<main class="wrap" id="main"></main><nav class="tabbar" aria-label="' + t('nav.aria') + '"><div class="in" id="tabs"></div></nav>';
   const main = root.querySelector('#main'), tabs = root.querySelector('#tabs');
 
   const renderTabs = () => {
-    tabs.innerHTML = TABS.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + '>' + TAB_ICONS[k] + '<span>' + t('nav.' + k) + '</span></button>').join('');
+    const list = tabsNow();
+    tabs.style.gridTemplateColumns = 'repeat(' + list.length + ',1fr)';
+    tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + '>' + TAB_ICONS[k] + '<span>' + t('nav.' + k) + '</span></button>').join('');
   };
 
   function render() {
@@ -36,7 +38,8 @@ export function createShell(app, root) {
     if (panel.page) panel.close();
     if (tab === 'settings') { panel.open('week'); return; }
     if (tab === 'stats') { panel.open('stats'); return; }
-    view.tab = TABS.includes(tab) ? tab : 'home';
+    // Вкладку можно открыть и убранную (ссылкой «Все песни» и т.п.) — она просто не подсвечена внизу
+    view.tab = TAB_IDS.includes(tab) ? tab : tabsNow()[0];
     view.song = song || null;
     render();
     window.scrollTo(0, 0);

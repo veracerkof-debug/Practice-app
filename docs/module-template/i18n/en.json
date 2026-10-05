@@ -1,0 +1,11 @@
+{
+  "name": "Counter",
+  "about": "Counts exercise repetitions",
+  "hint": "Tap when you’ve played a repetition",
+  "add": "Plus one",
+  "reset": "Reset",
+  "count": [
+    "{n} repetition",
+    "{n} repetitions"
+  ]
+}

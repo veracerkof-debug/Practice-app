@@ -25,5 +25,6 @@
   ],
   "auto": "Start next phase automatically",
   "pauseSession": "Breaks don’t count as practice",
-  "progress": "Cycles before the long break: {done} of {n}"
+  "progress": "Cycles before the long break: {done} of {n}",
+  "about": "Work and breaks"
 }

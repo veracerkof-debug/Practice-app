@@ -177,6 +177,7 @@ function bind() {
 
 export default {
   id: 'piano',
+  order: 30,
   name: { ru: ru.name, uz: uz.name, en: en.name },
   i18n: { ru, uz, en },
   icon: ICON,

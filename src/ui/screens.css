@@ -185,3 +185,7 @@
 .tosbox p{font-size:15px;line-height:1.45;margin:0 0 10px}
 .mring{vertical-align:middle;flex:none;display:inline-block}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
+/* Длинная подпись карточки не распирает сетку (с 10+ модулями карточка «Табы и текст» встаёт в колонку) */
+.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:900px){.tgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.tcard2{min-width:0}
