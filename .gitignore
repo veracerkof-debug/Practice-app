@@ -1,0 +1,25 @@
+# зависимости и сборка
+node_modules/
+dist/
+.vite/
+
+# Android (появится на этапе 3)
+android/app/build/
+android/.gradle/
+android/local.properties
+*.keystore
+*.jks
+
+# окружение и система
+.env
+.env.*
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# старая копия прототипа — только локально, эталон: legacy/practice.html
+legacy/practice.prev.html
+
+# пользовательский контент автора (уроки, табы, аудио) — не в репозиторий
+private/
