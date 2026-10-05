@@ -40,7 +40,7 @@ export default {
 - `ctx.store` — настройки модуля на устройстве, пространство имён `device[id]` (`practice.v1.tools`):
   `get(k, def)`, `set(k, v)`, `all()` (сам объект — можно менять и вызвать `save()`), `subscribe(fn)`.
 - `ctx.audio` — общий звуковой движок: `bus('piano' | 'metro' | 'drone' | 'theory' | 'media')`,
-  `playNote(midi, opts)`, `playChord(midis, opts)`, `playSeq(midis, opts)`, `refTone(midi)`, `now()`, `mf(midi)`;
+  `playNote(midi, opts)`, `playChord(midis, opts)`, `playSeq(midis, opts)`, `refTone(midi)`, `now()`, `mf(midi)`, `pianoPatch()` (текущий звук пианино — сыграть им своим голосом, как глайдер);
   общие инструменты `metro`, `drone`, `synth`, `mixer`. Громкость шины управляется микшером ядра.
 - `ctx.mic.request()` — микрофон по явному разрешению пользователя; поток только для анализа.
   Возвращает `{ read(), sampleRate, stop() }`, ошибка — с `reason: 'denied' | 'unavailable'`.

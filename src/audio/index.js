@@ -87,6 +87,8 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     ready: () => !!peekContext(),
     now,
     mf: (m) => midiFreq(m, a4()),
+    // Текущий звук пианино (пресет и ручки панели) — чтобы другие инструменты звучали так же (глайдер)
+    pianoPatch: () => pianoPatch(device.piano),
     bus: (name) => mixer.bus(name),
     // Короткая нота; opts: { bus = 'theory', dur = 0.9, preset — встроенный звук синтезатора (piano, organ, bell…) }
     playNote(midi, { bus = 'theory', dur = 0.9, preset = null } = {}) {

@@ -30,6 +30,9 @@ import audioEn from '../src/modules/audio/i18n/en.json';
 import spRu from '../src/modules/spectrum/i18n/ru.json';
 import spUz from '../src/modules/spectrum/i18n/uz.json';
 import spEn from '../src/modules/spectrum/i18n/en.json';
+import glRu from '../src/modules/glider/i18n/ru.json';
+import glUz from '../src/modules/glider/i18n/uz.json';
+import glEn from '../src/modules/glider/i18n/en.json';
 import notesRu from '../src/modules/notes/i18n/ru.json';
 import notesUz from '../src/modules/notes/i18n/uz.json';
 import notesEn from '../src/modules/notes/i18n/en.json';
@@ -70,7 +73,7 @@ describe('тюнер', () => {
 
 describe('переводы', () => {
   const sets = { core: [ruCore, uzCore, enCore], metro: [metroRu, metroUz, metroEn], tuner: [tunerRu, tunerUz, tunerEn],
-    piano: [pianoRu, pianoUz, pianoEn], drone: [droneRu, droneUz, droneEn], theory: [theoryRu, theoryUz, theoryEn], timer: [timerRu, timerUz, timerEn], audio: [audioRu, audioUz, audioEn], notes: [notesRu, notesUz, notesEn], spectrum: [spRu, spUz, spEn] };
+    piano: [pianoRu, pianoUz, pianoEn], drone: [droneRu, droneUz, droneEn], theory: [theoryRu, theoryUz, theoryEn], timer: [timerRu, timerUz, timerEn], audio: [audioRu, audioUz, audioEn], notes: [notesRu, notesUz, notesEn], spectrum: [spRu, spUz, spEn], glider: [glRu, glUz, glEn] };
   it.each(Object.keys(sets))('%s: все ключи есть в uz и en, подстановки совпадают', (k) => {
     const [ru, uz, en] = sets[k];
     for (const d of [uz, en]) {
