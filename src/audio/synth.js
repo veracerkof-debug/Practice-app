@@ -46,12 +46,13 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
   };
 
   const syn = {
-    // opts: { bus: 'piano' | 'theory', hold: true — держать (Hold), даже если у пресета нет сустейна }
+    // opts: { bus: 'piano' | 'theory', hold: true — держать (Hold), даже если у пресета нет сустейна,
+    //        patch — сыграть другим звуком, не меняя настройки пианино (тембры тренажёра слуха) }
     on(m, key, opts = {}) {
       const c = getContext(mixer.state.mode);
       if (!c) return;
       syn.off(key, true);
-      const s = getPatch(), busName = opts.bus || 'piano';
+      const s = opts.patch || getPatch(), busName = opts.bus || 'piano';
       const SU = opts.hold ? Math.max(s.sus, 0.45) : s.sus;
       const t = c.currentTime + 0.004, f = midiFreq(m, getA4()), kind = s.kind || 'soft';
       mixer.setReverb('piano', s.rev * 0.9);

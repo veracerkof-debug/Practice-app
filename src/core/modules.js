@@ -71,6 +71,9 @@ export function makeCtx(app, mod) {
     audio: app.audio,
     mic: { request: () => app.audio.openMic() },
     presets: (kind) => presetsApi(app, kind),
+    // Данные модуля в общем состоянии (попадают в резервную копию): state.settings[id]
+    data: () => (app.store.state.settings[mod.id] ??= {}),
+    saveData: () => app.store.settingsChanged(),
     pomodoro: app.pomodoro,
     // Открыть другой инструмент (например, пианино с подсветкой гаммы)
     openTool: (id) => app.openTool && app.openTool(id),

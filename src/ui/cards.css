@@ -1,0 +1,27 @@
+/* Кольцо цели (с перевыполнением), огонёк серии, карточки и плашки статистики. Перенесено из legacy/practice.html.
+   Кольцо в прототипе — .ring; здесь .gring, чтобы не путать с превью «Кольцо» в настройках тюнера и помодоро. */
+.gring{width:96px;height:96px;flex:none}
+.gring circle{fill:none;stroke-width:12;stroke-linecap:round}
+.card{background:var(--cell);border-radius:12px;padding:14px 16px 16px;margin-top:12px}
+.card .ch{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:600;color:var(--tint-text)}
+.card .ch span:last-child{color:var(--l2);font-weight:400;font-size:14px}
+.hrow{display:grid;grid-template-columns:minmax(0,1fr) 1.6fr auto;gap:12px;align-items:center;padding:7px 0;font-size:15px}
+.hrow .hb{height:7px;background:var(--fill);border-radius:4px;overflow:hidden}
+.hrow .hb i{display:block;height:100%;background:var(--tint);border-radius:4px}
+.hrow .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{background:var(--cell);border-radius:12px;padding:12px 14px}
+.tile b{display:block;font-size:20px;font-weight:600;letter-spacing:-.02em}
+.tile span{font-size:13px;color:var(--l2)}
+.card{padding:12px 14px 14px;margin-top:10px}
+.tiles{gap:8px}
+.tile{padding:10px 12px}
+.gring .rover{fill:none;stroke-width:12;stroke-linecap:round;filter:drop-shadow(0 0 2px rgba(0,0,0,.35))}
+.gring .rpct{font:700 17px var(--font);fill:var(--ink)}
+.gring .rover2{font:700 11px var(--font);fill:color-mix(in srgb,var(--tint) 62%,#ff2d55)}
+.gring.big{width:110px;height:110px;flex:none}
+.spill{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:4px 10px 4px 6px;border-radius:999px;background:color-mix(in srgb,var(--tint) 14%,transparent);color:var(--tint-text);font-size:13px;font-weight:600}
+.spill b{font-size:15px}
+.spill.risk{background:var(--fill);color:var(--l2)}
+.flame{width:18px;height:18px;fill:currentColor;flex:none}
+.hrow{display:flex;align-items:center;gap:16px}

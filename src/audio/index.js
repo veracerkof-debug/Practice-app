@@ -2,7 +2,7 @@
 // Создаётся один раз ядром; модулям отдаётся через ctx.audio (см. MODULE_SPEC.md).
 import { getContext, peekContext, now, midiFreq, masterNode } from './context.js';
 import { createMixer } from './mixer.js';
-import { createSynth, pianoPatch, playChord, playSeq } from './synth.js';
+import { createSynth, pianoPatch, playChord, playSeq, PRESETS } from './synth.js';
 import { createDrone } from './drone.js';
 import { createMetronome } from './metronome.js';
 import { openMic } from './mic.js';
@@ -88,10 +88,10 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     now,
     mf: (m) => midiFreq(m, a4()),
     bus: (name) => mixer.bus(name),
-    // Короткая нота; opts: { bus = 'theory', dur = 0.9 }
-    playNote(midi, { bus = 'theory', dur = 0.9 } = {}) {
+    // Короткая нота; opts: { bus = 'theory', dur = 0.9, preset — встроенный звук синтезатора (piano, organ, bell…) }
+    playNote(midi, { bus = 'theory', dur = 0.9, preset = null } = {}) {
       const k = 'n' + n++;
-      synth.on(midi, k, { bus });
+      synth.on(midi, k, { bus, patch: preset ? PRESETS[preset] || PRESETS.piano : null });
       setTimeout(() => synth.off(k), dur * 1000);
     },
     playChord: (midis, opts) => playChord(synth, midis, opts),
