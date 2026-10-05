@@ -48,5 +48,7 @@
   "preset.delete": "Delete",
   "preset.empty": "Nothing here yet",
   "preset.saved": "Preset saved",
-  "ui.close": "Close"
+  "ui.close": "Close",
+  "pomo.breakOver": "Break is over",
+  "pomo.breakTime": "Time for a break"
 }

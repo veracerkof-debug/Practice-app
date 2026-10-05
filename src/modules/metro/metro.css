@@ -1,6 +1,5 @@
 /* Метроном. Перенесено из legacy/practice.html (порядок правил сохранён — поздние перекрывают ранние). */
 .bpm{font-size:76px;font-weight:300;letter-spacing:-.04em;min-width:3ch;text-align:center;line-height:.95}
-.bpmlbl{text-align:center;font-size:13px;color:var(--l2)}
 .beats{display:flex;gap:6px;justify-content:center;margin:22px 0 6px;height:64px;align-items:flex-end}
 .beat{flex:1;max-width:44px;height:100%;display:flex;align-items:flex-end;border-radius:8px;position:relative}
 .beat i{display:block;width:100%;border-radius:8px;background:var(--fill2);transition:background .06s}
@@ -24,10 +23,8 @@
 .pane .beats{flex:1;height:auto;min-height:36px;max-height:24cqh;margin:4px 0}
 .pane .barct{margin:0;min-height:14px}
 .pane.strip .bpm{font-size:clamp(24px,46cqh,72px);line-height:1}
-.pane.strip .bpmlbl{font-size:12px;min-height:0}
 .pane.quarter .bpm{font-size:clamp(28px,26cqmin,80px)}
 .bpmbox{text-align:center;min-width:0}
-.pane .bpmlbl{font-size:12px;min-height:0;white-space:nowrap}
 .beats.mini{height:12px!important;max-height:none!important;min-height:0!important;flex:none!important;gap:6px;margin:0!important;align-items:center}
 .beats.mini .beat{flex:none;width:12px;height:12px;max-width:none}
 .beats.mini .beat i{height:12px!important;width:12px;border-radius:50%}
@@ -48,7 +45,6 @@
 .wcenter{position:absolute;inset:24%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:50%;background:var(--cell);box-shadow:0 2px 14px rgba(0,0,0,.08);pointer-events:none}
 .wcenter>*{pointer-events:auto}
 .mwheel .bpm{font-size:clamp(28px,11cqmin,96px)!important;line-height:1}
-.mwheel .bpmlbl{font-size:clamp(10px,2.8cqmin,15px)!important}
 .mwheel .bigplay{width:clamp(38px,11cqmin,84px)!important;height:clamp(38px,11cqmin,84px)!important;margin-top:4px;box-shadow:none}
 .mside{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none;width:100%}
 .mctl{display:grid;gap:clamp(6px,2cqw,14px);justify-items:center;align-items:center;width:100%;max-width:520px}
@@ -118,14 +114,12 @@
 .pane.strip .vs .mtile b{font-size:16px!important}
 .pane.strip .bpmbox{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
 .pane.strip .bpmbox .bpm{font-size:clamp(24px,30cqh,46px)!important;line-height:1}
-.pane.strip .bpmbox .bpmlbl{font-size:11px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .pane.strip .beats.mini{justify-content:center}
 .pane.quarter .mv.quarter .mwheel{width:min(100%,calc(100cqh - 175px))!important}
 .pane.quarter .mv.quarter{gap:8px}
 .mwheel{container-type:inline-size}
 .mwheel .wcenter{inset:27.5%!important;gap:0!important;padding:0}
 .mwheel .wcenter .bpm{font-size:15cqw!important;line-height:1!important;font-weight:300;letter-spacing:-.03em;padding:0 1cqw;min-width:0}
-.mwheel .wcenter .bpmlbl{font-size:3.5cqw!important;margin-top:.6cqw;min-height:0!important;white-space:nowrap}
 .mwheel .wcenter .bigplay{width:13cqw!important;height:13cqw!important;min-width:0!important;aspect-ratio:1;margin-top:2.2cqw;flex:none;box-shadow:0 1.5cqw 4cqw color-mix(in srgb,var(--tint) 35%,transparent)!important}
 .mwheel .wcenter .bigplay svg{width:44%!important;height:44%!important}
 .mwheel .wcenter .wrow{gap:0}

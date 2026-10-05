@@ -48,5 +48,7 @@
   "preset.delete": "O‘chirish",
   "preset.empty": "Hozircha bo‘sh",
   "preset.saved": "Preset saqlandi",
-  "ui.close": "Yopish"
+  "ui.close": "Yopish",
+  "pomo.breakOver": "Tanaffus tugadi",
+  "pomo.breakTime": "Tanaffus vaqti"
 }

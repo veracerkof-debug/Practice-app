@@ -48,5 +48,7 @@
   "preset.delete": "Удалить",
   "preset.empty": "Пока пусто",
   "preset.saved": "Пресет сохранён",
-  "ui.close": "Закрыть"
+  "ui.close": "Закрыть",
+  "pomo.breakOver": "Перерыв окончен",
+  "pomo.breakTime": "Время перерыва"
 }

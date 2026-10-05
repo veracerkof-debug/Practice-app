@@ -21,6 +21,9 @@ import droneEn from '../src/modules/drone/i18n/en.json';
 import theoryRu from '../src/modules/theory/i18n/ru.json';
 import theoryUz from '../src/modules/theory/i18n/uz.json';
 import theoryEn from '../src/modules/theory/i18n/en.json';
+import timerRu from '../src/modules/timer/i18n/ru.json';
+import timerUz from '../src/modules/timer/i18n/uz.json';
+import timerEn from '../src/modules/timer/i18n/en.json';
 
 const L = runLegacy([/^const SH=/, /^const LETTERS=/, /^const accOf=/, /^const TUNINGS=/, /^const parseN=/, /^const mName=/, /^const splitN=/],
   '{TUNINGS,parseN,mName}');
@@ -58,7 +61,7 @@ describe('тюнер', () => {
 
 describe('переводы', () => {
   const sets = { core: [ruCore, uzCore, enCore], metro: [metroRu, metroUz, metroEn], tuner: [tunerRu, tunerUz, tunerEn],
-    piano: [pianoRu, pianoUz, pianoEn], drone: [droneRu, droneUz, droneEn], theory: [theoryRu, theoryUz, theoryEn] };
+    piano: [pianoRu, pianoUz, pianoEn], drone: [droneRu, droneUz, droneEn], theory: [theoryRu, theoryUz, theoryEn], timer: [timerRu, timerUz, timerEn] };
   it.each(Object.keys(sets))('%s: все ключи есть в uz и en, подстановки совпадают', (k) => {
     const [ru, uz, en] = sets[k];
     for (const d of [uz, en]) {

@@ -1,0 +1,29 @@
+{
+  "name": "Pomodoro",
+  "statusRun": "{phase}, {time}",
+  "statusIdle": "{n} min of work",
+  "ph.work": "Work",
+  "ph.short": "Break",
+  "ph.long": "Long break",
+  "start": "Start",
+  "pause": "Pause",
+  "reset": "Reset",
+  "skip": "Next phase",
+  "settings": "Pomodoro settings",
+  "set.title": "Pomodoro",
+  "set.view": "Style",
+  "style.ring": "Ring",
+  "style.flip": "Flip clock",
+  "set.work": "Work",
+  "set.short": "Break",
+  "set.long": "Long break",
+  "set.every": "Long break after",
+  "u.min": "{n} min",
+  "u.cycles": [
+    "{n} cycle",
+    "{n} cycles"
+  ],
+  "auto": "Start next phase automatically",
+  "pauseSession": "Breaks don’t count as practice",
+  "progress": "Cycles before the long break: {done} of {n}"
+}

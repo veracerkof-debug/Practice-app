@@ -77,6 +77,8 @@ button.cell:active{background:var(--fill)}
 .ic.sm svg{width:18px;height:18px}
 .ic.act{background:var(--tint);color:var(--on-tint)}
 .ic.plain{background:none;color:var(--tint-text)}
+.ic.corner{position:absolute;top:12px;right:12px;width:36px;height:36px}
+.ic.corner svg{width:18px;height:18px}
 .prow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .hdr{margin:16px 12px 6px}
 .ftr{margin:6px 12px 0}
