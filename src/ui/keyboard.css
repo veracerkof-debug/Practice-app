@@ -1,0 +1,17 @@
+/* Клавиатура (пианино, гаммы на клавишах). Перенесено из legacy/practice.html. */
+.kbwrap{overflow-x:auto;padding:2px 0 4px}
+.kb{position:relative;display:flex;height:180px;touch-action:none;user-select:none;-webkit-user-select:none;min-width:calc(var(--n) * 30px)}
+.kb .w{flex:1;background:#fff;border:1px solid #c7c7cc;border-radius:0 0 8px 8px;margin-right:-1px;position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font-size:11px;color:#8a8a8e;box-shadow:inset 0 -4px 0 #e5e5ea;cursor:pointer}
+.kb .w:last-of-type{margin-right:0}
+.kb .b{position:absolute;top:0;height:60%;width:calc(100% / var(--n) * .6);background:linear-gradient(#3a3a3c,#1c1c1e);border-radius:0 0 6px 6px;z-index:2;transform:translateX(-50%);box-shadow:inset 0 -4px 0 rgba(255,255,255,.1);cursor:pointer}
+.kb .w.down{background:#e5e5ea;box-shadow:none}
+.kb .b.down{background:#636366}
+.kb .hl::before{content:"";position:absolute;left:50%;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;background:var(--tint);opacity:.55}
+.kb .w.hl::before{bottom:26px}
+.kb .b.hl::before{bottom:10px}
+.kb .hl.root::before{opacity:1;width:11px;height:11px}
+.kb{height:min(220px,34vh)}
+.kb{height:min(240px,36vh)}
+.kb{height:clamp(130px,25vh,200px)}
+.kb .w.held{background:color-mix(in srgb,var(--tint) 45%,#fff)!important}
+.kb .b.held{background:var(--tint)!important}

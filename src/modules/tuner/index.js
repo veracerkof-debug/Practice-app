@@ -5,7 +5,7 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import { yin, createPitchSmoother } from '../../audio/pitch.js';
-import { TUNINGS, TOL, STYLES, normalizeTuner, curTuning, reading, inRange, mName, splitN } from './tuning.js';
+import { TUNINGS, TOL, STYLES, normalizeTuner, curTuning, reading, inRange, mName, splitN } from '../../music/tuning.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M9 3v8a3 3 0 0 0 6 0V3M12 14v7"/></svg>';
 const TICK_MS = 70;

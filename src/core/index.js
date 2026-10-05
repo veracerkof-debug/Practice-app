@@ -20,6 +20,8 @@ export function boot(root) {
   const device = loadDevice();
   // Способ регулировки темпа в прототипе хранился в общих настройках — теперь в настройках модуля
   device.metro ??= { adj: store.state.settings.metroAdj || 'wheel' };
+  // Гамма в прототипе хранилась отдельно (tools.scale) — теперь в настройках теории
+  device.theory.scale ??= device.scale || { pc: 9, type: 'minor' };
 
   // Звук создаётся сразу, но AudioContext — только на первом жесте пользователя
   const audio = createAudio({

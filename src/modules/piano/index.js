@@ -6,10 +6,10 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import { pianoPatch, PRESETS } from '../../audio/synth.js';
 import { synBody, synBind, synthSheet } from './synth-panel.js';
+import { kbHTML, lastWhite } from '../../ui/keyboard.js';
+import { mName } from '../../music/notes.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v14M13 5v14M10.5 5v8M15.5 5v8"/></svg>';
-const SH = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
-const WHITE = [0, 2, 4, 5, 7, 9, 11];
 const I = {
   minus: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
@@ -17,27 +17,6 @@ const I = {
   dual: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="7" rx="1.5"/><rect x="3.5" y="13" width="17" height="7" rx="1.5"/></svg>',
   rot: '<svg viewBox="0 0 24 24"><rect x="7" y="3.5" width="10" height="17" rx="2"/><path d="M20.5 8.5a6 6 0 0 1-3 5.2M3.5 15.5a6 6 0 0 1 3-5.2"/></svg>',
 };
-
-export const mName = (m) => SH[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
-// MIDI n-й белой клавиши, начиная с m
-export function lastWhite(m, n) {
-  let wi = 0;
-  for (;;) { if (WHITE.includes(m % 12)) { wi++; if (wi === n) return m; } m++; }
-}
-
-// Клавиатура: nw белых клавиш от m0; hl — подсвеченные ступени (Set), root — тоника
-export function kbHTML(m0, nw, hl, root) {
-  let ws = '', bs = '', wi = 0, m = m0;
-  while (wi < nw) {
-    const pc = m % 12, h = hl && hl.has(pc) ? ' hl' + (root === pc ? ' root' : '') : '', nm = mName(m);
-    if (WHITE.includes(pc)) {
-      ws += '<div class="w' + h + '" data-m="' + m + '" role="button" aria-label="' + nm + '"><span>' + (pc === 0 ? 'C' + (Math.floor(m / 12) - 1) : '') + '</span></div>';
-      wi++;
-    } else if (wi > 0) bs += '<div class="b' + h + '" data-m="' + m + '" role="button" aria-label="' + nm + '" style="left:' + (wi * 100) / nw + '%"></div>';
-    m++;
-  }
-  return '<div class="kbwrap"><div class="kb" style="--n:' + nw + '">' + ws + bs + '</div></div>';
-}
 
 let host = null, ctx = null, size = 'full', ro = null, unbindSyn = () => {}, unsubShared = () => {};
 const offs = [], ptr = new Map(), hold = { on: false, k: new Map() };

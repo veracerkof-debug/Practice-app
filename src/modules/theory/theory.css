@@ -1,0 +1,129 @@
+/* Теория: круг, гаммы, аккорды, интервалы, гриф. Перенесено из legacy/practice.html (порядок правил сохранён). */
+.circle{width:100%;max-width:340px;display:block;margin:0 auto}
+.circle .sec{cursor:pointer;outline:none}
+.circle .sec:focus-visible path{stroke:var(--tint);stroke-width:2.5}
+.scnotes{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.scnotes div{flex:1;min-width:40px;background:var(--fill);border-radius:10px;padding:8px 2px;text-align:center}
+.scnotes b{display:block;font-size:19px;font-weight:600}
+.scnotes span{font-size:12px;color:var(--l2)}
+.ctrl4{display:grid;align-items:center;justify-items:center;margin-top:16px}
+.ctrl4{grid-template-columns:repeat(4,1fr);margin-top:14px}
+.fnb{font-size:12px;font-weight:700;width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex:none}
+.fT{background:color-mix(in srgb,#34C759 20%,transparent);color:#1f9d45}
+.fS{background:color-mix(in srgb,#007AFF 18%,transparent);color:#0a66d6}
+.fD{background:color-mix(in srgb,#FF3B30 18%,transparent);color:#d92b21}
+.scnotes{gap:4px}
+.scnotes div{padding:6px 2px}
+.pane .ctrl4{margin-top:4px}
+.cwrap{display:flex;flex-direction:column;min-height:0}
+.cwrap.q{flex:1;align-items:center;justify-content:center}
+.cwrap.q .circle{width:auto;height:100%;max-width:100%;max-height:100cqh}
+.cwrap.h{flex:1;flex-direction:row;gap:8px;align-items:center}
+.cwrap.h .csvg{height:100%;aspect-ratio:1;max-width:58%;display:flex;align-items:center}
+.cwrap.h .circle{width:100%;height:auto;max-height:100%}
+.cside{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;max-height:100%;overflow:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--fill);border-radius:10px;padding:4px 8px 4px 4px;font-weight:600;font-size:14px}
+.chip .fnb{width:auto;padding:0 5px;min-width:24px}
+.cwrap.f .csvg{display:flex;justify-content:center}
+.cwrap.f .circle{max-height:52cqh;width:auto;max-width:100%}
+.swrap{display:flex;flex-direction:column;min-height:0}
+.ch2{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:2px 2px 0;font-size:15px}
+.pane.quarter .scnotes div{min-width:26px;padding:4px 1px}
+.pane.quarter .scnotes b{font-size:14px}
+.pane.quarter .scnotes span{font-size:10px}
+.ktitle{display:flex;flex-direction:column;align-items:center;font-weight:600;font-size:16px;flex:none;min-width:84px}
+.ktitle span{font-size:11px;font-weight:400}
+.chips.nowrap{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;justify-content:flex-start}
+.chips.nowrap::-webkit-scrollbar{display:none}
+.chips.nowrap .chip{flex:none}
+.pane.strip .scnotes{margin-top:4px;flex-wrap:nowrap}
+.pane.strip .scnotes div{min-width:0;padding:3px 1px}
+.pane.strip .scnotes b{font-size:14px}
+.pane.quarter .scnotes{gap:3px}
+.vrow{display:flex;align-items:center;justify-content:center;gap:10px}
+.vrow.tight{gap:6px}
+.pane.quarter .scnotes{gap:2px;width:100%}
+.pane.quarter .scnotes div{min-width:0;padding:4px 0}
+.pane.quarter .scnotes b{font-size:clamp(11px,8cqw,16px)}
+.pane.quarter .scnotes span{font-size:9px}
+.stype{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sroot{font-size:20px;min-width:2.4ch;text-align:center}
+.pane.strip .scnotes{margin:0}
+.pane.strip .scnotes div{padding:4px 1px}
+.cgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.cbtn{display:flex;align-items:center;gap:6px;background:var(--fill);border-radius:10px;padding:5px 6px;min-width:0}
+.cbtn b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbtn .fnb{width:auto;min-width:30px;padding:0 4px;font-size:11px}
+.cbtn:active{transform:scale(.96)}
+.cwrap.f .cgrid{grid-template-columns:repeat(4,1fr);margin-top:6px}
+.cwrap.h .csvg{max-width:52%}
+.cside{justify-content:center}
+.comp{flex:1;display:flex;flex-direction:column;min-height:0;gap:6px}
+.cbody{flex:1;display:flex;flex-direction:column;min-height:0}
+.csw{display:flex;gap:4px;justify-content:center;flex:none}
+.cswb{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:600;color:var(--l2)}
+.cswb svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.cswb.on{background:var(--fill);color:var(--ink)}
+.cswb.txt{font-size:12px}
+.comp.quarter .csw,.comp.strip .csw{position:absolute;top:2px;left:6px;z-index:3}
+.comp.quarter .cswb,.comp.strip .cswb{height:24px;padding:0 6px}
+.comp.strip .csw{flex-direction:row}
+.tsw{display:flex;gap:2px;background:var(--fill);border-radius:10px;padding:2px;flex:none;overflow-x:auto;scrollbar-width:none}
+.tswb{flex:1;min-height:30px;border-radius:8px;font-size:13px;font-weight:600;color:var(--l2);white-space:nowrap;padding:0 8px}
+.tswb.on{background:var(--cell);color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.cname{font-size:clamp(24px,14cqmin,56px);font-weight:700;letter-spacing:-.02em}
+.cname.sm{font-size:20px}
+.igrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:100%}
+.ibtn{background:var(--fill);border-radius:8px;min-height:30px;font-weight:600;font-size:13px}
+.chip.on{background:var(--tint);color:var(--on-tint)}
+.fretwrap{overflow-x:auto;margin-top:8px;-webkit-overflow-scrolling:touch}
+.fret{display:block;min-width:520px;width:100%;height:auto}
+.fbg{fill:color-mix(in srgb,#c8a26b 18%,var(--cell))}
+.fnut{stroke:var(--ink);stroke-width:4}
+.ffret{stroke:var(--l3);stroke-width:1.4}
+.fstr{stroke:var(--l2)}
+.fdot{fill:var(--fill2)}
+.fn circle{fill:var(--cell);stroke:var(--l2);stroke-width:1.4}
+.fn text{font:600 8.5px var(--font);fill:var(--ink)}
+.fn.r circle{fill:var(--tint);stroke:var(--tint)}
+.fn.r text{fill:var(--on-tint)}
+.fn{cursor:pointer}
+.fnum{font:500 9px var(--font);fill:var(--l2)}
+.vtog{display:flex;justify-content:center;margin-top:8px}
+.comp.strip{flex-direction:row!important;gap:8px}
+.comp.strip>.csw,.comp.quarter>.csw{position:static!important}
+.comp.strip>.csw{flex-direction:column!important;justify-content:center;gap:4px;flex:none}
+.comp.strip .cswb{width:34px;height:34px!important;padding:0!important;justify-content:center;border-radius:10px}
+.comp.quarter>.csw{justify-content:center;gap:2px}
+.comp.quarter .cswb{height:28px!important;padding:0 8px!important}
+.comp.strip>.cbody{min-width:0}
+.pane.strip .ktitle{min-width:70px;font-size:14px}
+.pane.strip .chips.nowrap .chip{font-size:13px;padding:3px 7px 3px 3px}
+.swrap{flex:1;overflow:auto;min-height:0;display:flex;flex-direction:column;gap:8px;scrollbar-width:none}
+.swrap::-webkit-scrollbar{display:none}
+.swrap>*{flex:none}
+.swrap .hscroll{padding-bottom:2px}
+.shead2{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.tpbtn{flex:1;min-width:0;min-height:40px;border-radius:12px;background:var(--fill);font-weight:600;font-size:15px;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.tpbtn span{color:var(--l2);font-size:12px}
+.swrap .ch2{margin:0}
+.swrap .scnotes{margin:0}
+.swrap .vtog{margin:0}
+.swrap .fretwrap{margin:0}
+.swrap .ctrl4{margin-top:2px!important}
+.pane.half .swrap .scnotes div{padding:5px 2px}
+.pane.half .swrap .scnotes b{font-size:17px}
+.pane.half .swrap .ctrl4 .ic{width:44px!important;height:44px!important}
+.swrap.h2{overflow:hidden}
+.swrap.h2 .shead2 .ic.sm{flex:none}
+.swrap.h2 .tpbtn b{font-weight:700}
+.sviz{flex:1!important;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.sviz .fretwrap{overflow-x:auto}
+.sviz .fret{min-width:480px}
+.igrid2{flex:1!important;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:6px;min-height:0}
+.ib2{border-radius:12px;background:var(--fill);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:2px;min-height:0}
+.ib2 b{font-size:clamp(14px,4.4cqmin,20px)}
+.ib2 span{font-size:12px;color:var(--tint-text);font-weight:600}
+.ib2 small{font-size:9.5px;color:var(--l2);line-height:1.1;text-align:center}
+.ib2:active{transform:scale(.95)}

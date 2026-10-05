@@ -5,7 +5,8 @@ import metro from './metro/index.js';
 import tuner from './tuner/index.js';
 import piano from './piano/index.js';
 import drone from './drone/index.js';
+import theory from './theory/index.js';
 
 // Порядок — как на экране «Инструменты» прототипа
-export const modules = [metro, tuner, piano, drone];
+export const modules = [metro, tuner, piano, drone, theory];
 export const moduleById = (id) => modules.find((m) => m.id === id);

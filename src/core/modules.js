@@ -71,6 +71,10 @@ export function makeCtx(app, mod) {
     audio: app.audio,
     mic: { request: () => app.audio.openMic() },
     presets: (kind) => presetsApi(app, kind),
+    // Открыть другой инструмент (например, пианино с подсветкой гаммы)
+    openTool: (id) => app.openTool && app.openTool(id),
+    // Настройки другого модуля — только чтение (копия)
+    peek: (id) => JSON.parse(JSON.stringify(app.device[id] || {})),
     shared: app.shared,
     get session() { return app.active ? { type: app.active.type, songId: app.active.songId } : null; },
     ui,

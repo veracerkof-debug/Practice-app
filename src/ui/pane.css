@@ -44,10 +44,19 @@
 .sgrow{flex:1;min-width:0;text-align:center}
 .pane.strip .bigplay{width:clamp(40px,58cqh,72px);height:clamp(40px,58cqh,72px);box-shadow:none}
 .pane.quarter .bigplay{width:clamp(40px,24cqmin,64px);height:clamp(40px,24cqmin,64px);box-shadow:none}
+.vq{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;gap:4px;min-height:0;text-align:center;overflow:hidden}
+.vs{flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:0;min-width:0}
 .pane.quarter .bigplay{width:clamp(44px,34cqw,72px);height:clamp(44px,34cqw,72px)}
 .pane.strip .bigplay{width:clamp(42px,44cqh,68px);height:clamp(42px,44cqh,68px)}
 .pane.strip .srow2{gap:8px}
+.pane.strip .vs .srow2{flex:none}
+.pane.quarter .vq .ic.round{width:clamp(44px,30cqw,64px);height:clamp(44px,30cqw,64px)}
+.pane.quarter .vq .bigplay{width:clamp(56px,40cqw,88px);height:clamp(56px,40cqw,88px)}
+.pane.strip .vs .ic.round{width:clamp(42px,40cqh,62px);height:clamp(42px,40cqh,62px)}
+.pane.strip .vs .bigplay{width:clamp(50px,54cqh,80px);height:clamp(50px,54cqh,80px)}
+.pane.strip .vs{gap:4px;justify-content:center}
 .pane.strip .srow2{gap:8px;min-width:0}
-.pane.strip .srow2>.ic.round{width:clamp(34px,28cqh,46px)!important;height:clamp(34px,28cqh,46px)!important;flex:none}
+.pane.strip .vs .ic.round,.pane.strip .srow2>.ic.round{width:clamp(34px,28cqh,46px)!important;height:clamp(34px,28cqh,46px)!important;flex:none}
 .pane.strip .bigplay{flex:none;width:clamp(42px,36cqh,60px)!important;height:clamp(42px,36cqh,60px)!important}
+.pane.quarter .vq{gap:3px;justify-content:space-around}
 @keyframes tin{from{opacity:0;transform:translateY(10px)}}

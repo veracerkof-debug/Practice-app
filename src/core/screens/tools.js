@@ -35,14 +35,18 @@ export function openToolView(app, id, onClose) {
   const inst = mountModule(app, mod, hostEl, size);
   const track = trackToolTime(app, id);
 
-  const close = () => {
+  const close = (next) => {
+    app.openTool = null;
     document.removeEventListener('keydown', onKey);
     inst.unmount();
     layer.remove();
     const sec = track.stop();
     if (sec) ui.toast(t('tools.recorded', { tool: name, dur: fmtDur(sec) }));
-    if (onClose) onClose();
+    if (next) openToolView(app, next, onClose);
+    else if (onClose) onClose();
   };
+  // Переход из модуля в другой инструмент: это окно закрывается, открывается новое
+  app.openTool = (id) => { if (moduleById(id)) close(id); };
   const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('#sheetLayer .scrim')) close(); };
   document.addEventListener('keydown', onKey);
   layer.addEventListener('click', (e) => {

@@ -1,7 +1,7 @@
 // Модули: строи тюнера сверяются с прототипом, расчёт показаний, полнота переводов.
 import { describe, it, expect } from 'vitest';
 import { runLegacy } from './legacy.js';
-import { TUNINGS, parseN, mName, curTuning, reading, normalizeTuner } from '../src/modules/tuner/tuning.js';
+import { TUNINGS, parseN, mName, curTuning, reading, normalizeTuner } from '../src/music/tuning.js';
 import ruCore from '../src/i18n/ru.json';
 import uzCore from '../src/i18n/uz.json';
 import enCore from '../src/i18n/en.json';
@@ -18,6 +18,9 @@ import pianoEn from '../src/modules/piano/i18n/en.json';
 import droneRu from '../src/modules/drone/i18n/ru.json';
 import droneUz from '../src/modules/drone/i18n/uz.json';
 import droneEn from '../src/modules/drone/i18n/en.json';
+import theoryRu from '../src/modules/theory/i18n/ru.json';
+import theoryUz from '../src/modules/theory/i18n/uz.json';
+import theoryEn from '../src/modules/theory/i18n/en.json';
 
 const L = runLegacy([/^const SH=/, /^const LETTERS=/, /^const accOf=/, /^const TUNINGS=/, /^const parseN=/, /^const mName=/, /^const splitN=/],
   '{TUNINGS,parseN,mName}');
@@ -55,7 +58,7 @@ describe('тюнер', () => {
 
 describe('переводы', () => {
   const sets = { core: [ruCore, uzCore, enCore], metro: [metroRu, metroUz, metroEn], tuner: [tunerRu, tunerUz, tunerEn],
-    piano: [pianoRu, pianoUz, pianoEn], drone: [droneRu, droneUz, droneEn] };
+    piano: [pianoRu, pianoUz, pianoEn], drone: [droneRu, droneUz, droneEn], theory: [theoryRu, theoryUz, theoryEn] };
   it.each(Object.keys(sets))('%s: все ключи есть в uz и en, подстановки совпадают', (k) => {
     const [ru, uz, en] = sets[k];
     for (const d of [uz, en]) {

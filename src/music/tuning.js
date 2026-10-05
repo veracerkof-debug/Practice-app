@@ -1,18 +1,8 @@
-// Строи и расчёт показаний тюнера — без DOM. Перенесено из legacy/practice.html (TUNINGS, curTuning, TU.show).
+// Строи струнных и расчёт показаний тюнера — без DOM. Перенесено из legacy/practice.html (TUNINGS, curTuning, TU.show).
 
-export const SH = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
-const NAT = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-const accOf = (n) => [...n.slice(1)].reduce((t, ch) => t + (ch === '♯' ? 1 : ch === '♭' ? -1 : 0), 0);
+import { mName, parseN, splitN } from './notes.js';
 
-// 'E♭2' → MIDI
-export const parseN = (n) => {
-  const m = n.match(/^([A-G])([♯♭]*)(-?\d)$/);
-  return 12 * (+m[3] + 1) + NAT[m[1]] + accOf(m[1] + m[2]);
-};
-// MIDI → 'C♯4'
-export const mName = (m) => SH[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
-// 'C♯4' → ['C♯', '4']
-export const splitN = (n) => { const m = n.match(/^(.*?)(-?\d)$/); return [m[1], m[2]]; };
+export { mName, parseN, splitN };
 
 // Группы строев: [ключ группы, [[id, ноты от низкой струны]]]. Названия — i18n group.<ключ>, tuning.<id>
 export const TUNINGS = [

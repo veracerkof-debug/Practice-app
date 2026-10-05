@@ -19,6 +19,12 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
   mixer.probe('piano', () => synth.active('piano'));
   mixer.probe('theory', () => synth.active('theory'));
   mixer.probe('drone', () => drone.on);
+  // Дрон на ноте (из теории): сменить тонику и зазвучать
+  drone.tonic = (pc) => {
+    device.drone.pc = pc;
+    save();
+    drone.on ? drone.retune() : drone.start();
+  };
 
   // Сигнал окончания (помодоро): две ноты и вибрация
   function chime() {

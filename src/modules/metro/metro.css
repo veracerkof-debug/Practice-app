@@ -26,7 +26,6 @@
 .pane.strip .bpm{font-size:clamp(24px,46cqh,72px);line-height:1}
 .pane.strip .bpmlbl{font-size:12px;min-height:0}
 .pane.quarter .bpm{font-size:clamp(28px,26cqmin,80px)}
-.vs{flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:0;min-width:0}
 .bpmbox{text-align:center;min-width:0}
 .pane .bpmlbl{font-size:12px;min-height:0;white-space:nowrap}
 .beats.mini{height:12px!important;max-height:none!important;min-height:0!important;flex:none!important;gap:6px;margin:0!important;align-items:center}
@@ -35,10 +34,7 @@
 .beats.mini .beat.grp{margin-left:4px}
 .pane.quarter .bpm{font-size:clamp(30px,30cqw,72px)}
 .pane.strip .bpm{font-size:clamp(26px,36cqh,64px)}
-.pane.strip .vs .srow2{flex:none}
 .pane.half .beats{max-height:18cqh}
-.pane.strip .vs .ic.round{width:clamp(42px,40cqh,62px);height:clamp(42px,40cqh,62px)}
-.pane.strip .vs .bigplay{width:clamp(50px,54cqh,80px);height:clamp(50px,54cqh,80px)}
 .mv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,3cqh,22px);min-height:0;min-width:0}
 .mwheel{position:relative;width:min(100%,calc(100cqh - 150px));aspect-ratio:1;touch-action:none;flex:none;max-width:560px;outline:none}
 .mv.quarter .mwheel{width:min(100%,calc(100cqh - 130px))}
@@ -76,6 +72,7 @@
 .mtile{height:clamp(54px,15cqmin,78px);border-radius:18px;background:var(--fill);color:var(--ink);display:flex;align-items:center;justify-content:center;transition:transform .1s,background .15s}
 .mtile:active{transform:scale(.94);background:var(--fill2)}
 .mtile svg{width:clamp(24px,7cqmin,36px);height:clamp(24px,7cqmin,36px);fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.mtile svg.f{fill:currentColor;stroke:none}
 .mtile b{font-size:clamp(18px,5.6cqmin,28px);font-weight:700;letter-spacing:-.02em}
 .mv.quarter .mtile{height:clamp(44px,26cqw,60px);border-radius:14px}
 @container (min-aspect-ratio: 5/4){
@@ -117,13 +114,11 @@
 .mtile b{font-size:clamp(17px,5cqmin,24px)!important}
 .mtile .tapt{font-size:clamp(14px,4.2cqmin,18px)!important;letter-spacing:.06em}
 .mside{max-width:560px}
-.pane.strip .vs{gap:4px;justify-content:center}
 .pane.strip .vs .mtile{width:auto!important;flex:none;height:clamp(38px,30cqh,50px)!important;padding:0 12px;border-radius:12px!important}
 .pane.strip .vs .mtile b{font-size:16px!important}
 .pane.strip .bpmbox{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
 .pane.strip .bpmbox .bpm{font-size:clamp(24px,30cqh,46px)!important;line-height:1}
 .pane.strip .bpmbox .bpmlbl{font-size:11px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.pane.strip .vs .ic.round{width:clamp(34px,28cqh,46px)!important;height:clamp(34px,28cqh,46px)!important;flex:none}
 .pane.strip .beats.mini{justify-content:center}
 .pane.quarter .mv.quarter .mwheel{width:min(100%,calc(100cqh - 175px))!important}
 .pane.quarter .mv.quarter{gap:8px}
