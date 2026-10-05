@@ -12,7 +12,8 @@ import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
 
-export const QUICK_DEF = ['metro', 'tuner', 'ear', 'piano'];
+// Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
+export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
 const QUICK_MAX = 8;
 
 const quickList = (st) => (st.quick || QUICK_DEF).filter((id) => isOn(st, id) && moduleById(id));

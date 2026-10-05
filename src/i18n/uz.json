@@ -402,5 +402,6 @@
   "tabs.hint": "Tartib strelka bilan oʻzgaradi. Kamida bitta boʻlim doim qoladi. Profil istalgan boʻlim tepasidagi tugma bilan ochiladi.",
   "tabs.up": "{name}: yuqoriga",
   "tabs.off": "{name}: olib tashlash",
-  "tabs.on": "{name}: qaytarish"
+  "tabs.on": "{name}: qaytarish",
+  "tool.ear": "Eshitish"
 }

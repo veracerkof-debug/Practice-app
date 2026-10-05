@@ -72,7 +72,9 @@ function statsHTML(app) {
   h += card(t('stats.thisMonth'), fmtDur(m.total), '<div class="split"><i style="width:' + pc(m.free) + '%;background:var(--ink)"></i><i style="width:' + pc(m.songs) + '%;background:var(--tint)"></i><i style="flex:1;background:#5856D6"></i></div>' +
     '<div class="legend"><span><i style="background:var(--ink)"></i>' + t('stats.free', { d: fmtDur(m.free) }) + '</span><span><i style="background:var(--tint)"></i>' + t('stats.songs', { d: fmtDur(m.songs) }) +
     '</span><span><i style="background:#5856D6"></i>' + t('stats.tools', { d: fmtDur(m.tool) }) + '</span></div>');
-  const tools = byTool(all).map((x) => ({ n: moduleById(x.n) ? moduleName(moduleById(x.n)) : x.n, v: x.v }));
+  // Модуль могли выключить или убрать — тогда название из строк ядра (tool.<id>), иначе id
+  const toolName = (id) => (moduleById(id) ? moduleName(moduleById(id)) : t('tool.' + id) !== 'tool.' + id ? t('tool.' + id) : id);
+  const tools = byTool(all).map((x) => ({ n: toolName(x.n), v: x.v }));
   if (tools.length) h += card(t('stats.toolsTitle'), t('stats.total'), hbars(tools));
   const songs = app.store.songs(), byS = bySong(all, songs).map((x) => ({ n: songs.find((s) => s.id === x.n).title, v: x.v }));
   if (byS.length) h += card(t('stats.songsTitle'), t('stats.byTime'), hbars(byS));

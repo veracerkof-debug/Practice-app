@@ -409,5 +409,6 @@
   "tabs.hint": "Use the arrow to reorder. At least one tab always stays. Open your profile with the button at the top of any tab.",
   "tabs.up": "{name}: move up",
   "tabs.off": "{name}: remove",
-  "tabs.on": "{name}: add back"
+  "tabs.on": "{name}: add back",
+  "tool.ear": "Ear training"
 }

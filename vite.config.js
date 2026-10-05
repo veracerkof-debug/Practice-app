@@ -12,6 +12,8 @@ export default defineConfig({
     host: true, // доступ с телефона по Wi-Fi
     port: 5173,
   },
+  // тесты — только из tests/ (в docs/archive лежат отложенные модули со своими тестами)
+  test: { include: ['tests/**/*.test.js'] },
   build: {
     outDir: 'dist',
     target: 'es2022',
