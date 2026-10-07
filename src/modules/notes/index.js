@@ -5,7 +5,8 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import { fileSongs, inSong } from '../../core/files.js';
-import { lyricsHTML, chordsIn } from '../../music/lyrics.js';
+import { lyricsHTML, chordsIn, degreesIn } from '../../music/lyrics.js';
+import { tonicIsMinor } from '../../music/degrees.js';
 import { detectKey, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
 import { isPdf, openPdf, createPdfView } from './pdf.js';
 // Шрифт нот и звуковой банк — файлы проекта, никаких CDN
@@ -264,8 +265,14 @@ function tabsBody() {
 function songKey(song) {
   const k = song.key && parseNote(song.key);
   if (k) return { pc: k.pc, minor: /m$/.test(song.key), sharp: k.acc > 0 ? true : k.acc < 0 ? false : null, given: true };
-  return detectKey(chordsIn(song.notes));
+  const det = detectKey(chordsIn(song.notes));
+  if (det) return det;
+  // текст записан ступенями — тональность не указана: до мажор или ля минор, сменить можно выбором тональности
+  const d = degreesIn(song.notes);
+  return d.length ? (tonicIsMinor(d) ? { pc: 9, minor: true, sharp: null, assumed: true } : { pc: 0, minor: false, sharp: null, assumed: true }) : null;
 }
+const viewOf = () => (st().view === 'degrees' ? 'degrees' : 'chords');
+const dstyle = () => (st().dstyle === 'nash' ? 'nash' : 'roman');
 
 function textBody() {
   const { t } = ctx, song = ctx.song();
@@ -273,10 +280,13 @@ function textBody() {
   const n = song.tr, key = songKey(song);
   const keyBtn = key ? '<button class="trkey num" data-x="nkey" aria-label="' + esc(t('tr.pick')) + '">' + esc(keyLabel(key)) + (n ? ' → <b>' + esc(keyLabel(shiftKey(key, n))) + '</b>' : '') + '</button>' : '';
   return '<div class="ntools"><div class="vrow tight">' + icb('data-x="ntr" data-d="-1"', I.minus, t('trDown'), 'sm') + '<span class="num trv">' + (n > 0 ? '+' : '') + n + '</span>' +
-    icb('data-x="ntr" data-d="1"', I.plus, t('trUp'), 'sm') + keyBtn + '</div>' +
+    icb('data-x="ntr" data-d="1"', I.plus, t('trUp'), 'sm') + keyBtn +
+    // вид: аккорды или ступени (римские цифры / нэшвиллская запись — в выборе тональности)
+    (key ? '<button class="trview" data-x="nview" aria-pressed="' + (viewOf() === 'degrees') + '" aria-label="' + esc(t(viewOf() === 'degrees' ? 'deg.toChords' : 'deg.toDegrees')) + '">' +
+      (viewOf() === 'degrees' ? (dstyle() === 'nash' ? '1 4 5' : 'I IV V') : 'C F G') + '</button>' : '') + '</div>' +
     (big() ? '<div class="vrow tight">' + icb('data-x="nfs" data-d="-1"', 'A−', t('smaller'), 'sm txt') + icb('data-x="nfs" data-d="1"', 'A+', t('bigger'), 'sm txt') + icb('data-x="nedit"', I.pen, t('editText'), 'sm') + '</div>' : '') + '</div>' +
     (song.notes
-      ? '<div class="lyr" style="font-size:' + (st().fs || 15) + 'px">' + lyricsHTML(song.notes, n, key) + '</div>'
+      ? '<div class="lyr" style="font-size:' + (st().fs || 15) + 'px">' + lyricsHTML(song.notes, n, key, { view: viewOf(), style: dstyle() }) + '</div>'
       : '<div class="vq l2" style="font-size:14px">' + t('textEmpty') + '<button class="btn sm" data-x="nedit" style="margin-top:8px">' + t('addText') + '</button></div>');
 }
 
@@ -317,11 +327,19 @@ function keySheet() {
   const { t, ui } = ctx, song = ctx.song(), key = song && songKey(song);
   if (!key) return;
   const opts = Array.from({ length: 12 }, (_, i) => { const d = shiftTo(key, (key.pc + i) % 12); return { d, label: keyLabel(shiftKey(key, d)) }; }).sort((a, b) => a.d - b.d);
-  ui.sheet(() => ui.snav(t('tr.key')) + '<p class="ftr" style="margin-top:0">' + esc(t(key.given ? 'tr.fromSong' : 'tr.fromChords', { k: keyLabel(key) })) + '</p>' +
+  ui.sheet(() => ui.snav(t('tr.key')) + '<p class="ftr" style="margin-top:0">' + esc(t(key.given ? 'tr.fromSong' : key.assumed ? 'tr.fromAssumed' : 'tr.fromChords', { k: keyLabel(key) })) + '</p>' +
     '<div class="group"><div class="cellcol trgrid">' + opts.map((o) => '<button type="button" class="pill num" data-trd="' + o.d + '" aria-pressed="' + (o.d === song.tr) + '">' + esc(o.label) +
       '<small>' + (o.d > 0 ? '+' : '') + o.d + '</small></button>').join('') + '</div></div>' +
-    '<p class="ftr">' + t('tr.hint') + '</p>',
+    '<p class="ftr">' + t('tr.hint') + '</p>' +
+    '<div class="hdr">' + t('deg.title') + '</div><div class="group"><div class="cellcol">' +
+    ui.seg('nview', [['chords', t('deg.chords')], ['roman', t('deg.roman')], ['nash', t('deg.nash')]], viewOf() === 'chords' ? 'chords' : dstyle(), t('deg.title')) + '</div></div>' +
+    '<p class="ftr">' + t('deg.hint') + '</p>',
   (el, sh) => el.addEventListener('click', (e) => {
+    const v = e.target.closest('[data-seg="nview"] [data-v]');
+    if (v) {
+      if (v.dataset.v === 'chords') st().view = 'chords'; else { st().view = 'degrees'; st().dstyle = v.dataset.v; }
+      ctx.store.save(); sh.close(); render(); return;
+    }
     const b = e.target.closest('[data-trd]');
     if (!b) return;
     ctx.updateSong({ tr: +b.dataset.trd });
@@ -370,6 +388,7 @@ function act(a, el) {
     case 'nfs': st().fs = Math.max(11, Math.min(26, (st().fs || 15) + +el.dataset.d)); ctx.store.save(); render(); break;
     case 'nedit': lyricsEdit(); break;
     case 'nkey': keySheet(); break;
+    case 'nview': st().view = viewOf() === 'degrees' ? 'chords' : 'degrees'; ctx.store.save(); render(); break;
     case 'tadd': addFile(); break;
     case 'topen': if (x) openTab(x); break;
     case 'tdel':

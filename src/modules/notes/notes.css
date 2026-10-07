@@ -31,3 +31,5 @@
 .trgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .trgrid .pill{display:flex;flex-direction:column;align-items:center;min-height:52px;justify-content:center}
 .trgrid .pill small{font-size:11px;opacity:.6}
+.trview{min-height:40px;padding:0 12px;border-radius:999px;border:1px solid var(--sep);color:var(--ink);font-size:13px;font-weight:600;white-space:nowrap;background:none}
+.trview[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}

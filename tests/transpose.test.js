@@ -44,3 +44,40 @@ describe('транспонирование по ступеням', () => {
     expect(lyricsHTML(txt, 2, C)).toBe('<b class="chd">D</b>   <b class="chd">Bm</b>\n<b class="chd">G</b>Строка <b class="chd">A</b>песни\n<b class="chd">C</b>и дальше');
   });
 });
+
+import { parseDegree, chordToDegree, degreeToRoman, degreeToNash, degreeToChord } from '../src/music/degrees.js';
+import { degreesIn } from '../src/music/lyrics.js';
+
+describe('ступени', () => {
+  const roman = (c, k) => degreeToRoman(chordToDegree(c, k)), nash = (c, k) => degreeToNash(chordToDegree(c, k));
+  it('аккорды → римские цифры и нэшвиллская запись', () => {
+    expect(['C', 'Dm7', 'Em', 'Fmaj7', 'G7', 'Am', 'Bm7b5', 'Bb', 'G/B', 'Csus4', 'Ab'].map((c) => roman(c, C)))
+      .toEqual(['I', 'ii7', 'iii', 'IVmaj7', 'V7', 'vi', 'viiø7', '♭VII', 'V/7', 'Isus4', '♭VI']);
+    expect(['C', 'Dm7', 'G7', 'Am', 'Bm7b5', 'Bb', 'G/B', 'E7'].map((c) => nash(c, C)))
+      .toEqual(['1', '2m⁷', '5⁷', '6m', '7ø⁷', '♭7', '5/7', '3⁷']);
+  });
+  it('в миноре — по натуральному звукоряду', () => {
+    expect(['Am', 'Dm', 'E7', 'C', 'G', 'F', 'Bdim'].map((c) => roman(c, Am))).toEqual(['i', 'iv', 'V7', 'III', 'VII', 'VI', 'ii°']);
+  });
+  it('ступени → аккорды в любой тональности', () => {
+    const D = { pc: 2, minor: false };
+    expect(['I', 'vi7', 'IV', 'V/7', '♭VII', 'viiø7'].map((r) => degreeToChord(parseDegree(r), D))).toEqual(['D', 'Bm7', 'G', 'A/C♯', 'C', 'C♯m7♭5']);
+    expect(['1', '6m', '4', '5/7', 'b7'].map((r) => degreeToChord(parseDegree(r), C))).toEqual(['C', 'Am', 'F', 'G/B', 'B♭']);
+    expect(degreeToRoman(parseDegree('6m7'))).toBe('vi7');
+    expect(degreeToNash(parseDegree('IVmaj7'))).toBe('4maj⁷');
+    expect(parseDegree('Am')).toBe(null);
+    expect(parseDegree('12')).toBe(null);
+    expect(degreeToRoman(parseDegree('57'))).toBe('V7');
+    expect(degreeToRoman(parseDegree('2m⁷'))).toBe('ii7');
+  });
+  it('текст: любая запись — любой вид', () => {
+    const chords = '[C]Раз [Am]два [F]три [G7]четыре';
+    expect(lyricsHTML(chords, 0, C, { view: 'degrees' })).toBe('<b class="chd">I</b>Раз <b class="chd">vi</b>два <b class="chd">IV</b>три <b class="chd">V7</b>четыре');
+    expect(lyricsHTML(chords, 0, C, { view: 'degrees', style: 'nash' })).toBe('<b class="chd">1</b>Раз <b class="chd">6m</b>два <b class="chd">4</b>три <b class="chd">5⁷</b>четыре');
+    const degs = '1  6m  4  5\n[I]Раз [vi]два';
+    expect(degreesIn(degs).length).toBe(6);
+    expect(lyricsHTML(degs, 2, C)).toBe('<b class="chd">D</b>  <b class="chd">Bm</b>  <b class="chd">G</b>  <b class="chd">A</b>\n<b class="chd">D</b>Раз <b class="chd">Bm</b>два');
+    // с буквенными аккордами числа — просто числа
+    expect(lyricsHTML('C 1', 0, C)).toBe('C 1');
+  });
+});

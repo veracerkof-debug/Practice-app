@@ -5,8 +5,8 @@
 import { NAT, LETTERS, SH, FL } from './notes.js';
 
 const ACC = { '#': 1, '♯': 1, b: -1, '♭': -1, '##': 2, bb: -2 };
-const accStr = (a) => (a > 0 ? '♯'.repeat(a) : '♭'.repeat(-a));
-const mod12 = (n) => ((n % 12) + 12) % 12;
+export const accStr = (a) => (a > 0 ? '♯'.repeat(a) : '♭'.repeat(-a));
+export const mod12 = (n) => ((n % 12) + 12) % 12;
 
 // Название ноты: { L — индекс буквы в CDEFGAB, acc, pc, name }
 export function parseNote(s) {
@@ -15,7 +15,7 @@ export function parseNote(s) {
   const letter = m[1] === 'H' ? 'B' : m[1], acc = ACC[m[2]] || 0;
   return { L: LETTERS.indexOf(letter), acc, pc: mod12(NAT[letter] + acc), len: m[0].length, name: letter + accStr(acc) };
 }
-const noteOf = (L, pc) => {
+export const noteOf = (L, pc) => {
   const letter = LETTERS[(L + 7) % 7];
   let a = mod12(pc - NAT[letter]);
   if (a > 6) a -= 12;
@@ -34,10 +34,10 @@ export function tonicName(pc, minor, sharp = null) {
 export const keyLabel = (k) => (k ? tonicName(k.pc, k.minor, k.sharp) + (k.minor ? 'm' : '') : '');
 
 // Диезная ли тональность (для выбора написания при равенстве и для аккордов вне ступеней)
-const sharpKey = (k) => { const n = parseNote(tonicName(k.pc, k.minor, k.sharp)); const relMaj = k.minor ? mod12(k.pc + 3) : k.pc; return n.acc > 0 || [7, 2, 9, 4, 11, 6].includes(relMaj); };
+export const sharpKey = (k) => { const n = parseNote(tonicName(k.pc, k.minor, k.sharp)); const relMaj = k.minor ? mod12(k.pc + 3) : k.pc; return n.acc > 0 || [7, 2, 9, 4, 11, 6].includes(relMaj); };
 
 // Аккорд: [скобка](корень)(остальное)[/бас][скобка]
-const CH = /^(\(?)([A-H](?:##|bb|#|b|♯|♭)?)(.*?)(?:\/([A-H](?:##|bb|#|b|♯|♭)?))?(\)?)$/;
+export const CH = /^(\(?)([A-H](?:##|bb|#|b|♯|♭)?)(.*?)(?:\/([A-H](?:##|bb|#|b|♯|♭)?))?(\)?)$/;
 const isMinorQ = (q) => /^(m(?!aj)|min|-)/.test(q) || /^(dim|°|ø)/.test(q);
 
 // Определить тональность по аккордам: каждый аккорд, который входит в тональность (с нужным наклонением),
