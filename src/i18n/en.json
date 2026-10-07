@@ -605,5 +605,7 @@
   "inst.clarinet": "Clarinet",
   "inst.mando": "Mandolin",
   "inst.banjo": "Banjo",
-  "inst.other": "Other"
+  "inst.other": "Other",
+  "lic.cg.sub": "Font of the glider title",
+  "lic.cg.text": "Distributed under the SIL Open Font License 1.1 (openfontlicense.org), like the Bravura font above. Used without changes."
 }

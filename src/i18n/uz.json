@@ -596,5 +596,7 @@
   "inst.clarinet": "Klarnet",
   "inst.mando": "Mandolina",
   "inst.banjo": "Banjo",
-  "inst.other": "Boshqa"
+  "inst.other": "Boshqa",
+  "lic.cg.sub": "Glayder nomi shrifti",
+  "lic.cg.text": "SIL Open Font License 1.1 litsenziyasi boʻyicha tarqatiladi (openfontlicense.org), yuqoridagi Bravura shrifti kabi. Oʻzgarishsiz ishlatiladi."
 }

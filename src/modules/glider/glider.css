@@ -1,41 +1,72 @@
-/* Глайдер: поверхность с полосами нот (как клавиши, только без границ), касания, эффект по вертикали */
-.gl{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;width:100%}
-.glbar{display:flex;align-items:center;gap:8px;flex:none;min-height:44px}
-.glread{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px}
-.glread b{font-size:clamp(22px,7cqmin,40px);font-weight:700;letter-spacing:-.02em;min-width:2.4ch}
-.glread span{font-size:14px}
-.glrange{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600}
-.glrange span{min-width:5.4em;text-align:center}
-.gl>.seg{flex:none}
+/* Глайдер: поверхность занимает всё окно, кнопки и название лежат поверх неё */
+.gl{flex:1;display:flex;min-height:0;width:100%;height:100%}
 .glpad{position:relative;flex:1;min-height:80px;border-radius:16px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:crosshair;
   background:linear-gradient(0deg,color-mix(in srgb,var(--tint) 3%,var(--cell)),color-mix(in srgb,var(--tint) 16%,var(--cell)))}
+.tview.imm .glpad{border-radius:0}
 .glk{position:absolute;top:0;bottom:0;pointer-events:none}
 .glk.b{background:color-mix(in srgb,var(--ink) 5%,transparent)}
 .glk.off{background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .gll{position:absolute;top:0;bottom:0;width:0;border-left:1px solid color-mix(in srgb,var(--ink) 18%,transparent);pointer-events:none}
 .gll.c{border-left-color:color-mix(in srgb,var(--ink) 35%,transparent)}
 .gll.root{border-left:2px solid color-mix(in srgb,var(--tint) 75%,transparent)}
-.gll b{position:absolute;bottom:6px;left:0;transform:translateX(-50%);font-size:11px;font-weight:600;color:var(--l2);white-space:nowrap;background:color-mix(in srgb,var(--cell) 80%,transparent);padding:0 3px;border-radius:4px}
+.gll b{position:absolute;bottom:calc(8px + env(safe-area-inset-bottom,0px));left:0;transform:translateX(-50%);font-size:11px;font-weight:600;font-style:normal;color:var(--l2);white-space:nowrap;
+  background:color-mix(in srgb,var(--cell) 80%,transparent);padding:0 3px;border-radius:4px}
 .gll.root b{color:var(--tint-text)}
+.gll.el b{transform:translateX(-2px)}
+.gll.er b{transform:translateX(calc(-100% + 2px))}
 .glpad.dense .gll:not(.c):not(.root) b{display:none}
 .glpad.dense .gll:not(.c):not(.root){border-left-color:color-mix(in srgb,var(--ink) 8%,transparent)}
-.glaxis{position:absolute;left:8px;top:6px;font-size:11px;font-weight:600;color:var(--l2);pointer-events:none}
 .gltc{position:absolute;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;pointer-events:none;
   background:radial-gradient(circle,color-mix(in srgb,var(--tint) 85%,#fff) 0 22%,color-mix(in srgb,var(--tint) 45%,transparent) 40%,transparent 70%);transition:opacity .25s,transform .25s}
 .gltc::after{content:"";position:absolute;left:50%;top:-2000px;bottom:-2000px;width:2px;margin-left:-1px;background:color-mix(in srgb,var(--tint) 55%,transparent)}
 .gltc.out{opacity:0;transform:scale(1.6)}
-.glgear{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:1;background:color-mix(in srgb,var(--cell) 85%,transparent)!important}
-.gl.strip{position:relative;flex-direction:row}
-.gl.strip .glpad{min-height:0;border-radius:12px;margin-right:46px}
+
+/* поверх поверхности */
+.glov{position:absolute;z-index:2;top:8px;right:8px;display:flex;align-items:center;gap:6px;padding:4px;border-radius:999px;background:color-mix(in srgb,var(--cell) 78%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 2px 12px rgba(0,0,0,.06);cursor:default;touch-action:manipulation;max-width:calc(100% - 16px)}
+.tview.imm .glov{top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px))}
+.glov .ic{background:transparent!important}
+.glread{display:flex;align-items:baseline;gap:6px;padding:0 6px 0 10px;min-width:4.6em}
+.glread b{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.glread span{font-size:12px;color:var(--l2)}
+.glrange{display:flex;align-items:center;gap:0;font-size:14px;font-weight:600}
+.glrange span{min-width:4.8em;text-align:center}
+.glsnap{min-height:36px;padding:0 12px;border-radius:999px;background:var(--fill);color:var(--ink);font-size:13px;font-weight:600;white-space:nowrap}
+.gltitle{position:absolute;z-index:1;left:64px;top:calc(4px + env(safe-area-inset-top,0px));font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;
+  font-size:clamp(30px,6cqmin,46px);line-height:1.2;letter-spacing:.01em;color:var(--ink);opacity:.86;pointer-events:none}
+.glaxis{position:absolute;left:12px;top:56px;font-size:11px;font-weight:600;color:var(--l2);pointer-events:none;max-width:60%}
+.gl:not(.full) .glaxis{top:8px}
+.tview.imm .glaxis{top:calc(62px + env(safe-area-inset-top,0px))}
+
+/* размеры окна */
+.gl.half .glov,.gl.quarter .glov{top:6px;right:6px}
+.gl.quarter .glread{min-width:0;padding:0 4px 0 8px}
+.gl.quarter .glread b{font-size:18px}
+.gl.quarter .glread span{display:none}
+.gl.quarter .glov{gap:0}
+.gl.strip .glpad{min-height:0;border-radius:12px}
 .gl.strip .glaxis{display:none}
 .gl.strip .gll b{bottom:2px;font-size:10px}
-.gl.quarter .glbar{min-height:36px}
-.gl.quarter .glread b{font-size:20px}
-.glchips,.glroots{display:flex;flex-wrap:wrap;gap:6px}
+.gl.strip .glov{top:50%;transform:translateY(-50%);right:4px}
+
+/* настройки */
+.glchips,.glroots,.glpre{display:flex;flex-wrap:wrap;gap:6px}
+.glpre{margin:0 0 12px}
 .glck{min-height:36px!important;padding:0 12px!important;font-size:14px!important}
 .glroots .glck{min-width:44px;justify-content:center}
 .glsel{width:100%;min-height:40px;font-size:16px}
 .glv{min-width:3em;text-align:center}
-.gll b{font-style:normal}
-.gll.el b{transform:translateX(-2px)}
-.gll.er b{transform:translateX(calc(-100% + 2px))}
+.glsub{font-size:13px;color:var(--l2);margin:10px 0 6px}
+.glfx .grow{display:flex;flex-direction:column;gap:2px;min-width:0}
+.glfx b{font-weight:600}
+.glfx small{font-size:13px;color:var(--l2);line-height:1.3}
+.glfxc{padding-top:0!important}
+.glamt{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px}
+.glamt span{color:var(--l2);min-width:5em}
+.glamt input{flex:1;accent-color:var(--tint);min-height:32px}
+.glamt b{min-width:3.2em;text-align:right;font-weight:600}
+/* узкий экран во весь рост: «назад» и название — первой строкой, кнопки — второй */
+@media (max-width:560px){
+  .tview.imm .glov{top:calc(60px + env(safe-area-inset-top,0px))}
+  .tview.imm .glaxis{top:calc(112px + env(safe-area-inset-top,0px))}
+}

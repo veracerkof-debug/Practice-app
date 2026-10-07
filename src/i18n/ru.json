@@ -614,5 +614,7 @@
   "inst.clarinet": "Кларнет",
   "inst.mando": "Мандолина",
   "inst.banjo": "Банджо",
-  "inst.other": "Другой"
+  "inst.other": "Другой",
+  "lic.cg.sub": "Шрифт названия глайдера",
+  "lic.cg.text": "Распространяется по лицензии SIL Open Font License 1.1 (openfontlicense.org), как и шрифт Bravura выше. Используется без изменений."
 }

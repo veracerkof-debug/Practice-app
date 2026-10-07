@@ -25,9 +25,13 @@ export function renderTools(app, root) {
 export function openToolView(app, id, onClose) {
   const mod = moduleById(id), name = moduleName(mod);
   const layer = document.createElement('div');
-  layer.innerHTML = '<div class="tview" role="dialog" aria-modal="true" aria-label="' + esc(name) + '"><div class="tvhd">' +
-    ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(name) + '</div><span style="width:36px"></span></div>' +
-    '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>';
+  // immersive — модуль на весь экран без шапки: кнопка «назад» плавает поверх (глайдер)
+  layer.innerHTML = mod.immersive
+    ? '<div class="tview imm" role="dialog" aria-modal="true" aria-label="' + esc(name) + '">' + ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm tvback') +
+      '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>'
+    : '<div class="tview" role="dialog" aria-modal="true" aria-label="' + esc(name) + '"><div class="tvhd">' +
+      ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(name) + '</div><span style="width:36px"></span></div>' +
+      '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>';
   document.body.appendChild(layer);
   const inst = mountModule(app, mod, layer.querySelector('.tvhost'), 'full');
   // Рабочие инструменты (stats: false, например шумомер) в статистику не пишут

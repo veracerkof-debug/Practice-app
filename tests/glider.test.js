@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { allowedPcs, posToMidi, midiToPos, notesIn, neighbors, snapPitch, nearest, clampLo } from '../src/modules/glider/scale.js';
+import { defaultFx, normalizeFx, voiceFx, busFx, applyPreset, axisFx } from '../src/modules/glider/fx.js';
+import { fxValue } from '../src/modules/glider/voice.js';
 
 describe('глайдер: положение и ноты', () => {
   it('крайние ноты — в середине своих полос, обратное преобразование точное', () => {
@@ -39,5 +41,38 @@ describe('глайдер: положение и ноты', () => {
     expect(nearest(60.74)).toEqual({ n: 61, cents: -26 });
     expect(clampLo(10, 24)).toBe(24);
     expect(clampLo(100, 24)).toBe(84);
+  });
+});
+
+describe('глайдер: эффекты', () => {
+  it('внизу эффекта нет совсем, вверху — сила, кривая задаёт чувствительность', () => {
+    const e = { on: true, amt: 0.8, curve: 'even', mode: 'axis' };
+    expect(fxValue(e, 0)).toBe(0);
+    expect(fxValue(e, 1)).toBeCloseTo(0.8);
+    expect(fxValue({ ...e, curve: 'soft' }, 0.5)).toBeCloseTo(0.2);
+    expect(fxValue({ ...e, curve: 'sharp' }, 0.25)).toBeCloseTo(0.4);
+    expect(fxValue({ ...e, mode: 'fixed' }, 0)).toBeCloseTo(0.8);
+    expect(fxValue({ ...e, on: false }, 1)).toBe(0);
+  });
+  it('старая настройка (одна строка) переносится', () => {
+    const s = { fx: 'vib' }, fx = normalizeFx(s);
+    expect(fx.vib.on).toBe(true);
+    expect(fx.bright.on).toBe(false);
+    expect(s.fx).toBe(fx);
+    expect(normalizeFx({}).bright.on).toBe(true);
+  });
+  it('громкость: внизу тише, вверху полная; без эффекта — 1', () => {
+    const fx = defaultFx();
+    expect(voiceFx(fx, 0).volGain).toBe(1);
+    fx.vol.on = true;
+    expect(voiceFx(fx, 0).volGain).toBeCloseTo(0.1);
+    expect(voiceFx(fx, 1).volGain).toBeCloseTo(1);
+  });
+  it('шина — по самому высокому пальцу; наборы включают свои эффекты', () => {
+    const fx = applyPreset('ambient');
+    expect(busFx(fx, [0.1, 0.9])).toMatchObject({ echo: 0.6, time: 500 });
+    expect(busFx(fx, []).verb).toBeCloseTo(0.8);
+    expect(axisFx(fx)).toEqual(['bright']);
+    expect(Object.values(applyPreset('clean')).some((e) => e.on)).toBe(false);
   });
 });

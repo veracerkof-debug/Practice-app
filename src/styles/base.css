@@ -24,3 +24,9 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 .segcap{display:block;font-size:13px;line-height:1.4;color:var(--l2);margin:8px 2px 0}
 /* Переключатель в две колонки — когда подписи длинные (уровень в «Обо мне») */
 .seg.g2{display:grid!important;grid-template-columns:1fr 1fr;row-gap:2px}
+
+/* Окно инструмента на весь экран (manifest.immersive): без шапки и полей, «назад» плавает поверх */
+.tview.imm .tvbody{padding:0;max-width:none}
+.tview.imm .tvhost{padding:0!important;border-radius:0!important;background:none!important;box-shadow:none!important}
+.tview.imm .tvback{position:absolute;z-index:5;top:calc(8px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--cell) 80%,transparent)!important;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}

@@ -19,6 +19,7 @@
   "dependencies": {
     "@capacitor/android": "8.5.2",
     "@capacitor/core": "8.5.2",
-    "@coderline/alphatab": "1.8.4"
+    "@coderline/alphatab": "1.8.4",
+    "@fontsource/cormorant-garamond": "5.3.0"
   }
 }
