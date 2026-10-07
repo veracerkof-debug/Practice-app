@@ -549,7 +549,7 @@
   "cal.kind.goal": "Song goal",
   "cal.showMore": "Show more",
   "lic.cap.sub": "Android app · version 8.5.2",
-  "lic.cap.text": "Distributed under the MIT License (github.com/ionic-team/capacitor). The Android app also includes AndroidX libraries (Apache License 2.0, © The Android Open Source Project).",
+  "lic.cap.text": "Distributed under the MIT License (github.com/ionic-team/capacitor), together with the @capacitor/app module (the Back button). The Android app also includes AndroidX libraries (Apache License 2.0, © The Android Open Source Project).",
   "page.me": "About me",
   "me.hint": "Experience before the app counts towards total time and the mastery gem, but not the weekly statistics. Profile data is stored on this device only.",
   "gem.prior": "including {h} of experience before the app",
@@ -607,5 +607,7 @@
   "inst.banjo": "Banjo",
   "inst.other": "Other",
   "lic.cg.sub": "Font of the glider title",
-  "lic.cg.text": "Distributed under the SIL Open Font License 1.1 (openfontlicense.org), like the Bravura font above. Used without changes."
+  "lic.cg.text": "Distributed under the SIL Open Font License 1.1 (openfontlicense.org), like the Bravura font above. Used without changes.",
+  "ob.needHours": "Enter an approximate number of hours — the estimate below can help",
+  "ob.expRequired": "This field is required for the chosen level."
 }

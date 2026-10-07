@@ -558,7 +558,7 @@
   "cal.kind.goal": "Цель по песне",
   "cal.showMore": "Показать ещё",
   "lic.cap.sub": "Приложение для Android · версия 8.5.2",
-  "lic.cap.text": "Распространяется по лицензии MIT (github.com/ionic-team/capacitor). В приложение для Android входят также библиотеки AndroidX (Apache License 2.0, © The Android Open Source Project).",
+  "lic.cap.text": "Распространяется по лицензии MIT (github.com/ionic-team/capacitor); вместе с ним — модуль @capacitor/app (кнопка «Назад»). В приложение для Android входят также библиотеки AndroidX (Apache License 2.0, © The Android Open Source Project).",
   "page.me": "Обо мне",
   "me.hint": "Опыт до приложения учитывается в общем времени и значке мастерства, но не в недельной статистике. Данные профиля хранятся только на этом устройстве.",
   "gem.prior": "в том числе {h} опыта до приложения",
@@ -616,5 +616,7 @@
   "inst.banjo": "Банджо",
   "inst.other": "Другой",
   "lic.cg.sub": "Шрифт названия глайдера",
-  "lic.cg.text": "Распространяется по лицензии SIL Open Font License 1.1 (openfontlicense.org), как и шрифт Bravura выше. Используется без изменений."
+  "lic.cg.text": "Распространяется по лицензии SIL Open Font License 1.1 (openfontlicense.org), как и шрифт Bravura выше. Используется без изменений.",
+  "ob.needHours": "Нужно указать примерное число часов — можно воспользоваться подсчётом ниже",
+  "ob.expRequired": "Для выбранного уровня поле обязательное."
 }

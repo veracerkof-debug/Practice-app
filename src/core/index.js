@@ -8,6 +8,7 @@ import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
 import { applyTheme } from './settings.js';
 import { createShell } from './screens/shell.js';
+import { initBack } from './back.js';
 import { createSessionScreen } from './screens/session.js';
 import { createMixerDrawer } from './screens/mixer.js';
 import { createShared } from './modules.js';
@@ -112,6 +113,8 @@ export function boot(root) {
   createMixerDrawer(app);
   // Сессия, начатая до перезагрузки страницы, продолжается
   session.resume();
+  // «Назад» на Android закрывает открытое по очереди, а не всё приложение
+  initBack(app);
   // Статус медиатеки и табов зависит от файлов, которые читаются из базы асинхронно
   files.ready.then(() => { if (!app.openTool) app.render(); });
   return app;

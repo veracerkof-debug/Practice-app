@@ -70,3 +70,4 @@
   .tview.imm .glov{top:calc(60px + env(safe-area-inset-top,0px))}
   .tview.imm .glaxis{top:calc(112px + env(safe-area-inset-top,0px))}
 }
+.glpad.plain{background:color-mix(in srgb,var(--tint) 9%,var(--cell))}

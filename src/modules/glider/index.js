@@ -32,7 +32,7 @@ const offs = [], touches = new Map(); // pointerId → { voice, el, m, y }
 
 const cfg = () => {
   const s = ctx.store.all();
-  s.sound ??= 'app'; s.hold ??= true; s.snap ??= 'magnet'; s.port ??= 60; s.scale ??= 'chrom'; s.root ??= 0; s.labels ??= true;
+  s.sound ??= 'app'; s.hold ??= true; s.snap ??= 'magnet'; s.port ??= 60; s.scale ??= 'chrom'; s.root ??= 0; s.labels ??= true; s.keys ??= true;
   s.width ??= 12; s.lo ??= 60; // октава C4–C5: на телефоне по ширине в самый раз
   if (!WIDTHS.includes(s.width)) s.width = 12;
   s.lo = clampLo(s.lo, s.width);
@@ -49,14 +49,15 @@ const axisTxt = (s) => { const a = axisFx(s.fx); return a.length ? '↑ ' + a.ma
 function padHTML(s, over) {
   const pcs = allowedPcs(s), W = s.width + 1;
   let cols = '', lines = '';
-  for (let m = s.lo; m <= s.lo + s.width; m++) {
+  // без разметки — сплошное одноцветное поле: ни полос клавиш, ни линий, ни названий нот
+  for (let m = s.lo; s.keys && m <= s.lo + s.width; m++) {
     const pc = ((m % 12) + 12) % 12, inSc = !pcs || pcs.includes(pc), root = pcs ? pc === s.root : pc === 0;
     cols += '<i class="glk' + (BLACK.includes(pc) ? ' b' : '') + (inSc ? '' : ' off') + '" style="left:' + ((m - s.lo) / W) * 100 + '%;width:' + 100 / W + '%"></i>';
     const x = midiToPos(m, s.lo, s.width);
     if (inSc) lines += '<i class="gll' + (root ? ' root' : '') + (pc === 0 ? ' c' : '') + (x < 0.04 ? ' el' : x > 0.96 ? ' er' : '') + '" style="left:' + x * 100 + '%">' + (s.labels ? '<b>' + mName(m) + '</b>' : '') + '</i>';
   }
   const ax = axisTxt(s);
-  return '<div class="glpad" id="glpad" role="application" aria-roledescription="' + ctx.t('padRole') + '" aria-label="' + ctx.t('padAria', { range: rangeTxt(s), fx: ax.replace('↑ ', '') || ctx.t('fxNone') }) + '">' +
+  return '<div class="glpad' + (s.keys ? '' : ' plain') + '" id="glpad" role="application" aria-roledescription="' + ctx.t('padRole') + '" aria-label="' + ctx.t('padAria', { range: rangeTxt(s), fx: ax.replace('↑ ', '') || ctx.t('fxNone') }) + '">' +
     cols + lines + (ax ? '<span class="glaxis" aria-hidden="true">' + ax + '</span>' : '') + '<div id="gltouch"></div>' + over + '</div>';
 }
 
@@ -196,7 +197,8 @@ function setSheet() {
       '</div></div>' +
       '<div class="hdr">' + t('range') + '</div><div class="group"><div class="cell"><span class="grow">' + t('from') + '</span>' + ui.icb('data-glo2="-1"', I.left, t('lower'), 'sm') + '<b class="num glv">' + mName(s.lo) + '</b>' + ui.icb('data-glo2="1"', I.right, t('higher'), 'sm') + '</div>' +
       '<div class="cellcol"><div class="glsub">' + t('width') + ' · ' + rangeTxt(s) + '</div>' + ui.seg('gw', WIDTHS.map((w) => [w, t('w.' + w)]), s.width, t('width')) + '</div></div><p class="ftr">' + t('widthHint') + '</p>' +
-      '<div class="group"><div class="cell"><span class="grow">' + t('labels') + '</span>' + ui.sw('glab', s.labels, t('labels')) + '</div></div>';
+      '<div class="hdr">' + t('look') + '</div><div class="group"><div class="cell"><span class="grow">' + t('keys') + '</span>' + ui.sw('gkeys', s.keys, t('keys')) + '</div>' +
+      (s.keys ? '<div class="cell"><span class="grow">' + t('labels') + '</span>' + ui.sw('glab', s.labels, t('labels')) + '</div>' : '') + '</div><p class="ftr">' + t('keysHint') + '</p>';
   };
   ui.sheet(body, (el, sh) => {
     const done = () => { save(); sh.update(); render(); updateBus(); };
@@ -233,6 +235,7 @@ function setSheet() {
       if (e.target.dataset.gamt) { save(); render(); return; }
       if (sw === 'ghold') s.hold = e.target.checked;
       else if (sw === 'glab') s.labels = e.target.checked;
+      else if (sw === 'gkeys') s.keys = e.target.checked;
       else if (sw.startsWith('gfx-')) s.fx[sw.slice(4)].on = e.target.checked;
       else if (e.target.hasAttribute('data-gsc')) s.scale = e.target.value;
       else return;

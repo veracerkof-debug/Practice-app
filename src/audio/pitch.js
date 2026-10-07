@@ -1,9 +1,10 @@
 // Определение высоты звука (YIN) для тюнера и пения нот. Чистая функция: буфер → Гц (0 — нет ноты).
 
-export function yin(buf, sr) {
+// minRms — порог тишины (среднеквадратичный уровень): чем меньше, тем тише звук, который ещё слышен
+export function yin(buf, sr, minRms = 0.008) {
   let rms = 0;
   for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
-  if (Math.sqrt(rms / buf.length) < 0.008) return 0; // тишина
+  if (Math.sqrt(rms / buf.length) < minRms) return 0; // тишина
   const W = 2048, maxLag = Math.min(Math.floor(sr / 27), buf.length - W), minLag = Math.floor(sr / 2100);
   const d = new Float32Array(maxLag + 1);
   for (let tau = 1; tau <= maxLag; tau++) {

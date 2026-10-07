@@ -47,7 +47,7 @@ export function onboarding(app, done = () => {}) {
     }
     if (s === 'exp') {
       const g = gemOf(p.priorHours);
-      return '<h1 class="obh">' + t('ob.expTitle') + '</h1><p class="obp">' + t('ob.expText') + '</p>' +
+      return '<h1 class="obh">' + t('ob.expTitle') + '</h1><p class="obp">' + t('ob.expText') + (p.level === 'beginner' ? '' : ' ' + t('ob.expRequired')) + '</p>' +
         '<div class="group"><label class="cell"><span class="grow">' + t('ob.hours') + '</span><input class="inp num obhours" id="obhours" type="number" inputmode="numeric" min="0" max="' + PRIOR_MAX + '" placeholder="0" aria-label="' + t('ob.hours') + '" value="' + (p.priorHours || '') + '"></label></div>' +
         '<div class="hdr">' + t('ob.calc') + '</div><div class="group"><label class="cell"><span class="grow">' + t('ob.years') + '</span><input class="inp num" id="obyears" type="number" inputmode="decimal" min="0" max="80" step="0.5" placeholder="0" value="' + (f.years || '') + '"></label>' +
         '<label class="cell"><span class="grow">' + t('ob.perWeek') + '</span><input class="inp num" id="obweek" type="number" inputmode="decimal" min="0" max="80" step="0.5" placeholder="0" value="' + (f.perWeek || '') + '"></label>' +
@@ -101,6 +101,8 @@ export function onboarding(app, done = () => {}) {
     read();
     if (g('[data-obnext]')) {
       if (STEPS[f.step] === 'inst' && !p.instruments.length) { toast(t('ob.pickInst')); return; }
+      // у всех, кроме новичка, опыт обязателен: иначе уровень и звание не с чего посчитать
+      if (STEPS[f.step] === 'exp' && p.level !== 'beginner' && !p.priorHours) { toast(t('ob.needHours')); layer.querySelector('#obhours')?.focus(); return; }
       // цель по уровню подставляется, пока её не меняли вручную
       if (STEPS[f.step] === 'level' && !f.goalTouched) f.goalMin = GOAL_BY_LEVEL[p.level];
       if (f.step === STEPS.length - 1) { finish(); return; }

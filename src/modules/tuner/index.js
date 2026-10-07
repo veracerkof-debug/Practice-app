@@ -13,6 +13,9 @@ import { TUNINGS, TOL, STYLES, normalizeTuner, curTuning, reading, inRange, mNam
 const ICON = '<svg viewBox="0 0 24 24"><path d="M9 3v8a3 3 0 0 0 6 0V3M12 14v7"/></svg>';
 const WARN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 19.5h18.4zM12 10v4.5M12 17.2v.3"/></svg>';
 const TICK_MS = 70, SILENCE_MS = 1400, TAU = 0.09, TUNED_MS = 700;
+// Чувствительность: порог тишины. Микрофоны телефонов без автоусиления дают тихий сигнал, поэтому по умолчанию — «обычная»,
+// втрое чувствительнее прежнего порога (−42 дБ → −52 дБ); «высокая» — для тихих инструментов и дальнего телефона
+const SENS = { low: 0.008, normal: 0.0025, high: 0.0008 };
 
 let host = null, ctx = null, size = 'full', ro = null;
 let mic = null, timer = 0, raf = 0, smooth = null, lastT = 0, lock = null, micErr = null, starting = false;
@@ -178,7 +181,7 @@ function markTuned() {
 
 function tick() {
   if (!mic) return;
-  let f = yin(mic.read(), mic.sampleRate);
+  let f = yin(mic.read(), mic.sampleRate, SENS[st().sens] ?? SENS.normal);
   if (f && !inRange(f)) f = 0;
   if (!f) {
     if (R && Date.now() - lastT > SILENCE_MS) { R = null; okSince = 0; showText(); }
@@ -341,6 +344,8 @@ function settingsSheet() {
       '<div class="hdr">' + t('set.view') + '</div><div class="tstys" role="group" aria-label="' + t('set.view') + '">' +
       STYLES.map((k) => '<button class="tsty' + (s.style === k ? ' on' : '') + '" data-tsty="' + k + '" aria-pressed="' + (s.style === k) + '"><span class="tsi ' + k +
         '"><i></i><i></i><i></i></span><b>' + t('style.' + k) + '</b></button>').join('') + '</div>' +
+      '<div class="hdr">' + t('set.sens') + '</div><div class="group"><div class="cellcol">' + ui.seg('tsens', Object.keys(SENS).map((k) => [k, t('sens.' + k)]), s.sens || 'normal', t('set.sens')) +
+      '<div class="segcap">' + t('sens.hint') + '</div></div></div>' +
       '<div class="hdr">' + t('set.tol') + '</div><div class="group">' + Object.keys(TOL).map((k) => '<button class="cell" data-ttol="' + k + '" aria-pressed="' + (s.tol === k) +
         '"><span class="grow"><div class="ttl">' + t('tol.' + k) + '</div><div class="st">' + t('tol.' + k + '.d') + '</div></span>' + (s.tol === k ? ui.icons.check : '') + '</button>').join('') + '</div>' +
       '<div class="hdr">' + t('a4.title') + '</div><div class="group"><button class="cell" data-ta4><span class="grow">A4</span><span class="val">' + t('hz', { f: s.a4 }) + '</span>' + ui.icons.chev + '</button></div>';
@@ -350,7 +355,8 @@ function settingsSheet() {
     el.addEventListener('click', (e) => {
       const g = (x) => e.target.closest(x);
       let b;
-      if ((b = g('[data-tsty]'))) s.style = b.dataset.tsty;
+      if ((b = g('[data-seg="tsens"] [data-v]'))) s.sens = b.dataset.v;
+      else if ((b = g('[data-tsty]'))) s.style = b.dataset.tsty;
       else if ((b = g('[data-ttol]'))) s.tol = b.dataset.ttol;
       else if (g('[data-tpk]')) { sh.close(); tuningPicker(); return; }
       else if (g('[data-ta4]')) { sh.close(); a4Sheet(); return; }

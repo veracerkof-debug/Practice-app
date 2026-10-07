@@ -540,7 +540,7 @@
   "cal.kind.goal": "Qoʻshiq maqsadi",
   "cal.showMore": "Yana koʻrsatish",
   "lic.cap.sub": "Android uchun ilova · 8.5.2 versiya",
-  "lic.cap.text": "MIT litsenziyasi boʻyicha tarqatiladi (github.com/ionic-team/capacitor). Android ilovasiga AndroidX kutubxonalari ham kiradi (Apache License 2.0, © The Android Open Source Project).",
+  "lic.cap.text": "MIT litsenziyasi boʻyicha tarqatiladi (github.com/ionic-team/capacitor); u bilan birga — @capacitor/app moduli («Orqaga» tugmasi). Android ilovasiga AndroidX kutubxonalari ham kiradi (Apache License 2.0, © The Android Open Source Project).",
   "page.me": "Men haqimda",
   "me.hint": "Ilovagacha boʻlgan tajriba umumiy vaqt va mahorat belgisida hisobga olinadi, lekin haftalik statistikada emas. Profil maʼlumotlari faqat shu qurilmada saqlanadi.",
   "gem.prior": "shundan {h} ilovagacha boʻlgan tajriba",
@@ -598,5 +598,7 @@
   "inst.banjo": "Banjo",
   "inst.other": "Boshqa",
   "lic.cg.sub": "Glayder nomi shrifti",
-  "lic.cg.text": "SIL Open Font License 1.1 litsenziyasi boʻyicha tarqatiladi (openfontlicense.org), yuqoridagi Bravura shrifti kabi. Oʻzgarishsiz ishlatiladi."
+  "lic.cg.text": "SIL Open Font License 1.1 litsenziyasi boʻyicha tarqatiladi (openfontlicense.org), yuqoridagi Bravura shrifti kabi. Oʻzgarishsiz ishlatiladi.",
+  "ob.needHours": "Taxminiy soatlar sonini koʻrsatish kerak — quyidagi hisoblashdan foydalanish mumkin",
+  "ob.expRequired": "Tanlangan daraja uchun bu maydon majburiy."
 }

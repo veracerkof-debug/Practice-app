@@ -99,5 +99,10 @@
   "warn": "Turn the peg slowly and play only the string being tuned: too much tension can break it.",
   "set.begOn": "The tuner works by the strings of the chosen tuning: it highlights the string being played and marks tuned ones. Tapping a string plays a reference tone and locks it; tapping again returns to auto-detection.",
   "set.begOff": "The tuner is chromatic: it shows any note played. Beginner mode adds instrument tunings and string hints.",
-  "warnShort": "Turn the peg slowly; play only the string being tuned."
+  "warnShort": "Turn the peg slowly; play only the string being tuned.",
+  "set.sens": "Microphone sensitivity",
+  "sens.low": "Low",
+  "sens.normal": "Normal",
+  "sens.high": "High",
+  "sens.hint": "High — for quiet instruments and a phone further away; low — in a noisy room, so the tuner ignores other sounds."
 }

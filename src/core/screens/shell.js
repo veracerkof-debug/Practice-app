@@ -98,6 +98,13 @@ export function createShell(app, root) {
     } else render();
   });
 
+  // «Назад» внутри вкладок: со страницы песни — к списку, с другой вкладки — на первую; false — уже на первой
+  app.shellBack = () => {
+    if (view.tab === 'library' && view.song) { go('library'); return true; }
+    const first = tabsNow()[0];
+    if (view.tab !== first) { go(first); return true; }
+    return false;
+  };
   app.go = go;
   app.render = render;
   app.shellAct = act;

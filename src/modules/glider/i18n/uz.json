@@ -93,5 +93,8 @@
   "curve.even": "Tekis",
   "curve.sharp": "Keskin",
   "echoTime": "Takror vaqti",
-  "fxHint": "Maydonning pastida vertikal effektlar oʻchiq, yuqorida — berilgan kuchda. «Silliq» — effekt yuqoriga yaqin kuchayadi, «Keskin» — oʻrtadan boshlab. «Doimo» rejimidagi effekt istalgan joyda berilgan kuch bilan yangraydi. Aks-sado va reverberatsiya barcha barmoqlar uchun umumiy va eng yuqoridagisiga ergashadi."
+  "fxHint": "Maydonning pastida vertikal effektlar oʻchiq, yuqorida — berilgan kuchda. «Silliq» — effekt yuqoriga yaqin kuchayadi, «Keskin» — oʻrtadan boshlab. «Doimo» rejimidagi effekt istalgan joyda berilgan kuch bilan yangraydi. Aks-sado va reverberatsiya barcha barmoqlar uchun umumiy va eng yuqoridagisiga ergashadi.",
+  "look": "Maydon koʻrinishi",
+  "keys": "Klavishlar belgisi",
+  "keysHint": "Belgisiz maydon — bir rangli yaxlit maydon: balandlikni pardasiz cholgʻudagidek eshitib topish kerak."
 }

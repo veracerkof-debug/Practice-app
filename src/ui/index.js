@@ -86,6 +86,8 @@ export function sheet(render, init, { onClose } = {}) {
 }
 
 export const closeAllSheets = () => [...stack].reverse().forEach((s) => s.close());
+// Закрыть верхнюю шторку (кнопка «Назад» на Android); false — шторок нет
+export const closeTopSheet = () => { const s = stack.at(-1); if (!s) return false; s.close(); return true; };
 
 /* ---------- сообщение ---------- */
 

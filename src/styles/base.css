@@ -30,3 +30,8 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 .tview.imm .tvhost{padding:0!important;border-radius:0!important;background:none!important;box-shadow:none!important}
 .tview.imm .tvback{position:absolute;z-index:5;top:calc(8px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--cell) 80%,transparent)!important;
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+/* Строгий режим учёта: часы на главной — золотом с бегущим бликом (без подписи) */
+.goldshine{background:linear-gradient(110deg,var(--gold) 0 38%,#fff3bf 50%,var(--gold) 62% 100%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;
+  color:transparent!important;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 8px color-mix(in srgb,var(--gold) 35%,transparent));animation:goldshine 3.6s ease-in-out infinite}
+@keyframes goldshine{0%{background-position:110% 0}60%,100%{background-position:-60% 0}}

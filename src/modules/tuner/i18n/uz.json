@@ -96,5 +96,10 @@
   "warn": "Quloqni sekin burang va faqat sozlanayotgan torni chaling: ortiqcha taranglik torni uzishi mumkin.",
   "set.begOn": "Tyuner tanlangan sozlik torlari boʻyicha sozlaydi: chalingan torni yoritadi va sozlanganlarini belgilaydi. Torga bosish tayanch tovushni chaladi va uni qotiradi; qayta bosish avtomatik aniqlashni qaytaradi.",
   "set.begOff": "Tyuner xromatik: chalingan istalgan notani koʻrsatadi. Yangi boshlovchi rejimi cholgʻu sozliklari va torlar boʻyicha maslahatlarni qoʻshadi.",
-  "warnShort": "Quloqni sekin burang; faqat sozlanayotgan torni chaling."
+  "warnShort": "Quloqni sekin burang; faqat sozlanayotgan torni chaling.",
+  "set.sens": "Mikrofon sezgirligi",
+  "sens.low": "Past",
+  "sens.normal": "Oddiy",
+  "sens.high": "Yuqori",
+  "sens.hint": "Yuqori — past ovozli cholgʻular va uzoqdagi telefon uchun; past — shovqinli xonada, tyuner begona tovushlarga javob bermasligi uchun."
 }
