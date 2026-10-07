@@ -21,7 +21,7 @@
 | ↳ внутри движка MediaPipe: TensorFlow Lite, XNNPACK, OpenCV, Protocol Buffers, Abseil и др. | Выполнение модели, обработка изображения | Apache-2.0 / BSD-3-Clause |
 | Модель MediaPipe Hand Landmarker (float16, v1) — © Google LLC | Модель распознавания 21 точки руки, файл `vendor/mediapipe/hand_landmarker.task` (7,8 МБ) без изменений | Apache-2.0 |
 | GFS Didot — © Greek Font Society, пакет `@fontsource/gfs-didot` 5.3.0 (греческий набор) | Шрифт логотипа «Μελέτη» и греческих цитат | SIL OFL 1.1 |
-| Onest (вариативный) — © 2023 The Onest Project Authors, пакет `@fontsource-variable/onest` 5.3.1 | Шрифт вида «Минимал» (эксперимент), кириллица и латиница | SIL OFL 1.1 |
+| Onest (вариативный) — © 2023 The Onest Project Authors, пакет `@fontsource-variable/onest` 5.3.1 | Дополнительный шрифт интерфейса, кириллица и латиница | SIL OFL 1.1 |
 | [Capacitor](https://github.com/ionic-team/capacitor) 8.5.2 (`@capacitor/core`, `@capacitor/android`, `@capacitor/app` 8.1.2) — © Ionic и участники | Приложение для Android: оболочка WebView и мост к системе | MIT |
 | AndroidX (appcompat, coordinatorlayout, core-splashscreen, webkit и др.) — © The Android Open Source Project | Библиотеки Android, входят в APK через Capacitor | Apache-2.0 |
 

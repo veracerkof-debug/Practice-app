@@ -107,5 +107,5 @@
   "delSelTitle": "Delete {files}?",
   "notMedia": "That’s not audio or video",
   "addedN": "Added: {files}",
-  "monoFixed": "In Minimal the view is fixed: {v}."
+  "monoFixed": "This style keeps the view fixed: {v}."
 }

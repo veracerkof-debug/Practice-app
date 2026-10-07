@@ -50,5 +50,5 @@
   "w.saved": "Saved: {time}",
   "w.statusRun": "Stopwatch, {time}",
   "w.statusPaused": "Stopwatch paused, {time}",
-  "monoFixed": "In Minimal the view is fixed: {v}."
+  "monoFixed": "This style keeps the view fixed: {v}."
 }

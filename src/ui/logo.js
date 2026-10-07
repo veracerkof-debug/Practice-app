@@ -7,4 +7,4 @@ import { esc } from './index.js';
 export const NAME_GR = 'Μελέτη';
 export const NAME_LAT = 'Melete';
 
-export const logoHTML = (cls = '') => '<button class="logo' + (cls ? ' ' + cls : '') + '" data-act="name" aria-label="' + esc(t('name.aria')) + '"><span lang="el">' + NAME_GR + '</span></button>';
+export const logoHTML = (cls = '') => '<button class="logo' + (cls ? ' ' + cls : '') + '" data-act="name" aria-label="' + esc(t('name.aria')) + '"><span lang="el"><span class="lg0">' + NAME_GR[0] + '</span>' + NAME_GR.slice(1) + '</span></button>';

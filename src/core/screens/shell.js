@@ -9,6 +9,7 @@ import { visibleTabs } from '../settings.js';
 import { homeHTML, mountStones, quickEdit, streakSheet, gemSheet, rankSheet, rankCheck, nameSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
+import { bindExt } from './ext.js';
 import { createPanel, donateSheet, legalSheet, tosGate, unverifiedSheet } from './panel.js';
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
 import { onboarding } from './onboard.js';
@@ -63,6 +64,7 @@ export function createShell(app, root) {
   }
 
   const panel = createPanel(app, () => render());
+  bindExt(app, () => panel.open('look'));
 
   // Действия, общие для экранов и панели. Возвращает true, если нажатие обработано
   function act(e) {

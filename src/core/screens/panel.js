@@ -16,6 +16,7 @@ import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { AVATAR, CHEV, BACK, IC, TAB_IDS, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
+import { extOn } from '../ext.js';
 import { freeTagName, trackMode } from '../session.js';
 import { INSTRUMENTS, LEVELS, PRIOR_MAX, lifetimeSec, saveProfile, newProfile } from '../profile.js';
 import { rankOf } from '../rank.js';
@@ -174,10 +175,9 @@ function lookHTML(app) {
     '<div class="hdr">' + t('look.lang') + '</div><div class="group"><div class="cellcol"><div class="seg uc" role="group" aria-label="' + t('look.lang') + '">' +
     LANGS.map((k) => '<button data-lang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>') +
     '<div class="hdr">' + t('look.theme') + '</div><div class="group"><div class="cellcol">' + seg('theme', [['system', t('look.auto')], ['light', t('look.light')], ['dark', t('look.dark')]], st.theme, t('look.theme')) + '</div></div>' +
-    // «Минимал» — экспериментальный вид интерфейса: чёрно-белый, без акцента и цветных тем
-    '<div class="hdr">' + t('mono.title') + '</div><div class="group"><div class="cellcol">' + seg('uistyle', [['default', t('mono.default')], ['mono', t('mono.name')]], st.uiStyle === 'mono' ? 'mono' : 'default', t('mono.title')) +
-    '<div class="segcap">' + t('mono.hint') + '</div></div></div>' +
-    (st.uiStyle === 'mono' ? '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('mono.lang') + '</span>' + psw('monoLang', st.monoLang !== false, t('mono.lang')) + '</div></div><p class="ftr">' + t('mono.langHint') + '</p>' : '') +
+    (!extOn(st) ? '' : '<div class="hdr">' + t('mono.title') + '</div><div class="group"><div class="cellcol">' + seg('uistyle', [['default', t('mono.default')], ['mono', t('mono.name')]], st.uiStyle === 'mono' ? 'mono' : 'default', t('mono.title')) +
+    '<div class="segcap">' + t('mono.hint') + '</div></div></div>') +
+    (st.uiStyle === 'mono' && extOn(st) ? '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('mono.lang') + '</span>' + psw('monoLang', st.monoLang !== false, t('mono.lang')) + '</div></div><p class="ftr">' + t('mono.langHint') + '</p>' : '') +
     (st.uiStyle === 'mono' ? '' : '<div class="hdr">' + t('look.style') + '</div><div class="skins">' + [['paper', t('look.paper'), '#F4EFE6', '#2B2620'], ['oled', 'OLED', '#000', '#fff']].map(([k, n, bg, fg]) =>
       '<button class="skin' + (st.theme === k ? ' on' : '') + '" data-skin="' + k + '" aria-pressed="' + (st.theme === k) + '" style="background:' + bg + ';color:' + fg + '">' + n + '</button>').join('') + '</div>') +
     (st.uiStyle === 'mono' ? '' :
@@ -282,7 +282,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-seg="uistyle"] [data-v]'))) {
         const st = app.store.state.settings, was = st.uiStyle === 'mono' && st.monoLang !== false;
-        st.uiStyle = b.dataset.v === 'mono' ? 'mono' : 'default';
+        st.uiStyle = b.dataset.v === 'mono' && extOn(st) ? 'mono' : 'default';
         applyTheme(st); changed();
         // у «Минимала» свой язык (греческий и латынь) — строки перечитываются после перезапуска
         if (was !== (st.uiStyle === 'mono' && st.monoLang !== false)) setTimeout(() => location.reload(), 150);

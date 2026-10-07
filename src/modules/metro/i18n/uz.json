@@ -88,5 +88,5 @@
   "sig.on": "Yoqilgan: {list}. Sozlamalarni ochish",
   "sig.ftr": "Signallar ulushlarga mos ravishda, tovush bilan yoki tovushsiz beriladi (klik ovozini mikserda oʻchirish mumkin). Tebranish telefon choʻntakda boʻlganda ham tempni ushlab turishga yordam beradi. Tez-tez chaqnash yorugʻlikka sezgir odamlar uchun noqulay boʻlishi mumkin.",
   "sig.android": "Fonar va tebranish Android ilovasida, ular mavjud qurilmalarda ishlaydi.",
-  "monoFixed": "«Minimal»da koʻrinish qatʼiy: {v}."
+  "monoFixed": "Bu bezakda koʻrinish qotirilgan: {v}."
 }

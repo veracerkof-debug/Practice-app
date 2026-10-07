@@ -7,6 +7,7 @@ import { loadDevice, saveDevice } from './device.js';
 import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
 import { applyTheme } from './settings.js';
+import { extCheck } from './ext.js';
 import { createShell } from './screens/shell.js';
 import { initBack } from './back.js';
 import { createSessionScreen } from './screens/session.js';
@@ -29,8 +30,10 @@ export function boot(root) {
   let clock = null;
   const store = createStore({ clockBad: () => !!(clock && clock.bad) });
   // Язык из настроек (выбран в «Оформлении»), иначе — язык системы
-  // «Минимал» говорит по-гречески и по-латыни (выключается в «Оформлении»)
   const st0 = store.state.settings;
+  if (extCheck(st0).changed) store.settingsChanged();
+  // время доступа к дополнительному оформлению вышло — вернуть обычное (строки и стили — перезапуском)
+  setInterval(() => { if (extCheck(store.state.settings).changed) { store.settingsChanged(); setTimeout(() => location.reload(), 150); } }, 15000);
   initI18n(st0.uiStyle === 'mono' && st0.monoLang !== false ? 'el' : st0.lang);
   ensureLib(store.state, t);
   applyTheme(store.state.settings);
