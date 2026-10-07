@@ -60,7 +60,6 @@
   "about": "Played with hands in front of the camera: one hand sets the pitch, the other the effects and volume.",
   "start": "Turn on camera",
   "stop": "Turn off camera",
-  "loading": "Loading hand tracking…",
   "hint.right": "Right hand — pitch: higher hand, higher note. Left hand — effects: open palm is sound, a fist is silence; higher — more space; turning the wrist — tone; tilting forward or back — vibrato; closer to the camera — drive; palm edge-on — tremolo; a pinch holds the effects.",
   "hint.left": "Left hand — pitch: higher hand, higher note. Right hand — effects: open palm is sound, a fist is silence; higher — more space; turning the wrist — tone; tilting forward or back — vibrato; closer to the camera — drive; palm edge-on — tremolo; a pinch holds the effects.",
   "privacy": "The camera is processed only on this device: the image is neither stored nor sent anywhere.",

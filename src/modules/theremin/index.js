@@ -42,7 +42,7 @@ const CHORD_GAIN = 0.42; // четыре голоса аккорда вмест�
 let host = null, ctx = null, size = 'full', ro = null, probed = false;
 const offs = [];
 // состояние живёт между перерисовками окна
-const S = { cam: null, state: 'off', err: '', voice: null, bus: null, seen: 0, hands: { pitch: null, fx: null }, m: null,
+const S = { cam: null, state: 'off', live: false, err: '', voice: null, bus: null, seen: 0, hands: { pitch: null, fx: null }, m: null,
   fPos: oneEuro(), fChar: oneEuro({ minCutoff: 1, beta: 0.2 }),
   // рука эффектов: сглаживание каждого жеста, текущие силы (для подсказки), фиксация щепотью, автонейтраль
   fg: Object.fromEntries(GESTURES.map((g) => [g, oneEuro(g === 'open' ? { minCutoff: 2, beta: 0.2 } : { minCutoff: 0.8, beta: 0.3 })])),
@@ -63,6 +63,7 @@ const cfg = () => {
   normalizeFx(s);
   return s;
 };
+const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const save = () => ctx.store.save();
 const rangeTxt = (s) => mName(s.lo) + '–' + mName(s.lo + s.width);
 const patch = (s) => (s.sound === 'app' ? ctx.audio.pianoPatch() : SYN[s.sound] || SYN.sine);
@@ -82,8 +83,9 @@ function view() {
     mid = '<div class="tmstart">' + (S.state === 'error' ? '<p class="tmerr">' + t('err.' + S.err) + '</p>' : '') +
       '<button class="btn fill" data-x="tcam">' + I.cam + '<span>' + t('start') + '</span></button>' +
       (size !== 'strip' && size !== 'quarter' ? '<p class="tmhint">' + t('hint.' + s.side) + '</p><p class="tmpriv">' + t('privacy') + '</p>' : '') + '</div>';
-  } else if (S.state === 'loading') mid = '<div class="tmstart"><p class="tmhint">' + t('loading') + '</p></div>';
-  return '<div class="tm ' + size + ' hud-' + s.hud + (s.showCam ? '' : ' nocam') + '"><video class="tmcam" playsinline muted aria-hidden="true"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
+  } // пока камера включается — только сплошной фон, без надписей
+  // poster — пустой кадр: иначе Android до первого кадра рисует на видео свою серую заставку
+  return '<div class="tm ' + size + ' hud-' + s.hud + (s.showCam ? '' : ' nocam') + (S.live ? ' live' : '') + '"><video class="tmcam" playsinline muted aria-hidden="true" poster="' + BLANK + '"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
     '<div class="glnote tmnote" aria-live="off"><b class="num" id="tmnote">' + (on ? '—' : '') + '</b><span class="num" id="tmc"></span></div>' +
     '<span class="tmlost" id="tmlost" hidden>' + t('noHands') + '</span>' + mid +
     '<div class="glov tmbar">' + (size === 'strip' ? '' : range + modeBtn + snap) + camBtn + gear + '</div></div>';
@@ -365,9 +367,12 @@ async function camOn(auto = false) {
     addEventListener('pointerdown', () => ctx && ctx.audio.unlock(), { once: true, capture: true });
   }
   S.state = 'loading';
+  S.live = false;
   render();
   try {
     const v = host.querySelector('video.tmcam');
+    // первый кадр — картинка плавно проявляется
+    v.addEventListener('loadeddata', () => { S.live = true; const el = host && host.querySelector('.tm'); if (el) el.classList.add('live'); }, { once: true });
     S.cam = await startHands(v, onHands);
     if (!host) { camOff(); return; }
     S.state = 'on';
@@ -387,6 +392,7 @@ function camOff() {
   silence();
   fxHand(cfg(), null, 0);
   S.frozen = null;
+  S.live = false;
   S.hands = { pitch: null, fx: null };
   if (S.state !== 'error') S.state = 'off';
 }

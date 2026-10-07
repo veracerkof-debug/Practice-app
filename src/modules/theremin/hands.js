@@ -25,16 +25,21 @@ const reasonOf = (e) => (e && (e.name === 'NotAllowedError' || e.name === 'Secur
 // onHands(hands, t) — каждый кадр: hands — [{ lm: 21 точка с зеркальным x, w: объёмные точки, ar }]
 export async function startHands(video, onHands) {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { const e = new Error('nocam'); e.reason = 'nocam'; throw e; }
+  // сначала камера и картинка (человек сразу видит себя), модель — следом: её запуск занимает поток,
+  // и если начать одновременно, первый кадр ждёт модель. Руки начинают ловиться, как только модель готова.
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } } });
   } catch (e) { e.reason = reasonOf(e); throw e; }
-  let lm;
-  try { lm = await landmarker(); } catch (e) { stream.getTracks().forEach((tr) => tr.stop()); e.reason = 'model'; throw e; }
   video.srcObject = stream;
   video.muted = true;
   video.playsInline = true;
-  await video.play().catch(() => {});
+  video.play().catch(() => {});
+  await new Promise((ok) => { if (video.readyState >= 2) ok(); else { video.addEventListener('loadeddata', ok, { once: true }); setTimeout(ok, 700); } });
+  await new Promise((ok) => requestAnimationFrame(() => setTimeout(ok, 0))); // дать кадру нарисоваться
+  const lmP = landmarker();
+  let lm;
+  try { lm = await lmP; } catch (e) { stream.getTracks().forEach((tr) => tr.stop()); video.srcObject = null; e.reason = 'model'; throw e; }
 
   let stopped = false, lastT = -1, raf = 0;
   const loop = () => {
