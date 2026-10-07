@@ -57,7 +57,7 @@
 - [ ] Проверено: приложение полностью работает без интернета
 
 ## Этап 3. Android
-- [x] Capacitor, бета-сборка APK на GitHub Actions (`app.practice.beta`, значок «Beta 1.0»)
+- [x] Capacitor, бета-сборка APK на GitHub Actions (`app.practice.beta`, «Melete Beta», значок «Μ beta», версия 1.1-beta)
 - [ ] Сборки `prod` и `dev` (разные applicationId, названия, иконки)
 - [ ] Сохранение файлов в Android (копия данных, `.ics`, видео) — через «Поделиться» / папку приложения
 - [ ] Живая перезагрузка `dev` на телефоне

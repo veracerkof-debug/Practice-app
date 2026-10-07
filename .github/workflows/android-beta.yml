@@ -1,5 +1,5 @@
 # Бета-версия для Android: собирает APK и кладёт его в релиз «beta» (ссылка не меняется:
-# releases/download/beta/Practice-Beta.apk). Сборка — на серверах GitHub, там уже есть Android SDK.
+# releases/download/beta/Melete-Beta.apk). Сборка — на серверах GitHub, там уже есть Android SDK.
 name: Android beta APK
 
 on:
@@ -49,20 +49,22 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
-          cp app/build/outputs/apk/debug/app-debug.apk ../Practice-Beta.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ../Melete-Beta.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Practice-Beta-${{ github.run_number }}
-          path: Practice-Beta.apk
+          name: Melete-Beta-${{ github.run_number }}
+          path: Melete-Beta.apk
 
       - name: Выложить в релиз «beta»
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES="Beta 1.0, сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ветка ${GITHUB_REF_NAME}). Скачать на телефон: Practice-Beta.apk"
+          NOTES="Melete Beta 1.1, сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ветка ${GITHUB_REF_NAME}). Скачать на телефон: Melete-Beta.apk"
           if ! gh release view beta >/dev/null 2>&1; then
-            gh release create beta --prerelease --title "Beta 1.0" --notes "$NOTES" --target "$GITHUB_SHA"
+            gh release create beta --prerelease --title "Melete Beta" --notes "$NOTES" --target "$GITHUB_SHA"
           fi
-          gh release edit beta --notes "$NOTES"
-          gh release upload beta Practice-Beta.apk --clobber
+          gh release edit beta --title "Melete Beta" --notes "$NOTES"
+          gh release upload beta Melete-Beta.apk --clobber
+          # прежнее имя файла (до названия Melete) — убрать, чтобы не скачали старую сборку
+          gh release delete-asset beta Practice-Beta.apk -y 2>/dev/null || true

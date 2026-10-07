@@ -16,7 +16,7 @@
     </style>
 
 
-    <!-- Заставка: на Android 12+ — системная (оранжевый фон и надпись Beta 1.0), на старых — картинка splash -->
+    <!-- Заставка: на Android 12+ — системная (светлый фон и знак «Μ beta»), на старых — картинка splash («Μελέτη», beta 1.1) -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
         <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
