@@ -44,6 +44,15 @@ export function createFiles({ indexedDB = globalThis.indexedDB } = {}) {
       try { await tx('readwrite', (st) => st.put(clean(rec))); return true; }
       catch { files.noDb = true; return false; }
     },
+    // Перечитать файл из базы: выбранный на Android файл (content://) часто нельзя читать с середины,
+    // а сохранённая копия — обычный файл на диске; true — получилось
+    async reread(rec) {
+      try {
+        const r = await tx('readonly', (st) => st.get(rec.id));
+        if (r && r.blob && r.blob.size === rec.blob.size) { rec.blob = r.blob; return true; }
+      } catch { /* остаётся исходный */ }
+      return false;
+    },
     // Сохранить изменения записи (имя, привязки к песням, волна)
     save(rec) { emit(); return tx('readwrite', (st) => st.put(clean(rec))).catch(() => {}); },
     remove(id) {

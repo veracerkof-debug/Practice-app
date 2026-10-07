@@ -76,5 +76,14 @@
   "help.2": "PDF — pinch and double-tap zoom, full screen; reopens at the last page.",
   "help.3": "Lyrics with chords — transpose and switch view: chords, Roman degrees or Nashville.",
   "help.4": "Files are stored only on this device.",
-  "help.tip": "Transpose to fit the voice or a capo."
+  "help.tip": "Transpose to fit the voice or a capo.",
+  "pdf.pw": "Password-protected file",
+  "pdf.pwText": "A password is required. It is stored only on this device.",
+  "pdf.pwWrong": "Wrong password.",
+  "pdf.pwOpen": "Open",
+  "pdf.err.broken": "The PDF is damaged or incomplete",
+  "pdf.err.pw": "The file is password-protected",
+  "pdf.err.mem": "Not enough device memory",
+  "pdf.err.other": "The PDF did not open",
+  "pdf.err.read": "The file cannot be read. Save it to the phone storage and upload it again"
 }

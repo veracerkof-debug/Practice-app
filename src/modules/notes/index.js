@@ -102,14 +102,46 @@ function closePdf() {
   PDF.rec = null;
 }
 
+// Почему PDF не открылся — словами; имя ошибки в скобках, чтобы по нему можно было разобраться
+function pdfErr(e) {
+  const n = (e && e.name) || 'Error';
+  const k = n === 'InvalidPDFException' ? 'pdf.err.broken' : n === 'PasswordException' ? 'pdf.err.pw' : n === 'ReadError' ? 'pdf.err.read' : /memory|allocation/i.test(String(e && e.message)) ? 'pdf.err.mem' : 'pdf.err.other';
+  return ctx.t(k) + ' (' + n + ')';
+}
+
+// Пароль к файлу: окно с полем; null — отказались
+function pwDialog(wrong) {
+  const { t, ui } = ctx;
+  return new Promise((resolve) => {
+    const d = document.createElement('div');
+    d.className = 'ask';
+    d.innerHTML = '<div class="alert" role="dialog" aria-label="' + ui.esc(t('pdf.pw')) + '"><div class="ab"><h3>' + t('pdf.pw') + '</h3>' +
+      (wrong ? '<p style="color:var(--red)">' + t('pdf.pwWrong') + '</p>' : '<p>' + t('pdf.pwText') + '</p>') +
+      '<input class="inp" type="password" autocomplete="off" aria-label="' + ui.esc(t('pdf.pw')) + '" style="width:100%;margin-top:10px;padding:10px 12px;border:1px solid var(--sep);border-radius:12px;background:var(--fill);color:var(--ink)"></div>' +
+      '<div class="abtns"><button data-k="no">' + t('ui.cancel') + '</button><button data-k="ok">' + t('pdf.pwOpen') + '</button></div></div>';
+    document.body.appendChild(d);
+    const inp = d.querySelector('input');
+    setTimeout(() => inp.focus(), 50);
+    const done = (v) => { ui.leave(d, 160); resolve(v); };
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') done(inp.value); if (e.key === 'Escape') done(null); });
+    d.addEventListener('click', (e) => { const k = e.target.closest('[data-k]'); if (k) done(k.dataset.k === 'ok' ? inp.value : null); });
+  });
+}
+
 async function openPdfRec(rec) {
   closePdf();
   AT.cur = rec;
   AT.state = 'loading';
   render();
   let doc;
-  try { doc = await openPdf(rec.blob); } catch { AT.state = 'error'; render(); if (ctx) ctx.ui.toast(ctx.t('openFail')); return; }
+  try { doc = await openPdf(rec.blob, { password: rec.pw, askPassword: pwDialog }); } catch (e) {
+    if (AT.cur !== rec) return;
+    AT.state = 'error'; render();
+    if (ctx && e.name !== 'PasswordCancel') ctx.ui.toast(pdfErr(e));
+    return;
+  }
   if (AT.cur !== rec) { closePdfDoc(doc); return; }
+  if (doc._pw && doc._pw !== rec.pw) { rec.pw = doc._pw; ctx.files.save(rec); }
   const pos = posOf(rec);
   PDF.rec = rec;
   PDF.view = createPdfView(doc, {
@@ -387,6 +419,7 @@ async function onFile(e) {
     fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' || (await sniffPdf(f)) ? 'pdf' : 'score',
     songs: song ? [song.id] : [], created: Date.now(), blob: f };
   if (!(await ctx.files.add(rec))) ctx.ui.toast(ctx.t('notSaved'));
+  else if (ctx.files.reread) await ctx.files.reread(rec);
   st().sec = 'tabs';
   ctx.store.save();
   openTab(rec);

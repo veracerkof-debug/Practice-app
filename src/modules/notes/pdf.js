@@ -26,13 +26,15 @@ const asset = (p) => new URL('pdfjs/' + p, document.baseURI).href;
 // Большой файл не читается в память целиком: pdf.js просит нужные куски, они берутся из файла по месту
 export const RANGE_FROM = 4 * 1024 * 1024;
 export const CHUNK = 256 * 1024;
+export const IMG_MAX_BYTES = 64 * 1024 * 1024;
 
 // У каждого документа свой поток pdf.js: закрытие одного не мешает открыть следующий
 // (общий поток, закрытый без ожидания, ломал повторное открытие)
 const docs = new WeakMap();
 let closing = Promise.resolve();
 
-export async function openPdf(blob) {
+// askPassword(wrong) — файл под паролем: спросить (wrong — прошлый не подошёл); null — отказались
+export async function openPdf(blob, { password, askPassword } = {}) {
   const pdfjs = await loadLib();
   await closing;
   const port = new PdfWorker(), worker = new pdfjs.PDFWorker({ port });
@@ -42,18 +44,47 @@ export async function openPdf(blob) {
     cMapUrl: asset('cmaps/'), cMapPacked: true,
     wasmUrl: asset('wasm/'),
     isEvalSupported: false, // без eval — безопаснее для файлов из интернета
+    // картинки больше 16 Мп (скан 600 dpi — 35 Мп, 140 МБ в памяти) уменьшаются вдвое ещё в потоке pdf.js:
+    // для экрана телефона хватает и при увеличении, а память не кончается на первой же странице
+    canvasMaxAreaInBytes: IMG_MAX_BYTES,
   };
   if (blob.size > RANGE_FROM) {
     const range = new pdfjs.PDFDataRangeTransport(blob.size, null);
+    // если кусок с середины не читается (поток без перемотки) — файл читается один раз подряд, куски — из него;
+    // не вышло и так — открытие обрывается с ошибкой, а не ждёт вечно
+    // (кусок отдаётся копией: pdf.js может передать его буфер в поток, и общий буфер стал бы пустым)
+    let whole = null;
+    const read = async (b, e) => {
+      if (!whole) {
+        try { return new Uint8Array(await blob.slice(b, e).arrayBuffer()); } catch { /* ниже — целиком */ }
+        whole = blob.arrayBuffer().then((x) => new Uint8Array(x));
+      }
+      return (await whole).slice(b, e);
+    };
     range.requestDataRange = (begin, end) => {
-      blob.slice(begin, end).arrayBuffer().then((b) => range.onDataRange(begin, new Uint8Array(b)), () => {});
+      read(begin, end).then((d) => range.onDataRange(begin, d), (e) => fail(Object.assign(new Error(String(e && e.message || e)), { name: 'ReadError' })));
     };
     Object.assign(opts, { range, length: blob.size, rangeChunkSize: CHUNK, disableAutoFetch: true, disableStream: true });
   } else opts.data = new Uint8Array(await blob.arrayBuffer());
+  if (password) opts.password = password;
+  // отказ (не читается файл, не дали пароль): у pdf.js destroy() не завершает ожидание — завершаем сами
+  let fail;
+  const failed = new Promise((_, rej) => { fail = rej; });
+  failed.catch(() => {});
   const task = pdfjs.getDocument(opts);
+  let pw = password || null;
+  task.onPassword = (update, reason) => {
+    const ask = askPassword ? askPassword(reason === pdfjs.PasswordResponses.INCORRECT_PASSWORD) : Promise.resolve(null);
+    ask.then((v) => {
+      if (v == null) { fail(Object.assign(new Error('password'), { name: 'PasswordCancel' })); return; }
+      pw = v;
+      update(v);
+    });
+  };
   let doc;
-  try { doc = await task.promise; } catch (e) { task.destroy().finally(() => port.terminate()); throw e; }
+  try { doc = await Promise.race([task.promise, failed]); } catch (e) { task.destroy().finally(() => port.terminate()); throw e; }
   docs.set(doc, { task, port });
+  doc._pw = pw; // подошедший пароль — чтобы в следующий раз не спрашивать
   return doc;
 }
 
@@ -151,6 +182,9 @@ export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = 
     if (destroyed || pg.task !== task) { c.width = c.height = 0; return; }
     pg.task = null;
     pg.drawn = key;
+    // нарисованное живёт в холсте, а расшифрованные картинки страницы (у скана — десятки МБ) больше не нужны:
+    // без этого память росла на каждую пролистанную страницу, и телефон закрывал тяжёлую книгу
+    s.p.cleanup();
     if (pg.canvas) { pg.canvas.width = pg.canvas.height = 0; pg.canvas.remove(); }
     pg.canvas = c;
     pg.el.appendChild(c);
@@ -160,6 +194,7 @@ export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = 
     if (pg.task) { try { pg.task.cancel(); } catch { /* */ } pg.task = null; }
     // обнулённый холст отдаёт память сразу, не дожидаясь сборщика мусора
     if (pg.canvas) { pg.canvas.width = pg.canvas.height = 0; pg.canvas.remove(); pg.canvas = null; pg.drawn = 0; }
+    if (sizes[i]) sizes[i].p.cleanup();
   }
 
   // Рисуется по одной странице за раз, ближние к текущей — первыми: тяжёлые сканы не забивают память разом

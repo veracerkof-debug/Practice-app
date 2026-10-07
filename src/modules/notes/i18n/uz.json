@@ -75,5 +75,14 @@
   "help.2": "PDF — chimdish va ikki marta bosish bilan kattalashtirish, toʻliq ekran; oxirgi sahifada ochiladi.",
   "help.3": "Akkordli matn — transpozitsiya va koʻrinish: akkordlar, rim pogʻonalari yoki Neshvill.",
   "help.4": "Fayllar faqat shu qurilmada saqlanadi.",
-  "help.tip": "Transpozitsiya — ovozga yoki kapodastrga moslash."
+  "help.tip": "Transpozitsiya — ovozga yoki kapodastrga moslash.",
+  "pdf.pw": "Fayl parol bilan himoyalangan",
+  "pdf.pwText": "Ochish uchun parol kerak. U faqat shu qurilmada saqlanadi.",
+  "pdf.pwWrong": "Parol mos kelmadi.",
+  "pdf.pwOpen": "Ochish",
+  "pdf.err.broken": "PDF shikastlangan yoki toʻliq yuklanmagan",
+  "pdf.err.pw": "Fayl parol bilan himoyalangan",
+  "pdf.err.mem": "Qurilma xotirasi yetmadi",
+  "pdf.err.other": "PDF ochilmadi",
+  "pdf.err.read": "Fayl oʻqilmayapti. Uni telefon xotirasiga saqlab, qayta yuklash maʼqul"
 }
