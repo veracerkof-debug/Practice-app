@@ -133,5 +133,13 @@
   "hud.off": "Yoʻq",
   "hudHint": "«Sokin» — faqat chetdagi nota shkalasi va kaftlar yogʻdusi; «Yoʻq» — toza kamera tasviri. Ekranga ikki marta bosish almashtiradi.",
   "hudOn": "Koʻrsatmalar: {mode}",
-  "camAuto": "Kamerani darhol yoqish"
+  "camAuto": "Kamerani darhol yoqish",
+  "csound": "Akkord tovushi",
+  "cs.same": "Solo kabi",
+  "cs.soft": "Iliq ped",
+  "cs.pad": "Ped",
+  "cs.bow": "Kamon",
+  "cs.choir": "Xor",
+  "cs.glass": "Shisha",
+  "csHint": "Pedlar — «Dron» modulining tovushlari: akkord yumshoq kirib, choʻziladi. Effektlar qoʻli balandlik, yorqinlik, vibrato va tremoloni oʻzgartiradi."
 }

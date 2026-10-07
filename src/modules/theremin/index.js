@@ -21,6 +21,7 @@ import { normalizeFx, voiceFx, busFx, applyPreset, PRESETS } from '../glider/fx.
 import { assign, palm, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, PINCH_ON, PINCH_OFF } from './map.js';
 import { startHands } from './hands.js';
 import { readSign, chordOf, chordName, voicing } from './chords.js';
+import { createPadVoice, PAD_SOUNDS } from '../../audio/padvoice.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M7 21V11.5a1.5 1.5 0 0 1 3 0V9a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5z"/><path d="M3 7c1.5-2 3-2 4.5 0S10.5 9 12 7s3-2 4.5 0"/></svg>';
 const I = {
@@ -58,7 +59,7 @@ const cfg = () => {
   s.lo = clampLo(s.lo, s.width);
   if (!s.fx) s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
   s.gmap = { ...DEFAULT_MAP, ...(s.gmap || {}) };
-  s.mode ??= 'solo'; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.hud ??= 'full'; s.camAuto ??= false;
+  s.mode ??= 'solo'; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.csound ??= 'same'; s.hud ??= 'full'; s.camAuto ??= false;
   if (!HUDS.includes(s.hud)) s.hud = 'full';
   normalizeFx(s);
   return s;
@@ -277,9 +278,11 @@ function playChord(s, h, sign, t, o, dest) {
   }
   const vo = { ...o, volGain: (o.volGain ?? 1) * CHORD_GAIN };
   if (!S.cv) {
-    const p = patch(s);
-    ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
-    S.cv = notes.map((m) => { const v = createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) }); v.start(m, vo); return v; });
+    // звук аккордов: как соло или пэд (тембры модуля «Пэды»)
+    const pad = PAD_SOUNDS.includes(s.csound), p = pad ? null : patch(s);
+    ctx.audio.mixer.setReverb('glider', pad ? 0.45 : (p.rev || 0) * 0.9);
+    const make = () => (pad ? createPadVoice(dest.context, S.bus.input, s.csound, { a4: ctx.audio.mf(69) }) : createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) }));
+    S.cv = notes.map((m) => { const v = make(); v.start(m, vo); return v; });
   } else {
     if (notes !== S.cnotes) S.cv.forEach((v, i) => v.pitch(notes[i], 0.05));
     S.cv.forEach((v) => v.fx(vo));
@@ -413,7 +416,9 @@ function setSheet() {
       '<div class="cellcol"><div class="glsub">' + t('ckey') + '</div><div class="glroots">' + SH.map((n, i) => chip('data-tck="' + i + '"', s.ckey === i, n)).join('') + '</div>' +
       '<div style="margin-top:10px">' + ui.seg('tcmode', [['maj', t('cmode.maj')], ['min', t('cmode.min')]], s.cmode, t('ckey')) + '</div></div>' +
       '<div class="cellcol"><div class="glsub">' + t('cq') + '</div>' + ui.seg('tcq', [['hand', t('cq.hand')], ['key', t('cq.key')]], s.cq, t('cq')) +
-      '<div class="segcap">' + t('cqHint.' + s.cq) + '</div></div></div>' +
+      '<div class="segcap">' + t('cqHint.' + s.cq) + '</div></div>' +
+      '<div class="cellcol"><div class="glsub">' + t('csound') + '</div><div class="glchips">' + ['same', ...PAD_SOUNDS].map((k) => chip('data-tcs="' + k + '"', s.csound === k, t('cs.' + k))).join('') +
+      '</div><div class="segcap">' + t('csHint') + '</div></div></div>' +
       // рука эффектов: какое движение что делает
       '<div class="hdr">' + t('fxHand.' + (s.side === 'right' ? 'left' : 'right')) + '</div><div class="group">' +
       GESTURES.map((k) => '<label class="cell"><span class="grow">' + t('g.' + k) + '</span><select class="sortsel" data-tg="' + k + '" aria-label="' + ui.esc(t('g.' + k)) + '">' +
@@ -446,6 +451,7 @@ function setSheet() {
       let b;
       if ((b = g('[data-tpre]'))) { const keep = s.fx.echo.time; s.fx = applyPreset(b.dataset.tpre); if (!PRESETS[b.dataset.tpre].echo) s.fx.echo.time = keep; ctx.ui.toast(t('presetOn', { name: t('preset.' + b.dataset.tpre) })); }
       else if ((b = g('[data-ts]'))) { s.sound = b.dataset.ts; silence(); }
+      else if ((b = g('[data-tcs]'))) { s.csound = b.dataset.tcs; silence(); }
       else if (g('[data-tcal]')) { calibrate(); return; }
       else if (g('[data-tgdef]')) { s.gmap = { ...DEFAULT_MAP }; S.frozen = null; }
       else if ((b = g('[data-tr]'))) s.root = +b.dataset.tr;

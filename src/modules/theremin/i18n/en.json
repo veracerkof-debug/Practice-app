@@ -133,5 +133,13 @@
   "hud.off": "None",
   "hudHint": "“Quiet” keeps only the note scale at the edge and a glow on the palms; “None” leaves the clean camera picture. A double tap on the screen switches.",
   "hudOn": "Guides: {mode}",
-  "camAuto": "Start camera at once"
+  "camAuto": "Start camera at once",
+  "csound": "Chord sound",
+  "cs.same": "Same as solo",
+  "cs.soft": "Warm pad",
+  "cs.pad": "Pad",
+  "cs.bow": "Bow",
+  "cs.choir": "Choir",
+  "cs.glass": "Glass",
+  "csHint": "Pads are the sounds of the Drone module: the chord fades in softly and sustains. The effects hand changes volume, brightness, vibrato and tremolo."
 }
