@@ -1,6 +1,7 @@
 // Общие элементы интерфейса для ядра и модулей: шторка, сообщение, подтверждение, переключатели, иконки.
 // Разметка и классы — как в прототипе (стили в ui.css).
 import './ui.css';
+import { loader } from './loader.js';
 import { t } from '../i18n/index.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -162,4 +163,5 @@ export function confirm(title, text, yes) {
   });
 }
 
-export const ui = { esc, icons, seg, sw, stepper, icb, snav, sheet, toast, confirm, leave };
+export { loader };
+export const ui = { esc, icons, seg, sw, stepper, icb, snav, sheet, toast, confirm, leave, loader };

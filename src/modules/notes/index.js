@@ -293,7 +293,7 @@ function tabsBody() {
       '<span class="sgrow aname" style="text-align:left">' + esc(AT.cur.name) + '</span>' +
       (PDF.pages > 1 ? icb('data-x="pgo" data-d="-1"', I.up, t('pdf.prev'), 'sm') + '<span class="num pdfpn" id="pdfpg">' + PDF.page + ' / ' + PDF.pages + '</span>' + icb('data-x="pgo" data-d="1"', I.down, t('pdf.next'), 'sm') : '') +
       icb('data-x="pzoom" data-d="-1"', I.minus, t('smaller'), 'sm') + icb('data-x="pzoom" data-d="1"', I.plus, t('bigger'), 'sm') + icb('data-x="pfit"', I.fit, t('pdf.fit'), 'sm') + icb('data-x="pfull"', I.full, t('pdf.full'), 'sm') + '</div>' +
-      '<div class="pdfwrap" id="pdfSlot">' + (AT.state === 'loading' ? '<div class="atload l2">' + t('opening') + '</div>' : '') + '</div>';
+      '<div class="pdfwrap" id="pdfSlot">' + (AT.state === 'loading' ? '<div class="atload">' + ctx.ui.loader('book', AT.cur.name) + '</div>' : '') + '</div>';
   }
   const tr = AT.score ? AT.score.tracks : [];
   return '<div class="ntools">' + icb('data-x="tlist"', I.list, t('tabFiles'), 'sm') +
@@ -302,7 +302,7 @@ function tabsBody() {
       : '<span class="sgrow aname" style="text-align:left">' + esc(AT.cur.name) + '</span>') +
     icb('data-x="tzoom" data-d="-1"', I.minus, t('smaller'), 'sm') + icb('data-x="tzoom" data-d="1"', I.plus, t('bigger'), 'sm') +
     '<button class="ic txt sm' + (st().prof === 'both' ? ' act' : '') + '" data-x="tprof" aria-pressed="' + (st().prof === 'both') + '" aria-label="' + t('scoreTab') + '">♪+T</button></div>' +
-    (big() ? barHTML() : '') + '<div class="atwrap" id="atSlot">' + (AT.state === 'loading' ? '<div class="atload l2">' + t('opening') + '</div>' : '') + '</div>';
+    (big() ? barHTML() : '') + '<div class="atwrap" id="atSlot">' + (AT.state === 'loading' ? '<div class="atload">' + ctx.ui.loader('beat', AT.cur.name) + '</div>' : '') + '</div>';
 }
 
 // Исходная тональность песни: из карточки песни, иначе — по аккордам текста

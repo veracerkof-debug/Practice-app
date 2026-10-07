@@ -83,11 +83,11 @@ function view() {
     mid = '<div class="tmstart">' + (S.state === 'error' ? '<p class="tmerr">' + t('err.' + S.err) + '</p>' : '') +
       '<button class="btn fill" data-x="tcam">' + I.cam + '<span>' + t('start') + '</span></button>' +
       (size !== 'strip' && size !== 'quarter' ? '<p class="tmhint">' + t('hint.' + s.side) + '</p><p class="tmpriv">' + t('privacy') + '</p>' : '') + '</div>';
-  } // пока камера включается — только сплошной фон, без надписей
+  } // пока камера включается — сплошной фон и тихая синусоида (её сменяет картинка с камеры)
   // poster — пустой кадр: иначе Android до первого кадра рисует на видео свою серую заставку
   return '<div class="tm ' + size + ' hud-' + s.hud + (s.showCam ? '' : ' nocam') + (S.live ? ' live' : '') + '"><video class="tmcam" playsinline muted aria-hidden="true" poster="' + BLANK + '"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
     '<div class="glnote tmnote" aria-live="off"><b class="num" id="tmnote">' + (on ? '—' : '') + '</b><span class="num" id="tmc"></span></div>' +
-    '<span class="tmlost" id="tmlost" hidden>' + t('noHands') + '</span>' + mid +
+    '<span class="tmlost" id="tmlost" hidden>' + t('noHands') + '</span>' + mid + (S.state === 'loading' || (on && !S.live) ? '<div class="tmwait">' + ui.loader('wave') + '</div>' : '') +
     '<div class="glov tmbar">' + (size === 'strip' ? '' : range + modeBtn + snap) + camBtn + gear + '</div></div>';
 }
 

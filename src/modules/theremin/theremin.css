@@ -10,6 +10,10 @@
 .tm.live .tmcam,.tm.live .tmvig{opacity:1}
 .tm.live.nocam .tmcam{opacity:0}
 .tm:not(.live) .glnote,.tm:not(.live) .tmlost{visibility:hidden}
+/* ожидание камеры: синусоида по центру, гаснет, когда пришёл первый кадр */
+.tmwait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;transition:opacity .35s ease}
+.tmwait .ld{--ld:color-mix(in srgb,var(--tint) 80%,#fff)}
+.tm.live .tmwait{opacity:0}
 .tmcv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .tm{--ink:#fff;color:#fff}
 .tm .glnote b,.tm .glnote span{color:#fff}
