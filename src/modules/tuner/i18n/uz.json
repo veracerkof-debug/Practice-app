@@ -102,5 +102,11 @@
   "sens.normal": "Oddiy",
   "sens.high": "Yuqori",
   "sens.hint": "Yuqori — past ovozli cholgʻular va uzoqdagi telefon uchun; past — shovqinli xonada, tyuner begona tovushlarga javob bermasligi uchun.",
-  "monoFixed": "Bu bezakda koʻrinish qotirilgan: {v}."
+  "monoFixed": "Bu bezakda koʻrinish qotirilgan: {v}.",
+  "help.what": "Nota kerakligidan qanchalik baland yoki past ekanini koʻrsatadi.",
+  "help.1": "Bitta tor yoki notani chalish — tyuner mikrofonni tinglaydi.",
+  "help.2": "Markazdan chapda — past (tortish), oʻngda — baland (boʻshatish); markazda — sozlangan.",
+  "help.3": "Sozlamalarda — cholgʻu sozlamasi, shkala koʻrinishi, aniqlik va lya chastotasi.",
+  "help.4": "Yangi boshlovchi rejimi qaysi torni qaysi tomonga burashni koʻrsatadi.",
+  "help.tip": "Notaga pastdan yuqoriga qarab sozlash."
 }

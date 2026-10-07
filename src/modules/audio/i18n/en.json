@@ -107,5 +107,11 @@
   "delSelTitle": "Delete {files}?",
   "notMedia": "That’s not audio or video",
   "addedN": "Added: {files}",
-  "monoFixed": "This style keeps the view fixed: {v}."
+  "monoFixed": "This style keeps the view fixed: {v}.",
+  "help.what": "Recordings and video to study and play along with.",
+  "help.1": "“+” uploads files; they are stored only on this device.",
+  "help.2": "Speed changes without changing pitch.",
+  "help.3": "A–B repeat loops a passage and can speed up 5% with each repeat.",
+  "help.4": "Time marks jump to places in a track; files can be linked to songs.",
+  "help.tip": "Practise a hard passage at 70–80% speed, then raise it."
 }

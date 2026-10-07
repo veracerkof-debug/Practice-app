@@ -7,6 +7,7 @@ import { isOn } from '../settings.js';
 import { mountModule, makeCtx, moduleName, trackToolTime, fmtDur } from '../modules.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { topbar } from './common.js';
+import { showHelp } from '../help.js';
 
 export function renderTools(app, root) {
   const list = modules.filter((m) => isOn(app.store.state.settings, m.id));
@@ -28,9 +29,10 @@ export function openToolView(app, id, onClose) {
   // immersive — модуль на весь экран без шапки: кнопка «назад» плавает поверх (глайдер)
   layer.innerHTML = mod.immersive
     ? '<div class="tview imm" role="dialog" aria-modal="true" aria-label="' + esc(name) + '">' + ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm tvback') +
+      ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm tvhelp') +
       '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>'
     : '<div class="tview" role="dialog" aria-modal="true" aria-label="' + esc(name) + '"><div class="tvhd">' +
-      ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(name) + '</div><span style="width:36px"></span></div>' +
+      ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(name) + '</div>' + ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm') + '</div>' +
       '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>';
   document.body.appendChild(layer);
   const inst = mountModule(app, mod, layer.querySelector('.tvhost'), 'full');
@@ -54,6 +56,7 @@ export function openToolView(app, id, onClose) {
   document.addEventListener('keydown', onKey);
   layer.addEventListener('click', (e) => {
     if (e.target.closest('[data-tv="close"]')) close();
+    else if (e.target.closest('[data-tv="help"]')) showHelp(app, mod);
   });
   return close;
 }

@@ -15,6 +15,7 @@ export const icons = {
   back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
   chev: '<svg class="chev" viewBox="0 0 8 13"><path d="M1.5 1.5 6.5 6.5 1.5 11.5"/></svg>',
   check: '<svg class="check" viewBox="0 0 16 16"><path d="M3 8.5 6.5 12 13 4.5"/></svg>',
+  help: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9.4a2.4 2.4 0 1 1 3.4 2.2c-.7.4-1.1.9-1.1 1.7v.3"/><path d="M12 16.6v.2"/></svg>',
 };
 
 // Сегментированный выбор: opts — [[значение, подпись], …]

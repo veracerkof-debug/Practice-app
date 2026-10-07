@@ -91,5 +91,11 @@
   "sig.on": "On: {list}. Open settings",
   "sig.ftr": "Signals follow the beats, with or without sound (the click volume can be turned down in the mixer). Vibration makes it possible to keep time with the phone in a pocket. Frequent flashes may be unpleasant for people with photosensitivity.",
   "sig.android": "Flashlight and vibration are available in the Android app on devices that have them.",
-  "monoFixed": "This style keeps the view fixed: {v}."
+  "monoFixed": "This style keeps the view fixed: {v}.",
+  "help.what": "Keeps a steady tempo.",
+  "help.1": "Tempo — the wheel, the arrows, or tap the number to type it; “Tap” sets the tempo from taps.",
+  "help.2": "Tapping a beat changes it: strong accent, medium, normal, silent.",
+  "help.3": "Meter and subdivision — the buttons below; settings add swing, gradual speed-up and silent bars.",
+  "help.4": "Without sound the beat is shown by a screen flash, the torch and vibration (Settings → Silent signals).",
+  "help.tip": "Start 10–20 BPM slower than what can be played cleanly, then add a little at a time."
 }

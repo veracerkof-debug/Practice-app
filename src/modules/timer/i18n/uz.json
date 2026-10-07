@@ -47,5 +47,11 @@
   "w.saved": "Yozildi: {time}",
   "w.statusRun": "Sekundomer, {time}",
   "w.statusPaused": "Sekundomer pauzada, {time}",
-  "monoFixed": "Bu bezakda koʻrinish qotirilgan: {v}."
+  "monoFixed": "Bu bezakda koʻrinish qotirilgan: {v}.",
+  "help.what": "Pomodoro — ish va tanaffuslar — hamda «qancha chalyapman» sekundomeri.",
+  "help.1": "Start — ish hisobi; soʻng tanaffus, bir necha sikldan keyin — uzun tanaffus.",
+  "help.2": "Sessiya vaqtida tanaffus hisobni pauzaga qoʻyadi.",
+  "help.3": "Sekundomer umumiy chalish vaqtini hisoblaydi; «Statistikaga» tugmasi yozib qoʻyadi.",
+  "help.4": "Davomiylik va koʻrinish — sozlamalarda.",
+  "help.tip": "Har 25–50 daqiqada tanaffus qoʻllar va diqqatni asraydi."
 }

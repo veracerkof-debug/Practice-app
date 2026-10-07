@@ -3,7 +3,7 @@
 // Перенесено из legacy/practice.html (panelRoot, renderPanel, PPAGES, weekHTML, lookHTML, dataHTML, featHTML, statsHTML,
 // barsSVG, hbars, legalSheet, tosGate, donateSheet, doExport, импорт копии).
 import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
-import { esc, seg, sheet, snav, toast, confirm, leave } from '../../ui/index.js';
+import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
 import { dayKey, weekday, weekStart } from '../time.js';
@@ -17,6 +17,7 @@ import { moduleName } from '../modules.js';
 import { AVATAR, CHEV, BACK, IC, TAB_IDS, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
 import { extOn } from '../ext.js';
+import { helpOf, showHelp, resetHelp } from '../help.js';
 import { freeTagName, trackMode } from '../session.js';
 import { INSTRUMENTS, LEVELS, PRIOR_MAX, lifetimeSec, saveProfile, newProfile } from '../profile.js';
 import { rankOf } from '../rank.js';
@@ -196,15 +197,17 @@ function dataHTML() {
 // Модули (встроенные и личные из src/modules-local) и функции ядра: включить и выключить
 function featHTML(app) {
   const st = app.store.state.settings, lang = getLang();
-  const row = (id, icon, color, name, about, extra = '') => '<div class="cell"><span class="ticon" style="background:' + color + '">' + icon + '</span><span class="grow"><span>' + esc(name) + extra +
+  const row = (id, icon, color, name, about, extra = '', help = false) => '<div class="cell"><span class="ticon" style="background:' + color + '">' + icon + '</span><span class="grow"><span>' + esc(name) + extra +
     '</span>' + (about ? '<span class="st l2" style="display:block;font-size:13px">' + esc(about) + '</span>' : '') + '</span>' +
+    (help ? '<button class="ic sm" data-help="' + id + '" aria-label="' + esc(t('help.open') + ': ' + name) + '">' + icons.help + '</button>' : '') +
     '<label class="sw"><input type="checkbox" data-feat="' + id + '"' + (isOn(st, id) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
   const aboutOf = (m) => (m.i18n?.[lang]?.about ?? m.i18n?.ru?.about ?? (m.about && (m.about[lang] || m.about.ru)) ?? '');
   return '<div class="large">' + t('feat.title') + '</div><p class="sub" style="margin:0 4px 12px">' + t('feat.hint') + '</p>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('feat.toolsOnly') + '</span>' + psw('toolsOnly', !!st.toolsOnly, t('feat.toolsOnly')) + '</div></div>' +
     '<p class="ftr">' + t('feat.toolsOnly.hint') + '</p>' +
     '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
-    modules.map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '')).join('') + '</div>' +
+    modules.map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
+    '<div class="group" style="margin-top:12px"><button class="cell act" data-helpreset>' + t('help.again') + '</button></div>' +
     // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
     (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : FLAME, k === 'mastery' ? '#5856D6' : '#FF9500', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
     '<p class="ftr">' + t('feat.own') + '</p>' +
@@ -278,6 +281,8 @@ export function createPanel(app, onChange) {
       if (g('[data-act="pclose"]')) { panel.close(); return; }
       if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, TAB_IDS, b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
       if ((b = g('[data-day]'))) { toggleDay(app.store, +b.dataset.day); render(); onChange(); return; }
+      if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
+      if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); return; }
       if ((b = g('[data-goal]'))) { changeGoal(app.store, +b.dataset.goal); render(); onChange(); return; }
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-seg="uistyle"] [data-v]'))) {

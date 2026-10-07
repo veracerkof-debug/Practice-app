@@ -11,6 +11,19 @@ export const LEVELS = ['beginner', 'amateur', 'advanced', 'pro'];
 export const GOAL_BY_LEVEL = { beginner: 180, amateur: 300, advanced: 600, pro: 900 };
 export const PRIOR_MAX = 100000;
 
+// Инструменты (модули) при регистрации — по уровню и инструментам (решение автора). Новичку — самое нужное,
+// остальное включается потом в «Настройки → Функции». all — id всех модулей; возвращает id включённых
+const BY_LEVEL = {
+  beginner: ['metro', 'tuner', 'notes', 'audio'],
+  amateur: ['metro', 'tuner', 'notes', 'audio', 'piano', 'drone', 'theory', 'timer'],
+};
+export function toolsFor(level, instruments = [], all = []) {
+  const on = new Set(BY_LEVEL[level] || all.filter((id) => id !== 'theremin')); // продвинутым — всё, кроме камеры
+  if (instruments.includes('vocal')) { on.add('piano'); on.add('drone'); } // голосу нужна опора для интонации
+  if (instruments.length && instruments.every((x) => x === 'piano' || x === 'drums')) on.delete('tuner'); // настраивать нечего
+  return all.filter((id) => on.has(id));
+}
+
 // Строй тюнера для инструмента (первый из выбранных, у которого есть строй)
 const TUNING = { guitar: 'g_std', egtr: 'g_std', bass: 'b4', dbass: 'b4', uke: 'u_std', violin: 'violin', viola: 'viola', cello: 'cello', mando: 'mando', banjo: 'banjo' };
 export function tuningFor(instruments = []) {

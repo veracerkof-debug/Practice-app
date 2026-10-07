@@ -49,5 +49,11 @@
   "scope.calc": "shape from settings",
   "pre.new": "New preset",
   "pre.default": "My sound",
-  "about": "Up to two octaves, sounds and your own presets"
+  "about": "Up to two octaves, sounds and your own presets",
+  "help.what": "A keyboard for checking notes, chords and intonation.",
+  "help.1": "Arrows shift the octave; “−/+” shows fewer or more keys.",
+  "help.2": "Hold — a tap starts a note, another tap stops it; held notes keep sounding with the window closed.",
+  "help.3": "Two rows — two keyboards; rotate — for playing sideways.",
+  "help.4": "Sound — six presets and custom tone settings.",
+  "help.tip": "Hold works well as a reference chord under singing or playing."
 }

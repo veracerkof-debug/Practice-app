@@ -1,16 +1,19 @@
-// Регистрация при первом запуске: язык и имя, инструменты, уровень, опыт до приложения, цель недели и дни практики.
+// Регистрация при первом запуске: язык и имя, инструменты, уровень, набор инструментов приложения, опыт до приложения,
+// цель недели и дни практики.
 // Аккаунта нет: всё хранится на устройстве (settings.profile) и меняется потом в профиле.
 import '../../ui/onboard.css';
 import { t, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
 import { esc, toast } from '../../ui/index.js';
 import { fmtDur } from '../format.js';
 import { GOAL_MIN, GOAL_MAX } from '../settings.js';
-import { INSTRUMENTS, LEVELS, GOAL_BY_LEVEL, PRIOR_MAX, newProfile, saveProfile, applyLevelDefaults, estimateHours } from '../profile.js';
+import { INSTRUMENTS, LEVELS, GOAL_BY_LEVEL, PRIOR_MAX, newProfile, saveProfile, applyLevelDefaults, estimateHours, toolsFor } from '../profile.js';
+import { modules } from '../../modules/index.js';
+import { moduleName } from '../modules.js';
 import { rankOf } from '../rank.js';
 import { rankSVG, rankName, RANK_COLORS } from '../../ui/rank.js';
 import { weekdays } from './common.js';
 
-const STEPS = ['name', 'inst', 'level', 'exp', 'goal'];
+const STEPS = ['name', 'inst', 'level', 'tools', 'exp', 'goal'];
 
 // Карточки для выбора (инструменты, уровень)
 const card = (attr, on, title, sub = '') => '<button type="button" class="obcard' + (on ? ' on' : '') + '" ' + attr + ' aria-pressed="' + on + '"><b>' + esc(title) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</button>';
@@ -25,7 +28,9 @@ export function onboarding(app, done = () => {}) {
   if (document.getElementById('onboard')) return;
   const st = app.store.state.settings;
   const p = { ...newProfile(), ...(st.profile || {}) };
-  const f = { step: 0, years: 0, perWeek: 0, goalMin: st.goalMin, days: st.days.slice(), goalTouched: false };
+  const f = { step: 0, years: 0, perWeek: 0, goalMin: st.goalMin, days: st.days.slice(), goalTouched: false, tools: null, toolsTouched: false };
+  const allIds = modules.map((m) => m.id);
+  const aboutOf = (m) => { const l = getLang(); return m.i18n?.[l]?.about ?? m.i18n?.ru?.about ?? ''; };
   const layer = document.createElement('div');
   layer.id = 'onboard';
   layer.className = 'onb';
@@ -50,6 +55,13 @@ export function onboarding(app, done = () => {}) {
     if (s === 'level') {
       return '<h1 class="obh">' + t('ob.levelTitle') + '</h1><p class="obp">' + t('ob.levelText') + '</p><div class="oblist">' +
         LEVELS.map((k) => card('data-oblevel="' + k + '"', p.level === k, t('level.' + k), t('level.' + k + '.text'))).join('') + '</div>';
+    }
+    // Набор инструментов: по уровню и инструментам подставлен, любой можно отметить или снять
+    if (s === 'tools') {
+      return '<h1 class="obh">' + t('ob.toolsTitle') + '</h1><p class="obp">' + t('ob.toolsText.' + (p.level === 'beginner' ? 'beginner' : 'other')) + '</p><div class="oblist">' +
+        modules.map((m) => '<button type="button" class="obcard obtool' + (f.tools.includes(m.id) ? ' on' : '') + '" data-obtool="' + m.id + '" aria-pressed="' + f.tools.includes(m.id) + '">' +
+          '<span class="obtic" style="background:' + (m.color || '#8E8E93') + '">' + m.icon + '</span><span><b>' + esc(moduleName(m)) + '</b><small>' + esc(aboutOf(m)) + '</small></span></button>').join('') +
+        '</div><p class="ftr">' + t('ob.toolsHint') + '</p>';
     }
     if (s === 'exp') {
       return '<h1 class="obh">' + t('ob.expTitle') + '</h1><p class="obp">' + t('ob.expText') + (p.level === 'beginner' ? '' : ' ' + t('ob.expRequired')) + '</p>' +
@@ -90,6 +102,9 @@ export function onboarding(app, done = () => {}) {
 
   const finish = () => {
     saveProfile(app.store, p, { done: true });
+    // не отмеченные инструменты выключаются (как в «Настройки → Функции»); функции ядра в st.off не трогаются
+    const off = st.off || (st.off = {});
+    allIds.forEach((id) => { if (f.tools.includes(id)) delete off[id]; else off[id] = true; });
     st.goalMin = f.goalMin;
     st.days = f.days;
     app.store.settingsChanged();
@@ -110,6 +125,9 @@ export function onboarding(app, done = () => {}) {
       if (STEPS[f.step] === 'exp' && p.level !== 'beginner' && !p.priorHours) { toast(t('ob.needHours')); layer.querySelector('#obhours')?.focus(); return; }
       // цель по уровню подставляется, пока её не меняли вручную
       if (STEPS[f.step] === 'level' && !f.goalTouched) f.goalMin = GOAL_BY_LEVEL[p.level];
+      // набор инструментов по уровню — пока его не меняли вручную
+      if (STEPS[f.step] === 'level' && !f.toolsTouched) f.tools = toolsFor(p.level, p.instruments, allIds);
+      if (STEPS[f.step] === 'tools' && !f.tools.length) { toast(t('ob.pickTool')); return; }
       if (f.step === STEPS.length - 1) { finish(); return; }
       f.step++;
       render();
@@ -120,6 +138,13 @@ export function onboarding(app, done = () => {}) {
       b.classList.toggle('on');
       b.setAttribute('aria-pressed', p.instruments.includes(k));
     } else if ((b = g('[data-oblevel]'))) { p.level = b.dataset.oblevel; render(); }
+    else if ((b = g('[data-obtool]'))) {
+      const id = b.dataset.obtool;
+      f.tools = f.tools.includes(id) ? f.tools.filter((x) => x !== id) : allIds.filter((x) => x === id || f.tools.includes(x));
+      f.toolsTouched = true;
+      b.classList.toggle('on');
+      b.setAttribute('aria-pressed', f.tools.includes(id));
+    }
     else if (g('[data-obcalc]')) { p.priorHours = Math.min(PRIOR_MAX, estimateHours(f.years, f.perWeek)); render(); }
     else if ((b = g('[data-obgoal]'))) { f.goalMin = Math.max(GOAL_MIN, Math.min(GOAL_MAX, f.goalMin + +b.dataset.obgoal)); f.goalTouched = true; render(); }
     else if ((b = g('[data-obday]'))) { const i = +b.dataset.obday; f.days[i] = f.days[i] ? 0 : 1; render(); }

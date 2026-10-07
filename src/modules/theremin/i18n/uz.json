@@ -121,5 +121,11 @@
   "cq.hand": "Kaft bilan",
   "cq.key": "Tonallik boʻyicha",
   "cqHint.hand": "Kaft kameraga — major akkord, orqa tomoni — minor, istalgan pogʻonada.",
-  "cqHint.key": "Akkord tonallikdagidek (majorda: I, IV, V — major; ii, iii, vi — minor; vii — kichraytirilgan); orqa tomoni — qarama-qarshi lad."
+  "cqHint.key": "Akkord tonallikdagidek (majorda: I, IV, V — major; ii, iii, vi — minor; vii — kichraytirilgan); orqa tomoni — qarama-qarshi lad.",
+  "help.what": "Kamera oldida qoʻllar bilan, tegmasdan chalinadi.",
+  "help.1": "Oʻng qoʻl — balandlik: qoʻl balandroq — nota balandroq. «Okey» ishorasi solo va akkordlarni almashtiradi.",
+  "help.2": "Akkordlar: 1–5 barmoq — I–V pogʻonalar, bosh barmoq jimjiloqqa — VI, nomsizga — VII; kaft — major, orqa tomoni — minor.",
+  "help.3": "Chap qoʻl — effektlar: musht — sukunat, balandroq — fazo, bilakni burish — tembr, egish — vibrato; chimdish effektlarni qotiradi.",
+  "help.4": "Kamera faqat qurilmada qayta ishlanadi va oyna yopilganda oʻchadi.",
+  "help.tip": "Bir tekis yorugʻlik va kaftlar kadrda toʻliq — aniqroq taniladi."
 }

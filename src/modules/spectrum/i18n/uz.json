@@ -34,5 +34,11 @@
   "set.calHint": "Telefonni namunaviy shovqin oʻlchagich yoniga qoʻying (yoki 94 dB kalibratorni kiying) va koʻrsatkichlar mos kelguncha tuzatishni 0,5 dB dan oʻzgartiring.",
   "set.hold": "Spektrda choʻqqilarni ushlab turish",
   "micRetry": "Qayta urinish",
-  "privacy": "Ovoz faqat qurilmada qayta ishlanadi va yozib olinmaydi. Bu moduldagi vaqt statistikaga kirmaydi."
+  "privacy": "Ovoz faqat qurilmada qayta ishlanadi va yozib olinmaydi. Bu moduldagi vaqt statistikaga kirmaydi.",
+  "help.what": "Mikrofondan tovush chastotalari va desibellarda balandlik.",
+  "help.1": "Spektr — qaysi chastotalar yangrayapti; bosish rasmni toʻxtatadi.",
+  "help.2": "Shovqin oʻlchagich — dB(A), dB(C) yoki dB(Z), minimum, maksimum, oʻrtacha.",
+  "help.3": "Kalibrlash — tuzatma bilan, agar namunaviy asbob boʻlsa.",
+  "help.4": "Bu yerdagi vaqt mashq statistikasiga kirmaydi.",
+  "help.tip": "85 dB(A) dan baland uzoq vaqt — eshitishni himoyalash shart."
 }

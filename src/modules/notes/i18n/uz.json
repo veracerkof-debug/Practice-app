@@ -69,5 +69,11 @@
   "deg.toChords": "Akkordlar bilan koʻrsatish",
   "deg.toDegrees": "Pogʻonalar bilan koʻrsatish",
   "deg.hint": "Pogʻonalar tonallikka bogʻliq emas: I — tonika, IV — subdominanta, V — dominanta; major — katta harflar bilan, minor — kichik (vi), ° — kamaytirilgan, ø — yarim kamaytirilgan. Neshvill tizimi xuddi shuni raqamlar bilan yozadi: 1, 4, 5, 6m. Matnni pogʻonalar bilan ham yozish mumkin — [I], [vi7], 1 4 5 1 — shunda akkordlar tanlangan tonallikda koʻrsatiladi.",
-  "tr.fromAssumed": "Matn pogʻonalar bilan yozilgan, tonallik koʻrsatilmagan — {k} koʻrsatilmoqda. Uni qoʻshiq kartochkasida berish yoki shu yerda tanlash mumkin."
+  "tr.fromAssumed": "Matn pogʻonalar bilan yozilgan, tonallik koʻrsatilmagan — {k} koʻrsatilmoqda. Uni qoʻshiq kartochkasida berish yoki shu yerda tanlash mumkin.",
+  "help.what": "Tabulaturalar, PDF-notalar va akkordli matnlar.",
+  "help.1": "Tablar — Guitar Pro va MusicXML fayllari: koʻrish va metronom bilan ijro.",
+  "help.2": "PDF — chimdish va ikki marta bosish bilan kattalashtirish, toʻliq ekran; oxirgi sahifada ochiladi.",
+  "help.3": "Akkordli matn — transpozitsiya va koʻrinish: akkordlar, rim pogʻonalari yoki Neshvill.",
+  "help.4": "Fayllar faqat shu qurilmada saqlanadi.",
+  "help.tip": "Transpozitsiya — ovozga yoki kapodastrga moslash."
 }

@@ -54,5 +54,11 @@
   "xfade": "Smooth transition between notes",
   "pre.new": "New pad preset",
   "pre.default": "My pad",
-  "about": "Sustained note and pads for intonation"
+  "about": "Sustained note and pads for intonation",
+  "help.what": "A sustained note or chord — a reference for intonation.",
+  "help.1": "Tap a note to start the drone; tap again to stop.",
+  "help.2": "Layers — low, middle, high; chord — root, fifth, major, minor.",
+  "help.3": "Tones: warm, pad, bow, choir, glass, tanpura.",
+  "help.4": "Custom presets are in the settings.",
+  "help.tip": "Scales and long notes over a drone reveal pitch problems at once."
 }

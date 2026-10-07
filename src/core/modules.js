@@ -6,6 +6,7 @@ import { createToolView, toolViewMs, toolViewVisibility, saveToolView, recordToo
 import { overlapMs, mergeSegs } from './stopwatch.js';
 import { fmtDur } from './format.js';
 import '../ui/pane.css';
+import { firstHelp } from './help.js';
 
 export const SIZES = ['full', 'half', 'quarter', 'strip'];
 
@@ -136,6 +137,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
   frame.dataset.size = size;
   frame.style.setProperty('--mod', mod.color);
   mod.mount(host, ctx, size);
+  firstHelp(app, mod); // при первом открытии — инструкция
   return {
     ctx,
     resize(next) {

@@ -96,5 +96,11 @@
   "fxHint": "Maydonning pastida vertikal effektlar oʻchiq, yuqorida — berilgan kuchda. «Silliq» — effekt yuqoriga yaqin kuchayadi, «Keskin» — oʻrtadan boshlab. «Doimo» rejimidagi effekt istalgan joyda berilgan kuch bilan yangraydi. Aks-sado va reverberatsiya barcha barmoqlar uchun umumiy va eng yuqoridagisiga ergashadi.",
   "look": "Maydon koʻrinishi",
   "keys": "Klavishlar belgisi",
-  "keysHint": "Belgisiz maydon — bir rangli yaxlit maydon: balandlikni pardasiz cholgʻudagidek eshitib topish kerak."
+  "keysHint": "Belgisiz maydon — bir rangli yaxlit maydon: balandlikni pardasiz cholgʻudagidek eshitib topish kerak.",
+  "help.what": "Pardasiz klaviatura: tovush skripkadagidek notalar orasida sirpanadi.",
+  "help.1": "Gorizontal boʻyicha — balandlik, vertikal boʻyicha — effektlar kuchi (pastda yoʻq, yuqorida toʻliq).",
+  "help.2": "Bir vaqtda beshtagacha barmoq.",
+  "help.3": "Bogʻlash tugmasi: pardasiz, magnit (notalarga tortadi) yoki faqat notalar.",
+  "help.4": "Sozlamalarda — effektlar va toʻplamlar, tovush, lad, diapazon.",
+  "help.tip": "Magnit notalarga tushishga yordam beradi va sirpanishni saqlaydi."
 }

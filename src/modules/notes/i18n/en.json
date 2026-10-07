@@ -70,5 +70,11 @@
   "deg.toChords": "Show as chords",
   "deg.toDegrees": "Show as scale degrees",
   "deg.hint": "Scale degrees do not depend on the key: I is the tonic, IV the subdominant, V the dominant; major in capitals, minor in lower case (vi), ° diminished, ø half-diminished. The Nashville system writes the same with numbers: 1, 4, 5, 6m. Lyrics can also be written in degrees — [I], [vi7], 1 4 5 1 — and are then shown as chords in the chosen key.",
-  "tr.fromAssumed": "The text is written in scale degrees and no key is set — showing {k}. The key can be set in the song card or chosen here."
+  "tr.fromAssumed": "The text is written in scale degrees and no key is set — showing {k}. The key can be set in the song card or chosen here.",
+  "help.what": "Tabs, PDF sheet music and lyrics with chords.",
+  "help.1": "Tabs — Guitar Pro and MusicXML files: viewing and playback with a metronome.",
+  "help.2": "PDF — pinch and double-tap zoom, full screen; reopens at the last page.",
+  "help.3": "Lyrics with chords — transpose and switch view: chords, Roman degrees or Nashville.",
+  "help.4": "Files are stored only on this device.",
+  "help.tip": "Transpose to fit the voice or a capo."
 }

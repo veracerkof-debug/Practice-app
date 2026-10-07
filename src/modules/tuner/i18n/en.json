@@ -105,5 +105,11 @@
   "sens.normal": "Normal",
   "sens.high": "High",
   "sens.hint": "High — for quiet instruments and a phone further away; low — in a noisy room, so the tuner ignores other sounds.",
-  "monoFixed": "This style keeps the view fixed: {v}."
+  "monoFixed": "This style keeps the view fixed: {v}.",
+  "help.what": "Shows how far a note is above or below the target.",
+  "help.1": "Play a single string or note — the tuner listens through the microphone.",
+  "help.2": "Left of centre is flat (tighten), right is sharp (loosen); centred means in tune.",
+  "help.3": "Settings hold the tuning, display style, precision and the A frequency.",
+  "help.4": "Beginner mode shows which string to turn and which way.",
+  "help.tip": "Tune up to the note rather than down to it."
 }

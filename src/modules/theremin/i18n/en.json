@@ -121,5 +121,11 @@
   "cq.hand": "By palm",
   "cq.key": "By key",
   "cqHint.hand": "Palm to the camera — a major chord, back of the hand — minor, on any degree.",
-  "cqHint.key": "Chords follow the key (in major: I, IV, V major; ii, iii, vi minor; vii diminished); the back of the hand gives the opposite quality."
+  "cqHint.key": "Chords follow the key (in major: I, IV, V major; ii, iii, vi minor; vii diminished); the back of the hand gives the opposite quality.",
+  "help.what": "Played with the hands in front of the camera, without touching.",
+  "help.1": "Right hand — pitch: higher hand, higher note. The “OK” sign switches solo and chords.",
+  "help.2": "Chords: 1–5 fingers are degrees I–V, thumb to pinky is VI, to ring finger is VII; palm — major, back of the hand — minor.",
+  "help.3": "Left hand — effects: a fist is silence, higher — space, wrist turn — tone, tilt — vibrato; a pinch holds the effects.",
+  "help.4": "The camera is processed only on the device and turns off when the window closes.",
+  "help.tip": "Even light and whole palms in view make tracking more accurate."
 }

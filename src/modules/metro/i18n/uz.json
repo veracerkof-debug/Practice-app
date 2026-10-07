@@ -88,5 +88,11 @@
   "sig.on": "Yoqilgan: {list}. Sozlamalarni ochish",
   "sig.ftr": "Signallar ulushlarga mos ravishda, tovush bilan yoki tovushsiz beriladi (klik ovozini mikserda oʻchirish mumkin). Tebranish telefon choʻntakda boʻlganda ham tempni ushlab turishga yordam beradi. Tez-tez chaqnash yorugʻlikka sezgir odamlar uchun noqulay boʻlishi mumkin.",
   "sig.android": "Fonar va tebranish Android ilovasida, ular mavjud qurilmalarda ishlaydi.",
-  "monoFixed": "Bu bezakda koʻrinish qotirilgan: {v}."
+  "monoFixed": "Bu bezakda koʻrinish qotirilgan: {v}.",
+  "help.what": "Bir tekis temp ushlab turadi.",
+  "help.1": "Temp — gʻildirak, strelkalar yoki raqamga bosib kiritish; «Tap» — bosishlar boʻyicha temp.",
+  "help.2": "Hissaga bosish uni oʻzgartiradi: kuchli urgʻu, oʻrta, oddiy, tovushsiz.",
+  "help.3": "Oʻlchov va boʻlinish — pastdagi tugmalar; sozlamalarda — svinq, asta tezlashish va jim taktlar.",
+  "help.4": "Tovushsiz rejimda temp ekran chaqnashi, fonar va tebranish bilan koʻrsatiladi.",
+  "help.tip": "Toza chiqadigan tempdan 10–20 zarba sekinroq boshlab, asta-sekin qoʻshib borish."
 }

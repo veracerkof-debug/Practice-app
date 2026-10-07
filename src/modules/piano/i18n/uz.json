@@ -49,5 +49,11 @@
   "scope.calc": "sozlamalar bo‘yicha shakl",
   "pre.new": "Yangi preset",
   "pre.default": "Mening ovozim",
-  "about": "Ikki oktavagacha, tovushlar va oʻz presetlaringiz"
+  "about": "Ikki oktavagacha, tovushlar va oʻz presetlaringiz",
+  "help.what": "Notalar, akkordlar va intonatsiyani tekshirish uchun klaviatura.",
+  "help.1": "Strelkalar — oktava pastga va yuqoriga; «−/+» — kamroq yoki koʻproq klavish.",
+  "help.2": "Hold — bosish notani yoqadi, qayta bosish oʻchiradi; oyna yopilsa ham notalar yangraydi.",
+  "help.3": "Ikki qator — ikki klaviatura; burish — yonboshlab chalish uchun.",
+  "help.4": "Tovush — oltita preset va oʻz tembr sozlamalari.",
+  "help.tip": "Hold qoʻshiq yoki chalish ostida tayanch akkord uchun qulay."
 }

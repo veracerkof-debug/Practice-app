@@ -57,3 +57,18 @@ describe('профиль', () => {
     expect(e.glider).toBeUndefined();
   });
 });
+
+describe('набор инструментов при регистрации', async () => {
+  const { toolsFor } = await import('../src/core/profile.js');
+  const ALL = ['metro', 'tuner', 'piano', 'glider', 'theremin', 'drone', 'theory', 'timer', 'audio', 'notes', 'spectrum'];
+  it('новичку — самое нужное, продвинутым — всё, кроме камеры', () => {
+    expect(toolsFor('beginner', ['guitar'], ALL)).toEqual(['metro', 'tuner', 'audio', 'notes']);
+    expect(toolsFor('amateur', ['guitar'], ALL)).toEqual(['metro', 'tuner', 'piano', 'drone', 'theory', 'timer', 'audio', 'notes']);
+    expect(toolsFor('pro', ['guitar'], ALL)).toEqual(ALL.filter((x) => x !== 'theremin'));
+  });
+  it('поправки на инструмент: вокалу — пианино и дрон, пианисту и барабанщику — без тюнера', () => {
+    expect(toolsFor('beginner', ['vocal'], ALL)).toEqual(['metro', 'tuner', 'piano', 'drone', 'audio', 'notes']);
+    expect(toolsFor('beginner', ['piano'], ALL)).not.toContain('tuner');
+    expect(toolsFor('beginner', ['piano', 'guitar'], ALL)).toContain('tuner');
+  });
+});
