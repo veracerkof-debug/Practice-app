@@ -11,6 +11,9 @@ import {
 import { topbar, relDay, mRing, mBadge, mInput, bindM, BACK, CHEV, IC, PLAY } from './common.js';
 import { scaleOf } from '../library.js';
 import { songEventsHTML } from './calendar.js';
+import { lookup, KEYS, keyName } from '../songinfo.js';
+import { analyzeAudio } from '../songanalyze.js';
+import { fileSongs } from '../files.js';
 
 const chipHTML = (it, cls, attrs) => '<span class="lchip ' + (cls || '') + '" style="--c:' + it.color + ';--t:' + textColor(it) + '" ' + (attrs || '') + '>' + esc(it.name) + '</span>';
 const diffLabel = (d) => t('diff.' + d);
@@ -77,7 +80,7 @@ export function songHTML(app, id) {
     // «Только инструменты»: без времени и числа занятий
     (plain ? '' : '<div class="srow" title="' + t('song.time') + '">' + IC.clock + '<b class="num">' + fmtDur(st.total) + '</b></div>' +
     '<div class="srow" title="' + t('song.sessions') + '">' + IC.stack + '<b class="num">' + st.count + '</b><span>' + (st.last ? relDay(st.last) : '—') + '</span></div>') +
-    '<div class="srow" title="' + t('song.tempo') + '">' + IC.metro + '<b class="num">' + (s.currentBpm || '—') + '</b><span>' + (s.targetBpm ? '→ ' + s.targetBpm : '') + ' bpm</span></div>' +
+    '<div class="srow" title="' + t('song.tempo') + '">' + IC.metro + '<b class="num">' + (s.currentBpm || '—') + '</b><span>' + (s.targetBpm ? '→ ' + s.targetBpm : '') + ' bpm' + (s.key ? ' · ' + esc(s.key) : '') + '</span></div>' +
     '<div class="srow">' + IC.bolt + '<span class="dots" role="img" aria-label="' + esc(t('song.diffAria', { n: s.difficulty })) + '">' + [1, 2, 3, 4, 5].map((i) => '<i class="' + (i <= s.difficulty ? 'on' : '') + '"></i>').join('') + '</span></div></div></div>';
   if (!plain && st.tempo.length >= 2) h += '<div class="card">' + tempoChart(st.tempo, s.targetBpm) + '</div>';
   if (s.notes) h += '<div class="group" style="margin-top:12px"><div class="notes">' + esc(s.notes) + '</div></div>';
@@ -97,6 +100,9 @@ function pickHTML(L, kind, sel, multi) {
     }).join('') + '<button type="button" class="lchip off add" data-pnew="' + kind + '" aria-label="' + t('libm.add.' + kind) + '">＋</button></div>';
 }
 
+// Аудиофайлы медиатеки, привязанные к песне
+const songAudio = (app, id) => (id && app.files ? app.files.list('audio').filter((r) => fileSongs(r).includes(id) && r.blob) : []);
+
 // onSaved(id) — после сохранения (открыть карточку)
 export function songForm(app, id, onSaved) {
   const settings = app.store.state.settings, L = ensureLib(app.store.state, t);
@@ -104,7 +110,9 @@ export function songForm(app, id, onSaved) {
   const pick = { difficulty: s.difficulty, cats: s.cat || '', genres: s.genre || '', tags: (s.tags || []).slice() };
   const body = () => '<form id="songForm">' + snav(t(id ? 'form.song' : 'form.new'), { left: '<button type="button" class="link l" data-close>' + t('ui.cancel') + '</button>', right: '<button class="link b r">' + t('ui.done') + '</button>' }) +
     '<div class="group"><label class="cell"><input class="inp left" name="title" required placeholder="' + t('form.title') + '" aria-label="' + t('form.title') + '" value="' + esc(s.title) + '"></label>' +
-    '<label class="cell"><input class="inp left" name="artist" placeholder="' + t('form.artist') + '" aria-label="' + t('form.artist') + '" value="' + esc(s.artist) + '"></label></div>' +
+    '<label class="cell"><input class="inp left" name="artist" placeholder="' + t('form.artist') + '" aria-label="' + t('form.artist') + '" value="' + esc(s.artist) + '"></label>' +
+    '<button type="button" class="cell act center" data-find>' + t('find.web') + '</button></div>' +
+    '<div id="finddup"></div><div id="findres"></div><p class="ftr">' + t('find.note') + '</p>' +
     '<div class="hdr">' + t('form.cat') + '</div><div class="group"><div class="cellcol" id="pk-cats">' + pickHTML(L, 'cats', pick.cats) + '</div></div>' +
     '<div class="hdr">' + t('form.genre') + '</div><div class="group"><div class="cellcol" id="pk-genres">' + pickHTML(L, 'genres', pick.genres) + '</div></div>' +
     '<div class="hdr">' + t('form.tags') + '</div><div class="group"><div class="cellcol" id="pk-tags">' + pickHTML(L, 'tags', pick.tags, true) + '</div></div>' +
@@ -112,12 +120,66 @@ export function songForm(app, id, onSaved) {
     '<div class="segcap" data-hint="difficulty">' + diffLabel(pick.difficulty) + '</div></div></div>' +
     '<div class="hdr">' + t('mastery.title') + '</div><div class="group"><div class="cellcol">' + mInput(getPct(s), settings) + '</div></div>' +
     '<div class="hdr">' + t('form.tempo') + '</div><div class="group"><label class="cell"><span>' + t('form.current') + '</span><input class="inp num" name="currentBpm" type="number" inputmode="numeric" min="20" max="300" placeholder="—" value="' + esc(s.currentBpm ?? '') + '"></label>' +
-    '<label class="cell"><span>' + t('form.target') + '</span><input class="inp num" name="targetBpm" type="number" inputmode="numeric" min="20" max="300" placeholder="—" value="' + esc(s.targetBpm ?? '') + '"></label></div>' +
+    '<label class="cell"><span>' + t('form.target') + '</span><input class="inp num" name="targetBpm" type="number" inputmode="numeric" min="20" max="300" placeholder="—" value="' + esc(s.targetBpm ?? '') + '"></label>' +
+    '<label class="cell"><span class="grow">' + t('form.key') + '</span><select class="inp sel" name="key" aria-label="' + t('form.key') + '"><option value="">—</option>' +
+    KEYS.map((k) => '<option value="' + esc(k) + '"' + (s.key === k ? ' selected' : '') + '>' + esc(k) + '</option>').join('') + '</select></label></div>' +
+    // Темп и тональность по записи — на устройстве: привязанные к песне файлы или любой файл (он не сохраняется)
+    '<div class="hdr">' + t('an.title') + '</div><div class="group">' + songAudio(app, id).map((f) => '<button type="button" class="cell act" data-an="' + esc(f.id) + '"><span class="grow" style="text-align:left">' + esc(f.name) + '</span></button>').join('') +
+    '<label class="cell act"><span class="grow">' + t('an.pick') + '</span><input type="file" accept="audio/*" data-anfile hidden></label></div>' +
+    '<div id="anres"></div><p class="ftr">' + t('an.note') + '</p>' +
     '<div class="hdr">' + t('form.notes') + '</div><div class="group"><textarea class="ta" name="notes" aria-label="' + t('form.notes') + '" placeholder="Am   F   C   G">' + esc(s.notes || '') + '</textarea></div></form>';
   sheet(body, (el, sh) => {
     const f = el.querySelector('#songForm'), readM = bindM(el, settings);
     const rePk = (k) => { const x = el.querySelector('#pk-' + k); if (x) x.innerHTML = pickHTML(ensureLib(app.store.state, t), k, pick[k], k === 'tags'); };
+    const box = (sel, html) => { const b = el.querySelector(sel); if (b) b.innerHTML = html; };
+    // Уже есть такая песня? — подсказка по мере ввода названия (сначала свои песни, потом интернет)
+    const dup = () => {
+      const tt = f.elements.title.value.trim().toLowerCase();
+      const same = tt ? app.store.songs().filter((x) => x.id !== id && x.title.trim().toLowerCase() === tt) : [];
+      box('#finddup', same.length ? '<p class="ftr" style="color:var(--tint)">' + esc(t('find.dup', { list: same.map((x) => x.title + (x.artist ? ' — ' + x.artist : '')).join('; ') })) + '</p>' : '');
+    };
+    f.elements.title.addEventListener('input', dup);
+    let found = [];
+    const find = async () => {
+      const tt = f.elements.title.value.trim(), aa = f.elements.artist.value.trim();
+      if (!tt && !aa) { toast(t('find.need')); f.elements.title.focus(); return; }
+      box('#findres', '<p class="ftr">' + t('find.wait') + '</p>');
+      try { found = await lookup(tt, aa); }
+      catch (err) { found = []; box('#findres', ''); toast(t('find.err.' + (err.reason || 'failed'))); return; }
+      box('#findres', found.length ? '<div class="hdr">' + t('find.results') + '</div><div class="group">' + found.map((r, i) => '<button type="button" class="cell" data-fr="' + i + '"><span class="grow" style="text-align:left;min-width:0"><span style="display:block">' + esc(r.title) + '</span>' +
+        '<span class="st l2" style="display:block;font-size:13px">' + esc([r.artist, r.year].filter(Boolean).join(' · ')) + '</span></span>' + CHEV + '</button>').join('') + '</div>' : '<p class="ftr">' + t('find.none') + '</p>');
+    };
+    // Выбранный результат заполняет название и исполнителя; жанр — если такой уже есть среди меток
+    const takeFound = (r) => {
+      f.elements.title.value = r.title;
+      f.elements.artist.value = r.artist;
+      const G = ensureLib(app.store.state, t).genres, g = G.find((x) => r.tags.some((tg) => tg.toLowerCase() === x.name.toLowerCase()));
+      if (g && !pick.genres) { pick.genres = g.name; rePk('genres'); }
+      box('#findres', '');
+      dup();
+      toast(t('find.filled'));
+    };
+    const runAn = async (blob) => {
+      box('#anres', '<p class="ftr">' + t('an.wait') + '</p>');
+      let r;
+      try { r = await analyzeAudio(blob); }
+      catch (err) { box('#anres', ''); toast(t(err.reason === 'format' ? 'an.format' : 'an.fail')); return; }
+      const parts = [];
+      if (r.tempo) { const bpm = Math.round(r.tempo.bpm); f.elements.targetBpm.value = bpm; parts.push('≈ ' + bpm + ' bpm'); }
+      if (r.key) { const k = keyName(r.key.pc, r.key.minor); f.elements.key.value = k; parts.push(k); }
+      const weak = (r.tempo && r.tempo.conf < 0.15) || (r.key && r.key.conf < 0.15);
+      box('#anres', '<p class="ftr" style="color:var(--ink)">' + (parts.length ? esc(t('an.done', { r: parts.join(' · ') })) + (weak ? ' ' + t('an.weak') : '') : t('an.none')) + '</p>');
+    };
+    el.addEventListener('change', (e) => {
+      const inp = e.target.closest('[data-anfile]');
+      if (inp && inp.files && inp.files[0]) { runAn(inp.files[0]); inp.value = ''; }
+    });
     el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-find]')) { find(); return; }
+      const fr = e.target.closest('[data-fr]');
+      if (fr) { takeFound(found[+fr.dataset.fr]); return; }
+      const an = e.target.closest('[data-an]');
+      if (an) { const rec = app.files.get(an.dataset.an); if (rec && rec.blob) runAn(rec.blob); return; }
       const pv = e.target.closest('[data-pv]'), pn = e.target.closest('[data-pnew]'), dv = e.target.closest('[data-seg="difficulty"] [data-v]');
       if (pn) {
         const k = pn.dataset.pnew;
@@ -141,7 +203,7 @@ export function songForm(app, id, onSaved) {
       const fd = new FormData(f), pct = readM();
       const nid = saveSong(app.store, id, {
         title: fd.get('title'), artist: fd.get('artist'), genre: pick.genres, cat: pick.cats, tags: pick.tags,
-        difficulty: pick.difficulty, masteryPct: pct, targetBpm: fd.get('targetBpm'), currentBpm: fd.get('currentBpm'), notes: fd.get('notes'),
+        difficulty: pick.difficulty, masteryPct: pct, targetBpm: fd.get('targetBpm'), currentBpm: fd.get('currentBpm'), notes: fd.get('notes'), key: fd.get('key'),
       });
       if (!nid) return;
       sh.close();

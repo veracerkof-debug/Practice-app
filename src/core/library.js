@@ -1,6 +1,7 @@
 // Библиотека: песни, категории, жанры, теги; шкала выученности; сортировка и фильтры.
 import { uid } from './time.js';
 import { songStats } from './stats.js';
+import { parseKey } from './songinfo.js';
 
 export const PALETTE = ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#00C7BE', '#30B0C7', '#007AFF',
   '#5856D6', '#AF52DE', '#FF2D55', '#A2845E', '#8E8E93', '#3A3A3C', '#F2F2F7'];
@@ -97,7 +98,7 @@ export const masteryLevel = (p) => Math.min(4, Math.max(0, Math.ceil(p / 20) - 1
 export function emptySong(settings) {
   const n = scaleOf(settings);
   return { title: '', artist: '', genre: '', difficulty: 3, mastery: 1, masteryPct: n === 100 ? 0 : fromScale(1, n),
-    targetBpm: '', currentBpm: '', notes: '' };
+    targetBpm: '', currentBpm: '', notes: '', key: null };
 }
 
 const posInt = (v) => { const n = parseInt(v, 10); return n > 0 ? n : null; };
@@ -110,6 +111,7 @@ export function saveSong(store, id, f) {
     genre: f.genre || '', cat: f.cat || null, tags: (f.tags || []).slice(),
     difficulty: f.difficulty, masteryPct: f.masteryPct, mastery: Math.max(1, Math.round(f.masteryPct / 20)),
     targetBpm: posInt(f.targetBpm), currentBpm: posInt(f.currentBpm), notes: f.notes || '',
+    key: parseKey(f.key) ? f.key : null,
     updatedAt: now,
   };
   if (!data.title) return null;
