@@ -39,11 +39,18 @@ export const ACCENTS = [['orange', '#FF9500'], ['red', '#FF3B30'], ['pink', '#FF
   ['indigo', '#5856D6'], ['blue', '#007AFF'], ['teal', '#00C7BE'], ['green', '#34C759'], ['graphite', '#8E8E93']];
 
 // Тема и акцент на <html>. Приложение бесплатное: все темы и акценты доступны всем
+// Стиль интерфейса «Минимал» (эксперимент): только чёрный, белый и оттенки серого; темы — светлая и тёмная,
+// акцента нет («Бумага» показывается светлой, OLED — тёмной)
+export const UI_STYLES = ['default', 'mono'];
+export const isMono = (settings) => settings.uiStyle === 'mono';
+
 export function applyTheme(settings, de = document.documentElement) {
   const t = settings.theme;
   if (t === 'system' || !THEMES.includes(t)) de.removeAttribute('data-theme');
   else de.setAttribute('data-theme', t);
-  const a = settings.accent && settings.accent !== 'orange' ? ACCENTS.find((x) => x[0] === settings.accent) : null;
+  if (isMono(settings)) de.setAttribute('data-style', 'mono');
+  else de.removeAttribute('data-style');
+  const a = !isMono(settings) && settings.accent && settings.accent !== 'orange' ? ACCENTS.find((x) => x[0] === settings.accent) : null;
   if (a) {
     de.style.setProperty('--tint', a[1]);
     de.style.setProperty('--tint-text', 'color-mix(in srgb,' + a[1] + ' 78%,var(--ink))');

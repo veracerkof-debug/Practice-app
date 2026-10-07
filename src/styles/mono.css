@@ -1,0 +1,149 @@
+/* «Минимал» (эксперимент, settings.uiStyle = 'mono'): чёрный, белый и оттенки серого, текст и тонкие линии.
+   Только поверх обычных стилей — разметка и функции те же. Инструменты становятся серыми целиком (фильтр),
+   их работа не меняется. Шрифт — Onest (OFL), кириллица и латиница. */
+@import '@fontsource-variable/onest';
+
+:root[data-style="mono"] {
+  --bg: #F4F4F4; --cell: #FFFFFF; --ink: #0B0B0B; --l2: #757575; --l3: #BDBDBD;
+  --sep: rgba(0,0,0,.12); --fill: rgba(0,0,0,.05); --fill2: rgba(0,0,0,.10);
+  --tint: #0B0B0B; --tint-text: #0B0B0B; --on-tint: #FFFFFF; --red: #0B0B0B; --bar: rgba(244,244,244,.92);
+  --gold: #0B0B0B; --gold-bg: rgba(0,0,0,.06);
+  --line: #CFCFCF;
+  --font: "Onest Variable", -apple-system, system-ui, Roboto, Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style="mono"]:not([data-theme="light"]):not([data-theme="paper"]) {
+    --bg: #0B0B0B; --cell: #161616; --ink: #F2F2F2; --l2: #8E8E8E; --l3: #474747;
+    --sep: rgba(255,255,255,.12); --fill: rgba(255,255,255,.06); --fill2: rgba(255,255,255,.12);
+    --tint: #F2F2F2; --tint-text: #F2F2F2; --on-tint: #0B0B0B; --red: #F2F2F2; --bar: rgba(11,11,11,.92);
+    --gold: #F2F2F2; --gold-bg: rgba(255,255,255,.08); --line: #333;
+    color-scheme: dark;
+  }
+}
+:root[data-style="mono"][data-theme="dark"], :root[data-style="mono"][data-theme="oled"] {
+  --bg: #0B0B0B; --cell: #161616; --ink: #F2F2F2; --l2: #8E8E8E; --l3: #474747;
+  --sep: rgba(255,255,255,.12); --fill: rgba(255,255,255,.06); --fill2: rgba(255,255,255,.12);
+  --tint: #F2F2F2; --tint-text: #F2F2F2; --on-tint: #0B0B0B; --red: #F2F2F2; --bar: rgba(11,11,11,.92);
+  --gold: #F2F2F2; --gold-bg: rgba(255,255,255,.08); --line: #333;
+  color-scheme: dark;
+}
+
+:root[data-style="mono"] body { font-family: var(--font); background: var(--bg); }
+
+/* ---------- инструменты и всё цветное — оттенками серого ---------- */
+:root[data-style="mono"] .tview .tvbody, :root[data-style="mono"] .session .ws, :root[data-style="mono"] .session .sdock,
+:root[data-style="mono"] .rank, :root[data-style="mono"] .gem, :root[data-style="mono"] .lchip, :root[data-style="mono"] .catp,
+:root[data-style="mono"] .mxp, :root[data-style="mono"] .mxh, :root[data-style="mono"] .swc, :root[data-style="mono"] .skin,
+:root[data-style="mono"] .clist, :root[data-style="mono"] .heat, :root[data-style="mono"] .chart, :root[data-style="mono"] .pdffull,
+:root[data-style="mono"] .mflash, :root[data-style="mono"] .stile3, :root[data-style="mono"] .cal { filter: grayscale(1); }
+
+/* ---------- заголовки и подписи разделов ---------- */
+:root[data-style="mono"] .large { text-transform: uppercase; font-weight: 800; letter-spacing: -.01em; font-size: 30px; }
+:root[data-style="mono"] .hdr { text-transform: uppercase; letter-spacing: .16em; font-size: 11.5px; font-weight: 600; color: var(--l2); margin-left: 4px; }
+:root[data-style="mono"] .hhdr span { text-transform: uppercase; letter-spacing: .2em; font-size: 15px; font-weight: 400; }
+:root[data-style="mono"] .hhdr .link { text-transform: uppercase; letter-spacing: .12em; font-size: 12px; color: var(--l2); }
+:root[data-style="mono"] .ftr, :root[data-style="mono"] .segcap { color: var(--l2); }
+
+/* ---------- группы и строки: белые карточки с тонкими разделителями ---------- */
+:root[data-style="mono"] .group { border-radius: 22px; border: 1px solid var(--sep); }
+:root[data-style="mono"] .cell { min-height: 56px; padding-top: 12px; padding-bottom: 12px; }
+:root[data-style="mono"] .ticon { background: var(--fill) !important; border-radius: 50%; width: 40px; height: 40px; }
+:root[data-style="mono"] .ticon svg { stroke: var(--ink); width: 20px; height: 20px; stroke-width: 1.6; }
+:root[data-style="mono"] .ticon .gem { filter: grayscale(1); }
+:root[data-style="mono"] .psub { display: block; font-size: 13px; color: var(--l2); margin-top: 2px; }
+.psub { display: none; }
+:root[data-style="mono"] .link { color: var(--ink); }
+:root[data-style="mono"] .danger, :root[data-style="mono"] .cell.danger { color: var(--ink) !important; }
+
+/* ---------- кнопки, переключатели, сегменты ---------- */
+:root[data-style="mono"] .btn { color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; }
+:root[data-style="mono"] .btn.fill, :root[data-style="mono"] .hcta { background: var(--ink); color: var(--bg); border-color: var(--ink); box-shadow: none; }
+:root[data-style="mono"] .seg { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+:root[data-style="mono"] .seg button { border-radius: 999px; text-transform: uppercase; letter-spacing: .06em; font-size: 12.5px; }
+:root[data-style="mono"] .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); box-shadow: none; }
+:root[data-style="mono"] .sw i { background: transparent; border: 1.5px solid var(--l3); }
+:root[data-style="mono"] .sw i::after { background: var(--l3); box-shadow: none; top: 3.5px; left: 3.5px; width: 21px; height: 21px; }
+:root[data-style="mono"] .sw input:checked + i { background: var(--ink); border-color: var(--ink); }
+:root[data-style="mono"] .sw input:checked + i::after { background: var(--bg); transform: translateX(20px); }
+:root[data-style="mono"] .pill[aria-pressed="true"], :root[data-style="mono"] .chip.on { background: var(--ink) !important; color: var(--bg) !important; }
+:root[data-style="mono"] .sheet { border-radius: 26px 26px 0 0; }
+:root[data-style="mono"] .snav b, :root[data-style="mono"] .snav h2 { text-transform: uppercase; letter-spacing: .04em; }
+:root[data-style="mono"] .toast, :root[data-style="mono"] .nosnd { border: 1px solid var(--line); box-shadow: none; }
+:root[data-style="mono"] .search { border: 1px solid var(--line); background: transparent; border-radius: 999px; }
+
+/* ---------- нижние вкладки: подписи прописными, без цвета ---------- */
+:root[data-style="mono"] .tabbar { border-top: 1px solid var(--sep); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root[data-style="mono"] .tab { color: var(--l3); text-transform: uppercase; letter-spacing: .12em; font-size: 9.5px; font-weight: 600; }
+:root[data-style="mono"] .tab svg { width: 22px; height: 22px; stroke-width: 1.4; }
+:root[data-style="mono"] .tab[aria-current="page"] { color: var(--ink); }
+
+/* ---------- профиль ---------- */
+:root[data-style="mono"] .phero { align-items: flex-start; margin: 4px 4px 18px; }
+:root[data-style="mono"] .phero .large { text-align: left !important; font-size: 38px; margin: 14px 0 0; }
+:root[data-style="mono"] .pav { background: var(--fill); color: var(--ink); width: 64px; height: 64px; }
+:root[data-style="mono"] .pav svg { stroke: var(--ink); }
+:root[data-style="mono"] .prname { color: var(--l2); text-transform: uppercase; letter-spacing: .18em; font-size: 12px; padding: 0; min-height: 32px; }
+:root[data-style="mono"] .phero .l2 { text-align: left !important; }
+:root[data-style="mono"] .tile { background: transparent; border: 1px solid var(--sep); border-radius: 18px; }
+:root[data-style="mono"] .tile span { text-transform: uppercase; letter-spacing: .1em; font-size: 10.5px; }
+:root[data-style="mono"] .avatar { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+:root[data-style="mono"] .about b { letter-spacing: .2em; text-transform: uppercase; }
+:root[data-style="mono"] .goldshine { background: none !important; -webkit-text-fill-color: currentColor !important; color: var(--ink) !important; animation: none !important; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; }
+
+/* ---------- главная «Минимал» ---------- */
+.mono-home { padding-bottom: 24px; }
+.mono-home .mhello { font-size: 40px; line-height: 1; font-weight: 850; text-transform: uppercase; letter-spacing: -.02em; margin: 26px 0 14px; }
+.mono-home .mdate { display: inline-block; padding: 8px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--fill);
+  text-transform: uppercase; letter-spacing: .2em; font-size: 11.5px; font-weight: 700; }
+.mono-home .mhd { display: flex; align-items: center; justify-content: space-between; margin: 34px 2px 10px; }
+.mono-home .mhd h2 { font-size: 18px; font-weight: 300; text-transform: uppercase; letter-spacing: .2em; margin: 0; }
+.mono-home .mact { display: flex; gap: 4px; }
+.mono-home .mbtn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--ink); }
+.mono-home .mbtn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.4; }
+.mtri { width: 14px !important; height: 14px !important; fill: none; stroke: var(--l2); stroke-width: 1.2; stroke-linejoin: round; }
+.mono-home .mweek { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 0 2px; text-align: left; }
+.mono-home .mbig { font-size: 52px; font-weight: 250; letter-spacing: -.03em; line-height: 1; }
+.mono-home .mof { font-size: 18px; color: var(--l2); font-weight: 400; }
+.mono-home .mline { height: 2px; background: var(--line); margin: 16px 2px 12px; }
+.mono-home .mline i { display: block; height: 100%; background: var(--ink); }
+.mono-home .mdays { display: flex; justify-content: space-between; padding: 0 2px; }
+.mono-home .mdays span { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--l3); font-weight: 600; width: 34px; text-align: center; padding: 6px 0; border-radius: 999px; }
+.mono-home .mdays .plan { color: var(--l2); }
+.mono-home .mdays .done { color: var(--ink); }
+.mono-home .mdays .done::after { content: ""; display: block; width: 4px; height: 4px; border-radius: 50%; background: var(--ink); margin: 4px auto 0; }
+.mono-home .mdays .today { border: 1px solid var(--ink); }
+.mono-home .mtags { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 0; }
+.mono-home .mtags button { min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; text-transform: uppercase; letter-spacing: .14em; font-size: 11px; font-weight: 600; color: var(--ink); }
+.mono-home .mcta { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 68px; margin: 28px 0 0; padding: 0 8px 0 26px;
+  border-radius: 999px; background: var(--ink); color: var(--bg); text-transform: uppercase; letter-spacing: .14em; font-size: 14px; font-weight: 700; }
+.mono-home .mcta i { width: 52px; height: 52px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--bg) 40%, transparent); display: flex; align-items: center; justify-content: center; }
+.mono-home .mcta svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.mono-home .mtools { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 6px; scrollbar-width: none; }
+.mono-home .mtools button { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: none; width: 64px; }
+.mono-home .mcirc { width: 58px; height: 58px; border-radius: 50%; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--ink); }
+.mono-home .mcirc svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.mono-home .mlbl { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--l2); font-weight: 700; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mono-home .mlist { display: flex; flex-direction: column; }
+.mono-home .mrow { display: flex; align-items: center; border-bottom: 1px solid var(--sep); }
+.mono-home .mrow > button:first-child { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; min-height: 58px; text-align: left; padding: 0 2px; }
+.mono-home .mt { font-size: 21px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mono-home .mm { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--l2); white-space: nowrap; }
+.mono-home .mplay { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+.mono-home .mempty { color: var(--l2); font-style: italic; margin: 6px 2px; }
+.mono-home .hhdr { margin: 34px 2px 10px; }
+
+/* ---------- инструменты (вкладка), календарь, песни ---------- */
+:root[data-style="mono"] .tcard2 { box-shadow: none; border: 1px solid var(--sep); border-radius: 24px; }
+:root[data-style="mono"] .tci2 { background: transparent !important; border: 1px solid var(--line); border-radius: 50%; box-shadow: none !important; }
+:root[data-style="mono"] .tci2 svg { stroke: var(--ink); stroke-width: 1.5; width: 24px; height: 24px; }
+:root[data-style="mono"] .tcn2 { font-weight: 500; letter-spacing: -.01em; }
+:root[data-style="mono"] .tcs2 { text-transform: uppercase; letter-spacing: .08em; font-size: 10.5px; }
+:root[data-style="mono"] .qbtn { background: transparent !important; color: var(--ink); border: 1px solid var(--line); box-shadow: none !important; }
+:root[data-style="mono"] .tile b { font-size: 18px; font-weight: 500; }
+:root[data-style="mono"] .calendar, :root[data-style="mono"] .cgrid, :root[data-style="mono"] .cwk, :root[data-style="mono"] .cmonth,
+:root[data-style="mono"] .slist, :root[data-style="mono"] .hcard, :root[data-style="mono"] .shero, :root[data-style="mono"] .card { filter: grayscale(1); }
+:root[data-style="mono"] .card, :root[data-style="mono"] .shero, :root[data-style="mono"] .hcard { box-shadow: none; border: 1px solid var(--sep); }
+:root[data-style="mono"] .addbtn, :root[data-style="mono"] .fab { background: var(--ink) !important; color: var(--bg) !important; box-shadow: none !important; }
+/* Всё содержимое экранов и шторок — без цвета (кроме плавающей кнопки: фильтр сломал бы её положение) */
+:root[data-style="mono"] #main > *:not(.fab), :root[data-style="mono"] .sheet > *, :root[data-style="mono"] .panel > * { filter: grayscale(1); }

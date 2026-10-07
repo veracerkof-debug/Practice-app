@@ -34,7 +34,46 @@ export function streakPill(app, extra = '') {
     FLAME + '<b class="num">' + s.weeks + '</b><span>' + esc(tn('streak.weeksWord', s.weeks) + extra) + '</span></button>';
 }
 
+/* ---------- «Минимал» (эксперимент): та же главная, но только текст, линии и оттенки серого ---------- */
+
+const ARROW = '<svg viewBox="0 0 12 12" class="mtri" aria-hidden="true"><path d="M3.5 2l5 4-5 4z"/></svg>';
+const greet = (h) => t(h < 5 ? 'mono.night' : h < 12 ? 'mono.morning' : h < 18 ? 'mono.day' : h < 23 ? 'mono.evening' : 'mono.night');
+const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';
+
+function homeMonoHTML(app) {
+  const st = app.store.state.settings, plain = !!st.toolsOnly, now = new Date();
+  const lang = getLang() === 'uz' ? 'uz-Latn' : getLang();
+  const date = new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'short' }).format(now);
+  let h = '<div class="mono-home">' + topbar() + '<h1 class="mhello">' + esc(greet(now.getHours())) + '</h1><div class="mdate">' + esc(date) + '</div>';
+  if (!plain) {
+    const w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st), today = weekday(Date.now()), WD = weekdays();
+    h += mhead(t('home.week'), '<button class="mbtn" data-pp="' + (st.configured ? 'stats' : 'week') + '" aria-label="' + esc(t('home.stats')) + '">' + ARROW + '</button>') +
+      '<button class="mweek" data-pp="' + (st.configured ? 'stats' : 'week') + '"><span class="mbig num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</span>' +
+      '<span class="mof num">/ ' + fmtDur(goal) + '</span></button><div class="mline"><i style="width:' + Math.min(100, p * 100) + '%"></i></div>' +
+      '<div class="mdays">' + WD.map((d, i) => '<span class="' + (w.per[i] > 0 ? 'done' : st.days[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '">' + d + '</span>').join('') + '</div>';
+    if (isOn(st, 'mastery')) {
+      const all = app.store.sessions(), r = rankOf(lifetimeSec(all, st) / 3600), g = gemOf(gemSec(all) / 3600);
+      h += '<div class="mtags"><button data-act="rank">' + esc(rankName(r.id, r.level)) + '</button><button data-act="gem">' + esc(t('gem.' + g.gem.id)) + ' · ' + fmtDur(gemSec(all)) + '</button>' +
+        (isOn(st, 'streak') && streakInfo(all, st).weeks ? '<button data-act="streak">' + esc(tn('streak.weeks', streakInfo(all, st).weeks)) + '</button>' : '') + '</div>';
+    }
+  }
+  h += '<button class="mcta" data-act="free"><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span><i>' + PLAY + '</i></button>';
+  const q = quickList(st);
+  h += mhead(t('home.quick'), '<button class="mbtn" data-act="quickedit" aria-label="' + esc(t('home.edit')) + '">' + IC.plus + '</button>') +
+    '<div class="mtools">' + q.map((id) => { const m = moduleById(id); return '<button data-open-tool="' + id + '"><span class="mcirc">' + m.icon + '</span><span class="mlbl">' + esc(moduleName(m)) + '</span></button>'; }).join('') + '</div>';
+  h += nextEventsHTML(app);
+  const songs = app.store.songs();
+  const rec = songs.map((s) => ({ s, st: songStats(app.store.sessions(), s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 6);
+  h += mhead(t('home.continue'), '<button class="mbtn" data-act="addSong" aria-label="' + esc(t('home.firstSong')) + '">' + IC.plus + '</button><button class="mbtn" data-tab="library" aria-label="' + esc(t('home.allSongs')) + '">' + ARROW + '</button>');
+  h += rec.length ? '<div class="mlist">' + rec.map(({ s, st: ss }) => '<div class="mrow"><button data-song="' + s.id + '"><span class="mt">' + esc(s.title) + '</span>' +
+    (!plain && ss.total ? '<span class="mm num">' + fmtDur(ss.total) + '</span>' : s.artist ? '<span class="mm">' + esc(s.artist) + '</span>' : '') + '</button>' +
+    '<button class="mplay" data-play="' + s.id + '" aria-label="' + esc(t('home.playSong', { title: s.title })) + '">' + ARROW + '</button></div>').join('') + '</div>'
+    : '<p class="mempty">' + t('mono.noSongs') + '</p>';
+  return h + '</div>';
+}
+
 export function homeHTML(app) {
+  if (app.store.state.settings.uiStyle === 'mono') return homeMonoHTML(app);
   const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
   const today = weekday(Date.now()), plan = st.days, WD = weekdays();
   let h = topbar() + '<div class="large">' + t('home.title') + '</div><div class="hcols"><div>';
