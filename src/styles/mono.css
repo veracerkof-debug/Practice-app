@@ -145,10 +145,8 @@
 .mono-home .mdays .today { border: 1px solid var(--ink); }
 .mono-home .mtags { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 0; }
 .mono-home .mtags button { min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; text-transform: uppercase; letter-spacing: .14em; font-size: 11px; font-weight: 600; color: var(--ink); }
-.mono-home .mcta { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 68px; margin: 28px 0 0; padding: 0 8px 0 26px;
+.mono-home .mcta { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 68px; margin: 28px 0 0; padding: 0 26px;
   border-radius: 999px; background: var(--ink); color: var(--bg); text-transform: uppercase; letter-spacing: .14em; font-size: 14px; font-weight: 700; }
-.mono-home .mcta i { width: 52px; height: 52px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--bg) 40%, transparent); display: flex; align-items: center; justify-content: center; }
-.mono-home .mcta svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
 .mono-home .mtools { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 6px; scrollbar-width: none; }
 .mono-home .mtools button { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: none; width: 64px; }
 .mono-home .mcirc { width: 58px; height: 58px; border-radius: 50%; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--ink); }
