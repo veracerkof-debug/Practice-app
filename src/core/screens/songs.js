@@ -231,7 +231,7 @@ export function libManager(app, rerender) {
 // Редактор метки; back(item | undefined) — после сохранения, удаления или «Назад»
 export function itemEditor(app, kind, id, back) {
   const L = ensureLib(app.store.state, t), ex = id ? L[kind].find((x) => x.id === id) : null, it = ex ? { ...ex } : newLibItem(L, kind);
-  const swatches = (attr, cur, list) => '<div class="swgrid">' + list.map((c) => '<button type="button" class="swc' + (cur === c ? ' on' : '') + '" ' + attr + '="' + c + '" style="background:' + c + '" aria-label="' + esc(t('libm.colorAria', { c })) + '" aria-pressed="' + (cur === c) + '"></button>').join('') +
+  const swatches = (attr, cur, list) => '<div class="swgrid">' + list.map((c) => '<button type="button" class="swc' + (cur === c ? ' on' : '') + '" ' + attr + '="' + c + '" style="background:' + c + ';--c:' + c + '" aria-label="' + esc(t('libm.colorAria', { c })) + '" aria-pressed="' + (cur === c) + '"></button>').join('') +
     '<label class="swc custom" aria-label="' + t('libm.customColor') + '"><input type="color" ' + attr + '-in value="' + (cur && cur[0] === '#' ? cur : '#ff9500') + '"></label></div>';
   const preview = () => '<div class="lprevw">' + chipHTML({ ...it, name: it.name || t('libm.name') }, 'big') +
     (kind === 'genres' ? '<div class="stile3 demo" style="--g:' + it.color + '"><div class="grow"><div class="ttl">' + t('libm.demoTitle') + '</div><div class="st">' + t('libm.demoSub') + '</div></div></div>' : '') + '</div>';

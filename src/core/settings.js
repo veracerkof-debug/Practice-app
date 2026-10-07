@@ -1,4 +1,5 @@
 // Настройки ядра: цель недели, дни практики, тема, функции (вкл/выкл).
+import { watchMarks } from '../ui/marks.js';
 
 // Функции ядра, которые можно выключить (модули выключаются так же — по id); данные при этом сохраняются
 export const CORE_FEATURES = ['streak', 'mastery'];
@@ -50,6 +51,7 @@ export function applyTheme(settings, de = document.documentElement) {
   else de.setAttribute('data-theme', t);
   if (isMono(settings)) de.setAttribute('data-style', 'mono');
   else de.removeAttribute('data-style');
+  if (typeof document !== 'undefined' && document.body) watchMarks(isMono(settings));
   const a = !isMono(settings) && settings.accent && settings.accent !== 'orange' ? ACCENTS.find((x) => x[0] === settings.accent) : null;
   if (a) {
     de.style.setProperty('--tint', a[1]);

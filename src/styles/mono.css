@@ -147,3 +147,30 @@
 :root[data-style="mono"] .addbtn, :root[data-style="mono"] .fab { background: var(--ink) !important; color: var(--bg) !important; box-shadow: none !important; }
 /* Всё содержимое экранов и шторок — без цвета (кроме плавающей кнопки: фильтр сломал бы её положение) */
 :root[data-style="mono"] #main > *:not(.fab), :root[data-style="mono"] .sheet > *, :root[data-style="mono"] .panel > * { filter: grayscale(1); }
+
+/* ---------- цвета меток — знаками (src/ui/marks.js: --mg) ---------- */
+/* метки: белые с обводкой, знак цвета перед названием; выбранная — чёрная */
+:root[data-style="mono"] .lchip:not(.off):not(.add), :root[data-style="mono"] .catp, :root[data-style="mono"] .cwchip, :root[data-style="mono"] .cchips i {
+  background: var(--cell) !important; color: var(--ink) !important; box-shadow: none !important; border: 1px solid var(--line); }
+:root[data-style="mono"] .lchip.on:not(.off), :root[data-style="mono"] .catp.on { background: var(--ink) !important; color: var(--bg) !important; border-color: var(--ink); }
+:root[data-style="mono"] .lchip::before, :root[data-style="mono"] .catp::before, :root[data-style="mono"] .cwchip::before, :root[data-style="mono"] .cchips i::before,
+:root[data-style="mono"] .cwev b::before, :root[data-style="mono"] .cebody b::before, :root[data-style="mono"] .cdt::before {
+  content: var(--mg, none); margin-right: 5px; font-size: .9em; font-weight: 400; }
+/* песня: вместо цветной полосы — знак жанра слева */
+:root[data-style="mono"] .stile3 { background: var(--cell) !important; border: 1px solid var(--sep); padding-left: 34px; }
+:root[data-style="mono"] .stile3::before { content: var(--mg, "·"); width: 26px; background: none !important; display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--ink); }
+:root[data-style="mono"] .cdot { background: none !important; width: auto; height: auto; }
+:root[data-style="mono"] .cdot::before { content: var(--mg, "·"); font-size: 11px; font-style: normal; }
+/* события: полоска цвета — пунктир разной частоты не нужна, достаточно знака; полоска — нейтральная */
+:root[data-style="mono"] .cdbar, :root[data-style="mono"] .cevt .cchk::before { background: var(--ink) !important; }
+:root[data-style="mono"] .cwev { background: var(--cell) !important; border: 1px solid var(--line) !important; }
+:root[data-style="mono"] .cdots i { background: none !important; width: auto; height: auto; font-size: 8px; line-height: 6px; font-style: normal; color: var(--ink); }
+:root[data-style="mono"] .cdots i::before { content: var(--mg, "•"); }
+/* выбор цвета метки: на образце — его знак */
+:root[data-style="mono"] .swc { position: relative; }
+:root[data-style="mono"] .swc::after { content: var(--mg, ""); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; mix-blend-mode: difference; }
+:root[data-style="mono"] .fchip { background: var(--cell) !important; color: var(--ink) !important; border: 1px solid var(--line); box-shadow: none !important; }
+:root[data-style="mono"] .fchip.on { background: var(--ink) !important; color: var(--bg) !important; }
+:root[data-style="mono"] .fchip i { background: none !important; width: auto; height: auto; font-style: normal; }
+:root[data-style="mono"] .fchip i::before { content: var(--mg, "·"); }
+:root[data-style="mono"] .fchip.tagf::before { content: var(--mg, none); margin-right: 4px; }
