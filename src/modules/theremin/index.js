@@ -1,5 +1,8 @@
 // Терменвокс: играют руками перед камерой. Рука высоты (по умолчанию правая): выше — выше звук, ближе к краю кадра —
-// ярче (характер). Другая рука — эффекты: выше — сильнее (как вертикаль глайдера), кулак — тишина, раскрытая ладонь — звук.
+// ярче (характер). Другая рука — эффекты, каждым своим движением (map.js, назначения меняются в настройках):
+// ладонь раскрыта — звук, кулак — тишина; высота — пространство; поворот кисти — тембр; наклон вперёд-назад — вибрато;
+// ближе к камере — перегруз; разворот ладони ребром — тремоло; щепоть — зафиксировать эффекты (чтобы не держать руку).
+// Углы и расстояние считаются от нейтрального положения: запоминается само при первом появлении руки, заново — в настройках.
 // Звук — движок глайдера (тот же голос, эффекты, привязка к нотам и лады) и его шина в микшере.
 // Камера — только на устройстве (hands.js): изображение не сохраняется и никуда не отправляется.
 // Отдельный модуль: сборку можно выпустить и без него (распознаванию рук нужна готовая модель — см. DECISIONS.md).
@@ -15,7 +18,7 @@ import { SCALE_TYPES } from '../../music/theory.js';
 import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, clampLo, notesIn } from '../glider/scale.js';
 import { createGlideVoice, createFxBus } from '../glider/voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, PRESETS } from '../glider/fx.js';
-import { assign, openness, heightOf, characterOf, oneEuro, EDGE } from './map.js';
+import { assign, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, PINCH_ON, PINCH_OFF } from './map.js';
 import { startHands } from './hands.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M7 21V11.5a1.5 1.5 0 0 1 3 0V9a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5z"/><path d="M3 7c1.5-2 3-2 4.5 0S10.5 9 12 7s3-2 4.5 0"/></svg>';
@@ -27,12 +30,18 @@ const I = {
 };
 const SOUNDS = ['app', ...Object.keys(SYN)];
 const LOST_MS = 180; // рука пропала из кадра на мгновение — звук не обрывается
+const AUTO_CAL_MS = 1500; // нейтраль запоминается сама, когда рука эффектов впервые продержалась в кадре столько
+const PINCH_MS = 150; // щепоть держится столько — переключает фиксацию (случайное касание пальцев не считается)
+const VOICE_FX = ['bright', 'vib', 'trem', 'drive', 'fuzz'];
 
 let host = null, ctx = null, size = 'full', ro = null, probed = false;
 const offs = [];
 // состояние живёт между перерисовками окна
 const S = { cam: null, state: 'off', err: '', voice: null, bus: null, seen: 0, hands: { pitch: null, fx: null }, m: null,
-  fPos: oneEuro(), fFx: oneEuro({ minCutoff: 0.8, beta: 0.3 }), fOpen: oneEuro({ minCutoff: 2, beta: 0.2 }), fChar: oneEuro({ minCutoff: 1, beta: 0.2 }) };
+  fPos: oneEuro(), fChar: oneEuro({ minCutoff: 1, beta: 0.2 }),
+  // рука эффектов: сглаживание каждого жеста, текущие силы (для подсказки), фиксация щепотью, автонейтраль
+  fg: Object.fromEntries(GESTURES.map((g) => [g, oneEuro(g === 'open' ? { minCutoff: 2, beta: 0.2 } : { minCutoff: 0.8, beta: 0.3 })])),
+  gv: null, pose: null, frozen: null, pinchT: 0, pinched: false, calT: 0 };
 
 const cfg = () => {
   const s = ctx.store.all();
@@ -41,6 +50,7 @@ const cfg = () => {
   if (!WIDTHS.includes(s.width)) s.width = 12;
   s.lo = clampLo(s.lo, s.width);
   if (!s.fx) s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
+  s.gmap = { ...DEFAULT_MAP, ...(s.gmap || {}) };
   normalizeFx(s);
   return s;
 };
@@ -121,6 +131,24 @@ function draw() {
   };
   dot(S.hands.pitch, tint);
   dot(S.hands.fx, ink);
+  // подсказка руки эффектов: что сейчас делает каждое движение (у края руки эффектов, внизу)
+  if (S.gv || S.frozen) {
+    const rows = GESTURES.filter((k) => (s.gmap[k] || 'off') !== 'off'), bw = 56, x0 = right ? 12 : W - 12 - bw - 92;
+    let y = H - 28 - rows.length * 18;
+    g.textAlign = 'left';
+    g.font = '600 10.5px system-ui, sans-serif';
+    if (S.frozen) { g.fillStyle = tint; g.globalAlpha = 0.95; g.fillText('❄ ' + ctx.t('frozen'), x0, y - 4); }
+    y += 14;
+    rows.forEach((k) => {
+      const v = S.gv ? S.gv[k] || 0 : 0, frozenRow = S.frozen && s.gmap[k] !== 'vol';
+      g.globalAlpha = 0.75; g.fillStyle = ink;
+      g.fillText(ctx.t('tg.' + s.gmap[k]), x0, y);
+      g.globalAlpha = 0.25; g.fillRect(x0 + 92, y - 3, bw, 4);
+      g.globalAlpha = frozenRow ? 0.45 : 0.9; g.fillStyle = tint; g.fillRect(x0 + 92, y - 3, bw * v, 4);
+      y += 18;
+    });
+    g.globalAlpha = 1;
+  }
   if (S.m != null) { // где сейчас звучит
     const y = map.y(EDGE + (1 - midiToPos(S.m, s.lo, s.width)) * (1 - 2 * EDGE));
     g.strokeStyle = tint; g.lineWidth = 2.5; g.globalAlpha = 0.8;
@@ -148,20 +176,61 @@ function silence() {
   showNote(null);
 }
 
+// Нейтральное положение руки эффектов: от него считаются поворот, разворот, наклон и расстояние
+const neutralOf = (p) => ({ rot: p.rot, turn: p.turn ?? 0, tilt: p.tilt ?? 0, size: p.size });
+function calibrate() {
+  const { t, ui } = ctx;
+  ui.toast(t('calSoon'));
+  setTimeout(() => {
+    if (!ctx) return;
+    if (!S.pose) { ctx.ui.toast(t('calNo')); return; }
+    cfg().cal = neutralOf(S.pose);
+    save();
+    GESTURES.forEach((g) => S.fg[g].reset());
+    ctx.ui.toast(t('calDone'));
+  }, 2500);
+}
+
+// Рука эффектов → силы жестов (сглаженные), фиксация щепотью, первая автонейтраль
+function fxHand(s, h, t) {
+  if (!h) { S.pose = null; S.gv = null; S.calT = 0; S.pinchT = 0; S.pinched = false; GESTURES.forEach((g) => S.fg[g].reset()); return null; }
+  const p = pose(h);
+  S.pose = p;
+  if (!s.cal) {
+    S.calT ||= t;
+    if (t - S.calT > AUTO_CAL_MS) { s.cal = neutralOf(p); save(); ctx.ui.toast(ctx.t('calAuto')); }
+  }
+  const raw = gestureValues(p, s.cal || undefined, s.side), g = {};
+  GESTURES.forEach((k) => { g[k] = S.fg[k].next(raw[k], t); });
+  S.gv = g;
+  // щепоть при раскрытой ладони (в кулаке большой палец тоже касается указательного — это не щепоть)
+  if (s.gmap.pinch === 'freeze') {
+    if (p.pinch < PINCH_ON && p.open > 0.45) {
+      S.pinchT ||= t;
+      if (!S.pinched && t - S.pinchT > PINCH_MS) { S.pinched = true; S.frozen = S.frozen ? null : applyGestures(g, s.gmap); ctx.ui.toast(ctx.t(S.frozen ? 'frozen' : 'unfrozen')); }
+    } else if (p.pinch > PINCH_OFF || p.open <= 0.45) { S.pinchT = 0; S.pinched = false; }
+  } else S.frozen = null;
+  return g;
+}
+
 function onHands(list, t) {
   if (!host) return;
   const s = cfg(), a = assign(list, s.side);
   S.hands = a;
   const lost = host.querySelector('#tmlost');
   if (lost) lost.hidden = list.length > 0;
+  const g = fxHand(s, a.fx, t);
   if (a.pitch) S.seen = t;
   else if (t - S.seen > LOST_MS) silence();
   if (a.pitch) {
     const pos = S.fPos.next(heightOf(a.pitch.c.y), t), m = snapPitch(posToMidi(pos, s.lo, s.width), s.snap, allowedPcs(s));
-    const effY = a.fx ? S.fFx.next(heightOf(a.fx.c.y), t) : 0, gate = a.fx ? S.fOpen.next(openness(a.fx.lm), t) : 1;
-    const o = voiceFx(s.fx, effY);
+    // эффекты: постоянные из набора + жесты руки эффектов (или зафиксированные щепотью); громкость — всегда живая
+    const live = g ? applyGestures(g, s.gmap) : null;
+    const fxv = S.frozen ? { ...S.frozen, vol: live ? live.vol : 1 } : live || { vol: 1 };
+    const o = voiceFx(s.fx, 0);
+    VOICE_FX.forEach((k) => { o[k] = Math.max(o[k] || 0, fxv[k] || 0); });
     if (s.charX) o.bright = Math.max(o.bright || 0, S.fChar.next(characterOf(a.pitch.c.x, s.side), t));
-    o.volGain = (o.volGain ?? 1) * Math.max(0, Math.min(1, gate));
+    o.volGain = (o.volGain ?? 1) * Math.max(0, Math.min(1, fxv.vol ?? 1));
     const dest = ctx.audio.bus('glider');
     if (dest) {
       if (!S.bus || S.bus.ctx !== dest.context) { S.bus = createFxBus(dest.context, dest); S.bus.ctx = dest.context; }
@@ -174,7 +243,8 @@ function onHands(list, t) {
         S.voice.pitch(m, s.snap === 'note' ? 0.03 : 0.02);
         S.voice.fx(o);
       }
-      S.bus.set(busFx(s.fx, [effY]));
+      const b = busFx(s.fx, [0]);
+      S.bus.set({ echo: Math.max(b.echo, fxv.echo || 0), verb: Math.max(b.verb, fxv.verb || 0), time: b.time });
     }
     if (S.m == null || Math.round(S.m) !== Math.round(m) || s.snap !== 'note') showNote(m);
     S.m = m;
@@ -202,6 +272,8 @@ async function camOn() {
 function camOff() {
   if (S.cam) { S.cam.stop(); S.cam = null; }
   silence();
+  fxHand(cfg(), null, 0);
+  S.frozen = null;
   S.hands = { pitch: null, fx: null };
   if (S.state !== 'error') S.state = 'off';
 }
@@ -216,7 +288,15 @@ function setSheet() {
     return ui.snav(t('settings')) +
       '<div class="hdr" style="margin-top:4px">' + t('hands') + '</div><div class="group"><div class="cellcol">' + ui.seg('tside', [['right', t('hand.right')], ['left', t('hand.left')]], s.side, t('hands')) +
       '<div class="segcap">' + t('hint.' + s.side) + '</div></div><div class="cell"><span class="grow">' + t('charX') + '</span>' + ui.sw('tchar', s.charX, t('charX')) + '</div></div><p class="ftr">' + t('charHint') + '</p>' +
-      '<div class="hdr">' + t('effects') + '</div><div class="glpre" role="group" aria-label="' + t('presets') + '">' +
+      // рука эффектов: какое движение что делает
+      '<div class="hdr">' + t('fxHand.' + (s.side === 'right' ? 'left' : 'right')) + '</div><div class="group">' +
+      GESTURES.map((k) => '<label class="cell"><span class="grow">' + t('g.' + k) + '</span><select class="sortsel" data-tg="' + k + '" aria-label="' + ui.esc(t('g.' + k)) + '">' +
+        TARGETS.map((tg) => '<option value="' + tg + '"' + (s.gmap[k] === tg ? ' selected' : '') + '>' + t('tg.' + tg) + '</option>').join('') + '</select></label>').join('') +
+      '<label class="cell"><span class="grow">' + t('g.pinch') + '</span><select class="sortsel" data-tg="pinch" aria-label="' + ui.esc(t('g.pinch')) + '">' +
+        ['off', 'freeze'].map((tg) => '<option value="' + tg + '"' + (s.gmap.pinch === tg ? ' selected' : '') + '>' + t('tg.' + tg) + '</option>').join('') + '</select></label>' +
+      '<button class="cell act" data-tcal>' + t('cal') + '</button><button class="cell act" data-tgdef>' + t('gDefault') + '</button></div>' +
+      '<p class="ftr">' + t('calHint') + '</p>' +
+      '<div class="hdr">' + t('presetsBase') + '</div><div class="glpre" role="group" aria-label="' + t('presets') + '">' +
       Object.keys(PRESETS).map((k) => chip('data-tpre="' + k + '"', false, t('preset.' + k))).join('') + '</div><p class="ftr" style="margin-top:0">' + t('fxHint') + '</p>' +
       '<div class="hdr">' + t('sound') + '</div><div class="group"><div class="cellcol"><div class="glchips">' +
       SOUNDS.map((k) => chip('data-ts="' + k + '"', s.sound === k, t('pre.' + k))).join('') + '</div></div></div>' +
@@ -237,6 +317,8 @@ function setSheet() {
       let b;
       if ((b = g('[data-tpre]'))) { const keep = s.fx.echo.time; s.fx = applyPreset(b.dataset.tpre); if (!PRESETS[b.dataset.tpre].echo) s.fx.echo.time = keep; ctx.ui.toast(t('presetOn', { name: t('preset.' + b.dataset.tpre) })); }
       else if ((b = g('[data-ts]'))) { s.sound = b.dataset.ts; silence(); }
+      else if (g('[data-tcal]')) { calibrate(); return; }
+      else if (g('[data-tgdef]')) { s.gmap = { ...DEFAULT_MAP }; S.frozen = null; }
       else if ((b = g('[data-tr]'))) s.root = +b.dataset.tr;
       else if ((b = g('[data-tlo2]'))) s.lo = clampLo(s.lo + +b.dataset.tlo2, s.width);
       else if ((b = g('[data-seg] [data-v]'))) {
@@ -253,6 +335,7 @@ function setSheet() {
       if (sw === 'tchar') s.charX = e.target.checked;
       else if (sw === 'tshow') s.showCam = e.target.checked;
       else if (e.target.hasAttribute('data-tsc')) s.scale = e.target.value;
+      else if (e.target.dataset.tg) { s.gmap[e.target.dataset.tg] = e.target.value; if (e.target.dataset.tg === 'pinch') S.frozen = null; }
       else return;
       done();
     });

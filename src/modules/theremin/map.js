@@ -46,6 +46,75 @@ export const heightOf = (y) => clamp01(1 - (y - EDGE) / (1 - 2 * EDGE));
 // Характер звука — горизонталь руки высоты: у края кадра — ярче, к середине — мягче
 export const characterOf = (x, pitchSide = 'right') => clamp01(pitchSide === 'right' ? (x - 0.5) / 0.45 : (0.5 - x) / 0.45);
 
+/* ---------- рука эффектов: положение и жесты ---------- */
+
+const deg = (r) => (r * 180) / Math.PI;
+const sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: (a.z || 0) - (b.z || 0) });
+const unit = (v) => { const l = Math.hypot(v.x, v.y, v.z) || 1e-9; return { x: v.x / l, y: v.y / l, z: v.z / l }; };
+const cross = (a, b) => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
+
+// Положение руки: h — { lm (кадр, доли), w (объёмные точки в метрах, если есть), ar (ширина/высота кадра) }.
+//   rot  — поворот кисти в плоскости кадра, ° (0 — пальцы вверх): «крутить как ручку»; самый надёжный угол
+//   turn — разворот ладони, ° (0 — ладонь к камере, ±90 — ребром); tilt — наклон пальцев к камере (+) и от неё (−), °
+//   size — размер ладони в кадре (ближе к камере — больше); pinch — щепоть: расстояние большой–указательный / ладонь
+export function pose(h) {
+  const lm = h.lm, ar = h.ar || 4 / 3, c = palm(lm);
+  const ux = (lm[9].x - lm[0].x) * ar, uy = lm[9].y - lm[0].y;
+  const size = Math.hypot(ux, uy) || 1e-6;
+  const p = { x: c.x, y: c.y, open: openness(lm), size, rot: deg(Math.atan2(ux, -uy)), turn: null, tilt: null,
+    pinch: Math.hypot((lm[4].x - lm[8].x) * ar, lm[4].y - lm[8].y) / size };
+  const w = h.w;
+  if (w && w.length === 21) {
+    const u = unit(sub(w[9], w[0])), n = unit(cross(sub(w[17], w[5]), u));
+    p.turn = deg(Math.atan2(n.x, Math.abs(n.z)));
+    p.tilt = deg(Math.atan2(-u.z, Math.hypot(u.x, u.y)));
+  }
+  return p;
+}
+
+// Нейтральное положение по умолчанию (пока его не запомнили): ладонь к камере, пальцы вверх, рука на расстоянии вытянутой руки
+export const NEUTRAL = { rot: 0, turn: 0, tilt: 0, size: 0.15 };
+// Сколько нужно отклониться для полной силы: поворот 60°, разворот 70°, наклон 50°, ближе к камере в 1,6 раза
+export const SPAN = { rot: 60, turn: 70, tilt: 50, dist: 0.6 };
+const DEAD = 0.08; // небольшое отклонение от нейтрали — не считается (рука не стоит идеально неподвижно)
+const dz = (v) => clamp01((v - DEAD) / (1 - DEAD));
+
+// Жесты руки эффектов → силы 0…1. side — сторона руки высоты (рука эффектов — с другой стороны)
+export const GESTURES = ['open', 'height', 'rot', 'tilt', 'dist', 'turn', 'x'];
+export function gestureValues(p, cal = NEUTRAL, side = 'right') {
+  const n = { ...NEUTRAL, ...cal };
+  return {
+    open: p.open,
+    height: heightOf(p.y),
+    rot: dz(Math.abs(p.rot - n.rot) / SPAN.rot),
+    tilt: p.tilt == null ? 0 : dz(Math.abs(p.tilt - n.tilt) / SPAN.tilt),
+    dist: dz((p.size / (n.size || NEUTRAL.size) - 1) / SPAN.dist),
+    turn: p.turn == null ? 0 : dz(Math.abs(p.turn - n.turn) / SPAN.turn),
+    x: characterOf(p.x, side === 'right' ? 'left' : 'right'), // наружу, к своему краю кадра — сильнее
+  };
+}
+// Щепоть: кончики большого и указательного сведены
+export const PINCH_ON = 0.32, PINCH_OFF = 0.45;
+
+// Что можно назначить жесту. space — пространство: реверберация и эхо вместе; vol — громкость
+export const TARGETS = ['off', 'vol', 'space', 'tone', 'vib', 'trem', 'drive', 'fuzz', 'echo', 'verb'];
+export const DEFAULT_MAP = { open: 'vol', height: 'space', rot: 'tone', tilt: 'vib', dist: 'drive', turn: 'trem', x: 'off', pinch: 'freeze' };
+
+// Силы жестов → эффекты: { bright, vib, trem, drive, fuzz, echo, verb } (наибольшее из назначенных) и vol (произведение; 1 — не назначено)
+export function applyGestures(vals, map = DEFAULT_MAP) {
+  const out = { bright: 0, vib: 0, trem: 0, drive: 0, fuzz: 0, echo: 0, verb: 0, vol: 1 };
+  const put = (k, v) => { out[k] = Math.max(out[k], v); };
+  GESTURES.forEach((g) => {
+    const tg = map[g] || 'off', v = clamp01(vals[g] || 0);
+    if (tg === 'off') return;
+    if (tg === 'vol') out.vol *= v;
+    else if (tg === 'space') { put('verb', v); put('echo', v * 0.6); }
+    else if (tg === 'tone') put('bright', v);
+    else put(tg, v);
+  });
+  return out;
+}
+
 // Сглаживание «один евро» (Casiez и др., 2012): почти не дрожит, когда рука стоит, и почти не отстаёт, когда движется
 export function oneEuro({ minCutoff = 1.2, beta = 0.6, dCutoff = 1 } = {}) {
   let x = null, dx = 0, t0 = 0;

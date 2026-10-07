@@ -22,7 +22,7 @@ async function landmarker() {
 const reasonOf = (e) => (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError') ? 'denied'
   : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError') ? 'nocam' : 'fail');
 
-// onHands(hands, t) — каждый кадр: hands — [{ lm: 21 точка с зеркальным x }]
+// onHands(hands, t) — каждый кадр: hands — [{ lm: 21 точка с зеркальным x, w: объёмные точки, ar }]
 export async function startHands(video, onHands) {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { const e = new Error('nocam'); e.reason = 'nocam'; throw e; }
   let stream;
@@ -44,7 +44,14 @@ export async function startHands(video, onHands) {
       const t = performance.now();
       let r = null;
       try { r = lm.detectForVideo(video, t); } catch { /* кадр пропускается */ }
-      const hands = (r && r.landmarks ? r.landmarks : []).map((pts) => ({ lm: pts.map((p) => ({ x: 1 - p.x, y: p.y })) }));
+      // lm — точки в кадре (доли, x зеркальный), w — объёмные точки в метрах (тоже зеркально), ar — пропорции кадра
+      const ar = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 4 / 3;
+      const world = (r && r.worldLandmarks) || [];
+      const hands = (r && r.landmarks ? r.landmarks : []).map((pts, i) => ({
+        lm: pts.map((p) => ({ x: 1 - p.x, y: p.y })),
+        w: world[i] ? world[i].map((p) => ({ x: -p.x, y: p.y, z: p.z })) : null,
+        ar,
+      }));
       onHands(hands, t);
     }
     raf = requestAnimationFrame(loop);
