@@ -43,6 +43,11 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Вибрация в такт метронома -->
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- Фонарик: только наличие вспышки, камера не нужна -->
+    <!-- Фонарик: только наличие вспышки -->
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+    <!-- Камера: только терменвокс (руки перед камерой), кадры обрабатываются на устройстве и не сохраняются.
+         Разрешение спрашивается при включении камеры в терменвоксе; без камеры приложение ставится и работает -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
 </manifest>

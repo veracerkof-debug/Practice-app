@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { alphaTab } from '@coderline/alphatab-vite';
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { join, relative, extname } from 'node:path';
+import { mediapipe } from './build/mediapipe.js';
 
 // pdf.js: стандартные шрифты, таблицы кодировок (cmaps) и декодеры изображений — файлы пакета, кладутся в сборку
 // по пути pdfjs/…; в режиме разработки отдаются прямо из node_modules. Никаких CDN.
@@ -33,7 +34,9 @@ export default defineConfig({
   // дата сборки: часы устройства раньше неё — сбиты (src/core/clock.js)
   define: { __BUILD_TIME__: Date.now() },
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
-  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets()],
+  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe()],
+  // MediaPipe не собирается заранее: иначе в режиме разработки вырезка статистики (build/mediapipe.js) не сработает
+  optimizeDeps: { exclude: ['@mediapipe/tasks-vision'] },
   // воркеры alphaTab сжимаются так же, как основной код
   worker: { format: 'es', rolldownOptions: { output: { minify: true } } },
   server: {

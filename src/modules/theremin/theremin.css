@@ -1,0 +1,25 @@
+/* Терменвокс: кадр камеры на всё окно, поверх — линии нот, точки рук, нота и одна узкая панель в углу */
+.tm{position:relative;flex:1;width:100%;height:100%;min-height:80px;overflow:hidden;border-radius:16px;background:#0d0d10;user-select:none;-webkit-user-select:none}
+.tview.imm .tm{border-radius:0}
+.tmcam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:.55;pointer-events:none}
+.tm.nocam .tmcam{opacity:0}
+.tmcv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.tm{--ink:#fff;color:#fff}
+.tm .glnote b,.tm .glnote span{color:#fff}
+.tm .glnote{opacity:.22}
+.tm .glnote.on{opacity:.75}
+.tmbar{background:color-mix(in srgb,#000 45%,transparent)!important}
+.tmbar .ic,.tmbar .glsnap,.tmbar .glrange{color:#fff!important}
+.tmbar .ic svg{stroke:#fff}
+.tmstart{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;z-index:1}
+.tmstart .btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 24px}
+.tmstart .btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
+.tmhint{max-width:440px;margin:0;font-size:15px;line-height:1.45;color:rgba(255,255,255,.85)}
+.tmpriv{max-width:440px;margin:0;font-size:12.5px;line-height:1.4;color:rgba(255,255,255,.55)}
+.tmerr{max-width:440px;margin:0;font-size:15px;color:#ff9f9a}
+.tmlost{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:6px 14px;border-radius:999px;background:rgba(0,0,0,.45);color:#fff;font-size:12.5px;pointer-events:none;white-space:nowrap}
+.tm.quarter .tmstart,.tm.strip .tmstart{padding:8px;gap:6px}
+.tm.quarter .tmstart .btn,.tm.strip .tmstart .btn{min-height:40px;padding:0 14px;font-size:14px}
+.tm.strip .glnote{display:none}
+.tm.strip .tmbar{top:50%;transform:translateY(-50%);right:4px}
+.tm.strip .tmstart{align-items:flex-start}

@@ -730,5 +730,7 @@
   "stone.edges": "edges smoothed",
   "stone.form": "shape rounded",
   "stone.text": "An ordinary stone from the road. With every hour of practice in the app it loses its edges and bumps and grows rounder, like a pebble in a river. Sharp edges smooth out first (over the first hundreds of hours), then the angular shape slowly goes (thousands of hours). The stone can be turned with a finger.",
-  "mix.glider": "Glider"
+  "mix.glider": "Glider",
+  "lic.mp.sub": "Hand tracking in the theremin · version 1.1.0",
+  "lic.mp.text": "Licensed under the Apache License 2.0 (github.com/google-ai-edge/mediapipe), as is the Hand Landmarker model. The engine includes TensorFlow Lite, XNNPACK, OpenCV, Protocol Buffers and Abseil (Apache-2.0, BSD-3-Clause). Modified: the built-in usage statistics collector that sent data to Google has been removed. Tracking runs only on the device."
 }

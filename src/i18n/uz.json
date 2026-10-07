@@ -721,5 +721,7 @@
   "stone.edges": "qirralar silliqlangan",
   "stone.form": "shakl yumaloqlangan",
   "stone.text": "Yoʻldagi oddiy tosh. Ilovadagi har bir soat mashgʻulot bilan u qirra va boʻrtiqlarini yoʻqotib, daryodagi shagʻal kabi yumaloqlashadi. Avval oʻtkir qirralar silliqlanadi (dastlabki yuzlab soatlarda), soʻng shaklning burchakliligi asta-sekin yoʻqoladi (minglab soatlarda). Toshni barmoq bilan aylantirish mumkin.",
-  "mix.glider": "Glayder"
+  "mix.glider": "Glayder",
+  "lic.mp.sub": "Termenvoksda qoʻllarni aniqlash · versiya 1.1.0",
+  "lic.mp.text": "Apache License 2.0 litsenziyasi boʻyicha tarqatiladi (github.com/google-ai-edge/mediapipe), Hand Landmarker modeli ham. Ichida — TensorFlow Lite, XNNPACK, OpenCV, Protocol Buffers, Abseil (Apache-2.0, BSD-3-Clause). Oʻzgartirilgan: Google’ga maʼlumot yuboruvchi ichki statistika yigʻuvchisi olib tashlangan. Aniqlash faqat qurilmada bajariladi."
 }
