@@ -13,7 +13,9 @@ export function bindExt(app, open) {
     const logo = e.target.closest && e.target.closest('.logo');
     if (!logo) return;
     start = { x: e.clientX, y: e.clientY };
-    const deep = Date.now() < armed && e.target.closest('.lg0');
+    // «Μ» — первая буква; палец шире буквы, поэтому засчитывается левая треть названия
+    const r = logo.getBoundingClientRect();
+    const deep = Date.now() < armed && (e.target.closest('.lg0') || e.clientX < r.left + r.width * 0.34);
     timer = setTimeout(() => {
       timer = 0;
       swallow = true;
@@ -27,6 +29,7 @@ export function bindExt(app, open) {
   // долгое нажатие — не обычное нажатие (справка о названии не открывается)
   addEventListener('click', (e) => { if (swallow && e.target.closest && e.target.closest('.logo')) { e.preventDefault(); e.stopPropagation(); } swallow = false; }, { capture: true });
   addEventListener('contextmenu', (e) => { if (e.target.closest && e.target.closest('.logo')) e.preventDefault(); }, { capture: true });
+  addEventListener('selectstart', (e) => { if (e.target.closest && e.target.closest('.logo')) e.preventDefault(); }, { capture: true });
 }
 
 function dialog(app, open) {
