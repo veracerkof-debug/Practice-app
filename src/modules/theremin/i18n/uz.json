@@ -76,7 +76,7 @@
   "charHint": "Balandlik qoʻli kadr chetida — tovush yorqinroq, oʻrtaga yaqin — yumshoqroq.",
   "fxHint": "Toʻplam doimiy effektlarni belgilaydi; effekt qoʻli ularning ustiga oʻzinikini qoʻshadi.",
   "camShow": "Kamera tasviri",
-  "camHint": "Tasvirsiz faqat nota chiziqlari va qoʻl nuqtalari koʻrinadi.",
+  "camHint": "Tasvirsiz faqat nota shkalasi va qoʻllar koʻrinadi. «Kamerani darhol yoqish» — birinchi yoqilgandan keyin kamera termenvoks ochilganda oʻzi yoqiladi.",
   "fxHand.left": "Chap qoʻl — effektlar",
   "fxHand.right": "Oʻng qoʻl — effektlar",
   "g.open": "Kaft: musht — ochiq",
@@ -133,5 +133,6 @@
   "hud.quiet": "Sokin",
   "hud.off": "Yoʻq",
   "hudHint": "«Sokin» — faqat chetdagi nota shkalasi va kaftlar yogʻdusi; «Yoʻq» — toza kamera tasviri. Ekranga ikki marta bosish almashtiradi.",
-  "hudOn": "Koʻrsatmalar: {mode}"
+  "hudOn": "Koʻrsatmalar: {mode}",
+  "camAuto": "Kamerani darhol yoqish"
 }

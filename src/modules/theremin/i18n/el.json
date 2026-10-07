@@ -127,5 +127,6 @@
   "hud.quiet": "Ήσυχαι",
   "hud.off": "Ουδεμία",
   "hudHint": "Δις πάτημα — εναλλαγή.",
-  "hudOn": "{mode}"
+  "hudOn": "{mode}",
+  "camAuto": "Κάμερα αμέσως"
 }

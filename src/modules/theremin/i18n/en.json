@@ -76,7 +76,7 @@
   "charHint": "Pitch hand near the frame edge — brighter sound, near the middle — softer.",
   "fxHint": "A preset sets constant effects; the effects hand adds its own on top.",
   "camShow": "Camera image",
-  "camHint": "Without the image only note lines and hand points are shown.",
+  "camHint": "Without the image only the note scale and hands are shown. “Start camera at once” — after the first start the camera turns on by itself when the theremin opens.",
   "fxHand.left": "Left hand — effects",
   "fxHand.right": "Right hand — effects",
   "g.open": "Palm: fist — open",
@@ -133,5 +133,6 @@
   "hud.quiet": "Quiet",
   "hud.off": "None",
   "hudHint": "“Quiet” keeps only the note scale at the edge and a glow on the palms; “None” leaves the clean camera picture. A double tap on the screen switches.",
-  "hudOn": "Guides: {mode}"
+  "hudOn": "Guides: {mode}",
+  "camAuto": "Start camera at once"
 }

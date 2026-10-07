@@ -58,7 +58,7 @@ const cfg = () => {
   s.lo = clampLo(s.lo, s.width);
   if (!s.fx) s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
   s.gmap = { ...DEFAULT_MAP, ...(s.gmap || {}) };
-  s.mode ??= 'solo'; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.hud ??= 'full';
+  s.mode ??= 'solo'; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.hud ??= 'full'; s.camAuto ??= false;
   if (!HUDS.includes(s.hud)) s.hud = 'full';
   normalizeFx(s);
   return s;
@@ -356,9 +356,14 @@ function onHands(list, t) {
   draw();
 }
 
-async function camOn() {
+// auto — включение само (окно открыли, вернулись в приложение): звук, если без касания его не разбудить,
+// заработает от первого касания экрана
+async function camOn(auto = false) {
   if (S.state === 'on' || S.state === 'loading') return;
-  if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('noAudio')); return; }
+  if (!ctx.audio.unlock()) {
+    if (!auto) { ctx.ui.toast(ctx.t('noAudio')); return; }
+    addEventListener('pointerdown', () => ctx && ctx.audio.unlock(), { once: true, capture: true });
+  }
   S.state = 'loading';
   render();
   try {
@@ -366,9 +371,13 @@ async function camOn() {
     S.cam = await startHands(v, onHands);
     if (!host) { camOff(); return; }
     S.state = 'on';
+    // однажды разрешённая и включённая камера дальше включается сама (выключается в настройках)
+    const s = cfg();
+    if (!s.camAuto && !s.camAutoOff) { s.camAuto = true; save(); }
   } catch (e) {
     S.state = 'error';
     S.err = e.reason || 'fail';
+    if (S.err === 'denied') { cfg().camAuto = false; save(); } // запретили — сама больше не пытается
   }
   render();
 }
@@ -420,7 +429,8 @@ function setSheet() {
       '<div class="cellcol"><div class="glsub">' + t('width') + ' · ' + rangeTxt(s) + '</div>' + ui.seg('tw', WIDTHS.map((w) => [w, t('w.' + w)]), s.width, t('width')) + '</div></div>' +
       '<div class="hdr">' + t('look') + '</div><div class="group"><div class="cellcol"><div class="glsub" style="margin-top:0">' + t('hud') + '</div>' +
       ui.seg('thud', HUDS.map((k) => [k, t('hud.' + k)]), s.hud, t('hud')) + '<div class="segcap">' + t('hudHint') + '</div></div>' +
-      '<div class="cell"><span class="grow">' + t('camShow') + '</span>' + ui.sw('tshow', s.showCam, t('camShow')) + '</div></div>' +
+      '<div class="cell"><span class="grow">' + t('camShow') + '</span>' + ui.sw('tshow', s.showCam, t('camShow')) + '</div>' +
+      '<div class="cell"><span class="grow">' + t('camAuto') + '</span>' + ui.sw('tauto', !!s.camAuto, t('camAuto')) + '</div></div>' +
       '<p class="ftr">' + t('camHint') + ' ' + t('privacy') + '</p>';
   };
   ui.sheet(body, (el, sh) => {
@@ -452,6 +462,7 @@ function setSheet() {
       const s = cfg(), sw = e.target.dataset.sw || '';
       if (sw === 'tchar') s.charX = e.target.checked;
       else if (sw === 'tshow') s.showCam = e.target.checked;
+      else if (sw === 'tauto') { s.camAuto = e.target.checked; s.camAutoOff = !e.target.checked; }
       else if (e.target.hasAttribute('data-tsc')) s.scale = e.target.value;
       else if (e.target.dataset.tg) { s.gmap[e.target.dataset.tg] = e.target.value; if (e.target.dataset.tg === 'pinch') S.frozen = null; }
       else return;
@@ -492,7 +503,11 @@ function bind() {
     } else lastTap = now;
   });
   // свернули приложение — камера выключается сразу (и не включается сама)
-  on(document, 'visibilitychange', () => { if (document.visibilityState === 'hidden' && S.cam) { camOff(); render(); } });
+  on(document, 'visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && S.cam) { camOff(); render(); }
+    // вернулись в приложение, окно терменвокса открыто — камера снова сама
+    else if (document.visibilityState === 'visible' && host && cfg().camAuto && S.state === 'off') camOn(true);
+  });
 }
 
 export default {
@@ -515,6 +530,7 @@ export default {
     bind();
     ro = new ResizeObserver(() => draw());
     ro.observe(host);
+    if (cfg().camAuto) camOn(true); // камеру уже разрешали и включали — сразу
   },
   resize(sz) { size = sz; render(); },
   // Окно закрыто — камера выключается всегда (и в сессии): снимать без открытого окна незачем

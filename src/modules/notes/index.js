@@ -9,7 +9,7 @@ import { fileSongs, inSong } from '../../core/files.js';
 import { lyricsHTML, chordsIn, degreesIn } from '../../music/lyrics.js';
 import { tonicIsMinor } from '../../music/degrees.js';
 import { detectKey, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
-import { isPdf, openPdf, createPdfView, closePdfDoc } from './pdf.js';
+import { isPdf, openPdf, createPdfView, closePdfDoc, sniffPdf } from './pdf.js';
 // Шрифт нот и звуковой банк — файлы проекта, никаких CDN
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
 import SONIVOX from '@coderline/alphatab/soundfont/sonivox.sf3?url';
@@ -130,6 +130,8 @@ async function openPdfRec(rec) {
 async function openTab(rec) {
   st().lastTab = rec.id; // при следующем запуске откроется он же, с того же места
   ctx.store.save();
+  // загруженный раньше PDF без расширения и типа — узнать по содержимому (один раз, потом запомнено)
+  if (!isPdf(rec) && rec.blob && (await sniffPdf(rec.blob))) { rec.fmt = 'pdf'; ctx.files.save(rec); }
   if (isPdf(rec)) { openPdfRec(rec); return; }
   closePdf();
   AT.state = 'loading';
@@ -382,7 +384,7 @@ async function onFile(e) {
   if (!f) return;
   const song = ctx.song();
   const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type,
-    fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' ? 'pdf' : 'score',
+    fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' || (await sniffPdf(f)) ? 'pdf' : 'score',
     songs: song ? [song.id] : [], created: Date.now(), blob: f };
   if (!(await ctx.files.add(rec))) ctx.ui.toast(ctx.t('notSaved'));
   st().sec = 'tabs';

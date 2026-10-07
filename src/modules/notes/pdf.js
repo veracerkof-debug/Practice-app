@@ -7,6 +7,17 @@ import PdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker';
 export const ZOOM_MIN = 0.5, ZOOM_MAX = 4;
 export const isPdf = (rec) => !!rec && (rec.type === 'application/pdf' || /\.pdf$/i.test(rec.fileName || '') || rec.fmt === 'pdf');
 
+// PDF по содержимому: «%PDF-» в начале файла (стандарт допускает немного мусора перед ним). На Android файл из
+// «Загрузок» или с Диска часто приходит без расширения и без типа — по имени его не узнать
+export function pdfBytes(bytes) {
+  const n = Math.min(bytes.length - 4, 1024);
+  for (let i = 0; i < n; i++) if (bytes[i] === 0x25 && bytes[i + 1] === 0x50 && bytes[i + 2] === 0x44 && bytes[i + 3] === 0x46 && bytes[i + 4] === 0x2d) return true;
+  return false;
+}
+export async function sniffPdf(blob) {
+  try { return pdfBytes(new Uint8Array(await blob.slice(0, 1029).arrayBuffer())); } catch { return false; }
+}
+
 let lib = null;
 const loadLib = () => lib || (lib = import('pdfjs-dist/legacy/build/pdf.mjs').catch((e) => { lib = null; throw e; }));
 

@@ -85,3 +85,14 @@ describe('камень «Минимала»', async () => {
     expect(Math.max(...m.V.map((p) => Math.hypot(...p)))).toBeCloseTo(1, 5);
   });
 });
+
+describe('PDF по содержимому', async () => {
+  const { pdfBytes } = await import('../src/modules/notes/pdf.js');
+  const enc = (s) => new TextEncoder().encode(s);
+  it('«%PDF-» в начале или после мусора — PDF; Guitar Pro и пустое — нет', () => {
+    expect(pdfBytes(enc('%PDF-1.7\n...'))).toBe(true);
+    expect(pdfBytes(enc('\r\n  junk %PDF-1.4'))).toBe(true);
+    expect(pdfBytes(enc('\x18FICHIER GUITAR PRO v5.00'))).toBe(false);
+    expect(pdfBytes(new Uint8Array(0))).toBe(false);
+  });
+});
