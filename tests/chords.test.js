@@ -123,6 +123,10 @@ describe('гармония соло пальцами', () => {
   });
   it('рок и кино — точные интервалы', () => {
     expect(harmOffsets('rock:3', 60, C)).toEqual([7, 12]);
+    expect(harmOffsets('rock:2', 64, C)).toEqual([3]); // E → G: терции двух гитар по тональности
+    expect(harmOffsets('rock:7', 60, C)).toEqual([-7, 4]);
+    expect(harmOffsets('classic:6', 60, C)).toEqual([9]); // секста сверху: C → A
+    expect(harmOffsets('film:4', 60, C)).toEqual([5, 9]);
     expect(harmOffsets('film:2', 61, C)).toEqual([4, 7]);
     expect(harmOffsets(null, 60, C)).toEqual([]);
   });

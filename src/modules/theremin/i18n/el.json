@@ -151,8 +151,8 @@
   "hst.jazz": "Jazz",
   "hst.rock": "Rock",
   "hst.film": "Film",
-  "hstHint.classic": "2 — third above, 3 — triad, 4 — chorale below, thumb to pinky — octave below, to ring — sixth below.",
-  "hstHint.jazz": "2 — block chord under the melody, 3 — fourths, 4 — upper structure a tone higher, thumb to pinky — fifth and bass, to ring — shell with bass.",
-  "hstHint.rock": "2 — fifth below, 3 — power (fifth and octave), 4 — octaves up and down, thumb to pinky — fourth below, to ring — fifth and octave below.",
-  "hstHint.film": "2 — parallel major triad, 3 — minor, 4 — open fifths, thumb to pinky — sus2, to ring — major seventh."
+  "hstHint.classic": "2 — third above, 3 — triad, 4 — chorale below (third and sixth), thumb to pinky — sixth above, to ring — sixth below.",
+  "hstHint.jazz": "2 — block chord under the melody, 3 — fourths, 4 — upper structure a tone higher, thumb to pinky — shell (third and seventh below), to ring — drop 2.",
+  "hstHint.rock": "2 — twin-guitar thirds, 3 — power (fifth and octave), 4 — sixth above, thumb to pinky — fourth below, to ring — fifth below and third above.",
+  "hstHint.film": "2 — parallel major triad, 3 — minor, 4 — fourth with sixth, thumb to pinky — sus2, to ring — major seventh."
 }

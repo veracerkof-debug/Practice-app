@@ -157,8 +157,8 @@
   "hst.jazz": "Jaz",
   "hst.rock": "Rok",
   "hst.film": "Kino",
-  "hstHint.classic": "2 — yuqoridan tersiya, 3 — uchtovush, 4 — pastdan xoral, katta barmoq jimjiloqqa — pastdan oktava, nomsiz barmoqqa — pastdan seksta.",
-  "hstHint.jazz": "2 — kuy ostida blok-akkord, 3 — kvartalar, 4 — bir ton yuqori «ustki tuzilma», katta barmoq jimjiloqqa — kvinta va bas, nomsiz barmoqqa — bas bilan shell.",
-  "hstHint.rock": "2 — pastdan kvinta, 3 — «pauer» (kvinta va oktava), 4 — yuqori va pastga oktavalar, katta barmoq jimjiloqqa — pastdan kvarta, nomsiz barmoqqa — pastdan kvinta va oktava.",
-  "hstHint.film": "2 — parallel major uchtovush, 3 — minor, 4 — boʻsh kvintalar, katta barmoq jimjiloqqa — sus2, nomsiz barmoqqa — katta septima."
+  "hstHint.classic": "2 — yuqoridan tersiya, 3 — uchtovush, 4 — pastdan xoral (tersiya va seksta), katta barmoq jimjiloqqa — yuqoridan seksta, nomsiz barmoqqa — pastdan seksta.",
+  "hstHint.jazz": "2 — kuy ostida blok-akkord, 3 — kvartalar, 4 — bir ton yuqori «ustki tuzilma», katta barmoq jimjiloqqa — shell (pastdan tersiya va septima), nomsiz barmoqqa — drop 2.",
+  "hstHint.rock": "2 — ikki gitara tersiyalari, 3 — «pauer» (kvinta va oktava), 4 — yuqoridan seksta, katta barmoq jimjiloqqa — pastdan kvarta, nomsiz barmoqqa — pastdan kvinta va yuqoridan tersiya.",
+  "hstHint.film": "2 — parallel major uchtovush, 3 — minor, 4 — kvarta va seksta, katta barmoq jimjiloqqa — sus2, nomsiz barmoqqa — katta septima."
 }
