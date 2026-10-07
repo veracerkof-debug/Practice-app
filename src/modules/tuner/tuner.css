@@ -1,105 +1,120 @@
-/* Тюнер. Перенесено из legacy/practice.html (порядок правил сохранён — поздние перекрывают ранние). */
-.gauge{width:100%;max-width:300px;display:block;margin:0 auto}
-.gauge .needle{transform-origin:150px 156px;transition:transform .12s ease-out}
-.gauge .needle line{stroke:var(--ink)}
-.gauge .needle circle{fill:var(--ink)}
-.gauge .needle.ok line{stroke:#34C759}
-.gauge .needle.ok circle{fill:#34C759}
-.tnoteW{font-size:72px;font-weight:300;letter-spacing:-.03em;line-height:1;margin-top:-6px}
-.tnoteW.ok{color:#34C759}
-.toct{font-size:24px;color:var(--l2);margin-left:2px}
-.tcent{font-size:15px;color:var(--l2);margin-top:6px;min-height:20px;font-variant-numeric:tabular-nums}
-.tcent.ok{color:#34C759;font-weight:600}
-.strings{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px}
-.strings .pill{min-width:44px;padding:0 10px}
-.strings .pill.near{box-shadow:inset 0 0 0 2px var(--tint)}
-.gauge{max-width:min(420px,52vh)}
-.tnoteW{font-size:clamp(56px,10vh,96px)}
-.tnoteW{transition:color .2s,text-shadow .3s}
-.tnoteW.ok{text-shadow:0 0 30px rgba(52,199,89,.5)}
-.pane .gauge{max-width:min(100%,calc(46cqh * 1.78));height:auto}
-.pane.quarter .gauge{max-width:min(100%,calc(34cqh * 1.78))}
-.pane .tnoteW{font-size:clamp(36px,18cqmin,120px)}
-.pane.quarter .tnoteW{font-size:clamp(26px,20cqmin,60px)}
-.pane.quarter .tcent{font-size:12px;margin:0}
-.pane.quarter .thz{display:none}
-.thz{font-size:12px;min-height:16px}
-.pane.strip .tnoteW{font-size:clamp(26px,52cqh,72px);margin:0;flex:none;min-width:2.2ch;text-align:center}
-.pane.strip .tcent{font-size:12px;margin-top:2px;min-height:14px}
-.pane.strip .thz{font-size:11px;min-height:0}
-.tunbar{position:relative;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--fill2),var(--fill) 45%,color-mix(in srgb,#34C759 45%,var(--fill)) 50%,var(--fill) 55%,var(--fill2));width:100%;margin:6px 0 2px}
-.tbarc{position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--ink);border-radius:1px}
-.tbarm{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--tint);transition:left .12s ease-out,background .2s}
-.tbarm.ok{background:#34C759}
-.pane.quarter .tunbar{width:86%}
-.pane.quarter .tnoteW{font-size:clamp(26px,24cqmin,64px)}
-.pane.quarter .tnoteW{font-size:clamp(28px,30cqw,64px)}
-.pane.quarter .tunbar{width:90%}
-.pane.quarter .tcent{font-size:12px}
-.pane.quarter .thz{font-size:10px}
-.pane.half .gauge{max-width:min(100%,calc(36cqh * 1.78))}
-.pane.half .tnoteW{font-size:clamp(34px,14cqh,72px)}
-.pane.half .strings{margin-top:4px}
-.pane .strings .pill{min-height:clamp(36px,9cqmin,54px);min-width:clamp(40px,10cqmin,60px);font-size:clamp(14px,4.4cqmin,21px);font-weight:600}
-.pane.full .gauge{max-width:min(100%,calc(44cqh * 1.78))!important}
-.pane.strip .tnoteW{font-size:clamp(24px,34cqh,50px)!important;min-width:2ch}
-.pane.strip .tmid{min-width:0}
-.tgw{flex:1;min-height:0;display:flex;justify-content:center;align-items:flex-end}
-.tgw .gauge{height:100%;width:auto;max-width:100%!important;max-height:100%}
-.tclean{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:0;text-align:center}
+/* Тюнер: шкалы (стрелка, стробоскоп-панорама, полоса, кольцо), режим новичка со струнами. Движение — из кадров JS,
+   поэтому здесь нет transition на положении стрелки и точки (иначе они запаздывают и дёргаются) */
+.tclean{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:0;width:100%;text-align:center}
 .tgear{position:absolute!important;top:0;right:0;z-index:2;color:var(--l2)}
-.tvis{width:100%;display:flex;justify-content:center;flex:1;min-height:0;max-height:46cqh}
-.tclean .tgw{width:100%;display:flex;justify-content:center;align-items:flex-end}
-.tclean .tgw .gauge{width:min(100%,520px);height:auto;max-height:100%}
-.tclean .tnoteW{font-size:clamp(56px,20cqmin,130px);margin:0}
-.tclean.half .tnoteW{font-size:clamp(36px,15cqh,72px)}
-.thz{font-size:clamp(15px,4cqmin,20px);color:var(--l2);font-variant-numeric:tabular-nums}
-.tclean .tcent{font-size:clamp(15px,4cqmin,19px);min-height:24px;margin:0}
-.tbot{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:8px}
-.tmicb{width:clamp(56px,16cqmin,80px)!important;height:clamp(56px,16cqmin,80px)!important}
-.tmode{font-size:12px;color:var(--l2)}
-.tstr2{margin:6px 0 0;flex-wrap:wrap;justify-content:center}
-.tclean.half{gap:2px}
-.tclean.half .tbot{margin-top:2px}
-.tclean.half .tmicb{width:48px!important;height:48px!important}
-.tbig{width:100%;display:flex;align-items:center;padding:0 6px}
-.tbig .tunbar{height:34px;border-radius:17px;width:100%}
-.tbig .tbarm{width:26px;height:26px;margin-left:-13px;top:4px}
-.tstrobe{position:relative;width:100%;align-self:center;height:min(120px,30cqh);display:flex;flex-direction:column;gap:6px;justify-content:center}
-.tstrobe i{display:block;height:28%;border-radius:10px;background:repeating-linear-gradient(90deg,var(--ink) 0 14px,transparent 14px 28px);background-position-x:var(--sx,0);opacity:.75;transition:background-color .2s}
-.tstrobe i:nth-child(2){background-size:56px 100%;background-image:repeating-linear-gradient(90deg,var(--ink) 0 28px,transparent 28px 56px);opacity:.5}
-.tstrobe i:nth-child(3){background-image:repeating-linear-gradient(90deg,var(--ink) 0 7px,transparent 7px 14px);opacity:.35}
-.tstrobe.ok i{background-color:color-mix(in srgb,#34C759 25%,transparent)}
+.tvis{width:100%;display:flex;justify-content:center;align-items:center;flex:1;min-height:0;max-height:46cqh}
+.tclean.beg .tvis{max-height:36cqh}
+
+/* нота и подписи */
+.tnoteW{font-size:clamp(48px,18cqmin,120px);font-weight:300;letter-spacing:-.03em;line-height:1;transition:color .25s,text-shadow .35s}
+.tnoteW.ok{color:#1fa64a;text-shadow:0 0 28px rgba(52,199,89,.45)}
+.toct{font-size:.34em;color:var(--l2);margin-left:2px}
+.tcent{font-size:clamp(14px,4cqmin,19px);min-height:24px;color:var(--l2);font-variant-numeric:tabular-nums;transition:color .2s}
+.tcent.ok{color:#1fa64a;font-weight:600}
+.tcent.flat,.tcent.sharp{color:var(--tint-text)}
+.thz{font-size:clamp(12px,3.4cqmin,15px);color:var(--l2);font-variant-numeric:tabular-nums}
+.tmode{font-size:12px;color:var(--l2);margin-top:2px}
+.tnomic{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;font-size:14px;color:var(--l2)}
+
+/* стрелка */
+.tgw{width:100%;height:100%;display:flex;justify-content:center;align-items:flex-end}
+.gauge{width:min(100%,520px);height:auto;max-height:100%;display:block}
+.gtrack{fill:none;stroke:var(--fill);stroke-width:12;stroke-linecap:round}
+.gsoft{fill:none;stroke:url(#tgz);stroke-width:12}
+.gzone{fill:none;stroke:#34C759;stroke-width:12;stroke-linecap:round;opacity:.55;transition:opacity .25s,filter .25s}
+.gzone.ok{opacity:1;filter:drop-shadow(0 0 6px rgba(52,199,89,.7))}
+.gtick{stroke:var(--l3);stroke-width:1.5;stroke-linecap:round}
+.gtick.big{stroke:var(--l2);stroke-width:2.2}
+.gtick.zero{stroke:var(--ink);stroke-width:2.6}
+.glab{font:500 11px var(--font);fill:var(--l2);text-anchor:middle}
+.gfs{font:600 20px var(--font);fill:var(--l3);text-anchor:middle;transition:fill .2s}
+.gfs.on{fill:var(--tint)}
+.needle path{fill:var(--ink);transition:fill .25s}
+.needle circle{fill:var(--ink);transition:fill .25s}
+.needle .hub{fill:var(--cell)}
+.needle.ok path,.needle.ok circle:not(.hub){fill:#34C759}
+
+/* полоса */
+.tbarw{width:100%;display:flex;align-items:center;padding:0 4px}
+.tbar{display:flex;align-items:center;gap:8px;width:100%}
+.tbfs{font-size:20px;font-weight:600;color:var(--l3);transition:color .2s;width:14px}
+.tbar.flat .tbfs:first-child,.tbar.sharp .tbfs:last-child{color:var(--tint)}
+.tbtrack{position:relative;flex:1;height:38px;border-radius:19px;background:var(--fill)}
+.tbsoft,.tbzone{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);border-radius:19px}
+.tbsoft{background:linear-gradient(90deg,transparent,rgba(52,199,89,.22),transparent)}
+.tbzone{background:rgba(52,199,89,.5);transition:background .25s,box-shadow .25s}
+.tbar.ok .tbzone{background:#34C759;box-shadow:0 0 14px rgba(52,199,89,.6)}
+.tbtick{position:absolute;top:30%;bottom:30%;width:1.5px;margin-left:-.75px;background:var(--l3)}
+.tbmid{position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--ink)}
+.tbm{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--tint);box-shadow:0 2px 8px rgba(0,0,0,.2);transition:background .25s}
+.tbar.ok .tbm{background:#34C759}
+.tbar.sm .tbtrack{height:12px;border-radius:6px}
+.tbar.sm .tbsoft,.tbar.sm .tbzone{border-radius:6px}
+.tbar.sm .tbm{width:16px;height:16px;margin:-8px 0 0 -8px}
+.tbar.sm .tbtick{display:none}
+.tbar.sm .tbfs{font-size:14px;width:10px}
+
+/* кольцо */
 .tringw{position:relative;height:100%;aspect-ratio:1;max-width:100%}
-.tring{width:100%;height:100%}
+.tring{width:100%;height:100%;display:block}
 .trtrack{fill:none;stroke:var(--fill);stroke-width:10}
-.trzone{fill:none;stroke:#34C759;stroke-width:10;stroke-linecap:round;opacity:.55}
-.trdot{transform-origin:100px 100px;transition:transform .08s}
-.trdot circle{fill:var(--tint)}
+.trsoft{fill:none;stroke:rgba(52,199,89,.2);stroke-width:10}
+.trzone{fill:none;stroke:#34C759;stroke-width:10;stroke-linecap:round;opacity:.55;transition:opacity .25s}
+.tringw.ok .trzone{opacity:1}
+.trdev{fill:none;stroke:var(--tint);stroke-width:4;stroke-linecap:round;opacity:.7}
+.trzero{stroke:var(--ink);stroke-width:2;stroke-linecap:round}
+.trdot circle{fill:var(--tint);stroke:var(--cell);stroke-width:3;transition:fill .25s}
 .trdot.ok circle{fill:#34C759}
-.tringw.ok .trtrack{stroke:color-mix(in srgb,#34C759 30%,var(--fill))}
+.tringw.ok .trtrack{stroke:color-mix(in srgb,#34C759 22%,var(--fill))}
 .tringin{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
-.tringin .tnoteW{font-size:clamp(48px,16cqmin,110px)!important}
-.theadw{width:min(100%,300px);margin-top:4px}
-.thead{width:100%;height:auto;max-height:24cqh}
-.hsk{fill:color-mix(in srgb,#A2845E 25%,var(--cell));stroke:color-mix(in srgb,#A2845E 50%,transparent);stroke-width:1.5}
-.hstr{stroke:var(--l3);stroke-width:1}
-.hpost{stroke:var(--l3);stroke-width:3}
-.hpeg circle{fill:var(--fill2);transition:fill .15s}
-.hpeg text{font:700 11px var(--font);fill:var(--ink)}
-.hpeg.on circle{fill:var(--tint)}
-.hpeg.on text{fill:var(--on-tint)}
-.tinst{font-size:14px;color:var(--l2);font-weight:600}
-.tinst.act{color:var(--tint-text)}
-.tinst.ok{color:#1f9d45}
+.tringin .tnoteW{font-size:clamp(40px,15cqmin,104px)}
+
+/* стробоскоп-панорама */
+.tpano{position:relative;width:100%;height:min(100%,170px);min-height:90px;border-radius:16px;background:var(--fill);overflow:hidden}
+.tpano canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* режим новичка */
+.twarn{display:flex;align-items:flex-start;gap:8px;width:100%;box-sizing:border-box;padding:8px 44px 8px 10px;border-radius:12px;background:color-mix(in srgb,#FF9500 12%,var(--cell));
+  color:var(--ink);font-size:13px;line-height:1.35;text-align:left}
+.twarn svg{flex:none;width:18px;height:18px;fill:none;stroke:#C27C00;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
+.tstrs{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;width:100%}
+.tsb{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:46px;min-height:52px;padding:4px 8px;border-radius:14px;background:var(--fill);color:var(--ink);
+  transition:background .2s,box-shadow .2s,transform .15s}
+.tsb b{font-size:18px;font-weight:600;line-height:1}
+.tsb b sub{font-size:10px;font-weight:500;color:var(--l2);vertical-align:baseline;margin-left:1px}
+.tsb small{font-size:10px;color:var(--l2);margin-top:2px}
+.tsb .tsok{position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#34C759;color:#fff;font-size:11px;font-style:normal;line-height:18px;display:none}
+.tsb.done .tsok{display:block}
+.tsb.near{background:color-mix(in srgb,var(--tint) 18%,var(--cell));box-shadow:inset 0 0 0 2px var(--tint);transform:translateY(-2px)}
+.tsb.lock{box-shadow:inset 0 0 0 2px var(--ink)}
+
+/* размеры окна */
+.tclean.half{gap:3px}
+.tclean.half .twarn{font-size:12px;padding:6px 40px 6px 8px}
+.tclean.half .tnoteW{font-size:clamp(34px,14cqh,64px)}
+.tclean.half .tsb{min-height:42px;min-width:40px}
+.tclean.half .tsb small{display:none}
+.tq{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%}
+.tq .tnoteW{font-size:clamp(30px,30cqw,64px)}
+.tq .tcent{font-size:12px;min-height:16px}
+.ts{flex:1;display:flex;align-items:center;gap:12px;width:100%}
+.ts .tnoteW{font-size:clamp(26px,40cqh,52px);min-width:2.2ch}
+.tsmid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ts .tcent{font-size:12px;min-height:14px;text-align:left}
+
+/* выбор вида в настройках */
 .tstys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .tsty{background:var(--cell);border-radius:14px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;position:relative}
 .tsty.on{box-shadow:0 0 0 2px var(--tint)}
 .tsi{width:44px;height:30px;position:relative;display:block}
 .tsi.needle{border:3px solid var(--l3);border-bottom:0;border-radius:44px 44px 0 0}
 .tsi.needle i:first-child{position:absolute;left:50%;bottom:0;width:2px;height:26px;background:var(--tint);transform:rotate(18deg);transform-origin:bottom}
-.tsi.strobe{background:repeating-linear-gradient(90deg,var(--ink) 0 5px,transparent 5px 10px);border-radius:6px;opacity:.6}
+.tsi.strobe{border-radius:6px;background:linear-gradient(var(--fill),var(--fill)) top/100% 55% no-repeat,repeating-linear-gradient(90deg,var(--ink) 0 5px,transparent 5px 10px) bottom/100% 40% no-repeat;opacity:.7}
+.tsi.strobe i:first-child{position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--tint)}
 .tsi.bar{height:10px;margin-top:10px;border-radius:5px;background:var(--fill2)}
 .tsi.bar i:first-child{position:absolute;left:58%;top:-3px;width:16px;height:16px;border-radius:50%;background:var(--tint)}
 .tsi.ring{width:30px;border:3px solid var(--l3);border-radius:50%}
 .tsi.ring i:first-child{position:absolute;top:-6px;left:16px;width:10px;height:10px;border-radius:50%;background:var(--tint)}
+.tclean.half .thz{display:none}
+.tclean.half.beg .tvis{max-height:none}
+.tclean.half .tmode{display:none}
