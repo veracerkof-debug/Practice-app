@@ -48,9 +48,10 @@ const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><
 
 function homeMonoHTML(app) {
   const st = app.store.state.settings, plain = !!st.toolsOnly, now = new Date(), owner = extOwner(st);
+  // (имя приложения в строчке — с lang="el": прописными по-гречески, без ударения)
   // Приветствие — место, где приложение потом будет говорить: спрашивать, предлагать, напоминать (без даты: это не календарь)
   let h = '<div class="mono-home">' + topbar(logoHTML()) + '<div class="mvoice" aria-live="polite"><h1 class="mhello">' + esc(owner ? t('mono.creator', { g: greet(now.getHours()) }) : greet(now.getHours())) + '</h1>' +
-    (owner ? '<p class="mrole">' + esc(roleLine(now)).replace('Μελέτη', '<span lang="el">Μελέτη</span>') + '</p>' : '') // прописными по-гречески — без ударения + '</div>';
+    (owner ? '<p class="mrole">' + esc(roleLine(now)).replace('Μελέτη', '<span lang="el">Μελέτη</span>') + '</p>' : '') + '</div>';
   if (!plain) {
     const w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st), today = weekday(Date.now()), WD = weekdays();
     h += mhead(t('home.week'), '<button class="mbtn" data-pp="' + (st.configured ? 'stats' : 'week') + '" aria-label="' + esc(t('home.stats')) + '">' + ARROW + '</button>') +
