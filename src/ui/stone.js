@@ -7,6 +7,12 @@
 
 export const EDGE_H = 300, FORM_H = 3000;
 
+// Сколько камень «прошёл» за эти часы. По опытам с галькой в потоке (Кюнен, Кранбейн) гранит теряет острые рёбра
+// за первые ~10–20 км, а округлым становится за сотни километров. Наша кривая: половина рёбер — ~210 ч, почти
+// вся форма — ~7000 ч; с 50 м на час это ~10 км и ~350 км — в масштабе настоящей гальки. Цифра образная, примерная.
+export const KM_PER_H = 0.05;
+export const stoneKm = (hours) => Math.max(0, +hours || 0) * KM_PER_H;
+
 // Насколько камень сгладился: edges — рёбра, form — форма (0 — как с дороги, 1 — круглая галька)
 export function wear(hours) {
   const h = Math.max(0, +hours || 0);
@@ -162,15 +168,18 @@ export function stoneView(canvas, { seed = 1, hours = 0, detail = 3, spin = true
     drag.moved += Math.abs(dx) + Math.abs(dy);
     Object.assign(drag, { x: e.clientX, y: e.clientY, t: now });
   });
-  const up = () => {
+  // касание открывается по click, а не по pointerup: иначе следующий за ним click попадает в фон открытой шторки и закрывает её
+  let tapped = false;
+  const up = (e) => {
     if (!drag) return;
-    const tap = drag.moved < 8;
+    tapped = e.type === 'pointerup' && drag.moved < 8;
     drag = null;
-    if (tap) { vx = vy = 0; if (onTap) onTap(); }
+    if (tapped) vx = vy = 0;
     kick();
   };
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('click', (e) => { if (!tapped || !onTap) return; tapped = false; e.stopPropagation(); onTap(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') kick(); });
 
   kick();

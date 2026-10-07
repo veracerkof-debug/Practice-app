@@ -208,3 +208,7 @@
 :root[data-style="mono"] .fchip i { background: none !important; width: auto; height: auto; font-style: normal; }
 :root[data-style="mono"] .fchip i::before { content: var(--mg, "·"); }
 :root[data-style="mono"] .fchip.tagf::before { content: var(--mg, none); margin-right: 4px; }
+/* путь камня в километрах (src/ui/stone.js: stoneKm) */
+.stkm { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 16px 0 8px; text-align: center; }
+.stkm b { font-size: 28px; font-weight: 400; letter-spacing: .01em; }
+.stkm span { font-size: 13px; line-height: 1.35; color: var(--l2); max-width: 300px; }
