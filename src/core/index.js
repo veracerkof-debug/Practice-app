@@ -15,6 +15,9 @@ import { createShared } from './modules.js';
 import { createPomodoro, pomoDefaults } from './pomodoro.js';
 import { pause as pauseActive, resume as resumeActive, awayStart, awayEnd, countsWhileHidden } from './session.js';
 import { createStopwatch } from './stopwatch.js';
+import { createActivity } from './activity.js';
+import { initNoSound } from './nosound.js';
+import { BUSES } from '../audio/mixer.js';
 import { toast, confirm } from '../ui/index.js';
 import { createFiles } from './files.js';
 
@@ -26,6 +29,7 @@ export function boot(root) {
   applyTheme(store.state.settings);
   recoverToolView(store);
   let active = loadActive();
+  let activity = { hiddenAt: null, heard: 0 };
   const device = loadDevice();
   // Способ регулировки темпа в прототипе хранился в общих настройках — теперь в настройках модуля
   device.metro ??= { adj: store.state.settings.metroAdj || 'wheel' };
@@ -75,19 +79,24 @@ export function boot(root) {
   const stopwatch = createStopwatch(device.watch, { onChange: () => { saveDevice(device); watchSubs.forEach((fn) => fn()); } });
   stopwatch.subscribe = (fn) => { watchSubs.add(fn); return () => watchSubs.delete(fn); };
 
-  // Звучит ли что-то (метроном, пианино, пэды, медиа, теория) или идёт помодоро / секундомер —
-  // в обычном режиме учёта время при погасшем экране идёт только тогда
-  const sounding = () => ['metro', 'piano', 'drone', 'media', 'theory'].some((b) => audio.mixer.isActive(b)) || pomodoro.running || stopwatch.running;
+  // Звучит ли приложение (метроном, пианино, пэды, медиа, теория) с ненулевой громкостью в микшере.
+  // В обычном режиме учёта время при погасшем экране или в фоне идёт только тогда: помодоро и секундомер без звука
+  // не считаются — в фоне без звука никто не занимается
+  const soundingAudio = () => BUSES.some((b) => audio.mixer.isActive(b) && audio.mixer.value(b) > 0);
 
-  // Экран погас или вкладка скрыта: по режиму учёта сессии время «вдали» засчитывается или нет
+  // Экран погас или вкладка скрыта: по режиму учёта сессии время «вдали» засчитывается или нет.
+  // Если звук затих, пока приложение было в фоне, — «вдали» с момента, когда звук слышали последний раз
   const awayCheck = () => {
     if (!active || active.pausedAt) return;
-    const counts = document.visibilityState === 'visible' || countsWhileHidden(active.mode, sounding());
-    if (!counts && !active.awaySince) { audio.metro.flush(); awayStart(active); saveActive(active); }
+    const counts = document.visibilityState === 'visible' || countsWhileHidden(active.mode, soundingAudio());
+    const now = Date.now(), at = Math.min(now, Math.max(activity.hiddenAt || now, activity.heard || 0));
+    if (!counts && !active.awaySince) { audio.metro.flush(); awayStart(active, at); saveActive(active); }
     else if (counts && active.awaySince) { audio.metro.flush(); awayEnd(active); saveActive(active); }
   };
-  document.addEventListener('visibilitychange', awayCheck);
+  document.addEventListener('visibilitychange', () => awayCheck());
   setInterval(awayCheck, 15000);
+  // после перезагрузки: «вдали», начатое при закрытии страницы, заканчивается сразу
+  setTimeout(awayCheck, 0);
 
   const files = createFiles();
 
@@ -101,16 +110,21 @@ export function boot(root) {
   }
 
   const app = {
-    store, device, audio, modules, pomodoro, stopwatch, sounding, files, confirmUpload,
+    store, device, audio, modules, pomodoro, stopwatch, sounding: soundingAudio, soundingAudio, files, confirmUpload,
     shared: createShared(),
     saveDevice: () => saveDevice(device),
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },
   };
   const session = createSessionScreen(app);
+  app.session = session;
+  // Признаки занятия: касания, звук, микрофон — и проверки бездействия сессии и секундомера
+  activity = app.activity = createActivity(app, { soundingAudio });
   app.startSession = (type, songId, tool) => session.start(type, songId, tool);
   createShell(app, root);
   createMixerDrawer(app);
+  // Играет, но не слышно (микшер, громкость устройства) — уведомление внизу
+  initNoSound(app);
   // Сессия, начатая до перезагрузки страницы, продолжается
   session.resume();
   // «Назад» на Android закрывает открытое по очереди, а не всё приложение

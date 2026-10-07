@@ -95,5 +95,6 @@ export function createMixerDrawer(app) {
   });
   document.addEventListener('pointerdown', (e) => { if (open && !el.contains(e.target)) setOpen(false); }, true);
   setInterval(tick, 350);
+  app.openMixer = () => setOpen(true);
   return { render };
 }

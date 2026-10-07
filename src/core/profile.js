@@ -22,6 +22,9 @@ export const priorHours = (settings) => Math.max(0, Math.min(PRIOR_MAX, +((setti
 // Всё время музыканта, с: записанные занятия плюс опыт до приложения (для значка мастерства и «всего»)
 export const lifetimeSec = (sessions, settings) => totalTime(sessions) + priorHours(settings) * 3600;
 
+// Время для значка мастерства, с: без пауз тишины, отмеченных подтверждением игры звуком (rec.quiet)
+export const gemSec = (sessions, settings) => lifetimeSec(sessions, settings) - sessions.reduce((s, r) => s + Math.min(r.dur || 0, r.quiet || 0), 0);
+
 // Оценка опыта: годы занятий × часов в неделю × 52 недели
 export const estimateHours = (years, perWeek) => Math.max(0, Math.round((+years || 0) * 52 * (+perWeek || 0)));
 

@@ -8,7 +8,10 @@ export const LS_ACTIVE = 'practice.v1.active';
 export const LS_TV = 'practice.v1.tv';
 
 export const MIN_SESSION_S = 60;      // короче — не попадает в статистику
-export const IDLE_MS = 45 * 60000;    // бездействие → «Ты ещё играешь?»
+export const IDLE_MS = 45 * 60000;    // ни одного касания (даже под метроном или секундомером) → «Занятие продолжается?»
+export const QUIET_MS = 10 * 60000;   // ничего не звучит и ни одного действия → сессия завершается
+export const ASK_WAIT_MS = 3 * 60000; // вопрос без ответа → завершение по последнему действию
+export const GEM_QUIET_MS = 5 * 60000; // при подтверждении игры звуком: тишина дольше не идёт в значок мастерства
 export const MIN_TOOL_S = 10;         // инструмент вне сессии считается, если открыт дольше
 export const BPM_MIN_S = 15;          // темп засчитывается, если на нём играли не меньше
 
@@ -31,8 +34,8 @@ export const trackMode = (settings) => (settings.trackMode === 'strict' ? 'stric
 export function createActive({ type, songId = null, tool = null, mode = 'normal' }, now = Date.now()) {
   return {
     id: uid(), type, songId: songId || null, tool: tool || null, mode,
-    startedAt: now, pausedTotal: 0, pausedAt: null, awayTotal: 0, awaySince: null,
-    bpmTime: {}, last: now, asked: false,
+    startedAt: now, pausedAt: null, awaySince: null, pauses: [], aways: [],
+    bpmTime: {}, last: now, heard: 0, quiet: 0, askedAt: null, askEnd: null,
   };
 }
 
@@ -40,18 +43,37 @@ export function createActive({ type, songId = null, tool = null, mode = 'normal'
 export const isSameActive = (a, type, songId, tool) =>
   a.type === type && (type !== 'song' || a.songId === songId) && (type !== 'tool' || a.tool === tool);
 
-// Не засчитанное время «вдали»: экран погас, а по режиму учёта время идти не должно
-const away = (a, now) => (a.awayTotal || 0) + (a.awaySince ? now - a.awaySince : 0);
+// Пауза и время «вдали» (экран погас, а по режиму учёта время идти не должно) хранятся отрезками [от, до]:
+// так завершение задним числом (по последнему действию) не вычитает то, что было уже после него.
+// Сессии, начатые до появления отрезков, хранили только суммы — переводим их в отрезки от начала, друг за другом.
+function segs(a) {
+  const p = a.pausedTotal || 0;
+  if (!a.pauses) a.pauses = p ? [[a.startedAt, a.startedAt + p]] : [];
+  if (!a.aways) a.aways = a.awayTotal ? [[a.startedAt + p, a.startedAt + p + a.awayTotal]] : [];
+  return a;
+}
+const clip = (list, open, from, to) => list.reduce((s, [x, y]) => s + Math.max(0, Math.min(y, to) - Math.max(x, from)), 0) +
+  (open ? Math.max(0, to - Math.max(open, from)) : 0);
 
-export const elapsed = (a, now = Date.now()) =>
-  a ? ((a.pausedAt || now) - a.startedAt - a.pausedTotal - away(a, a.pausedAt || now)) / 1000 : 0;
+// Засчитанное время между from и to, мс: без пауз и без времени «вдали»
+export function countedMs(a, from, to) {
+  if (to <= from) return 0;
+  segs(a);
+  const pauses = clip(a.pauses, a.pausedAt, from, to);
+  // «вдали» внутри паузы не вычитается второй раз
+  const aways = clip(a.aways, a.awaySince, from, to) - a.aways.concat(a.awaySince ? [[a.awaySince, to]] : [])
+    .reduce((s, [x, y]) => s + clip(a.pauses, a.pausedAt, Math.max(x, from), Math.min(y, to)), 0);
+  return Math.max(0, to - from - pauses - aways);
+}
+
+export const elapsed = (a, now = Date.now()) => (a ? countedMs(a, a.startedAt, a.pausedAt || now) / 1000 : 0);
 
 export function awayStart(a, now = Date.now()) {
   if (!a.awaySince && !a.pausedAt) a.awaySince = now;
 }
 
 export function awayEnd(a, now = Date.now()) {
-  if (a.awaySince) { a.awayTotal = (a.awayTotal || 0) + now - a.awaySince; a.awaySince = null; }
+  if (a.awaySince) { segs(a).aways.push([a.awaySince, Math.max(a.awaySince, now)]); a.awaySince = null; }
 }
 
 // Должно ли время идти, пока экран погашен: строгий режим — нет; обычный — пока что-то звучит
@@ -64,7 +86,7 @@ export function pause(a, now = Date.now()) {
 
 export function resume(a, now = Date.now()) {
   if (a.pausedAt) {
-    a.pausedTotal += now - a.pausedAt;
+    segs(a).pauses.push([a.pausedAt, Math.max(a.pausedAt, now)]);
     a.pausedAt = null;
     a.pomoPaused = false;
   }
@@ -72,18 +94,50 @@ export function resume(a, now = Date.now()) {
 
 export const togglePause = (a, now = Date.now()) => (a.pausedAt ? resume(a, now) : pause(a, now));
 
-// Любое касание в сессии
+// Любое действие в сессии (касание, клавиша). Касание при открытом вопросе — ещё не ответ
 export function touch(a, now = Date.now()) {
   a.last = now;
 }
 
-export const shouldAskIdle = (a, { metroRunning = false } = {}, now = Date.now()) =>
-  !!a && !a.asked && !metroRunning && !a.pausedAt && now - a.last > IDLE_MS;
+// Последний признак занятия: действие или звук (звучит приложение или микрофон слышит игру)
+export const lastActivity = (a) => Math.max(a.last || a.startedAt, a.heard || 0);
 
-// Ответ «Да, играю»
+// Слышен звук. mic — сессию слушает «подтверждение игры звуком»: паузы тишины дольше GEM_QUIET_MS
+// копятся в a.quiet (мс) и не идут в значок мастерства
+export function noteHeard(a, now = Date.now(), { mic = false } = {}) {
+  if (!a || a.pausedAt) return;
+  if (mic) {
+    const from = Math.max(a.heard || 0, a.startedAt, a.micFrom || 0);
+    if (now - from > GEM_QUIET_MS) a.quiet = (a.quiet || 0) + countedMs(a, from, now);
+  }
+  a.heard = now;
+}
+
+// Что делать с бездействием: null, { ask, endAt } — спросить «Занятие продолжается?», { end, endAt } — завершить.
+// sounding — звучит приложение (метроном, пэды, запись); mic — микрофон слушает игру, и тишине можно верить.
+// endAt — до какого момента засчитывается время, если ответа не будет
+export function idleAction(a, { sounding = false, mic = false } = {}, now = Date.now()) {
+  if (!a || a.pausedAt) return null;
+  if (a.askedAt) return now - a.askedAt > ASK_WAIT_MS ? { end: true, endAt: a.askEnd || a.last } : null;
+  const act = lastActivity(a);
+  // тишина и ни одного действия: с микрофоном — точно никто не играет; без него — спросить
+  if (!sounding && now - act > QUIET_MS) return mic ? { end: true, endAt: act } : { ask: true, endAt: act };
+  // долго без касаний, даже если звучит метроном или идёт секундомер
+  if (now - (a.last || a.startedAt) > IDLE_MS) return { ask: true, endAt: a.last || a.startedAt };
+  return null;
+}
+
+// Задан вопрос «Занятие продолжается?»
+export function markAsked(a, endAt, now = Date.now()) {
+  a.askedAt = now;
+  a.askEnd = endAt;
+}
+
+// Ответ «Да, занятие продолжается»
 export function confirmPlaying(a, now = Date.now()) {
   a.last = now;
-  a.asked = false;
+  a.askedAt = null;
+  a.askEnd = null;
 }
 
 // Учёт времени на темпе метронома
@@ -101,19 +155,26 @@ export function bestBpm(bpmTime) {
   return best;
 }
 
-// Итог перед экраном «Сессия завершена». endAt — при завершении по бездействию (время последнего касания)
-export function summarize(a, { endAt = null, now = Date.now() } = {}) {
-  const dur = endAt ? Math.max(0, (endAt - a.startedAt - a.pausedTotal - away(a, endAt)) / 1000) : elapsed(a, now);
-  return { dur, best: bestBpm(a.bpmTime), short: dur < MIN_SESSION_S };
+// Итог перед экраном «Сессия завершена». endAt — при завершении по бездействию (время последнего действия):
+// всё после него не засчитывается ни в статистику, ни в строгие часы.
+// quiet — секунды тишины, которые не идут в значок мастерства (только при подтверждении игры звуком)
+export function summarize(a, { endAt = null, now = Date.now(), mic = false } = {}) {
+  const to = endAt ? Math.min(endAt, a.pausedAt || now) : a.pausedAt || now;
+  const dur = countedMs(a, a.startedAt, Math.max(a.startedAt, to)) / 1000;
+  let quiet = a.quiet || 0;
+  if (mic) { const from = Math.max(a.heard || 0, a.startedAt, a.micFrom || 0); if (to - from > GEM_QUIET_MS) quiet += countedMs(a, from, to); }
+  return { dur, best: bestBpm(a.bpmTime), short: dur < MIN_SESSION_S, quiet: Math.min(dur, Math.round(quiet / 1000)) };
 }
 
-export function buildRecord(a, { dur, best, endAt = null, tag = '', note = '' }, now = Date.now()) {
-  return {
+export function buildRecord(a, { dur, best, quiet = 0, endAt = null, tag = '', note = '' }, now = Date.now()) {
+  const rec = {
     id: a.id, type: a.type, songId: a.songId, tool: a.tool || null,
     start: a.startedAt, end: endAt || now, dur: Math.round(dur),
     bpm: best, tag: tag || null, note: (note || '').trim() || null, mode: a.mode === 'strict' ? 'strict' : 'normal',
     updatedAt: now,
   };
+  if (quiet > 0) rec.quiet = Math.round(quiet);
+  return rec;
 }
 
 /* ---------- метроном и песня ---------- */

@@ -38,8 +38,14 @@ export function createStopwatch(state, { now = Date.now, onChange = () => {} } =
     // Что-то накоплено (идёт или на паузе с ненулевым временем)
     active: () => state.running || state.segs.length > 0,
     start() { if (state.running) return; state.running = true; state.since = now(); changed(); },
-    pause() { if (!state.running) return; state.segs.push([state.since, now()]); state.running = false; state.since = null; changed(); },
-    toggle() { state.running ? sw.pause() : sw.start(); },
+    // at — задним числом (бездействие, фон без звука): время после него не засчитывается
+    pause(at = now()) {
+      if (!state.running) return;
+      const end = Math.min(at, now());
+      if (end > state.since) state.segs.push([state.since, end]);
+      state.running = false; state.since = null; changed();
+    },
+    toggle() { if (state.running) sw.pause(); else sw.start(); },
     reset() { state.running = false; state.since = null; state.segs = []; changed(); },
     // Сколько секунд попадёт в статистику: время секундомера минус уже учтённое
     credit(sessions, active = null, t = now()) {

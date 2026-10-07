@@ -146,13 +146,21 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
 }
 
 // Инструмент вне сессии: время идёт, пока страница видна (в обычном режиме учёта — и при погасшем экране,
-// пока что-то звучит); при закрытии — в статистику (от 10 с)
+// пока что-то звучит); 10 минут без звука и действий — не идёт (с последнего действия); при закрытии — в статистику (от 10 с)
 export function trackToolTime(app, toolId) {
-  const mode = trackMode(app.store.state.settings);
-  const counting = () => document.visibilityState === 'visible' || countsWhileHidden(mode, app.sounding ? app.sounding() : false);
+  const mode = trackMode(app.store.state.settings), act = app.activity;
+  const quiet = () => !!act && act.quiet();
+  const counting = () => (document.visibilityState === 'visible' || countsWhileHidden(mode, app.sounding ? app.sounding() : false)) && !quiet();
   const tv = createToolView(toolId, { visible: counting() });
-  const onVis = () => { toolViewVisibility(tv, counting()); saveToolView(tv); };
+  const onVis = () => {
+    const on = counting();
+    // затихло — время останавливается на последнем действии, а не на моменте проверки
+    toolViewVisibility(tv, on, !on && quiet() ? Math.max(act.last(), tv.seg || 0) : Date.now());
+    saveToolView(tv);
+  };
   document.addEventListener('visibilitychange', onVis);
+  addEventListener('pointerdown', onVis, { passive: true });
+  act?.toolOpen(true);
   saveToolView(tv);
   const hb = setInterval(onVis, 5000);
   return {
@@ -160,6 +168,9 @@ export function trackToolTime(app, toolId) {
     stop() {
       clearInterval(hb);
       document.removeEventListener('visibilitychange', onVis);
+      removeEventListener('pointerdown', onVis);
+      act?.toolOpen(false);
+      onVis();
       const ms = toolViewMs(tv);
       saveToolView(null);
       // То, что уже записал секундомер, второй раз не засчитывается

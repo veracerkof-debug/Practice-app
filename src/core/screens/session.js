@@ -10,7 +10,7 @@ import { fmtDur, fmtClock } from '../format.js';
 import { getPct, ensureLib } from '../library.js';
 import { isOn } from '../settings.js';
 import {
-  createActive, isSameActive, elapsed, togglePause, touch, shouldAskIdle, confirmPlaying, summarize, buildRecord,
+  createActive, isSameActive, elapsed, togglePause, touch, summarize, buildRecord,
   metroForSession, commitSession, saveActive, FREE_TAGS, trackMode,
 } from '../session.js';
 import {
@@ -381,26 +381,19 @@ export function createSessionScreen(app) {
     const pc = layer && layer.querySelector('#pchip');
     if (pc) { const h = pchipHTML(); if (pc.dataset.h !== h) { pc.dataset.h = h; pc.innerHTML = h; } }
     rotCheck();
-    checkIdle();
   }
 
-  function checkIdle() {
+  // Завершение по бездействию без ответа: сессия сохраняется сама, время — до последнего действия
+  function autoEnd(endAt) {
     const a = app.active;
-    if (!shouldAskIdle(a, { metroRunning: audio.metro.running })) return;
-    a.asked = true;
-    saveActive(a);
-    const d = document.createElement('div');
-    d.className = 'ask';
-    d.innerHTML = '<div class="alert" role="alertdialog" aria-label="' + esc(t('idle.title')) + '"><div class="ab"><h3>' + t('idle.title') + '</h3><p>' + t('idle.text') + '</p></div>' +
-      '<div class="abtns"><button data-k="end">' + t('idle.end') + '</button><button data-k="go">' + t('idle.go') + '</button></div></div>';
-    document.body.appendChild(d);
-    d.addEventListener('click', (e) => {
-      const k = e.target.closest('[data-k]');
-      if (!k) return;
-      d.remove();
-      if (k.dataset.k === 'go') { confirmPlaying(app.active); saveActive(app.active); }
-      else finish(app.active.last);
-    });
+    if (!a) return;
+    if (audio.metro.running) audio.metro.stop();
+    audio.metro.flush();
+    const sum = summarize(a, { endAt, mic: app.activity.listening });
+    if (!sum.short) commitSession(store, buildRecord(a, { dur: sum.dur, best: sum.best, quiet: sum.quiet, endAt }));
+    app.pomodoro.reset();
+    end();
+    toast(sum.short ? t('idle.ended0') : t('idle.ended', { d: fmtDur(sum.dur) }));
   }
 
   /* ---------- завершение ---------- */
@@ -417,7 +410,7 @@ export function createSessionScreen(app) {
     if (!a) return;
     if (audio.metro.running) audio.metro.stop();
     audio.metro.flush();
-    const sum = summarize(a, { endAt }), s = song();
+    const sum = summarize(a, { endAt, mic: app.activity.listening }), s = song();
     if (sum.short) {
       sheet(() => snav(t('fin.shortTitle'), { right: '<span></span>' }) + '<p style="text-align:center;margin:8px 8px 20px" class="l2">' + t('fin.shortText') + '</p>' +
         '<button class="btn fill block" data-k="back">' + t('fin.continue') + '</button><button class="btn block" data-k="drop" style="margin-top:10px;color:var(--red)">' + t('fin.drop') + '</button>',
@@ -446,7 +439,9 @@ export function createSessionScreen(app) {
         const k = e.target.closest('[data-k]');
         if (!k) return;
         if (k.dataset.k === 'back') { sh.close(); return; }
-        const rec = buildRecord(a, { dur: sum.dur, best: sum.best, endAt, tag, note: el.querySelector('#nt').value });
+        // сессию уже завершило бездействие, пока окно было открыто
+        if (app.active !== a) { sh.close(); return; }
+        const rec = buildRecord(a, { dur: sum.dur, best: sum.best, quiet: sum.quiet, endAt, tag, note: el.querySelector('#nt').value });
         commitSession(store, rec, s ? { masteryPct: readM(), confidentBpm: parseInt((el.querySelector('#cb') || {}).value, 10), metro: audio.metro.cfg } : null);
         app.pomodoro.reset();
         sh.close();
@@ -568,5 +563,5 @@ export function createSessionScreen(app) {
   document.addEventListener('pointercancel', endDrag, true);
 
   ensureLib(store.state, t);
-  return { start, resume, open, hide, finish, get isOpen() { return !!layer; } };
+  return { start, resume, open, hide, finish, autoEnd, get isOpen() { return !!layer; } };
 }

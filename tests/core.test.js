@@ -61,15 +61,54 @@ describe('сессия', () => {
     expect(S.summarize(a, { now: NOW + 59000 }).short).toBe(true);
     expect(S.summarize(a, { now: NOW + 60000 }).short).toBe(false);
   });
-  it('«Ты ещё играешь?» через 45 минут без касаний, не на паузе и не под метроном', () => {
+  it('бездействие: 45 минут без касаний — вопрос, даже под метроном; без ответа 3 минуты — конец по последнему касанию', () => {
     const a = S.createActive({ type: 'free' }, NOW);
-    expect(S.shouldAskIdle(a, {}, NOW + S.IDLE_MS)).toBe(false);
-    expect(S.shouldAskIdle(a, {}, NOW + S.IDLE_MS + 1)).toBe(true);
-    expect(S.shouldAskIdle(a, { metroRunning: true }, NOW + S.IDLE_MS + 1)).toBe(false);
+    S.noteHeard(a, NOW + S.IDLE_MS); // метроном звучит
+    expect(S.idleAction(a, { sounding: true }, NOW + S.IDLE_MS)).toBe(null);
+    const r = S.idleAction(a, { sounding: true }, NOW + S.IDLE_MS + 1);
+    expect(r).toEqual({ ask: true, endAt: NOW });
     S.touch(a, NOW + 1000);
-    expect(S.shouldAskIdle(a, {}, NOW + S.IDLE_MS + 1)).toBe(false);
+    expect(S.idleAction(a, { sounding: true }, NOW + S.IDLE_MS + 1)).toBe(null);
+    S.markAsked(a, a.last, NOW + S.IDLE_MS + 2000);
+    expect(S.idleAction(a, { sounding: true }, NOW + S.IDLE_MS + 2000 + S.ASK_WAIT_MS)).toBe(null);
+    expect(S.idleAction(a, { sounding: true }, NOW + S.IDLE_MS + 2001 + S.ASK_WAIT_MS)).toEqual({ end: true, endAt: NOW + 1000 });
     // завершение по бездействию считает время до последнего касания
     expect(S.summarize(a, { endAt: a.last, now: NOW + 9e6 }).dur).toBe(1);
+    S.confirmPlaying(a, NOW + 5e6);
+    expect([a.askedAt, a.last]).toEqual([null, NOW + 5e6]);
+  });
+  it('10 минут без звука и действий: с микрофоном — конец сразу, без него — вопрос; на паузе — ничего', () => {
+    const a = S.createActive({ type: 'free' }, NOW);
+    S.noteHeard(a, NOW + 60000);
+    const t = NOW + 60000 + S.QUIET_MS + 1;
+    expect(S.idleAction(a, {}, t - 2)).toBe(null);
+    expect(S.idleAction(a, { mic: true }, t)).toEqual({ end: true, endAt: NOW + 60000 });
+    expect(S.idleAction(a, {}, t)).toEqual({ ask: true, endAt: NOW + 60000 });
+    expect(S.idleAction(a, { sounding: true }, t)).toBe(null);
+    S.pause(a, NOW + 70000);
+    expect(S.idleAction(a, {}, t)).toBe(null);
+  });
+  it('завершение задним числом не вычитает паузы и «вдали», что были после него', () => {
+    const a = S.createActive({ type: 'free' }, NOW);
+    S.pause(a, NOW + 600000); S.resume(a, NOW + 900000);   // пауза 5 мин
+    S.awayStart(a, NOW + 1200000); S.awayEnd(a, NOW + 1500000); // вдали 5 мин
+    expect(S.elapsed(a, NOW + 1800000)).toBe(20 * 60);
+    expect(S.summarize(a, { endAt: NOW + 600000, now: NOW + 1800000 }).dur).toBe(10 * 60);
+    expect(S.summarize(a, { endAt: NOW + 1300000, now: NOW + 1800000 }).dur).toBe(15 * 60);
+  });
+  it('старая активная сессия (суммы вместо отрезков) считается как раньше', () => {
+    const a = { startedAt: NOW, pausedTotal: 60000, awayTotal: 120000, pausedAt: null, awaySince: null };
+    expect(S.elapsed(a, NOW + 600000)).toBe(7 * 60);
+  });
+  it('подтверждение звуком: тишина дольше 5 минут не идёт в значок', () => {
+    const a = S.createActive({ type: 'free' }, NOW);
+    a.micFrom = NOW;
+    S.noteHeard(a, NOW + 4 * 60000, { mic: true });   // 4 мин — не в счёт
+    S.noteHeard(a, NOW + 12 * 60000, { mic: true });  // 8 мин тишины
+    const sum = S.summarize(a, { now: NOW + 20 * 60000, mic: true }); // и ещё 8 в конце
+    expect(sum.quiet).toBe(16 * 60);
+    expect(S.buildRecord(a, sum, NOW + 20 * 60000).quiet).toBe(16 * 60);
+    expect(S.buildRecord(a, { dur: 60, best: null }, NOW).quiet).toBe(undefined);
   });
   it('лучший темп — самый быстрый, на котором играли от 15 секунд', () => {
     const a = S.createActive({ type: 'song', songId: 'x' }, NOW);

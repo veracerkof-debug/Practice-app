@@ -67,3 +67,14 @@ describe('режимы учёта', () => {
     expect(buildRecord(createActive({ type: 'free' }, 0), { dur: 90, best: null }).mode).toBe('normal');
   });
 });
+
+describe('секундомер: остановка задним числом', () => {
+  it('время после остановки не засчитывается, а остановка раньше старта — без отрезка', () => {
+    let t = 1000;
+    const sw = createStopwatch({}, { now: () => t });
+    sw.start(); t = 61000; sw.pause(31000);
+    expect(sw.elapsed()).toBe(30);
+    sw.start(); t = 90000; sw.pause(10);
+    expect(sw.state.segs.length).toBe(1);
+  });
+});
