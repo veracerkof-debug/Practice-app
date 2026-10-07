@@ -14,6 +14,9 @@
 | Bravura — © 2013 Steinberg Media Technologies GmbH, Reserved Font Name «Bravura» | Нотный шрифт (SMuFL) для alphaTab, файл `Bravura.woff2` из пакета alphaTab | SIL OFL 1.1 |
 | SONiVOX EAS — © 2004–2006 Sonic Network Inc. | Звуковой банк для воспроизведения табулатур, файл `sonivox.sf3` из пакета alphaTab без изменений | Apache-2.0 |
 | Comfortaa 400 — © 2011 The Comfortaa Project Authors (Johan Aakerlund), Reserved Font Name «Comfortaa», пакет `@fontsource/comfortaa` 5.3.0 | Шрифт названия глайдера (латиница и кириллица), файлы woff2 внутри приложения | SIL OFL 1.1 |
+| [pdf.js](https://github.com/mozilla/pdf.js) 6.4.299 (`pdfjs-dist`, сборка legacy) — © Mozilla Foundation и участники | Просмотр нот и табов в PDF (модуль «Табы, ноты и текст»), используется без изменений | Apache-2.0 |
+| ↳ ресурсы pdf.js: шрифты Foxit (© PDFium Authors), декодеры OpenJPEG и JBIG2 (PDFium), qcms (© Mozilla, Marti Maria), таблицы cmaps (© Adobe) | Стандартные шрифты PDF, декодирование JPEG 2000 и JBIG2, цветовые профили, кодировки — файлы `pdfjs/…` в сборке | BSD-3-Clause / BSD-2-Clause / MIT |
+| ↳ Liberation Sans — © Red Hat | Замена шрифта Helvetica/Arial для PDF без встроенных шрифтов | Liberation 1.x (GPLv2 с исключением для шрифтов) |
 | [Capacitor](https://github.com/ionic-team/capacitor) 8.5.2 (`@capacitor/core`, `@capacitor/android`, `@capacitor/app` 8.1.2) — © Ionic и участники | Приложение для Android: оболочка WebView и мост к системе | MIT |
 | AndroidX (appcompat, coordinatorlayout, core-splashscreen, webkit и др.) — © The Android Open Source Project | Библиотеки Android, входят в APK через Capacitor | Apache-2.0 |
 

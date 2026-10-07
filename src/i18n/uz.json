@@ -664,5 +664,7 @@
   "an.fail": "Yozuvni tahlil qilib boʻlmadi.",
   "an.done": "Yozuv boʻyicha aniqlandi: {r}. Qiymatlar «Maqsad» va «Tonallik» maydonlariga qoʻyildi.",
   "an.weak": "Ishonch past — quloq bilan tekshirgan maʼqul.",
-  "an.none": "Na tempni, na tonallikni aniqlab boʻlmadi."
+  "an.none": "Na tempni, na tonallikni aniqlab boʻlmadi.",
+  "lic.pdf.sub": "PDF koʻrish · versiya 6.4.299",
+  "lic.pdf.text": "Apache License 2.0 litsenziyasi boʻyicha tarqatiladi (github.com/mozilla/pdf.js). U bilan birga ilovaga kiradi: Foxit shriftlari va JBIG2 dekoderi (© PDFium Authors, BSD-3-Clause), OpenJPEG dekoderi (BSD-2-Clause), qcms (MIT), cmaps kodlash jadvallari (© Adobe, BSD-3-Clause) va Liberation Sans shrifti (© Red Hat, shriftlar uchun istisno bilan GPLv2)."
 }

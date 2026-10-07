@@ -12,3 +12,22 @@
 .pane.quarter .ntools{flex-wrap:wrap;justify-content:center}
 .atbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 0 6px}
 .atpl{width:44px!important;height:44px!important;box-shadow:none}
+/* PDF: страницы лентой; щипок и двойное касание — масштаб (src/modules/notes/pdf.js) */
+.pdfwrap{flex:1;min-height:0;position:relative;border-radius:12px;overflow:hidden;background:var(--fill)}
+.pdfv{position:absolute;inset:0;overflow:auto;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;outline:none;overscroll-behavior:contain}
+.pdfpages{padding:8px;box-sizing:border-box;margin:0 auto;will-change:transform}
+.pdfpg{position:relative;background:#fff;margin:0 auto 8px;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden}
+.pdfpg canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.pdfpg::before{content:attr(data-n);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#c7c7cc;font-size:28px}
+.pdfpn{font-size:13px;min-width:54px;text-align:center;color:var(--l2)}
+/* PDF во весь экран: страницы на всю площадь, панель — маленькая, поверх, внизу справа */
+.pdffull{position:fixed;inset:0;z-index:85;background:var(--bg);padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
+.pdffull .pdfbody{position:absolute;inset:0}
+.pdffbar{position:absolute;right:calc(10px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:4px;padding:4px;border-radius:999px;background:color-mix(in srgb,var(--cell) 88%,transparent);box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(8px)}
+.pdffbar .pdfpn{padding:0 8px 0 4px}
+/* Тональность при транспонировании: «Am → Bm», нажатие — выбор тональности */
+.trkey{min-height:40px;padding:0 12px;border-radius:999px;background:var(--fill);color:var(--ink);font-size:14px;white-space:nowrap}
+.trkey b{color:var(--tint)}
+.trgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.trgrid .pill{display:flex;flex-direction:column;align-items:center;min-height:52px;justify-content:center}
+.trgrid .pill small{font-size:11px;opacity:.6}

@@ -1,5 +1,5 @@
 {
-  "name": "Tablar va matn",
+  "name": "Tablar, notalar va matn",
   "statusIdle": "Guitar Pro, MusicXML, akkordlar",
   "tabs": [
     "{n} ta tabulatura"
@@ -24,10 +24,10 @@
   "metro": "Tablar uchun metronom",
   "thisSong": "Shu qoʻshiq",
   "others": "Boshqalar",
-  "allTabs": "Barcha tablar",
-  "uploadHint": "Guitar Pro (gp3, gp4, gp5, gpx, gp) yoki MusicXML faylini yuklang.",
-  "uploadTab": "Tabulatura yuklash",
-  "tabFiles": "Tabulaturalar",
+  "allTabs": "Barcha tablar va notalar",
+  "uploadHint": "PDF (notalar va tablar), Guitar Pro (gp3, gp4, gp5, gpx, gp) va MusicXML fayllari qoʻllab-quvvatlanadi.",
+  "uploadTab": "Tab yoki nota yuklash",
+  "tabFiles": "Tablar va notalar",
   "trackN": "{n}-yoʻlak",
   "smaller": "Kichikroq",
   "bigger": "Kattaroq",
@@ -39,7 +39,7 @@
   "editText": "Matnni tahrirlash",
   "textEmpty": "Hozircha boʻsh.",
   "addText": "Matn va akkord qoʻshish",
-  "sec.tabs": "Tablar",
+  "sec.tabs": "Tablar va notalar",
   "sec.text": "Matn va akkordlar",
   "tabsShort": "Tablar",
   "textShort": "Matn",
@@ -51,5 +51,15 @@
   "textPh": "Am        F\nQoʻshiq satri...\n\nyoki satr ichida: [Am]Qoʻshiq [F]satri",
   "textHint": "Faqat akkordlardan iborat satrlar ajratib koʻrsatiladi va transpozitsiya qilinadi. Akkordlarni matn ichida kvadrat qavsda yozish mumkin: [Am].",
   "notSaved": "Fayl qayta yuklangandan keyin saqlanmaydi",
-  "about": "Guitar Pro tabulaturalari va akkordli matn"
+  "about": "Guitar Pro tabulaturalari va akkordli matn",
+  "pdf.prev": "Oldingi sahifa",
+  "pdf.next": "Keyingi sahifa",
+  "pdf.fit": "Oyna kengligi boʻyicha",
+  "pdf.full": "Butun ekranga",
+  "pdf.exitFull": "Toʻliq ekrandan chiqish",
+  "tr.key": "Tonallik",
+  "tr.pick": "Tonallikni tanlash",
+  "tr.fromSong": "Asl tonallik — {k} (qoʻshiq kartochkasidan).",
+  "tr.fromChords": "Asl tonallik — {k}, akkordlar boʻyicha aniqlandi. Aniqroq boʻlishi uchun uni qoʻshiq kartochkasida koʻrsatish mumkin.",
+  "tr.hint": "Akkordlar oʻz pogʻonalarini saqlaydi, belgilar (diyez yoki bemol) esa yangi tonallikka qarab tanlanadi: re majorda — F♯ va C♯, fa majorda — B♭."
 }

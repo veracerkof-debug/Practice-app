@@ -1,5 +1,5 @@
 {
-  "name": "Tabs and text",
+  "name": "Tabs, sheet music and lyrics",
   "statusIdle": "Guitar Pro, MusicXML, chords",
   "tabs": [
     "{n} tab",
@@ -25,10 +25,10 @@
   "metro": "Metronome with tab",
   "thisSong": "This song",
   "others": "Others",
-  "allTabs": "All tabs",
-  "uploadHint": "Upload a Guitar Pro file (gp3, gp4, gp5, gpx, gp) or MusicXML.",
-  "uploadTab": "Upload tab",
-  "tabFiles": "Tabs",
+  "allTabs": "All tabs and sheet music",
+  "uploadHint": "Supported: PDF (sheet music and tabs), Guitar Pro files (gp3, gp4, gp5, gpx, gp) and MusicXML.",
+  "uploadTab": "Upload tabs or sheet music",
+  "tabFiles": "Tabs and sheet music",
   "trackN": "Track {n}",
   "smaller": "Smaller",
   "bigger": "Larger",
@@ -40,7 +40,7 @@
   "editText": "Edit text",
   "textEmpty": "Nothing here yet.",
   "addText": "Add lyrics and chords",
-  "sec.tabs": "Tabs",
+  "sec.tabs": "Tabs & sheets",
   "sec.text": "Lyrics and chords",
   "tabsShort": "Tabs",
   "textShort": "Text",
@@ -52,5 +52,15 @@
   "textPh": "Am        F\nA line of the song...\n\nor inline: [Am]A line [F]of the song",
   "textHint": "Lines made only of chords are highlighted and transposed. You can also write chords inline in square brackets: [Am].",
   "notSaved": "The file won’t be kept after reload",
-  "about": "Guitar Pro tabs and lyrics with chords"
+  "about": "Guitar Pro tabs and lyrics with chords",
+  "pdf.prev": "Previous page",
+  "pdf.next": "Next page",
+  "pdf.fit": "Fit width",
+  "pdf.full": "Full screen",
+  "pdf.exitFull": "Exit full screen",
+  "tr.key": "Key",
+  "tr.pick": "Choose key",
+  "tr.fromSong": "Original key: {k} (from the song card).",
+  "tr.fromChords": "Original key: {k}, detected from the chords. For accuracy, set it in the song card.",
+  "tr.hint": "Chords keep their scale degrees, and accidentals (sharps or flats) follow the new key: F♯ and C♯ in D major, B♭ in F major."
 }

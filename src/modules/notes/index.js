@@ -1,11 +1,13 @@
-// Табы и текст: табулатуры Guitar Pro / MusicXML (alphaTab, локально) с воспроизведением (SONiVOX),
-// текст песни с аккордами и транспонированием. Перенесено из legacy/practice.html (AT, ATP, notesHTML, tabSheet, lyricsEdit).
+// Табы и ноты, текст: табулатуры Guitar Pro / MusicXML (alphaTab, локально) с воспроизведением (SONiVOX),
+// ноты и табы в PDF (pdf.js, локально), текст песни с аккордами и транспонированием. Перенесено из legacy/practice.html (AT, ATP, notesHTML, tabSheet, lyricsEdit).
 import './notes.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import { fileSongs, inSong } from '../../core/files.js';
-import { lyricsHTML } from '../../music/lyrics.js';
+import { lyricsHTML, chordsIn } from '../../music/lyrics.js';
+import { detectKey, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
+import { isPdf, openPdf, createPdfView } from './pdf.js';
 // Шрифт нот и звуковой банк — файлы проекта, никаких CDN
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
 import SONIVOX from '@coderline/alphatab/soundfont/sonivox.sf3?url';
@@ -15,13 +17,18 @@ const I = {
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z"/></svg>',
   pause: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.4"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4"/></svg>',
   stop: '<svg viewBox="0 0 24 24" class="f"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  full: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5M9 9l-4-4M15 9l4-4M9 15l-4 4M15 15l4 4"/></svg>',
+  close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  fit: '<svg viewBox="0 0 24 24"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/></svg>',
+  up: '<svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>',
+  down: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   minus: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>',
   list: '<svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg>',
   pen: '<svg viewBox="0 0 24 24"><path d="M15.5 5.5l3 3L9 18l-4 1 1-4z"/></svg>',
   metro: '<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2"><path d="M8 21h8l-3-17h-2zM12 14l5-7"/></svg>',
 };
-const ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.gp8,.xml,.musicxml,.mxl';
+const ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.gp8,.xml,.musicxml,.mxl,.pdf,application/pdf';
 
 let host = null, ctx = null, size = 'full', input = null, offs = [];
 const st = () => ctx.store.all();
@@ -39,7 +46,81 @@ const ATP = { on: false, sf: false, playing: false, speed: 1, metro: false, err:
 const loadLib = () => AT.lib || (AT.lib = import('@coderline/alphatab').catch((e) => { AT.lib = null; throw e; }));
 const prof = (at) => (st().prof === 'both' ? at.StaveProfile.ScoreTab : at.StaveProfile.Tab);
 
+/* ---------- PDF: один просмотр на приложение (как и alphaTab) ---------- */
+
+const PDF = { view: null, rec: null, page: 1, pages: 0, zoom: 1, saveT: 0 };
+
+// Страница и масштаб запоминаются в записи файла — при следующем открытии с того же места
+function savePdfPos() {
+  const r = PDF.rec;
+  if (!r || !ctx) return;
+  r.pos = { page: PDF.page, zoom: PDF.zoom };
+  ctx.files.save(r);
+}
+
+// Во весь экран (удобно с повёрнутым телефоном): только страницы и маленькая панель поверх
+function pdfFull(on) {
+  const { t } = ctx;
+  let ov = document.querySelector('.pdffull');
+  if (!on) {
+    if (ov) ov.remove();
+    PDF.full = false;
+    render();
+    return;
+  }
+  if (!PDF.view) return;
+  PDF.full = true;
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.className = 'pdffull';
+    ov.setAttribute('role', 'dialog');
+    ov.setAttribute('aria-label', AT.cur ? AT.cur.name : 'PDF');
+    ov.innerHTML = '<div class="pdfbody"></div><div class="pdffbar">' + icb('data-x="pfull0"', I.close, t('pdf.exitFull'), 'sm') +
+      icb('data-x="pzoom" data-d="-1"', I.minus, t('smaller'), 'sm') + icb('data-x="pzoom" data-d="1"', I.plus, t('bigger'), 'sm') + icb('data-x="pfit"', I.fit, t('pdf.fit'), 'sm') +
+      '<span class="num pdfpn" id="pdfpgF">' + PDF.page + ' / ' + PDF.pages + '</span></div>';
+    ov.addEventListener('click', (e) => { const x = e.target.closest('[data-x]'); if (x) act(x.dataset.x, x); });
+    document.body.appendChild(ov);
+  }
+  PDF.view.moveTo(ov.querySelector('.pdfbody'));
+}
+
+function closePdf() {
+  if (PDF.full) pdfFull(false);
+  if (!PDF.view) return;
+  savePdfPos();
+  PDF.view.destroy();
+  PDF.view = null;
+  PDF.rec = null;
+}
+
+async function openPdfRec(rec) {
+  closePdf();
+  AT.cur = rec;
+  AT.state = 'loading';
+  render();
+  let doc;
+  try { doc = await openPdf(rec.blob); } catch { AT.state = 'error'; render(); if (ctx) ctx.ui.toast(ctx.t('openFail')); return; }
+  if (AT.cur !== rec) { doc.destroy(); return; }
+  const pos = rec.pos || {};
+  PDF.rec = rec;
+  PDF.view = createPdfView(doc, {
+    page: pos.page || 1, zoom: pos.zoom || 1,
+    onState: (s) => {
+      Object.assign(PDF, { page: s.page, pages: s.pages, zoom: s.zoom });
+      document.querySelectorAll('#pdfpg, #pdfpgF').forEach((pn) => { pn.textContent = s.page + ' / ' + s.pages; });
+      clearTimeout(PDF.saveT);
+      PDF.saveT = setTimeout(savePdfPos, 1500);
+    },
+  });
+  Object.assign(PDF, { pages: doc.numPages, page: Math.min(doc.numPages, pos.page || 1) });
+  AT.state = 'ready';
+  render();
+  PDF.view.mounted();
+}
+
 async function openTab(rec) {
+  if (isPdf(rec)) { openPdfRec(rec); return; }
+  closePdf();
   AT.state = 'loading';
   AT.cur = rec;
   AT.score = null;
@@ -81,6 +162,8 @@ function setTrack(i) {
 function attach() {
   const slot = host && host.querySelector('#atSlot');
   if (slot && AT.el && AT.el.parentNode !== slot) slot.appendChild(AT.el);
+  const ps = host && host.querySelector('#pdfSlot');
+  if (ps && PDF.view && !PDF.full) PDF.view.moveTo(ps);
 }
 
 /* ---------- воспроизведение табулатуры (звуковой банк SONiVOX) ---------- */
@@ -134,7 +217,7 @@ function togglePlay() {
 function tabRow(x) {
   const songs = ctx.songs(), so = fileSongs(x).map((id) => songs.find((s) => s.id === id)).find(Boolean);
   return '<div class="cell"><button class="grow" data-x="topen" data-id="' + x.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(x.name) + '</div><div class="st">' +
-    ctx.t('kb', { n: ctx.num((x.size || 0) / 1024, 0) }) + (so ? ', ' + esc(so.title) : '') + '</div></button>' +
+    (isPdf(x) ? 'PDF · ' : '') + ctx.t('kb', { n: ctx.num((x.size || 0) / 1024, 0) }) + (so ? ', ' + esc(so.title) : '') + '</div></button>' +
     '<button class="ic sm" data-x="tdel" data-id="' + x.id + '" aria-label="' + esc(ctx.t('deleteX', { name: x.name })) + '" style="color:var(--red)">' + I.minus + '</button></div>';
 }
 
@@ -160,6 +243,13 @@ function tabsBody() {
       '<div class="vrow" style="margin-top:12px"><button class="btn sm" data-x="tadd">' + I.plus.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4"') + ' ' + t('uploadTab') + '</button></div>' +
       (AT.state === 'error' ? '<p class="ftr" style="text-align:center">' + t('openFailShort') + '</p>' : '') + '</div>';
   }
+  if (isPdf(AT.cur)) {
+    return '<div class="ntools">' + icb('data-x="tlist"', I.list, t('tabFiles'), 'sm') +
+      '<span class="sgrow aname" style="text-align:left">' + esc(AT.cur.name) + '</span>' +
+      (PDF.pages > 1 ? icb('data-x="pgo" data-d="-1"', I.up, t('pdf.prev'), 'sm') + '<span class="num pdfpn" id="pdfpg">' + PDF.page + ' / ' + PDF.pages + '</span>' + icb('data-x="pgo" data-d="1"', I.down, t('pdf.next'), 'sm') : '') +
+      icb('data-x="pzoom" data-d="-1"', I.minus, t('smaller'), 'sm') + icb('data-x="pzoom" data-d="1"', I.plus, t('bigger'), 'sm') + icb('data-x="pfit"', I.fit, t('pdf.fit'), 'sm') + icb('data-x="pfull"', I.full, t('pdf.full'), 'sm') + '</div>' +
+      '<div class="pdfwrap" id="pdfSlot">' + (AT.state === 'loading' ? '<div class="atload l2">' + t('opening') + '</div>' : '') + '</div>';
+  }
   const tr = AT.score ? AT.score.tracks : [];
   return '<div class="ntools">' + icb('data-x="tlist"', I.list, t('tabFiles'), 'sm') +
     (tr.length > 1
@@ -170,15 +260,23 @@ function tabsBody() {
     (big() ? barHTML() : '') + '<div class="atwrap" id="atSlot">' + (AT.state === 'loading' ? '<div class="atload l2">' + t('opening') + '</div>' : '') + '</div>';
 }
 
+// Исходная тональность песни: из карточки песни, иначе — по аккордам текста
+function songKey(song) {
+  const k = song.key && parseNote(song.key);
+  if (k) return { pc: k.pc, minor: /m$/.test(song.key), sharp: k.acc > 0 ? true : k.acc < 0 ? false : null, given: true };
+  return detectKey(chordsIn(song.notes));
+}
+
 function textBody() {
   const { t } = ctx, song = ctx.song();
   if (!song) return '<div class="vq l2" style="font-size:14px">' + t('textNeedsSong') + '</div>';
-  const n = song.tr;
+  const n = song.tr, key = songKey(song);
+  const keyBtn = key ? '<button class="trkey num" data-x="nkey" aria-label="' + esc(t('tr.pick')) + '">' + esc(keyLabel(key)) + (n ? ' → <b>' + esc(keyLabel(shiftKey(key, n))) + '</b>' : '') + '</button>' : '';
   return '<div class="ntools"><div class="vrow tight">' + icb('data-x="ntr" data-d="-1"', I.minus, t('trDown'), 'sm') + '<span class="num trv">' + (n > 0 ? '+' : '') + n + '</span>' +
-    icb('data-x="ntr" data-d="1"', I.plus, t('trUp'), 'sm') + '</div>' +
+    icb('data-x="ntr" data-d="1"', I.plus, t('trUp'), 'sm') + keyBtn + '</div>' +
     (big() ? '<div class="vrow tight">' + icb('data-x="nfs" data-d="-1"', 'A−', t('smaller'), 'sm txt') + icb('data-x="nfs" data-d="1"', 'A+', t('bigger'), 'sm txt') + icb('data-x="nedit"', I.pen, t('editText'), 'sm') + '</div>' : '') + '</div>' +
     (song.notes
-      ? '<div class="lyr" style="font-size:' + (st().fs || 15) + 'px">' + lyricsHTML(song.notes, n) + '</div>'
+      ? '<div class="lyr" style="font-size:' + (st().fs || 15) + 'px">' + lyricsHTML(song.notes, n, key) + '</div>'
       : '<div class="vq l2" style="font-size:14px">' + t('textEmpty') + '<button class="btn sm" data-x="nedit" style="margin-top:8px">' + t('addText') + '</button></div>');
 }
 
@@ -214,6 +312,24 @@ function tabSheet() {
     }, true));
 }
 
+// Выбор тональности напрямую: 12 вариантов того же наклонения, «Исходная» — сброс сдвига
+function keySheet() {
+  const { t, ui } = ctx, song = ctx.song(), key = song && songKey(song);
+  if (!key) return;
+  const opts = Array.from({ length: 12 }, (_, i) => { const d = shiftTo(key, (key.pc + i) % 12); return { d, label: keyLabel(shiftKey(key, d)) }; }).sort((a, b) => a.d - b.d);
+  ui.sheet(() => ui.snav(t('tr.key')) + '<p class="ftr" style="margin-top:0">' + esc(t(key.given ? 'tr.fromSong' : 'tr.fromChords', { k: keyLabel(key) })) + '</p>' +
+    '<div class="group"><div class="cellcol trgrid">' + opts.map((o) => '<button type="button" class="pill num" data-trd="' + o.d + '" aria-pressed="' + (o.d === song.tr) + '">' + esc(o.label) +
+      '<small>' + (o.d > 0 ? '+' : '') + o.d + '</small></button>').join('') + '</div></div>' +
+    '<p class="ftr">' + t('tr.hint') + '</p>',
+  (el, sh) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-trd]');
+    if (!b) return;
+    ctx.updateSong({ tr: +b.dataset.trd });
+    sh.close();
+    render();
+  }));
+}
+
 function lyricsEdit() {
   const { t, ui } = ctx, song = ctx.song();
   if (!song) return;
@@ -238,6 +354,7 @@ async function onFile(e) {
   if (!f) return;
   const song = ctx.song();
   const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type,
+    fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' ? 'pdf' : 'score',
     songs: song ? [song.id] : [], created: Date.now(), blob: f };
   if (!(await ctx.files.add(rec))) ctx.ui.toast(ctx.t('notSaved'));
   st().sec = 'tabs';
@@ -252,17 +369,23 @@ function act(a, el) {
     case 'ntr': { const s = ctx.song(); if (s) { ctx.updateSong({ tr: s.tr + +el.dataset.d }); render(); } break; }
     case 'nfs': st().fs = Math.max(11, Math.min(26, (st().fs || 15) + +el.dataset.d)); ctx.store.save(); render(); break;
     case 'nedit': lyricsEdit(); break;
+    case 'nkey': keySheet(); break;
     case 'tadd': addFile(); break;
     case 'topen': if (x) openTab(x); break;
     case 'tdel':
       if (x) ui.confirm(t('delTitle', { name: x.name }), t('delText'), t('delete')).then((ok) => {
         if (!ok) return;
         ctx.files.remove(x.id);
-        if (AT.cur && AT.cur.id === x.id) { if (ATP.sf) AT.api.stop(); AT.cur = null; AT.state = 'idle'; }
+        if (AT.cur && AT.cur.id === x.id) { if (PDF.rec === x) closePdf(); else if (ATP.sf) AT.api.stop(); AT.cur = null; AT.state = 'idle'; }
         render();
       });
       break;
     case 'tlist': tabSheet(); break;
+    case 'pzoom': if (PDF.view) PDF.view.zoomBy(+el.dataset.d); break;
+    case 'pfit': if (PDF.view) PDF.view.fit(); break;
+    case 'pgo': if (PDF.view) PDF.view.go(PDF.page + +el.dataset.d); break;
+    case 'pfull': pdfFull(true); break;
+    case 'pfull0': pdfFull(false); break;
     case 'ttrack': setTrack(+el.dataset.i); render(); break;
     case 'tzoom': st().scale = Math.max(0.5, Math.min(2, Math.round((st().scale + +el.dataset.d * 0.1) * 10) / 10)); ctx.store.save(); restyle(); break;
     case 'tprof': st().prof = st().prof === 'both' ? 'tab' : 'both'; ctx.store.save(); restyle(); render(); break;
@@ -318,6 +441,8 @@ export default {
     if (input) { input.remove(); input = null; }
     if (AT.api && ATP.sf && !ctx.session) AT.api.pause();
     if (AT.el) AT.el.remove();
+    if (PDF.full) pdfFull(false);
+    if (PDF.view) { savePdfPos(); PDF.view.el.remove(); }
     host = null;
   },
 };

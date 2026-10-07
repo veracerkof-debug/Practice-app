@@ -24,7 +24,7 @@
 - CSS custom properties (темы светлая/тёмная/«Бумага»/OLED, акцентный цвет), container queries для размеров окон.
 - Web Audio API (единый AudioContext, шины, микшер), YIN для тюнера.
 - Хранение: localStorage (лёгкие данные) + IndexedDB (аудио, табы). Local-first.
-- alphaTab (MPL-2.0) для табулатур, шрифт Bravura (OFL), звуковой банк SONiVOX (Apache-2.0).
+- alphaTab (MPL-2.0) для табулатур, pdf.js (Apache-2.0) для нот и табов в PDF, шрифт Bravura (OFL), звуковой банк SONiVOX (Apache-2.0).
 - Android: Capacitor. Windows: позже, Tauri.
 
 ## Архитектура
@@ -43,7 +43,7 @@
   metro/piano/drone/media/theory), `synth.js` (пианино, 6 пресетов, 22 голоса), `drone.js` (пэды и тампура),
   `metronome.js` (планировщик `step` без звука + звук), `pitch.js` (YIN), `mic.js`. Сборка — `createAudio()` в `index.js`.
 - **Музыка** (`src/music`): ноты и правописание (`notes.js`), тональности, гаммы, аккорды, интервалы (`theory.js`),
-  строи струнных (`tuning.js`), текст с аккордами (`lyrics.js`) — чистые функции, сверены с прототипом (`tests/music.test.js`).
+  строи струнных (`tuning.js`), текст с аккордами (`lyrics.js`), транспонирование по ступеням (`transpose.js`), темп и тональность по записи (`analyze.js`) — чистые функции, сверены с прототипом (`tests/music.test.js`).
 - **Интерфейс** (`src/ui`): шторка, сообщение, подтверждение, переключатели, иконки (`index.js`), клавиатура (`keyboard.js`),
   пресеты (`presets.js`); стили перенесены из
   прототипа с сохранением порядка правил (`ui.css`, `pane.css` — окно модуля, `screens.css`); кольцо цели и карточки статистики — `cards.js`. Модули монтирует

@@ -673,5 +673,7 @@
   "an.fail": "The recording could not be analysed.",
   "an.done": "Detected from the recording: {r}. The values are filled into “Target” and “Key”.",
   "an.weak": "Low confidence — best to check by ear.",
-  "an.none": "Neither tempo nor key could be detected."
+  "an.none": "Neither tempo nor key could be detected.",
+  "lic.pdf.sub": "PDF viewer · version 6.4.299",
+  "lic.pdf.text": "Licensed under the Apache License 2.0 (github.com/mozilla/pdf.js). Included with it: Foxit fonts and the JBIG2 decoder (© PDFium Authors, BSD-3-Clause), the OpenJPEG decoder (BSD-2-Clause), qcms (MIT), cmaps encoding tables (© Adobe, BSD-3-Clause) and the Liberation Sans font (© Red Hat, GPLv2 with font exception)."
 }

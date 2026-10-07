@@ -104,10 +104,10 @@ export function makeCtx(app, mod) {
     peek: (id) => JSON.parse(JSON.stringify(app.device[id] || {})),
     shared: app.shared,
     get session() { return app.active ? { type: app.active.type, songId: app.active.songId } : null; },
-    // Песня текущей сессии (копия): { id, title, notes, tr } или null
+    // Песня текущей сессии (копия): { id, title, notes, tr, key } или null
     song() {
       const s = app.active && app.active.songId && app.store.songById(app.active.songId);
-      return s ? { id: s.id, title: s.title, notes: s.notes || '', tr: s.tr || 0 } : null;
+      return s ? { id: s.id, title: s.title, notes: s.notes || '', tr: s.tr || 0, key: s.key || null } : null;
     },
     // Правка песни текущей сессии: только текст с аккордами (notes) и транспонирование (tr)
     updateSong(patch) {
