@@ -60,6 +60,8 @@
 .panel{position:fixed;inset:0;z-index:35;background:var(--bg);overflow-y:auto;padding-top:env(safe-area-inset-top,0px);animation:up .28s cubic-bezier(.2,.8,.2,1)}
 .phero{display:flex;flex-direction:column;align-items:center;margin:8px 0 18px}
 .pav{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--tint),#FF2D55);color:#fff;display:flex;align-items:center;justify-content:center}
+.prank{display:block;border-radius:50%;min-width:44px;min-height:44px}
+.prname{color:var(--rk);font-weight:600;font-size:16px;min-height:40px;padding:0 12px}
 .pav svg{width:46px;height:46px;fill:none;stroke:#fff;stroke-width:1.6;stroke-linecap:round}
 .wrap{max-width:640px;padding:6px 12px 140px}
 .large{font-size:28px;margin:6px 4px 10px}
@@ -194,6 +196,12 @@
 .gemrow .gtxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .gemrow .gtxt b{font-size:20px;font-weight:700;letter-spacing:-.02em}
 .gemrow .gtxt .l2{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hprog{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.hprog .gemrow{margin-top:0;gap:10px;padding:8px 12px 8px 8px}
+.hprog .gemrow .gtxt b{font-size:17px}
+.rkrow .gtxt b{color:var(--rk);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rkbar{display:block;height:5px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:6px}
+.rkbar i{display:block;height:100%;background:var(--rk);border-radius:3px}
 .gemrow .chev{width:8px;height:13px;stroke:var(--l3);fill:none;stroke-width:2;flex:none}
 .gem{flex:none;display:block}
 .gem .gsp{animation:gtw 2.6s ease-in-out infinite}
@@ -201,8 +209,8 @@
 .gemhero{display:flex;flex-direction:column;align-items:center;gap:6px;margin:4px 0 16px;text-align:center}
 .gemhero .gname{font-size:24px;font-weight:700;letter-spacing:-.02em}
 .gbar{width:min(100%,280px);height:8px;border-radius:4px;background:var(--fill);overflow:hidden;margin-top:6px}
-.gbar i{display:block;height:100%;background:var(--tint);border-radius:4px}
+.gbar i{display:block;height:100%;background:var(--bc,var(--tint));border-radius:4px}
 .gemli{gap:12px}
-.gemli.locked .gem{filter:grayscale(1);opacity:.35}
+.gemli.locked .gem,.gemli.locked .rank{filter:grayscale(1);opacity:.35}
 .gemli.locked .grow{color:var(--l2)}
 .gemli.cur{background:color-mix(in srgb,var(--tint) 8%,var(--cell))}

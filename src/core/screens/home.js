@@ -6,7 +6,9 @@ import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
 import { weekData, goalProgress, songStats, streakInfo } from '../stats.js';
 import { GEMS, gemOf } from '../mastery.js';
-import { gemSec, priorHours } from '../profile.js';
+import { gemSec, lifetimeSec, priorHours } from '../profile.js';
+import { RANK_STEPS, rankOf } from '../rank.js';
+import { rankSVG, rankName, RANK_COLORS } from '../../ui/rank.js';
 import { gemSVG } from '../../ui/gems.js';
 import { trackMode } from '../session.js';
 import { genreOf, ensureLib } from '../library.js';
@@ -111,24 +113,56 @@ export function streakSheet(app) {
 
 const hoursText = (h) => fmtDur(h * 3600);
 
-// Строка под карточкой недели: значок и общие часы
+const fmtNum = (h) => new Intl.NumberFormat(getLang() === 'en' ? 'en' : 'ru').format(h);
+const bar = (frac, c = '') => '<div class="gbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(frac * 100) + '"' + (c ? ' style="--bc:' + c + '"' : '') + '><i style="width:' + frac * 100 + '%"></i></div>';
+
+// Строка под карточкой недели: камень (практика в приложении) и звание (весь опыт) — две половины,
+// без лишних подписей: подробности — в шторках
 function gemRow(app) {
   const st = app.store.state.settings;
   if (!isOn(st, 'mastery')) return '';
-  const total = gemSec(app.store.sessions(), st), g = gemOf(total / 3600), name = t('gem.' + g.gem.id);
-  return '<button class="gemrow" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(total) })) + '">' + gemSVG(g.gem.id, g.frac, 50) +
-    '<span class="gtxt"><b class="num">' + fmtDur(total) + '</b><span class="l2">' + esc(name) + (g.next ? ' · ' + esc(t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) })) : '') + '</span></span>' +
-    '<svg class="chev" viewBox="0 0 8 13"><path d="M1.5 1.5 6.5 6.5 1.5 11.5"/></svg></button>';
+  const all = app.store.sessions(), total = gemSec(all), g = gemOf(total / 3600), name = t('gem.' + g.gem.id);
+  const r = rankOf(lifetimeSec(all, st) / 3600), rn = rankName(r.id, r.level);
+  return '<div class="hprog"><button class="gemrow" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(total) })) + '">' + gemSVG(g.gem.id, g.frac, 44) +
+    '<span class="gtxt"><b class="num">' + fmtDur(total) + '</b><span class="l2">' + esc(name) + '</span></span></button>' +
+    '<button class="gemrow rkrow" data-act="rank" style="--rk:' + RANK_COLORS[r.id] + '" aria-label="' + esc(t('rank.aria', { name: rn })) + '">' + rankSVG(r.id, r.level, 44) +
+    '<span class="gtxt"><b>' + esc(rn) + '</b>' + (r.next ? '<span class="rkbar"><i style="width:' + r.frac * 100 + '%"></i></span>' : '<span class="l2">' + t('rank.topShort') + '</span>') + '</span></button></div>';
 }
 
 export function gemSheet(app) {
-  const st = app.store.state.settings, total = gemSec(app.store.sessions(), st), g = gemOf(total / 3600), prior = priorHours(st);
+  const total = gemSec(app.store.sessions()), g = gemOf(total / 3600);
   sheet(() => snav(t('gem.title')) +
     '<div class="gemhero">' + gemSVG(g.gem.id, g.frac, 150, t('gem.' + g.gem.id)) + '<div class="gname">' + t('gem.' + g.gem.id) + '</div><div class="l2 num">' + t('gem.total', { total: fmtDur(total) }) + '</div>' +
-    (prior ? '<div class="l2 num" style="font-size:13px">' + t('gem.prior', { h: hoursText(prior) }) + '</div>' : '') +
-    (g.next ? '<div class="gbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(g.frac * 100) + '"><i style="width:' + g.frac * 100 + '%"></i></div><div class="l2" style="font-size:13px">' +
+    (g.next ? bar(g.frac) + '<div class="l2" style="font-size:13px">' +
       t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) }) + '</div>' : '<div class="l2" style="font-size:13px">' + t('gem.top') + '</div>') + '</div>' +
     '<div class="group">' + GEMS.map((x, i) => '<div class="cell gemli' + (i > g.i ? ' locked' : '') + (i === g.i ? ' cur' : '') + '">' + gemSVG(x.id, i < g.i ? 1 : i === g.i ? g.frac : 0, 40) +
-      '<span class="grow">' + t('gem.' + x.id) + (x.id === 'rough' ? '<span class="st l2" style="display:block;font-size:12px">' + t('gem.pro') + '</span>' : '') + '</span><span class="val num">' + t('gem.from', { h: new Intl.NumberFormat(getLang() === 'en' ? 'en' : 'ru').format(x.h) }) + '</span></div>').join('') + '</div>' +
+      '<span class="grow">' + t('gem.' + x.id) + (x.id === 'rough' ? '<span class="st l2" style="display:block;font-size:12px">' + t('gem.pro') + '</span>' : '') + '</span><span class="val num">' + t('gem.from', { h: fmtNum(x.h) }) + '</span></div>').join('') + '</div>' +
     '<p class="ftr">' + t('gem.hint') + '</p>');
+}
+
+// Звание: весь опыт — часы до приложения и практика в приложении
+export function rankSheet(app) {
+  const st = app.store.state.settings, total = lifetimeSec(app.store.sessions(), st), r = rankOf(total / 3600), prior = priorHours(st), c = RANK_COLORS[r.id];
+  sheet(() => snav(t('rank.title')) +
+    '<div class="gemhero" style="--rk:' + c + '">' + rankSVG(r.id, r.level, 120, rankName(r.id, r.level)) + '<div class="gname" style="color:var(--rk)">' + esc(rankName(r.id, r.level)) + '</div>' +
+    '<div class="l2 num">' + t('rank.total', { total: fmtDur(total) }) + '</div>' +
+    (prior ? '<div class="l2 num" style="font-size:13px">' + t('rank.prior', { h: hoursText(prior) }) + '</div>' : '') +
+    (r.next ? bar(r.frac, c) + '<div class="l2" style="font-size:13px">' + t('gem.toNext', { name: rankName(r.next.id, r.next.level), left: hoursText(r.left) }) + '</div>'
+      : '<div class="l2" style="font-size:13px">' + t('rank.top') + '</div>') + '</div>' +
+    '<div class="group">' + RANK_STEPS.map(([id, lv, h], i) => '<div class="cell gemli rkli' + (i > r.i ? ' locked' : '') + (i === r.i ? ' cur' : '') + '">' + rankSVG(id, lv, 40) +
+      '<span class="grow">' + esc(rankName(id, lv)) + '</span><span class="val num">' + t('gem.from', { h: fmtNum(h) }) + '</span></div>').join('') + '</div>' +
+    '<p class="ftr">' + t('rank.hint') + '</p>');
+}
+
+// Новое звание — одно короткое сообщение (его можно выключить в «Уведомлениях»). Номер последнего
+// показанного звания хранится в settings.rankSeen; в первый раз запоминается молча
+export function rankCheck(app) {
+  const st = app.store.state.settings;
+  if (!st.profile) return;
+  const r = rankOf(lifetimeSec(app.store.sessions(), st) / 3600);
+  if (st.rankSeen == null || r.i < st.rankSeen) { st.rankSeen = r.i; app.store.settingsChanged(); return; }
+  if (r.i === st.rankSeen) return;
+  st.rankSeen = r.i;
+  app.store.settingsChanged();
+  if (st.rankNote !== false && isOn(st, 'mastery')) toast(t('rank.new', { name: rankName(r.id, r.level) }));
 }

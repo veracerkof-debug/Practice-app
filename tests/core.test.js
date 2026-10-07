@@ -69,6 +69,8 @@ describe('сессия', () => {
     expect(r).toEqual({ ask: true, endAt: NOW });
     S.touch(a, NOW + 1000);
     expect(S.idleAction(a, { sounding: true }, NOW + S.IDLE_MS + 1)).toBe(null);
+    // вопросы выключены — сразу завершение по последнему касанию
+    expect(S.idleAction(a, { sounding: true, ask: false }, NOW + S.IDLE_MS + 1001)).toEqual({ end: true, endAt: NOW + 1000 });
     S.markAsked(a, a.last, NOW + S.IDLE_MS + 2000);
     expect(S.idleAction(a, { sounding: true }, NOW + S.IDLE_MS + 2000 + S.ASK_WAIT_MS)).toBe(null);
     expect(S.idleAction(a, { sounding: true }, NOW + S.IDLE_MS + 2001 + S.ASK_WAIT_MS)).toEqual({ end: true, endAt: NOW + 1000 });
@@ -84,6 +86,7 @@ describe('сессия', () => {
     expect(S.idleAction(a, {}, t - 2)).toBe(null);
     expect(S.idleAction(a, { mic: true }, t)).toEqual({ end: true, endAt: NOW + 60000 });
     expect(S.idleAction(a, {}, t)).toEqual({ ask: true, endAt: NOW + 60000 });
+    expect(S.idleAction(a, { ask: false }, t)).toEqual({ end: true, endAt: NOW + 60000 });
     expect(S.idleAction(a, { sounding: true }, t)).toBe(null);
     S.pause(a, NOW + 70000);
     expect(S.idleAction(a, {}, t)).toBe(null);

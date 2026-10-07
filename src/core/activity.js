@@ -42,20 +42,26 @@ function askDialog(id, why, what, onGo, onEnd) {
   const title = t(what === 'watch' ? 'idle.watchTitle' : 'idle.title');
   d.innerHTML = '<div class="alert" role="alertdialog" aria-label="' + esc(title) + '"><div class="ab"><h3>' + title + '</h3><p>' +
     t(why === 'quiet' ? 'idle.textQuiet' : 'idle.text') + ' ' + t('idle.wait') + '</p></div>' +
-    '<div class="abtns"><button data-k="end">' + t(what === 'watch' ? 'idle.stop' : 'idle.end') + '</button><button data-k="go">' + t('idle.go') + '</button></div></div>';
+    '<div class="abtns"><button data-k="end">' + t(what === 'watch' ? 'idle.stop' : 'idle.end') + '</button><button data-k="go">' + t('idle.go') + '</button></div>' +
+    '<div class="abtns"><button data-k="never" style="flex:1;text-align:center;font-weight:400;color:var(--l2)">' + t('idle.never') + '</button></div></div>';
   document.body.appendChild(d);
   d.addEventListener('click', (e) => {
     const k = e.target.closest('[data-k]');
     if (!k) return;
     d.remove();
+    // «Больше не спрашивать»: вопросы выключаются (вернуть — в «Уведомлениях»), сейчас — как «Продолжается»
+    if (k.dataset.k === 'never') { onNever(); onGo(); return; }
     (k.dataset.k === 'go' ? onGo : onEnd)();
   });
 }
+let onNever = () => {};
 const closeAsk = (id) => document.querySelectorAll('.ask[data-idle="' + id + '"]').forEach((d) => d.remove());
 
 // app: store, stopwatch, active, session (idle: { ask, autoEnd }), saveDevice; soundingAudio() — звучит ли приложение
 export function createActivity(app, { soundingAudio }) {
   const st = () => app.store.state.settings;
+  onNever = () => { st().askIdle = false; app.store.settingsChanged(); toast(t('idle.neverDone')); };
+  const asks = () => st().askIdle !== false;
   const act = { touch: Date.now(), heard: 0, listening: false, level: null, hiddenAt: null, tools: 0 };
   let mic = null, micT = 0, gate = null, opening = false, micErr = false;
 
@@ -123,8 +129,8 @@ export function createActivity(app, { soundingAudio }) {
     }
     if (app.active) return; // сессия считает сама; секундомер второй раз её время не засчитает
     const pseudo = { startedAt: w().since, last: Math.max(act.touch, w().since), heard: act.heard, askedAt: w().askedAt || null, askEnd: w().askEnd };
-    const r = idleAction(pseudo, { sounding: soundingAudio(), mic: act.listening }, now);
-    if (!r && pseudo.askedAt) askDialog('watch', w().askWhy, 'watch', goWatch, () => stopWatch(w().askEnd));
+    const r = idleAction(pseudo, { sounding: soundingAudio(), mic: act.listening, ask: asks() }, now);
+    if (!r && pseudo.askedAt && asks()) askDialog('watch', w().askWhy, 'watch', goWatch, () => stopWatch(w().askEnd));
     if (!r) return;
     if (r.end) { stopWatch(r.endAt); toast(t('idle.watchStopped')); return; }
     w().askedAt = now; w().askEnd = r.endAt; w().askWhy = now - pseudo.last > QUIET_MS && !soundingAudio() ? 'quiet' : 'touch';
@@ -139,9 +145,9 @@ export function createActivity(app, { soundingAudio }) {
     const a = app.active;
     if (!a || a.ending) { closeAsk('session'); return; }
     const sounding = soundingAudio();
-    const r = idleAction(a, { sounding, mic: act.listening }, now);
+    const r = idleAction(a, { sounding, mic: act.listening, ask: asks() }, now);
     // после перезагрузки вопрос без ответа показывается снова
-    if (!r && a.askedAt) askDialog('session', a.askWhy, 'session', goSession, endSession);
+    if (!r && a.askedAt && asks()) askDialog('session', a.askWhy, 'session', goSession, endSession);
     if (!r) return;
     if (r.end) { closeAsk('session'); app.session.autoEnd(r.endAt); return; }
     markAsked(a, r.endAt, now);

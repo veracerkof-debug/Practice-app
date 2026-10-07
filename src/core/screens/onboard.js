@@ -6,14 +6,20 @@ import { esc, toast } from '../../ui/index.js';
 import { fmtDur } from '../format.js';
 import { GOAL_MIN, GOAL_MAX } from '../settings.js';
 import { INSTRUMENTS, LEVELS, GOAL_BY_LEVEL, PRIOR_MAX, newProfile, saveProfile, applyLevelDefaults, estimateHours } from '../profile.js';
-import { gemOf } from '../mastery.js';
-import { gemSVG } from '../../ui/gems.js';
+import { rankOf } from '../rank.js';
+import { rankSVG, rankName, RANK_COLORS } from '../../ui/rank.js';
 import { weekdays } from './common.js';
 
 const STEPS = ['name', 'inst', 'level', 'exp', 'goal'];
 
 // Карточки для выбора (инструменты, уровень)
 const card = (attr, on, title, sub = '') => '<button type="button" class="obcard' + (on ? ' on' : '') + '" ' + attr + ' aria-pressed="' + on + '"><b>' + esc(title) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</button>';
+
+// Стартовое звание по опыту до приложения
+function rankBox(hours) {
+  const r = rankOf(hours), n = rankName(r.id, r.level);
+  return rankSVG(r.id, r.level, 64, n) + '<div style="--rk:' + RANK_COLORS[r.id] + '"><b style="color:var(--rk)">' + esc(n) + '</b><small>' + t('ob.rankNote') + '</small></div>';
+}
 
 export function onboarding(app, done = () => {}) {
   if (document.getElementById('onboard')) return;
@@ -46,13 +52,12 @@ export function onboarding(app, done = () => {}) {
         LEVELS.map((k) => card('data-oblevel="' + k + '"', p.level === k, t('level.' + k), t('level.' + k + '.text'))).join('') + '</div>';
     }
     if (s === 'exp') {
-      const g = gemOf(p.priorHours);
       return '<h1 class="obh">' + t('ob.expTitle') + '</h1><p class="obp">' + t('ob.expText') + (p.level === 'beginner' ? '' : ' ' + t('ob.expRequired')) + '</p>' +
         '<div class="group"><label class="cell"><span class="grow">' + t('ob.hours') + '</span><input class="inp num obhours" id="obhours" type="number" inputmode="numeric" min="0" max="' + PRIOR_MAX + '" placeholder="0" aria-label="' + t('ob.hours') + '" value="' + (p.priorHours || '') + '"></label></div>' +
         '<div class="hdr">' + t('ob.calc') + '</div><div class="group"><label class="cell"><span class="grow">' + t('ob.years') + '</span><input class="inp num" id="obyears" type="number" inputmode="decimal" min="0" max="80" step="0.5" placeholder="0" value="' + (f.years || '') + '"></label>' +
         '<label class="cell"><span class="grow">' + t('ob.perWeek') + '</span><input class="inp num" id="obweek" type="number" inputmode="decimal" min="0" max="80" step="0.5" placeholder="0" value="' + (f.perWeek || '') + '"></label>' +
         '<button type="button" class="cell act center" data-obcalc>' + t('ob.calcUse', { h: estimateHours(f.years, f.perWeek) }) + '</button></div>' +
-        '<div class="obgem">' + gemSVG(g.gem.id, g.frac, 64, t('gem.' + g.gem.id)) + '<div><b>' + t('gem.' + g.gem.id) + '</b><small>' + t('ob.gemNote') + '</small></div></div>';
+        '<div class="obgem">' + rankBox(p.priorHours) + '</div>';
     }
     const WD = weekdays();
     return '<h1 class="obh">' + t('ob.goalTitle') + '</h1><p class="obp">' + t('ob.goalText') + '</p>' +
@@ -133,8 +138,8 @@ export function onboarding(app, done = () => {}) {
     const btn = layer.querySelector('[data-obcalc]');
     if (btn) btn.textContent = t('ob.calcUse', { h: estimateHours(f.years, f.perWeek) });
     if (e.target.id === 'obhours') {
-      const gm = gemOf(p.priorHours), box = layer.querySelector('.obgem');
-      if (box) box.innerHTML = gemSVG(gm.gem.id, gm.frac, 64, t('gem.' + gm.gem.id)) + '<div><b>' + t('gem.' + gm.gem.id) + '</b><small>' + t('ob.gemNote') + '</small></div>';
+      const box = layer.querySelector('.obgem');
+      if (box) box.innerHTML = rankBox(p.priorHours);
     }
   });
   layer.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); layer.querySelector('[data-obnext]').click(); } });

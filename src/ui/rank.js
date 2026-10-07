@@ -1,6 +1,9 @@
 // Значок звания (SVG): медальон с символом звания и тремя делениями уровня внизу.
 // Символы по нарастанию: восьмая, две восьмые, скрипичный ключ, ключ в лавровом венке, ключ в венке с короной.
-const COLORS = { student: '#8E8E93', amateur: '#34C759', musician: '#007AFF', master: '#AF52DE', virtuoso: '#FF9500' };
+import { t } from '../i18n/index.js';
+import { ROMAN } from '../core/rank.js';
+
+export const RANK_COLORS = { student: '#8E8E93', amateur: '#34C759', musician: '#007AFF', master: '#AF52DE', virtuoso: '#FF9500' };
 
 const NOTE = 'M44 28v28.5a8 8 0 1 0 4 6.9V36c6 1 10 5 11 11 3-10-5-17-15-19z';
 const BEAM = 'M38 34l26-7v27.5a7 7 0 1 0 4 6.3V23L34 32v26.5a7 7 0 1 0 4 6.3z';
@@ -15,7 +18,7 @@ const half = [128, 148, 168, 188, 208].map((d) => {
 const LAUREL = '<g class="rkf">' + half + '<g transform="matrix(-1 0 0 1 100 0)">' + half + '</g></g>';
 
 export function rankSVG(id, level, size = 56, label = '') {
-  const c = COLORS[id] || '#8E8E93';
+  const c = RANK_COLORS[id] || '#8E8E93';
   const top = id === 'master' || id === 'virtuoso';
   const sym = id === 'student' ? '<path d="' + NOTE + '" class="rkf"/>' : id === 'amateur' ? '<path d="' + BEAM + '" class="rkf"/>'
     : (top ? LAUREL : '') + '<path d="' + CLEF + '" class="rks" transform="translate(6 1) scale(.88)"/>' + (id === 'virtuoso' ? '<path d="' + CROWN + '" class="rkf rkcrown"/>' : '');
@@ -27,3 +30,6 @@ export function rankSVG(id, level, size = 56, label = '') {
   return '<svg class="rank" width="' + size + '" height="' + size + '" viewBox="0 0 100 100"' + (label ? ' role="img" aria-label="' + label + '"' : ' aria-hidden="true"') + ' style="--rk:' + c + '">' +
     '<circle cx="50" cy="50" r="46" class="rkbg"/><circle cx="50" cy="50" r="46" class="rkring"/>' + sym + pips + '</svg>';
 }
+
+// «Музыкант II»
+export const rankName = (id, level) => t('rank.' + id) + ' ' + ROMAN[level];

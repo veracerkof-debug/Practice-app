@@ -10,7 +10,7 @@ export const LS_TV = 'practice.v1.tv';
 export const MIN_SESSION_S = 60;      // короче — не попадает в статистику
 export const IDLE_MS = 45 * 60000;    // ни одного касания (даже под метроном или секундомером) → «Занятие продолжается?»
 export const QUIET_MS = 10 * 60000;   // ничего не звучит и ни одного действия → сессия завершается
-export const ASK_WAIT_MS = 3 * 60000; // вопрос без ответа → завершение по последнему действию
+export const ASK_WAIT_MS = 5 * 60000; // вопрос без ответа → завершение по последнему действию
 export const GEM_QUIET_MS = 5 * 60000; // при подтверждении игры звуком: тишина дольше не идёт в значок мастерства
 export const MIN_TOOL_S = 10;         // инструмент вне сессии считается, если открыт дольше
 export const BPM_MIN_S = 15;          // темп засчитывается, если на нём играли не меньше
@@ -115,15 +115,16 @@ export function noteHeard(a, now = Date.now(), { mic = false } = {}) {
 
 // Что делать с бездействием: null, { ask, endAt } — спросить «Занятие продолжается?», { end, endAt } — завершить.
 // sounding — звучит приложение (метроном, пэды, запись); mic — микрофон слушает игру, и тишине можно верить.
-// endAt — до какого момента засчитывается время, если ответа не будет
-export function idleAction(a, { sounding = false, mic = false } = {}, now = Date.now()) {
+// endAt — до какого момента засчитывается время, если ответа не будет.
+// ask: false — вопросы выключены в «Уведомлениях»: вместо вопроса сразу завершение по последнему действию
+export function idleAction(a, { sounding = false, mic = false, ask = true } = {}, now = Date.now()) {
   if (!a || a.pausedAt) return null;
   if (a.askedAt) return now - a.askedAt > ASK_WAIT_MS ? { end: true, endAt: a.askEnd || a.last } : null;
   const act = lastActivity(a);
   // тишина и ни одного действия: с микрофоном — точно никто не играет; без него — спросить
-  if (!sounding && now - act > QUIET_MS) return mic ? { end: true, endAt: act } : { ask: true, endAt: act };
+  if (!sounding && now - act > QUIET_MS) return mic || !ask ? { end: true, endAt: act } : { ask: true, endAt: act };
   // долго без касаний, даже если звучит метроном или идёт секундомер
-  if (now - (a.last || a.startedAt) > IDLE_MS) return { ask: true, endAt: a.last || a.startedAt };
+  if (now - (a.last || a.startedAt) > IDLE_MS) return { [ask ? 'ask' : 'end']: true, endAt: a.last || a.startedAt };
   return null;
 }
 

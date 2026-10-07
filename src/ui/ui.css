@@ -111,3 +111,12 @@ button.cell:active{background:var(--fill)}
 .nosnd .nst{flex:1;min-width:0}
 .nosnd .link{white-space:nowrap;min-height:40px}
 .nosnd .nsx{border:0;background:none;color:var(--ink);opacity:.55;font-size:22px;width:40px;height:40px;border-radius:50%;flex:none;cursor:pointer}
+/* Значок звания (src/ui/rank.js): цвет звания — --rk */
+.rank{flex:none;display:block}
+.rank .rkbg{fill:color-mix(in srgb,var(--rk) 14%,transparent)}
+.rank .rkring{fill:none;stroke:var(--rk);stroke-width:3}
+.rank .rkf{fill:var(--rk)}
+.rank .rks{fill:none;stroke:var(--rk);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.rank .rkcrown{stroke:var(--cell);stroke-width:2;paint-order:stroke}
+.rank .rkp{fill:color-mix(in srgb,var(--rk) 25%,transparent)}
+.rank .rkp.on{fill:var(--rk)}

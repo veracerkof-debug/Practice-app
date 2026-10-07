@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tuningFor, priorHours, lifetimeSec, estimateHours, saveProfile, applyLevelDefaults, newProfile } from '../src/core/profile.js';
+import { tuningFor, priorHours, lifetimeSec, gemSec, estimateHours, saveProfile, applyLevelDefaults, newProfile } from '../src/core/profile.js';
 import { createStore } from '../src/core/store.js';
 import { deviceDefaults } from '../src/core/device.js';
 
@@ -17,6 +17,8 @@ describe('профиль', () => {
     expect(priorHours({})).toBe(0);
     expect(priorHours({ profile: { priorHours: -5 } })).toBe(0);
     expect(lifetimeSec([{ dur: 3600 }, { dur: 1800 }], st)).toBe(5400 + 120 * 3600);
+    // камень — только практика в приложении, без тишины, отмеченной микрофоном
+    expect(gemSec([{ dur: 3600, quiet: 600 }, { dur: 1800 }])).toBe(4800);
   });
   it('оценка опыта: годы × часы в неделю × 52', () => {
     expect(estimateHours(3, 5)).toBe(780);
