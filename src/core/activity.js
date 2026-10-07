@@ -62,6 +62,7 @@ export function createActivity(app, { soundingAudio }) {
   const st = () => app.store.state.settings;
   onNever = () => { st().askIdle = false; app.store.settingsChanged(); toast(t('idle.neverDone')); };
   const asks = () => st().askIdle !== false;
+  const off = () => !!st().toolsOnly; // «Только инструменты»: учёта нет — и проверять нечего
   const act = { touch: Date.now(), heard: 0, listening: false, level: null, hiddenAt: null, tools: 0 };
   let mic = null, micT = 0, gate = null, opening = false, micErr = false;
 
@@ -83,7 +84,7 @@ export function createActivity(app, { soundingAudio }) {
   addEventListener('keydown', onAct, { capture: true });
 
   /* ---------- микрофон: «подтверждение игры звуком» ---------- */
-  const wantMic = () => !!st().micPresence && !micErr && document.visibilityState === 'visible' && (!!app.active || app.stopwatch.running || act.tools > 0);
+  const wantMic = () => !!st().micPresence && !off() && !micErr && document.visibilityState === 'visible' && (!!app.active || app.stopwatch.running || act.tools > 0);
   async function micStart() {
     if (mic || opening) return;
     opening = true;
@@ -122,7 +123,7 @@ export function createActivity(app, { soundingAudio }) {
   const w = () => app.stopwatch.state;
   function watchCheck(now) {
     const sw = app.stopwatch;
-    if (!sw.running) { closeAsk('watch'); return; }
+    if (!sw.running || off()) { closeAsk('watch'); return; }
     if (document.visibilityState !== 'visible') {
       if (!soundingAudio()) { sw.pause(Math.max(act.hiddenAt || now, act.heard)); w().autoPaused = true; app.saveDevice(); }
       return;
@@ -143,7 +144,7 @@ export function createActivity(app, { soundingAudio }) {
   /* ---------- сессия ---------- */
   function sessionCheck(now) {
     const a = app.active;
-    if (!a || a.ending) { closeAsk('session'); return; }
+    if (!a || a.ending || off()) { closeAsk('session'); return; }
     const sounding = soundingAudio();
     const r = idleAction(a, { sounding, mic: act.listening, ask: asks() }, now);
     // после перезагрузки вопрос без ответа показывается снова

@@ -647,5 +647,10 @@
   "notif.noSoundNote.hint": "Appears when something is playing but its sound is off in the mixer, or the device volume is zero or too low.",
   "notif.rankNote": "New rank message",
   "notif.rankNote.hint": "One short message when a new rank step is reached.",
-  "rank.total": "Total experience: {total}"
+  "rank.total": "Total experience: {total}",
+  "feat.toolsOnly": "Tools only",
+  "feat.toolsOnly.hint": "A mode without time tracking, statistics, ranks, badges and notifications: only tools, songs and the calendar. The workspace with windows works as usual, but time is not recorded anywhere. Data already recorded is kept and comes back when the mode is turned off.",
+  "ses.close": "Close the workspace",
+  "home.ws": "Open the workspace",
+  "home.wsResume": "Back to the workspace"
 }

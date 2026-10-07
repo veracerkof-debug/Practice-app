@@ -44,7 +44,7 @@ export function libraryHTML(app, view) {
       (c && !view.cat ? '<i class="cdot" style="background:' + c.color + '" title="' + esc(c.name) + '"></i>' : '') + esc(s.title) + '</div><div class="st">' +
       esc([s.artist, g ? g.name : s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + '</div>' +
       (tags.length ? '<div class="tagrow">' + tags.map((x) => chipHTML(x, 'sm')).join('') + '</div>' : '') +
-      '</div><div class="val"><div>' + mBadge(getPct(s), st) + '</div><div class="num" style="font-size:12px;margin-top:3px">' + fmtDur(ss.total) + '</div></div></button>';
+      '</div><div class="val"><div>' + mBadge(getPct(s), st) + '</div>' + (st.toolsOnly ? '' : '<div class="num" style="font-size:12px;margin-top:3px">' + fmtDur(ss.total) + '</div>') + '</div></button>';
   }).join('') + '</div>';
 }
 
@@ -68,17 +68,18 @@ function tempoChart(pts, target) {
 export function songHTML(app, id) {
   const s = app.store.songById(id);
   if (!s) return null;
-  const L = ensureLib(app.store.state, t), st = songStats(app.store.sessions(), id), p = getPct(s);
+  const L = ensureLib(app.store.state, t), st = songStats(app.store.sessions(), id), p = getPct(s), plain = !!app.store.state.settings.toolsOnly;
   const g = genreOf(L, s.genre), c = catOf(L, s.cat), tg = (s.tags || []).map((x) => tagOf(L, x)).filter(Boolean);
   let h = '<div class="navrow"><button class="link" data-go="library">' + BACK + t('songs.title') + '</button>' + icb('data-edit="' + s.id + '"', IC.pen, t('song.edit'), 'plain') + '</div>' +
     '<div class="large" style="margin:6px 4px 2px">' + esc(s.title) + '</div><p class="sub" style="margin:0 4px 16px">' + esc([s.artist, s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + '</p>' +
     (g || c || tg.length ? '<div class="tagrow" style="margin:-8px 4px 14px">' + (c ? chipHTML(c) : '') + (g ? chipHTML(g) : '') + tg.map((x) => chipHTML(x)).join('') + '</div>' : '') +
     '<div class="card shero"><div class="mring">' + mRing(p, 72, scaleOf(app.store.state.settings)) + '</div><div class="grow">' +
-    '<div class="srow" title="' + t('song.time') + '">' + IC.clock + '<b class="num">' + fmtDur(st.total) + '</b></div>' +
-    '<div class="srow" title="' + t('song.sessions') + '">' + IC.stack + '<b class="num">' + st.count + '</b><span>' + (st.last ? relDay(st.last) : '—') + '</span></div>' +
+    // «Только инструменты»: без времени и числа занятий
+    (plain ? '' : '<div class="srow" title="' + t('song.time') + '">' + IC.clock + '<b class="num">' + fmtDur(st.total) + '</b></div>' +
+    '<div class="srow" title="' + t('song.sessions') + '">' + IC.stack + '<b class="num">' + st.count + '</b><span>' + (st.last ? relDay(st.last) : '—') + '</span></div>') +
     '<div class="srow" title="' + t('song.tempo') + '">' + IC.metro + '<b class="num">' + (s.currentBpm || '—') + '</b><span>' + (s.targetBpm ? '→ ' + s.targetBpm : '') + ' bpm</span></div>' +
     '<div class="srow">' + IC.bolt + '<span class="dots" role="img" aria-label="' + esc(t('song.diffAria', { n: s.difficulty })) + '">' + [1, 2, 3, 4, 5].map((i) => '<i class="' + (i <= s.difficulty ? 'on' : '') + '"></i>').join('') + '</span></div></div></div>';
-  if (st.tempo.length >= 2) h += '<div class="card">' + tempoChart(st.tempo, s.targetBpm) + '</div>';
+  if (!plain && st.tempo.length >= 2) h += '<div class="card">' + tempoChart(st.tempo, s.targetBpm) + '</div>';
   if (s.notes) h += '<div class="group" style="margin-top:12px"><div class="notes">' + esc(s.notes) + '</div></div>';
   h += songEventsHTML(app, s.id);
   h += '<div style="text-align:center;margin-top:28px"><button class="link" data-del="' + s.id + '" style="color:var(--red);font-size:15px">' + t('song.delete') + '</button></div>';

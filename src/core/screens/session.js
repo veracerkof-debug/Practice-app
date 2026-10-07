@@ -106,14 +106,14 @@ export function createSessionScreen(app) {
   function open() {
     if (!app.active) return;
     if (layer) return;
-    const a = app.active, tm = a.type === 'tool', hide = st().showClock === false;
+    const a = app.active, tm = a.type === 'tool', hide = st().showClock === false || !!st().toolsOnly;
     w = fixWS(getWS(device, a), sessionGroups(st()), a);
     layer = document.createElement('div');
     layer.innerHTML = '<div class="session' + (tm ? ' toolmode' : '') + '" role="dialog" aria-modal="true" aria-label="' + esc(t('ses.aria')) + '"><div class="sin">' +
       '<div class="shd">' + icb('data-s="hide"', IC.down, t('ses.hide'), 'sm') +
       '<button class="stime' + (a.mode === 'strict' ? ' gold' : '') + '" data-s="pause" id="stime" aria-label="' + esc(t('ses.pause')) + '"' + (a.mode === 'strict' ? ' title="' + esc(t('track.strictTitle')) + '"' : '') + '><i class="sdot"></i>' + (hide ? '' : '<span id="clk" class="num">00:00</span>') + '</button>' +
       (tm || !isOn(st(), 'timer') ? '<span></span>' : '<button class="pchip" data-s="pomo" id="pchip" aria-label="' + esc(t('ses.pomo')) + '">' + pchipHTML() + '</button>') +
-      '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + icb('data-s="finish"', IC.check, t('ses.finish'), 'sm done') + '</div>' +
+      '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + icb('data-s="finish"', IC.check, t(st().toolsOnly ? 'ses.close' : 'ses.finish'), 'sm done') + '</div>' +
       '<div class="ws"></div></div>' +
       (tm ? '' : '<div class="sdock"><div class="tbar" id="tpills" role="tablist" aria-label="' + esc(t('ses.tools')) + '">' +
         sessionGroups(st()).map((g) => '<button class="tb" data-pill="' + g + '" role="tab" aria-label="' + esc(groupName(st(), g)) + '" title="' + esc(groupName(st(), g)) + '">' + groupIcon(g) + '</button>').join('') +
@@ -410,6 +410,8 @@ export function createSessionScreen(app) {
     if (!a) return;
     if (audio.metro.running) audio.metro.stop();
     audio.metro.flush();
+    // «Только инструменты»: рабочее место просто закрывается, в статистику ничего не пишется
+    if (st().toolsOnly) { end(); return; }
     const sum = summarize(a, { endAt, mic: app.activity.listening }), s = song();
     if (sum.short) {
       sheet(() => snav(t('fin.shortTitle'), { right: '<span></span>' }) + '<p style="text-align:center;margin:8px 8px 20px" class="l2">' + t('fin.shortText') + '</p>' +

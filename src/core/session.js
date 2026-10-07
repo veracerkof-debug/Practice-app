@@ -241,7 +241,7 @@ export function commitSession(store, rec, song = null) {
 // Записывает время инструмента молча, без сессии. Возвращает true, если записано
 // mode — режим учёта; overlapMs — сколько из этого времени уже записал секундомер (не засчитывается дважды)
 export function recordToolTime(store, tool, start, ms, now = Date.now(), { mode = 'normal', overlapMs = 0 } = {}) {
-  if (store.state.settings.autoTrack === false) return false;
+  if (store.state.settings.autoTrack === false || store.state.settings.toolsOnly) return false;
   const dur = Math.round(Math.max(0, ms - overlapMs) / 1000);
   if (dur < MIN_TOOL_S) return false;
   store.state.sessions.push({ id: uid(), type: 'tool', tool, songId: null, start, end: now, dur, mode, updatedAt: now });

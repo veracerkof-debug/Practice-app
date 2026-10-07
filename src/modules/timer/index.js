@@ -52,7 +52,8 @@ function buttons() {
   return {
     play: '<button class="bigplay" data-x="ptoggle" aria-label="' + t(v.running ? 'pause' : 'start') + '">' + (v.running ? I.pause : I.play) + '</button>',
     rs: ui.icb('data-x="preset"', I.reset, t(watch() ? 'w.reset' : 'reset')),
-    sk: watch() ? ui.icb('data-x="wsave"', I.save, t('w.save')) : ui.icb('data-x="pskip"', I.skip, t('skip')),
+    // в режиме «Только инструменты» записывать некуда — кнопки нет
+    sk: watch() ? (SW().saves === false ? '<span style="width:44px" aria-hidden="true"></span>' : ui.icb('data-x="wsave"', I.save, t('w.save'))) : ui.icb('data-x="pskip"', I.skip, t('skip')),
   };
 }
 

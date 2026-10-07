@@ -638,5 +638,10 @@
   "notif.noSoundNote.hint": "Biror narsa chalayotganda, lekin tovush mikserda oʻchirilgan yoki qurilma ovozi nolda yoki juda past boʻlsa chiqadi.",
   "notif.rankNote": "Yangi unvon haqida xabar",
   "notif.rankNote.hint": "Unvonning yangi bosqichiga oʻtilganda bitta qisqa xabar.",
-  "rank.total": "Jami tajriba: {total}"
+  "rank.total": "Jami tajriba: {total}",
+  "feat.toolsOnly": "Faqat asboblar",
+  "feat.toolsOnly.hint": "Vaqt hisobi, statistika, unvonlar, belgilar va bildirishnomalarsiz rejim: faqat asboblar, qoʻshiqlar va taqvim. Oynali ish joyi odatdagidek ishlaydi, lekin vaqt hech qayerga yozilmaydi. Avval yozilgan maʼlumotlar oʻchirilmaydi va rejim oʻchirilganda qaytadi.",
+  "ses.close": "Ish joyini yopish",
+  "home.ws": "Ish joyini ochish",
+  "home.wsResume": "Ish joyiga qaytish"
 }

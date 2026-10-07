@@ -48,7 +48,7 @@ export function initNoSound(app) {
   const check = async () => {
     if (busy) return;
     const playing = BUSES.filter((b) => mixer.isActive(b));
-    if (!playing.length || document.visibilityState !== 'visible' || app.store.state.settings.noSoundNote === false) { show(null); return; }
+    if (!playing.length || document.visibilityState !== 'visible' || app.store.state.settings.noSoundNote === false || app.store.state.settings.toolsOnly) { show(null); return; }
     let dev = null;
     if (Volume) { busy = true; try { dev = await Volume.get(); } catch { /* нет данных — проверяем только микшер */ } busy = false; }
     show(silenceReason(playing, mixer.value, dev));

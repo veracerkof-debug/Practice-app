@@ -38,7 +38,9 @@ export function homeHTML(app) {
   const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
   const today = weekday(Date.now()), plan = st.days, WD = weekdays();
   let h = topbar() + '<div class="large">' + t('home.title') + '</div><div class="hcols"><div>';
-  h += '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
+  // «Только инструменты»: без недели, цели, камня и звания — сразу рабочее место и инструменты
+  const plain = !!st.toolsOnly;
+  if (!plain) h += '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
     '</div><div class="big num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</div><div class="l2" style="font-size:14px">' + t('home.of', { goal: fmtDur(goal) }) + (p > 1 ? t('home.over') : p >= 1 ? t('home.met') : '') + '</div>' +
     streakPill(app) + '</div></div>' +
     '<div class="days hdays">' + WD.map((d, i) => '<div class="day ' + (w.per[i] > 0 ? 'done' : plan[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '" title="' +
@@ -46,7 +48,7 @@ export function homeHTML(app) {
     '<button class="hlink" data-pp="' + (st.configured ? 'stats' : 'week') + '">' +
     (st.configured ? (plan[today] ? t('home.todayPlan') : t('home.todayRest')) + ' · ' + t('home.stats') : t('home.setup')) + ' ›</button></div>';
   h += gemRow(app);
-  h += '<button class="hcta" data-act="free">' + PLAY + '<span>' + t(app.active ? 'home.resume' : 'home.start') + '</span></button>';
+  h += '<button class="hcta" data-act="free"' + (plain ? ' style="margin-top:4px"' : '') + '>' + PLAY + '<span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
   const q = quickList(st);
   h += '<div class="hhdr"><span>' + t('home.quick') + '</span><button class="link" data-act="quickedit">' + t('home.edit') + '</button></div>';
   h += '<div class="qgrid">' + (q.length
@@ -60,7 +62,7 @@ export function homeHTML(app) {
   if (!rec.length) h += '<div class="group"><button class="cell act" data-act="addSong">' + t('home.firstSong') + '</button></div>';
   else h += '<div class="slist">' + rec.map(({ s, st: ss }) => {
     const g = genreOf(L, s.genre);
-    const sub = s.currentBpm && s.targetBpm ? s.currentBpm + ' → ' + s.targetBpm + ' bpm' : ss.last ? relDay(ss.last) + ', ' + fmtDur(ss.total) : t('home.notPlayed');
+    const sub = s.currentBpm && s.targetBpm ? s.currentBpm + ' → ' + s.targetBpm + ' bpm' : plain ? s.artist || '' : ss.last ? relDay(ss.last) + ', ' + fmtDur(ss.total) : t('home.notPlayed');
     return '<div class="stile3 hsong" style="--g:' + (g ? g.color : 'var(--l3)') + '"><button class="grow" data-song="' + s.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(s.title) +
       '</div><div class="st">' + esc(sub) + '</div></button><button class="playmini2" aria-label="' + esc(t('home.playSong', { title: s.title })) + '" data-play="' + s.id + '">' + PLAY + '</button></div>';
   }).join('') + '</div>';
@@ -158,7 +160,7 @@ export function rankSheet(app) {
 // показанного звания хранится в settings.rankSeen; в первый раз запоминается молча
 export function rankCheck(app) {
   const st = app.store.state.settings;
-  if (!st.profile) return;
+  if (!st.profile || st.toolsOnly) return;
   const r = rankOf(lifetimeSec(app.store.sessions(), st) / 3600);
   if (st.rankSeen == null || r.i < st.rankSeen) { st.rankSeen = r.i; app.store.settingsChanged(); return; }
   if (r.i === st.rankSeen) return;

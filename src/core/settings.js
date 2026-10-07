@@ -3,7 +3,12 @@
 // Функции ядра, которые можно выключить (модули выключаются так же — по id); данные при этом сохраняются
 export const CORE_FEATURES = ['streak', 'mastery'];
 
-export const isOn = (settings, id) => !((settings.off || {})[id]);
+// Режим «Только инструменты»: без учёта времени, статистики, званий, значков и уведомлений — только инструменты,
+// песни и календарь. Уже записанные данные не удаляются и вернутся, если режим выключить
+export const toolsOnly = (settings) => !!settings.toolsOnly;
+
+// В режиме «Только инструменты» функции ядра (ударный режим, значок мастерства) выключены
+export const isOn = (settings, id) => !((settings.off || {})[id]) && !(settings.toolsOnly && CORE_FEATURES.includes(id));
 
 export function setFeature(store, id, on) {
   const st = store.state.settings, off = st.off || (st.off = {});

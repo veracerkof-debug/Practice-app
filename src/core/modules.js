@@ -91,7 +91,9 @@ export function makeCtx(app, mod) {
       reset: () => app.stopwatch.reset(),
       subscribe: (fn) => app.stopwatch.subscribe(fn),
       credit: () => app.stopwatch.credit(app.store.sessions(), app.active),
-      commit: (o) => app.stopwatch.commit(app.store, app.active, o),
+      commit: (o) => (app.store.state.settings.toolsOnly ? null : app.stopwatch.commit(app.store, app.active, o)),
+      // Можно ли записать время в статистику (в режиме «Только инструменты» — нет)
+      get saves() { return !app.store.state.settings.toolsOnly; },
       tags: () => FREE_TAGS.map((v) => ({ value: v, label: freeTagName(v) })),
     },
     // Открыть другой инструмент (например, пианино с подсветкой гаммы)

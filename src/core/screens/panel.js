@@ -14,7 +14,7 @@ import { CORE_FEATURES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, applyT
 import { scaleOf } from '../library.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
-import { CHEV, BACK, IC, TAB_IDS, TAB_ICONS, weekdays, mBadge } from './common.js';
+import { AVATAR, CHEV, BACK, IC, TAB_IDS, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
 import { freeTagName, trackMode } from '../session.js';
 import { INSTRUMENTS, LEVELS, PRIOR_MAX, lifetimeSec, saveProfile, newProfile } from '../profile.js';
@@ -32,6 +32,8 @@ const PAGES = {
   look: ['#5856D6', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="#fff"/></svg>'],
   data: ['#34C759', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
+// Страницы, которых нет в режиме «Только инструменты»
+const PLAIN_HIDE = ['stats', 'week', 'notif'];
 const HEART = '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
 const VERSION = '0.0.1';
 
@@ -173,6 +175,8 @@ function featHTML(app) {
     '<label class="sw"><input type="checkbox" data-feat="' + id + '"' + (isOn(st, id) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
   const aboutOf = (m) => (m.i18n?.[lang]?.about ?? m.i18n?.ru?.about ?? (m.about && (m.about[lang] || m.about.ru)) ?? '');
   return '<div class="large">' + t('feat.title') + '</div><p class="sub" style="margin:0 4px 12px">' + t('feat.hint') + '</p>' +
+    '<div class="group"><div class="cell"><span class="grow">' + t('feat.toolsOnly') + '</span>' + psw('toolsOnly', !!st.toolsOnly, t('feat.toolsOnly')) + '</div></div>' +
+    '<p class="ftr">' + t('feat.toolsOnly.hint') + '</p>' +
     '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
     modules.map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '')).join('') + '</div>' +
     '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : FLAME, k === 'mastery' ? '#5856D6' : '#FF9500', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>' +
@@ -196,15 +200,17 @@ function tabsHTML(app) {
 function rootHTML(app) {
   const all = app.store.sessions(), n = app.store.songs().length, weeks = streakInfo(all, app.store.state.settings).weeks;
   const pr = app.store.state.settings.profile || {}, sub = (pr.instruments || []).map((k) => t('inst.' + k)).join(', ');
-  // Вместо аватара — значок звания (весь опыт: до приложения и в приложении); нажатие — подробности
+  // Вместо аватара — значок звания (весь опыт: до приложения и в приложении); нажатие — подробности.
+  // «Только инструменты»: ни звания, ни итогов — обычный аватар, и в списке нет статистики, недели, уведомлений
+  const plain = !!app.store.state.settings.toolsOnly;
   const r = rankOf(lifetimeSec(all, app.store.state.settings) / 3600), rn = rankName(r.id, r.level);
-  return '<div class="phero"><button class="prank" data-act="rank" style="--rk:' + RANK_COLORS[r.id] + '" aria-label="' + esc(t('rank.aria', { name: rn })) + '">' + rankSVG(r.id, r.level, 88) + '</button>' +
+  return '<div class="phero">' + (plain ? '<div class="pav">' + AVATAR + '</div>' : '<button class="prank" data-act="rank" style="--rk:' + RANK_COLORS[r.id] + '" aria-label="' + esc(t('rank.aria', { name: rn })) + '">' + rankSVG(r.id, r.level, 88) + '</button>') +
     '<div class="large" style="margin:12px 0 0;text-align:center">' + esc(pr.name || t('panel.title')) + '</div>' +
-    '<button class="prname" data-act="rank" style="--rk:' + RANK_COLORS[r.id] + '">' + esc(rn) + '</button>' +
+    (plain ? '' : '<button class="prname" data-act="rank" style="--rk:' + RANK_COLORS[r.id] + '">' + esc(rn) + '</button>') +
     (sub ? '<div class="l2" style="text-align:center;font-size:15px">' + esc(sub) + (pr.level ? ' · ' + t('level.' + pr.level) : '') + '</div>' : '') + '</div>' +
-    '<div class="tiles num"><div class="tile"><b>' + fmtDur(lifetimeSec(all, app.store.state.settings)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
-    '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>' +
-    '<div class="group" style="margin-top:20px">' + Object.entries(PAGES).map(([k, [c, ic]]) => '<button class="cell" data-pp="' + k + '"><span class="ticon" style="background:' + c + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
+    (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(lifetimeSec(all, app.store.state.settings)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
+    '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
+    '<div class="group" style="margin-top:20px">' + Object.entries(PAGES).filter(([k]) => !plain || !PLAIN_HIDE.includes(k)).map(([k, [c, ic]]) => '<button class="cell" data-pp="' + k + '"><span class="ticon" style="background:' + c + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="background:#FF2D55">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button></div>' +
     '<div class="group" style="margin-top:12px">' + ['tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="about"><b>Practice</b> · ' + t('panel.version', { v: VERSION }) + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
@@ -274,7 +280,7 @@ export function createPanel(app, onChange) {
     layer.addEventListener('change', (e) => {
       const d = e.target.dataset;
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); return; }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly') app.render(); }
       if (d.me) { saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value }); onChange(); }
     });
   }
