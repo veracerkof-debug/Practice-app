@@ -209,13 +209,15 @@ export function rankCheck(app) {
   if (st.rankNote !== false && isOn(st, 'mastery')) toast(t('rank.new', { name: rankName(r.id, r.level) }));
 }
 
-// Справка о названии: что значит Μελέτη, муза упражнения у Павсания, стих из Первого послания к Тимофею
+// Справка о названии: что значит Μελέτη, стих из Первого послания к Тимофею, затем муза упражнения у Павсания
 const VERSE_GR = 'Ταῦτα μελέτα, ἐν τούτοις ἴσθι, ἵνα σου ἡ προκοπὴ φανερὰ ᾖ πᾶσιν.';
 export function nameSheet() {
   sheet(() => snav(t('name.title')) +
     '<div class="namehero">' + logoHTML() + '<div class="tr">' + esc(t('name.tr')) + '</div></div>' +
-    '<div class="group"><div class="cellcol"><p style="margin:0">' + esc(t('name.meaning')) + '</p></div><div class="cellcol"><p style="margin:0">' + esc(t('name.muse')) + '</p></div></div>' +
+    '<div class="group"><div class="cellcol"><p style="margin:0">' + esc(t('name.meaning')) + '</p></div></div>' +
+    // Писание — выше справки о музах (решение автора)
     '<div class="hdr">' + esc(t('name.verseHdr')) + '</div><div class="group"><div class="cellcol"><p class="nameq" lang="grc">' + VERSE_GR + '</p>' +
     (t('name.verse') ? '<p style="margin:0 0 6px">' + esc(t('name.verse')) + '</p>' : '') + '<div class="nameref">' + esc(t('name.ref')) + '</div></div></div>' +
+    '<div class="group" style="margin-top:12px"><div class="cellcol"><p style="margin:0">' + esc(t('name.muse')) + '</p></div></div>' +
     '<p class="ftr">' + esc(t('name.hint')) + '</p>');
 }
