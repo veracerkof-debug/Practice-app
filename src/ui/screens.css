@@ -227,3 +227,7 @@
 .nameq{font-family:"GFS Didot",Georgia,serif;font-size:20px;line-height:1.45;margin:0 0 8px}
 .nameref{color:var(--l2);font-size:13px}
 .nameq b{font-weight:700}
+/* «Сообщить о проблеме» (src/core/screens/report.js): поле описания и просмотр отчёта перед отправкой */
+.rptwhat{width:100%;min-height:96px;text-align:left;resize:vertical;font:inherit;font-size:16px;line-height:1.4;padding:4px 0}
+.rptpre{margin:12px 0 0;padding:12px;max-height:50vh;overflow:auto;border-radius:12px;background:var(--fill);color:var(--l2);
+  font:11.5px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;-webkit-user-select:text;user-select:text}

@@ -23,9 +23,14 @@ import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
 import { toast, confirm } from '../ui/index.js';
+import { startLog } from './log.js';
+import { APP_VERSION } from './report.js';
+import { crashOffer } from './screens/report.js';
 import { createFiles } from './files.js';
 
 export function boot(root) {
+  // журнал — первым: ошибки запуска тоже попадут в него
+  startLog(APP_VERSION + ' · ' + (navigator.userAgent.match(/Android [\d.]+|Chrome\/[\d.]+/g) || []).join(' · '));
   // Часы устройства: пока сбиты, новые записи о занятиях не подтверждаются
   let clock = null;
   const store = createStore({ clockBad: () => !!(clock && clock.bad) });
@@ -153,6 +158,8 @@ export function boot(root) {
   initBack(app);
   // Статус медиатеки и табов зависит от файлов, которые читаются из базы асинхронно
   files.ready.then(() => { if (!app.openTool) app.render(); });
+  // прошлый запуск закрылся неожиданно — предложить отправить отчёт
+  crashOffer(app);
   return app;
 }
 

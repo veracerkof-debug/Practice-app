@@ -372,12 +372,15 @@ async function camOn(auto = false) {
   S.state = 'loading';
   S.live = false;
   render();
+  const t0 = Date.now();
+  ctx.log('камера: включение' + (auto ? ' (само)' : ''));
   try {
     const v = host.querySelector('video.tmcam');
     // первый кадр — картинка плавно проявляется
-    v.addEventListener('loadeddata', () => { S.live = true; const el = host && host.querySelector('.tm'); if (el) el.classList.add('live'); }, { once: true });
+    v.addEventListener('loadeddata', () => { ctx && ctx.log('камера: первый кадр через ' + (Date.now() - t0) + ' мс, ' + v.videoWidth + '×' + v.videoHeight); S.live = true; const el = host && host.querySelector('.tm'); if (el) el.classList.add('live'); }, { once: true });
     S.cam = await startHands(v, onHands);
     if (!host) { camOff(); return; }
+    ctx.log('камера: руки распознаются через ' + (Date.now() - t0) + ' мс');
     S.state = 'on';
     // однажды разрешённая и включённая камера дальше включается сама (выключается в настройках)
     const s = cfg();
@@ -385,6 +388,7 @@ async function camOn(auto = false) {
   } catch (e) {
     S.state = 'error';
     S.err = e.reason || 'fail';
+    if (ctx) ctx.log('камера: ' + S.err + ' — ' + ((e && e.name) || '') + ' ' + ((e && e.message) || ''), S.err === 'denied' ? 'w' : 'e');
     if (S.err === 'denied') { cfg().camAuto = false; save(); } // запретили — сама больше не пытается
   }
   render();

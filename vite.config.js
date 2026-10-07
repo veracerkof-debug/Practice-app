@@ -32,7 +32,8 @@ export default defineConfig({
   // относительные пути — нужны для Capacitor (этап 3)
   base: './',
   // дата сборки: часы устройства раньше неё — сбиты (src/core/clock.js)
-  define: { __BUILD_TIME__: Date.now() },
+  // версия — в отчёт о проблеме (src/core/report.js)
+  define: { __BUILD_TIME__: Date.now(), __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version) },
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
   plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe()],
   // MediaPipe не собирается заранее: иначе в режиме разработки вырезка статистики (build/mediapipe.js) не сработает

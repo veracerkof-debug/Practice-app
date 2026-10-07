@@ -102,6 +102,8 @@ function closePdf() {
   PDF.rec = null;
 }
 
+const mbOf = (n) => (n / 1048576).toFixed(1) + ' МБ';
+
 // Почему PDF не открылся — словами; имя ошибки в скобках, чтобы по нему можно было разобраться
 function pdfErr(e) {
   const n = (e && e.name) || 'Error';
@@ -134,18 +136,22 @@ async function openPdfRec(rec) {
   AT.state = 'loading';
   render();
   let doc;
-  try { doc = await openPdf(rec.blob, { password: rec.pw, askPassword: pwDialog }); } catch (e) {
+  const t0 = Date.now(), plog = (m, l) => ctx && ctx.log('pdf: ' + m, l);
+  plog('открытие, ' + mbOf(rec.blob.size) + (rec.blob.type ? ', ' + rec.blob.type : ', без типа'));
+  try { doc = await openPdf(rec.blob, { password: rec.pw, askPassword: pwDialog, log: plog }); } catch (e) {
+    if (ctx) (e.name === 'PasswordCancel' ? plog('пароль не введён') : ctx.logErr(e));
     if (AT.cur !== rec) return;
     AT.state = 'error'; render();
     if (ctx && e.name !== 'PasswordCancel') ctx.ui.toast(pdfErr(e));
     return;
   }
   if (AT.cur !== rec) { closePdfDoc(doc); return; }
+  plog('открыт за ' + (Date.now() - t0) + ' мс, страниц ' + doc.numPages + ', с ' + (posOf(rec).page || 1));
   if (doc._pw && doc._pw !== rec.pw) { rec.pw = doc._pw; ctx.files.save(rec); }
   const pos = posOf(rec);
   PDF.rec = rec;
   PDF.view = createPdfView(doc, {
-    page: pos.page || 1, zoom: pos.zoom || 1,
+    page: pos.page || 1, zoom: pos.zoom || 1, log: plog,
     onState: (s) => {
       Object.assign(PDF, { page: s.page, pages: s.pages, zoom: s.zoom });
       document.querySelectorAll('#pdfpg, #pdfpgF').forEach((pn) => { pn.textContent = s.page + ' / ' + s.pages; });
@@ -171,7 +177,7 @@ async function openTab(rec) {
   AT.score = null;
   render();
   let at;
-  try { at = await loadLib(); } catch { AT.state = 'error'; render(); ctx && ctx.ui.toast(ctx.t('libFail')); return; }
+  try { at = await loadLib(); } catch (e) { ctx && ctx.logErr(e); AT.state = 'error'; render(); ctx && ctx.ui.toast(ctx.t('libFail')); return; }
   if (!AT.api) {
     AT.el = document.createElement('div');
     AT.el.className = 'atsurf';
@@ -182,7 +188,7 @@ async function openTab(rec) {
       display: { scale: st().scale, layoutMode: at.LayoutMode.Page, staveProfile: prof(at) },
     });
     AT.api.scoreLoaded.on((sc) => { AT.score = sc; AT.track = 0; AT.state = 'ready'; render(); });
-    AT.api.error.on(() => { AT.state = 'error'; render(); if (ctx) ctx.ui.toast(ctx.t('openFail')); });
+    AT.api.error.on((e) => { if (ctx) ctx.log('alphaTab: ' + ((e && (e.message || e.type)) || 'ошибка'), 'e'); AT.state = 'error'; render(); if (ctx) ctx.ui.toast(ctx.t('openFail')); });
   }
   try { AT.api.load(new Uint8Array(await rec.blob.arrayBuffer())); } catch { AT.state = 'error'; render(); }
 }
@@ -418,8 +424,9 @@ async function onFile(e) {
   const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type,
     fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' || (await sniffPdf(f)) ? 'pdf' : 'score',
     songs: song ? [song.id] : [], created: Date.now(), blob: f };
-  if (!(await ctx.files.add(rec))) ctx.ui.toast(ctx.t('notSaved'));
-  else if (ctx.files.reread) await ctx.files.reread(rec);
+  const saved = await ctx.files.add(rec), rr = saved && ctx.files.reread ? await ctx.files.reread(rec) : false;
+  ctx.log('загрузка: ' + mbOf(f.size) + ', тип ' + (f.type || 'нет') + ', формат ' + rec.fmt + (saved ? ', сохранён' : ', НЕ сохранён') + (rr ? ', читается из копии' : ''), saved ? 'i' : 'w');
+  if (!saved) ctx.ui.toast(ctx.t('notSaved'));
   st().sec = 'tabs';
   ctx.store.save();
   openTab(rec);

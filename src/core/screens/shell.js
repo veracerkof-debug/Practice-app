@@ -10,6 +10,7 @@ import { homeHTML, mountStones, quickEdit, streakSheet, gemSheet, rankSheet, ran
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { bindExt } from './ext.js';
+import { reportSheet } from './report.js';
 import { createPanel, donateSheet, legalSheet, tosGate, unverifiedSheet } from './panel.js';
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
 import { onboarding } from './onboard.js';
@@ -85,6 +86,7 @@ export function createShell(app, root) {
     else if (d.act === 'libman') libManager(app, render);
     else if (d.act === 'quickedit') quickEdit(app, render);
     else if (d.act === 'donate') donateSheet();
+    else if (d.act === 'report') reportSheet(app);
     else if (d.act === 'legal') legalSheet(d.v);
     else if (d.act === 'streak') streakSheet(app);
     else if (d.act === 'unver') unverifiedSheet(app);

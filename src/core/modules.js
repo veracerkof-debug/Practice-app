@@ -6,6 +6,7 @@ import { createToolView, toolViewMs, toolViewVisibility, saveToolView, recordToo
 import { overlapMs, mergeSegs } from './stopwatch.js';
 import { fmtDur } from './format.js';
 import '../ui/pane.css';
+import { log, logErr } from './log.js';
 import { firstHelp } from './help.js';
 
 export const SIZES = ['full', 'half', 'quarter', 'strip'];
@@ -77,6 +78,9 @@ export function makeCtx(app, mod) {
     // Вид «Минимал» (эксперимент): у инструментов с выбором вида он закреплён — самый простой и функциональный
     get mono() { return app.store.state.settings.uiStyle === 'mono'; },
     presets: (kind) => presetsApi(app, kind),
+    // Технический журнал (src/core/log.js): только события и ошибки, без названий и личных данных
+    log: (msg, lvl) => log(mod.id, msg, lvl),
+    logErr: (e) => logErr(mod.id, e),
     // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
     files: app.files,
     confirmUpload: () => app.confirmUpload(),
@@ -132,6 +136,7 @@ export const moduleName = (mod) => mod.name[getLang()] || mod.name.ru;
 // где есть ещё полоска перетаскивания и переключатель «метроном / тюнер».
 export function mountModule(app, mod, host, size = 'full', frame = host) {
   const ctx = makeCtx(app, mod);
+  log('mod', 'открыт ' + mod.id + ' (' + size + ')');
   frame.classList.add('pane', size);
   frame.dataset.tool = mod.id;
   frame.dataset.size = size;
@@ -145,9 +150,11 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
       frame.classList.add(next);
       frame.dataset.size = next;
       mod.resize(next);
+      log('mod', mod.id + ' → ' + next);
     },
     unmount() {
-      mod.unmount();
+      log('mod', 'закрыт ' + mod.id);
+      try { mod.unmount(); } catch (e) { logErr('mod', e); }
       host.replaceChildren();
     },
   };

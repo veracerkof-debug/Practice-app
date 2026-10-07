@@ -34,7 +34,7 @@ const docs = new WeakMap();
 let closing = Promise.resolve();
 
 // askPassword(wrong) — файл под паролем: спросить (wrong — прошлый не подошёл); null — отказались
-export async function openPdf(blob, { password, askPassword } = {}) {
+export async function openPdf(blob, { password, askPassword, log = () => {} } = {}) {
   const pdfjs = await loadLib();
   await closing;
   const port = new PdfWorker(), worker = new pdfjs.PDFWorker({ port });
@@ -56,8 +56,8 @@ export async function openPdf(blob, { password, askPassword } = {}) {
     let whole = null;
     const read = async (b, e) => {
       if (!whole) {
-        try { return new Uint8Array(await blob.slice(b, e).arrayBuffer()); } catch { /* ниже — целиком */ }
-        whole = blob.arrayBuffer().then((x) => new Uint8Array(x));
+        try { return new Uint8Array(await blob.slice(b, e).arrayBuffer()); } catch (err) { log('кусок ' + b + '–' + e + ' не читается (' + (err && err.name) + ') — файл читается целиком', 'w'); }
+        whole = blob.arrayBuffer().then((x) => { log('прочитан целиком'); return new Uint8Array(x); });
       }
       return (await whole).slice(b, e);
     };
@@ -74,6 +74,7 @@ export async function openPdf(blob, { password, askPassword } = {}) {
   const task = pdfjs.getDocument(opts);
   let pw = password || null;
   task.onPassword = (update, reason) => {
+    log('нужен пароль' + (reason === pdfjs.PasswordResponses.INCORRECT_PASSWORD ? ' (прошлый не подошёл)' : ''));
     const ask = askPassword ? askPassword(reason === pdfjs.PasswordResponses.INCORRECT_PASSWORD) : Promise.resolve(null);
     ask.then((v) => {
       if (v == null) { fail(Object.assign(new Error('password'), { name: 'PasswordCancel' })); return; }
@@ -112,7 +113,7 @@ export function canvasScale(cssW, cssH, dpr) {
 }
 
 // doc — документ pdf.js; state { page (с 1), zoom } — откуда начать; onState({ page, pages, zoom }) — для панели
-export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = {}) {
+export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {}, log = () => {} } = {}) {
   const el = document.createElement('div');
   el.className = 'pdfv';
   el.tabIndex = 0;
@@ -178,7 +179,7 @@ export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = 
     c.height = Math.round(h * k);
     const task = s.p.render({ canvasContext: c.getContext('2d'), viewport: s.p.getViewport({ scale: (w * k) / s.w }) });
     pg.task = task;
-    try { await task.promise; } catch { c.width = c.height = 0; return; }
+    try { await task.promise; } catch (e) { c.width = c.height = 0; if (e && e.name !== 'RenderingCancelledException') log('страница ' + (i + 1) + ' не нарисовалась: ' + (e && e.name) + ' ' + (e && e.message), 'e'); return; }
     if (destroyed || pg.task !== task) { c.width = c.height = 0; return; }
     pg.task = null;
     pg.drawn = key;

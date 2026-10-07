@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(VolumePlugin.class);
         registerPlugin(PulsePlugin.class);
         registerPlugin(ClockPlugin.class);
+        registerPlugin(ReportPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
