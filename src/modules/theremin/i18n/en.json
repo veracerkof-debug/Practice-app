@@ -1,6 +1,6 @@
 {
   "name": "Theremin",
-  "settings": "Theremin settings",
+  "settings": "Settings",
   "octDown": "Octave down",
   "octUp": "Octave up",
   "noAudio": "Sound isn’t available in this browser",
@@ -107,5 +107,19 @@
   "gDefault": "Default assignments",
   "frozen": "Effects held",
   "unfrozen": "Effects released",
-  "presetsBase": "Sound base (presets)"
+  "presetsBase": "Sound base (presets)",
+  "mode.solo": "Solo",
+  "mode.chord": "Chords",
+  "modeBtn": "Mode: {mode}. Switch",
+  "modeOn": "Mode: {mode}",
+  "chords": "Pitch hand: solo or chords",
+  "chordHint": "Chords: 1–5 extended fingers are degrees I–V; thumb to pinky is VI, thumb to ring finger is VII (sign language numbers); palm to the camera is major, back of the hand is minor; a fist is silence; hand height sets the chord register. The “OK” sign (thumb and index in a ring) switches solo and chords.",
+  "ckey": "Chord key",
+  "cmode.maj": "Major",
+  "cmode.min": "Minor",
+  "cq": "Chord quality",
+  "cq.hand": "By palm",
+  "cq.key": "By key",
+  "cqHint.hand": "Palm to the camera — a major chord, back of the hand — minor, on any degree.",
+  "cqHint.key": "Chords follow the key (in major: I, IV, V major; ii, iii, vi minor; vii diminished); the back of the hand gives the opposite quality."
 }

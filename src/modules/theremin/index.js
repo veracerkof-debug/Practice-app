@@ -20,6 +20,7 @@ import { createGlideVoice, createFxBus } from '../glider/voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, PRESETS } from '../glider/fx.js';
 import { assign, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, PINCH_ON, PINCH_OFF } from './map.js';
 import { startHands } from './hands.js';
+import { readSign, chordOf, chordName, voicing } from './chords.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M7 21V11.5a1.5 1.5 0 0 1 3 0V9a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5z"/><path d="M3 7c1.5-2 3-2 4.5 0S10.5 9 12 7s3-2 4.5 0"/></svg>';
 const I = {
@@ -33,6 +34,9 @@ const LOST_MS = 180; // рука пропала из кадра на мгнов�
 const AUTO_CAL_MS = 1500; // нейтраль запоминается сама, когда рука эффектов впервые продержалась в кадре столько
 const PINCH_MS = 150; // щепоть держится столько — переключает фиксацию (случайное касание пальцев не считается)
 const VOICE_FX = ['bright', 'vib', 'trem', 'drive', 'fuzz'];
+const CHORD_MS = 180; // знак держится столько — аккорд меняется (пока пальцы разгибаются, рука «показывает» лишнее)
+const OK_MS = 300; // «окей» держится столько — переключает «соло ↔ аккорды»
+const CHORD_GAIN = 0.42; // четыре голоса аккорда вместе — не громче одного голоса соло
 
 let host = null, ctx = null, size = 'full', ro = null, probed = false;
 const offs = [];
@@ -41,7 +45,9 @@ const S = { cam: null, state: 'off', err: '', voice: null, bus: null, seen: 0, h
   fPos: oneEuro(), fChar: oneEuro({ minCutoff: 1, beta: 0.2 }),
   // рука эффектов: сглаживание каждого жеста, текущие силы (для подсказки), фиксация щепотью, автонейтраль
   fg: Object.fromEntries(GESTURES.map((g) => [g, oneEuro(g === 'open' ? { minCutoff: 2, beta: 0.2 } : { minCutoff: 0.8, beta: 0.3 })])),
-  gv: null, pose: null, frozen: null, pinchT: 0, pinched: false, calT: 0 };
+  gv: null, pose: null, frozen: null, pinchT: 0, pinched: false, calT: 0,
+  // аккорды: голоса, текущий аккорд и его расположение, знак-кандидат (ждёт CHORD_MS), «окей»
+  cv: null, chord: null, cnotes: null, cand: null, okT: 0, okLatch: false };
 
 const cfg = () => {
   const s = ctx.store.all();
@@ -51,6 +57,7 @@ const cfg = () => {
   s.lo = clampLo(s.lo, s.width);
   if (!s.fx) s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
   s.gmap = { ...DEFAULT_MAP, ...(s.gmap || {}) };
+  s.mode ??= 'solo'; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand';
   normalizeFx(s);
   return s;
 };
@@ -65,7 +72,9 @@ function view() {
   const gear = ui.icb('data-x="tset"', ui.icons.gear, t('settings'), 'sm');
   const camBtn = ui.icb('data-x="tcam"', on || S.state === 'loading' ? I.camOff : I.cam, t(on || S.state === 'loading' ? 'stop' : 'start'), 'sm');
   const range = big ? '<div class="glrange">' + ui.icb('data-x="tlo" data-d="-12"', I.left, t('octDown'), 'sm') + '<span class="num">' + rangeTxt(s) + '</span>' + ui.icb('data-x="tlo" data-d="12"', I.right, t('octUp'), 'sm') + '</div>' : '';
-  const snap = big ? '<button class="glsnap" data-x="tsnap" aria-label="' + ui.esc(t('snapBtn', { mode: t('snap.' + s.snap) })) + '">' + t('snap.' + s.snap) + '</button>' : '';
+  const snap = big && s.mode !== 'chord' ? '<button class="glsnap" data-x="tsnap" aria-label="' + ui.esc(t('snapBtn', { mode: t('snap.' + s.snap) })) + '">' + t('snap.' + s.snap) + '</button>' : '';
+  // соло ↔ аккорды (то же — жестом «окей» правой рукой)
+  const modeBtn = size !== 'strip' ? '<button class="glsnap" data-x="tmode" aria-label="' + ui.esc(t('modeBtn', { mode: t('mode.' + s.mode) })) + '">' + t('mode.' + s.mode) + '</button>' : '';
   let mid = '';
   if (S.state === 'off' || S.state === 'error') {
     mid = '<div class="tmstart">' + (S.state === 'error' ? '<p class="tmerr">' + t('err.' + S.err) + '</p>' : '') +
@@ -75,7 +84,7 @@ function view() {
   return '<div class="tm ' + size + (s.showCam ? '' : ' nocam') + '"><video class="tmcam" playsinline muted aria-hidden="true"></video><canvas class="tmcv" aria-hidden="true"></canvas>' +
     '<div class="glnote tmnote" aria-live="off"><b class="num" id="tmnote">' + (on ? '—' : '') + '</b><span class="num" id="tmc"></span></div>' +
     '<span class="tmlost" id="tmlost" hidden>' + t('noHands') + '</span>' + mid +
-    '<div class="glov tmbar">' + (size === 'strip' ? '' : range + snap) + camBtn + gear + '</div></div>';
+    '<div class="glov tmbar">' + (size === 'strip' ? '' : range + modeBtn + snap) + camBtn + gear + '</div></div>';
 }
 
 function render() {
@@ -149,6 +158,11 @@ function draw() {
     });
     g.globalAlpha = 1;
   }
+  if (S.cnotes) { // звучащий аккорд — линии его нот
+    g.strokeStyle = tint; g.lineWidth = 2; g.globalAlpha = 0.7;
+    S.cnotes.forEach((m) => { if (m < s.lo || m > s.lo + s.width) return; const y = yOf(m); g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); });
+    g.globalAlpha = 1;
+  }
   if (S.m != null) { // где сейчас звучит
     const y = map.y(EDGE + (1 - midiToPos(S.m, s.lo, s.width)) * (1 - 2 * EDGE));
     g.strokeStyle = tint; g.lineWidth = 2.5; g.globalAlpha = 0.8;
@@ -169,11 +183,88 @@ function showNote(m) {
   if (c) c.textContent = cfg().snap === 'note' ? '' : (cents > 0 ? '+' : cents < 0 ? '−' : '±') + Math.abs(cents) + '¢';
 }
 
+function releaseChord() {
+  if (S.cv) S.cv.forEach((v) => v.release());
+  S.cv = null; S.chord = null; S.cnotes = null;
+}
+
 function silence() {
   if (S.voice) { S.voice.release(); S.voice = null; }
+  releaseChord();
+  S.cand = null;
   S.m = null;
   S.fPos.reset(); S.fChar.reset();
   showNote(null);
+}
+
+// «Окей» правой рукой (держится OK_MS) — переключение «соло ↔ аккорды»; пока держится — звук не меняется
+function modeGesture(s, sign, t) {
+  if (sign.kind !== 'ok') { S.okT = 0; S.okLatch = false; return false; }
+  S.okT ||= t;
+  if (!S.okLatch && t - S.okT > OK_MS) { S.okLatch = true; setMode(s.mode === 'chord' ? 'solo' : 'chord'); }
+  return true;
+}
+function setMode(mode) {
+  const s = cfg();
+  s.mode = mode;
+  save();
+  silence();
+  ctx.ui.toast(ctx.t('modeOn', { mode: ctx.t('mode.' + mode) }));
+  render();
+}
+
+// Соло: высота руки — высота звука
+function playSolo(s, h, t, o, dest) {
+  releaseChord();
+  const pos = S.fPos.next(heightOf(h.c.y), t), m = snapPitch(posToMidi(pos, s.lo, s.width), s.snap, allowedPcs(s));
+  if (!S.voice) {
+    const p = patch(s);
+    ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
+    S.voice = createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) });
+    S.voice.start(m, o);
+  } else {
+    S.voice.pitch(m, s.snap === 'note' ? 0.03 : 0.02);
+    S.voice.fx(o);
+  }
+  if (S.m == null || Math.round(S.m) !== Math.round(m) || s.snap !== 'note') showNote(m);
+  S.m = m;
+}
+
+// Аккорды: знак правой руки — ступень и лад (chords.js), высота руки — регистр (обращение); голоса скользят к новым нотам
+function playChord(s, h, sign, t, o, dest) {
+  if (S.voice) { S.voice.release(); S.voice = null; S.m = null; }
+  const key = { root: s.ckey, mode: s.cmode };
+  const center = posToMidi(S.fPos.next(heightOf(h.c.y), t), s.lo, s.width);
+  // кандидат меняет аккорд, только когда продержался CHORD_MS
+  const cand = sign.kind === 'fist' ? { id: 'fist' } : sign.kind === 'num' ? { id: 'c', c: chordOf(sign.n, sign.palm, key, s.cq) } : null;
+  if (cand) {
+    const id = cand.id + (cand.c ? cand.c.root + cand.c.q + cand.c.n : '');
+    if (!S.cand || S.cand.id !== id) S.cand = { id, t, c: cand.c };
+    else if (t - S.cand.t >= CHORD_MS) {
+      if (!cand.c) { if (S.cv) { releaseChord(); showNote(null); } }
+      else if (!S.chord || S.cand.id !== S.chord.id) S.chord = { ...cand.c, id };
+    }
+  }
+  if (!S.chord) return;
+  // расположение по высоте руки; с запасом, чтобы на границе двух обращений не дрожало
+  let notes = voicing(S.chord, center);
+  if (S.cnotes && S.cv && S.cnotes.id === S.chord.id) {
+    const mid = (n) => (n[1] + n[3]) / 2;
+    if (Math.abs(mid(notes) - center) > Math.abs(mid(S.cnotes) - center) - 1.5) notes = S.cnotes;
+  }
+  const vo = { ...o, volGain: (o.volGain ?? 1) * CHORD_GAIN };
+  if (!S.cv) {
+    const p = patch(s);
+    ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
+    S.cv = notes.map((m) => { const v = createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) }); v.start(m, vo); return v; });
+  } else {
+    if (notes !== S.cnotes) S.cv.forEach((v, i) => v.pitch(notes[i], 0.05));
+    S.cv.forEach((v) => v.fx(vo));
+  }
+  if (notes !== S.cnotes) { notes.id = S.chord.id; S.cnotes = notes; }
+  const nm = chordName(S.chord, key), n = host && host.querySelector('#tmnote'), c = host && host.querySelector('#tmc');
+  if (n) { n.textContent = nm.name; n.parentNode.classList.add('on'); }
+  if (c) c.textContent = nm.roman;
 }
 
 // Нейтральное положение руки эффектов: от него считаются поворот, разворот, наклон и расстояние
@@ -223,7 +314,8 @@ function onHands(list, t) {
   if (a.pitch) S.seen = t;
   else if (t - S.seen > LOST_MS) silence();
   if (a.pitch) {
-    const pos = S.fPos.next(heightOf(a.pitch.c.y), t), m = snapPitch(posToMidi(pos, s.lo, s.width), s.snap, allowedPcs(s));
+    const sign = readSign(a.pitch, s.side === 'right');
+    if (modeGesture(s, sign, t)) { draw(); return; }
     // эффекты: постоянные из набора + жесты руки эффектов (или зафиксированные щепотью); громкость — всегда живая
     const live = g ? applyGestures(g, s.gmap) : null;
     const fxv = S.frozen ? { ...S.frozen, vol: live ? live.vol : 1 } : live || { vol: 1 };
@@ -234,20 +326,11 @@ function onHands(list, t) {
     const dest = ctx.audio.bus('glider');
     if (dest) {
       if (!S.bus || S.bus.ctx !== dest.context) { S.bus = createFxBus(dest.context, dest); S.bus.ctx = dest.context; }
-      if (!S.voice) {
-        const p = patch(s);
-        ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
-        S.voice = createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) });
-        S.voice.start(m, o);
-      } else {
-        S.voice.pitch(m, s.snap === 'note' ? 0.03 : 0.02);
-        S.voice.fx(o);
-      }
+      if (s.mode === 'chord') playChord(s, a.pitch, sign, t, o, dest);
+      else playSolo(s, a.pitch, t, o, dest);
       const b = busFx(s.fx, [0]);
       S.bus.set({ echo: Math.max(b.echo, fxv.echo || 0), verb: Math.max(b.verb, fxv.verb || 0), time: b.time });
     }
-    if (S.m == null || Math.round(S.m) !== Math.round(m) || s.snap !== 'note') showNote(m);
-    S.m = m;
   }
   draw();
 }
@@ -288,6 +371,13 @@ function setSheet() {
     return ui.snav(t('settings')) +
       '<div class="hdr" style="margin-top:4px">' + t('hands') + '</div><div class="group"><div class="cellcol">' + ui.seg('tside', [['right', t('hand.right')], ['left', t('hand.left')]], s.side, t('hands')) +
       '<div class="segcap">' + t('hint.' + s.side) + '</div></div><div class="cell"><span class="grow">' + t('charX') + '</span>' + ui.sw('tchar', s.charX, t('charX')) + '</div></div><p class="ftr">' + t('charHint') + '</p>' +
+      // аккорды правой рукой
+      '<div class="hdr">' + t('chords') + '</div><div class="group"><div class="cellcol">' + ui.seg('tmode2', [['solo', t('mode.solo')], ['chord', t('mode.chord')]], s.mode, t('chords')) +
+      '<div class="segcap">' + t('chordHint') + '</div></div>' +
+      '<div class="cellcol"><div class="glsub">' + t('ckey') + '</div><div class="glroots">' + SH.map((n, i) => chip('data-tck="' + i + '"', s.ckey === i, n)).join('') + '</div>' +
+      '<div style="margin-top:10px">' + ui.seg('tcmode', [['maj', t('cmode.maj')], ['min', t('cmode.min')]], s.cmode, t('ckey')) + '</div></div>' +
+      '<div class="cellcol"><div class="glsub">' + t('cq') + '</div>' + ui.seg('tcq', [['hand', t('cq.hand')], ['key', t('cq.key')]], s.cq, t('cq')) +
+      '<div class="segcap">' + t('cqHint.' + s.cq) + '</div></div></div>' +
       // рука эффектов: какое движение что делает
       '<div class="hdr">' + t('fxHand.' + (s.side === 'right' ? 'left' : 'right')) + '</div><div class="group">' +
       GESTURES.map((k) => '<label class="cell"><span class="grow">' + t('g.' + k) + '</span><select class="sortsel" data-tg="' + k + '" aria-label="' + ui.esc(t('g.' + k)) + '">' +
@@ -320,10 +410,14 @@ function setSheet() {
       else if (g('[data-tcal]')) { calibrate(); return; }
       else if (g('[data-tgdef]')) { s.gmap = { ...DEFAULT_MAP }; S.frozen = null; }
       else if ((b = g('[data-tr]'))) s.root = +b.dataset.tr;
+      else if ((b = g('[data-tck]'))) { s.ckey = +b.dataset.tck; S.chord = null; }
       else if ((b = g('[data-tlo2]'))) s.lo = clampLo(s.lo + +b.dataset.tlo2, s.width);
       else if ((b = g('[data-seg] [data-v]'))) {
         const k = b.closest('[data-seg]').dataset.seg, v = b.dataset.v;
         if (k === 'tside') s.side = v;
+        else if (k === 'tmode2') { s.mode = v; silence(); }
+        else if (k === 'tcmode') { s.cmode = v; S.chord = null; }
+        else if (k === 'tcq') { s.cq = v; S.chord = null; }
         else if (k === 'tsnap') s.snap = v;
         else if (k === 'tw') { s.width = +v; s.lo = clampLo(s.lo, s.width); }
         else return;
@@ -350,6 +444,7 @@ function bind() {
     const s = cfg(), x = b.dataset.x;
     if (x === 'tset') { setSheet(); return; }
     if (x === 'tcam') { if (S.state === 'on' || S.state === 'loading') { camOff(); render(); } else camOn(); return; }
+    if (x === 'tmode') { setMode(s.mode === 'chord' ? 'solo' : 'chord'); return; }
     if (x === 'tlo') s.lo = clampLo(s.lo + +b.dataset.d, s.width);
     else if (x === 'tsnap') s.snap = SNAPS[(SNAPS.indexOf(s.snap) + 1) % SNAPS.length];
     else return;
@@ -375,7 +470,7 @@ export default {
   },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
-    if (!probed) { c.audio.mixer.probe('glider', () => !!S.voice); probed = true; }
+    if (!probed) { c.audio.mixer.probe('glider', () => !!S.voice || !!S.cv); probed = true; }
     render();
     bind();
     ro = new ResizeObserver(() => draw());

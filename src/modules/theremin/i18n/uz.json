@@ -1,6 +1,6 @@
 {
   "name": "Termenvoks",
-  "settings": "Termenvoks sozlamalari",
+  "settings": "Sozlamalar",
   "octDown": "Bir oktava pastga",
   "octUp": "Bir oktava yuqoriga",
   "noAudio": "Bu brauzerda ovoz mavjud emas",
@@ -107,5 +107,19 @@
   "gDefault": "Standart tayinlashlar",
   "frozen": "Effektlar qotirildi",
   "unfrozen": "Effektlar qoʻyib yuborildi",
-  "presetsBase": "Tovush asosi (toʻplamlar)"
+  "presetsBase": "Tovush asosi (toʻplamlar)",
+  "mode.solo": "Solo",
+  "mode.chord": "Akkordlar",
+  "modeBtn": "Rejim: {mode}. Almashtirish",
+  "modeOn": "Rejim: {mode}",
+  "chords": "Balandlik qoʻli: solo yoki akkordlar",
+  "chordHint": "Akkordlar: 1–5 ta yozilgan barmoq — I–V pogʻonalar; bosh barmoq jimjiloqqa — VI, nomsiz barmoqqa — VII (imo-ishora tili raqamlari); kaft kameraga — major, kaftning orqasi — minor; musht — sukunat; qoʻl balandligi — akkord registri. «Okey» ishorasi (bosh va koʻrsatkich barmoq halqa) solo va akkordlarni almashtiradi.",
+  "ckey": "Akkordlar tonalligi",
+  "cmode.maj": "Major",
+  "cmode.min": "Minor",
+  "cq": "Akkord ladi",
+  "cq.hand": "Kaft bilan",
+  "cq.key": "Tonallik boʻyicha",
+  "cqHint.hand": "Kaft kameraga — major akkord, orqa tomoni — minor, istalgan pogʻonada.",
+  "cqHint.key": "Akkord tonallikdagidek (majorda: I, IV, V — major; ii, iii, vi — minor; vii — kichraytirilgan); orqa tomoni — qarama-qarshi lad."
 }
