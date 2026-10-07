@@ -3,21 +3,22 @@
 // (сворачивается, но продолжается) → песня → первая вкладка → приложение сворачивается (не закрывается).
 // В браузере не используется: там «назад» — у самого браузера.
 import { Capacitor } from '@capacitor/core';
-import { closeTopSheet } from '../ui/index.js';
+import { closeTopSheet, leave } from '../ui/index.js';
 
 const click = (sel) => { const b = document.querySelector(sel); if (b) { b.click(); return true; } return false; };
 
 // Один шаг «назад». true — что-то закрыто; false — закрывать нечего (пора свернуть приложение)
 export function backStep(app) {
-  const ask = document.querySelector('.ask:not(#tosGate)');
-  if (ask) return click('.ask:not(#tosGate) [data-k="no"]') || (ask.remove(), true);
+  // уходящие с анимацией (.leaving) уже закрыты — их не трогаем
+  const ask = document.querySelector('.ask:not(#tosGate):not(.leaving)');
+  if (ask) return click('.ask:not(#tosGate):not(.leaving) [data-k="no"]') || (leave(ask, 160), true);
   if (document.getElementById('tosGate')) return false; // соглашение без ответа не закрывается
   if (document.getElementById('onboard')) return click('#onboard [data-obback]') || false;
   if (click('.pdffull [data-x="pfull0"]')) return true; // PDF во весь экран
   if (closeTopSheet()) return true;
   const panel = document.getElementById('panelLayer');
   if (panel) return click('#panelLayer .navrow [data-pp="root"]') || click('#panelLayer [data-act="pclose"]');
-  if (click('.tview [data-tv="close"]')) return true;
+  if (click('.tview:not(.leaving) [data-tv="close"]')) return true;
   if (click('.session [data-s="hide"]')) return true;
   return app.shellBack ? app.shellBack() : false;
 }

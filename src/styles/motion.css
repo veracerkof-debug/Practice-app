@@ -1,0 +1,94 @@
+/* Движение во всём приложении (кроме самих инструментов): одни длительности и кривые для всего.
+   Появление — быстро разгоняется и мягко тормозит, уход — короче и без задержек. Закрытие — класс .leaving
+   (ui/index.js: leave), элемент удаляется после анимации. «Уменьшить движение» в системе — только плавная прозрачность. */
+:root {
+  --t-fast: 140ms; --t-mid: 240ms; --t-slow: 340ms;
+  --e-out: cubic-bezier(.2, .8, .2, 1);      /* появление, перемещение */
+  --e-in: cubic-bezier(.4, 0, 1, 1);          /* уход */
+  --e-spring: cubic-bezier(.3, 1.35, .55, 1); /* небольшой отскок: отклик на нажатие, значки */
+}
+/* «Минимал»: движение сдержаннее — без отскоков, короче */
+:root[data-style="mono"] { --t-mid: 200ms; --t-slow: 260ms; --e-spring: var(--e-out); }
+
+@keyframes m-fade { from { opacity: 0; } }
+@keyframes m-fade-out { to { opacity: 0; } }
+@keyframes m-rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes m-sheet { from { transform: translateY(100%); } }
+@keyframes m-sheet-out { to { transform: translateY(100%); } }
+@keyframes m-pop { from { opacity: 0; transform: scale(.94); } }
+@keyframes m-pop-out { to { opacity: 0; transform: scale(.96); } }
+@keyframes m-screen { from { opacity: 0; transform: translateY(24px) scale(.985); } }
+@keyframes m-screen-out { to { opacity: 0; transform: translateY(18px) scale(.99); } }
+@keyframes m-from-right { from { opacity: 0; transform: translateX(28px); } }
+@keyframes m-from-left { from { opacity: 0; transform: translateX(-28px); } }
+@keyframes m-toast { from { opacity: 0; transform: translateY(-10px) scale(.96); } }
+@keyframes m-toast-out { to { opacity: 0; transform: translateY(-8px) scale(.97); } }
+@keyframes m-bounce { 40% { transform: translateY(-3px) scale(1.08); } }
+
+/* ---------- шторки: снизу, фон темнеет; закрытие — вниз ---------- */
+.scrim { animation: m-fade var(--t-mid) var(--e-out); }
+.scrim .sheet { animation: m-sheet var(--t-slow) var(--e-out); will-change: transform; }
+.scrim.leaving { animation: m-fade-out var(--t-mid) var(--e-in) forwards; pointer-events: none; }
+.scrim.leaving .sheet { animation: m-sheet-out var(--t-mid) var(--e-in) forwards; }
+.sheet.dragging { transition: none !important; animation: none !important; }
+.sheet.snap { transition: transform var(--t-mid) var(--e-out); }
+.grab { cursor: grab; touch-action: none; }
+
+/* ---------- полноэкранные слои: профиль, окно инструмента, сессия ---------- */
+.panel, .tview, .session { animation: m-screen var(--t-slow) var(--e-out) !important; }
+.panel.leaving, .tview.leaving, .session.leaving { animation: m-screen-out var(--t-mid) var(--e-in) forwards !important; pointer-events: none; }
+/* страницы профиля: вперёд — справа, назад — слева */
+.panel .wrap.pfwd { animation: m-from-right var(--t-mid) var(--e-out); }
+.panel .wrap.pback { animation: m-from-left var(--t-mid) var(--e-out); }
+
+/* ---------- вкладки: новое содержимое поднимается, первые блоки — по очереди ---------- */
+#main.tab-enter > * { animation: m-rise var(--t-slow) var(--e-out) backwards; }
+#main.tab-enter > *:nth-child(2) { animation-delay: 30ms; }
+#main.tab-enter > *:nth-child(3) { animation-delay: 60ms; }
+#main.tab-enter > *:nth-child(4) { animation-delay: 90ms; }
+#main.tab-enter > *:nth-child(n+5) { animation-delay: 120ms; }
+#main.tab-enter .hcols > div > *, #main.tab-enter .mono-home > * { animation: m-rise var(--t-slow) var(--e-out) backwards; }
+#main.tab-enter .hcols > div > *:nth-child(2), #main.tab-enter .mono-home > *:nth-child(2) { animation-delay: 35ms; }
+#main.tab-enter .hcols > div > *:nth-child(3), #main.tab-enter .mono-home > *:nth-child(3) { animation-delay: 70ms; }
+#main.tab-enter .hcols > div > *:nth-child(4), #main.tab-enter .mono-home > *:nth-child(4) { animation-delay: 105ms; }
+#main.tab-enter .hcols > div > *:nth-child(n+5), #main.tab-enter .mono-home > *:nth-child(n+5) { animation-delay: 140ms; }
+.tab[aria-current="page"] svg { animation: m-bounce var(--t-slow) var(--e-spring); }
+.tab { transition: color var(--t-mid) var(--e-out); }
+
+/* ---------- диалоги, сообщения ---------- */
+.ask { animation: m-fade var(--t-mid) var(--e-out); }
+.ask .alert { animation: m-pop var(--t-mid) var(--e-spring); }
+.ask.leaving { animation: m-fade-out var(--t-fast) var(--e-in) forwards; pointer-events: none; }
+.ask.leaving .alert { animation: m-pop-out var(--t-fast) var(--e-in) forwards; }
+.toast { animation: m-toast var(--t-mid) var(--e-spring) !important; }
+.toast.leaving { animation: m-toast-out var(--t-mid) var(--e-in) forwards !important; }
+.nosnd { animation: m-rise var(--t-mid) var(--e-out) !important; }
+
+/* ---------- отклик на нажатие ---------- */
+.btn, .hcta, .mcta, .tcard2, .qbtn, .stile3, .gemrow, .lchip, .pill, .chip, .catp, .fchip, .mtags button, .mtools button, .ic, .tab,
+.prank, .avatar, .logo, .tile.stile, .addbtn, .swc, .skin, .mrow > button, .sigc, .trkey, .trview {
+  transition: transform var(--t-fast) var(--e-out), background-color var(--t-mid) var(--e-out), color var(--t-mid) var(--e-out), box-shadow var(--t-mid) var(--e-out), opacity var(--t-mid);
+}
+.btn:active, .hcta:active, .mcta:active, .qbtn:active, .lchip:active, .pill:active, .chip:active, .catp:active, .fchip:active,
+.mtags button:active, .ic:active, .prank:active, .avatar:active, .logo:active, .addbtn:active, .swc:active, .skin:active, .sigc:active, .trkey:active, .trview:active { transform: scale(.95); }
+.tcard2:active, .stile3:active, .gemrow:active, .tile.stile:active, .mrow > button:active { transform: scale(.98); }
+.mtools button:active .mcirc { transform: scale(.92); }
+.mtools .mcirc { transition: transform var(--t-fast) var(--e-out), background-color var(--t-mid); }
+.cell { transition: background-color var(--t-fast) var(--e-out); }
+button.cell:active, label.cell:active, .cell.act:active { background-color: var(--fill); }
+
+/* ---------- переключатели, сегменты, полосы прогресса ---------- */
+.seg button { transition: background-color var(--t-mid) var(--e-out), color var(--t-mid) var(--e-out), box-shadow var(--t-mid) var(--e-out); }
+.sw i, .sw i::after { transition: background-color var(--t-mid) var(--e-out), transform var(--t-mid) var(--e-spring) !important; }
+.gbar i, .rkbar i, .mline i, .bar i { transition: width var(--t-slow) var(--e-out); }
+#main.tab-enter .gring circle[stroke-dasharray] { animation: m-ring 700ms var(--e-out) backwards; }
+@keyframes m-ring { from { stroke-dasharray: 0 999; } }
+#main.tab-enter .rkbar i, #main.tab-enter .mline i, .sheet .gbar i { animation: m-grow 700ms var(--e-out) backwards 120ms; }
+@keyframes m-grow { from { width: 0; } }
+
+/* «Уменьшить движение»: без перемещений и отскоков — только короткое появление прозрачностью.
+   Вспышка метронома — функция, а не украшение: остаётся. */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.mflash), *:not(.mflash)::before, *:not(.mflash)::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
+  .scrim, .panel, .tview, .session, .ask, .toast { animation: m-fade 120ms linear !important; }
+}

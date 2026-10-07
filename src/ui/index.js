@@ -46,6 +46,19 @@ const stack = [];
 
 // Открыть нижнюю шторку. render() → html; init(el, api) — один раз после открытия; onClose — после закрытия.
 // Возвращает api: { el, close(), update() } — update перерисовывает, сохраняя прокрутку
+/* ---------- плавный уход ---------- */
+
+// Элемент уходит с анимацией (.leaving в styles/motion.css) и удаляется после неё. Сразу теряет id и нажатия,
+// чтобы «Назад» и поиск по странице его уже не находили. «Уменьшить движение» — почти сразу
+const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+export function leave(el, ms = 240) {
+  if (!el || el.classList.contains('leaving')) return;
+  el.classList.add('leaving');
+  el.removeAttribute('id');
+  el.setAttribute('aria-hidden', 'true');
+  setTimeout(() => el.remove(), reduced() ? 0 : ms);
+}
+
 export function sheet(render, init, { onClose } = {}) {
   if (!layer) {
     layer = document.createElement('div');
@@ -66,7 +79,8 @@ export function sheet(render, init, { onClose } = {}) {
       el.scrollTop = y;
     },
     close() {
-      scrim.remove();
+      if (!stack.includes(api)) return;
+      leave(scrim, 260);
       stack.splice(stack.indexOf(api), 1);
       document.removeEventListener('keydown', onKey);
       if (prevFocus && prevFocus.focus) prevFocus.focus();
@@ -79,6 +93,33 @@ export function sheet(render, init, { onClose } = {}) {
   layer.appendChild(scrim);
   stack.push(api);
   api.update();
+  // Потянуть шторку вниз за полоску сверху или за заголовок (или в любом месте, если она прокручена в начало)
+  let drag = null;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button > 0 || e.target.closest('input,textarea,select,[contenteditable],.sw,.seg,[role="slider"]')) return;
+    const head = e.target.closest('.grab,.snav');
+    if (!head && el.scrollTop > 0) return;
+    drag = { y: e.clientY, t: performance.now(), dy: 0, id: e.pointerId, head: !!head };
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag.dy = Math.max(0, e.clientY - drag.y);
+    if (!drag.head && drag.dy < 8) return;
+    if (drag.dy > 4) { el.classList.add('dragging'); el.style.transform = 'translateY(' + drag.dy + 'px)'; scrim.style.backgroundColor = 'rgba(0,0,0,' + Math.max(0, 0.4 - drag.dy / 900) + ')'; }
+  });
+  const drop = (e) => {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    const v = drag.dy / Math.max(1, performance.now() - drag.t), d = drag.dy;
+    drag = null;
+    el.classList.remove('dragging');
+    if (d > 110 || (d > 40 && v > 0.6)) { el.style.transform = ''; api.close(); return; }
+    el.classList.add('snap');
+    el.style.transform = '';
+    scrim.style.backgroundColor = '';
+    setTimeout(() => el.classList.remove('snap'), 300);
+  };
+  el.addEventListener('pointerup', drop);
+  el.addEventListener('pointercancel', drop);
   el.setAttribute('tabindex', '-1');
   el.focus({ preventScroll: true });
   if (init) init(el, api);
@@ -92,13 +133,13 @@ export const closeTopSheet = () => { const s = stack.at(-1); if (!s) return fals
 /* ---------- сообщение ---------- */
 
 export function toast(msg) {
-  document.querySelectorAll('.toast').forEach((x) => x.remove());
+  document.querySelectorAll('.toast').forEach((x) => x.remove()); // новое сообщение сменяет старое сразу
   const el = document.createElement('div');
   el.className = 'toast';
   el.setAttribute('role', 'status');
   el.textContent = msg;
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2400);
+  setTimeout(() => leave(el, 240), 2400);
 }
 
 /* ---------- подтверждение ---------- */
@@ -114,10 +155,10 @@ export function confirm(title, text, yes) {
     d.addEventListener('click', (e) => {
       const k = e.target.closest('[data-k]');
       if (!k && e.target !== d) return;
-      d.remove();
+      leave(d, 160);
       resolve(!!k && k.dataset.k === 'yes');
     });
   });
 }
 
-export const ui = { esc, icons, seg, sw, stepper, icb, snav, sheet, toast, confirm };
+export const ui = { esc, icons, seg, sw, stepper, icb, snav, sheet, toast, confirm, leave };

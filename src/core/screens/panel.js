@@ -3,7 +3,7 @@
 // Перенесено из legacy/practice.html (panelRoot, renderPanel, PPAGES, weekHTML, lookHTML, dataHTML, featHTML, statsHTML,
 // barsSVG, hbars, legalSheet, tosGate, donateSheet, doExport, импорт копии).
 import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
-import { esc, seg, sheet, snav, toast, confirm } from '../../ui/index.js';
+import { esc, seg, sheet, snav, toast, confirm, leave } from '../../ui/index.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
 import { dayKey, weekday, weekStart } from '../time.js';
@@ -227,9 +227,9 @@ function rootHTML(app) {
 
 // Полноэкранная панель профиля; page — 'root' или ключ PAGES
 export function createPanel(app, onChange) {
-  let page = null, layer = null, input = null;
+  let page = null, layer = null, input = null, lastPage = null;
   const render = () => {
-    if (!page) { if (layer) { layer.remove(); layer = null; } return; }
+    if (!page) { if (layer) { leave(layer, 260); layer = null; } lastPage = null; return; }
     if (!layer) {
       layer = document.createElement('div');
       layer.id = 'panelLayer';
@@ -244,7 +244,10 @@ export function createPanel(app, onChange) {
     const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML }[page](app);
     layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="link" data-pp="root">' + BACK + t('panel.back') + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
-    layer.scrollTop = y;
+    // переход между страницами: вперёд — справа, назад в корень — слева; перерисовка той же страницы — без движения
+    if (lastPage && lastPage !== page) layer.firstChild.classList.add(page === 'root' ? 'pback' : 'pfwd');
+    layer.scrollTop = lastPage && lastPage !== page ? 0 : y;
+    lastPage = page;
   };
   const changed = () => { app.store.settingsChanged(); render(); onChange(); };
   function bind() {
@@ -306,7 +309,7 @@ export function createPanel(app, onChange) {
   input.hidden = true;
   input.addEventListener('change', () => importBackup(app, input, () => { applyTheme(app.store.state.settings); render(); onChange(); }));
   document.body.appendChild(input);
-  const onKey = (e) => { if (e.key === 'Escape' && page && !document.querySelector('#sheetLayer .scrim, .ask')) panel.close(); };
+  const onKey = (e) => { if (e.key === 'Escape' && page && !document.querySelector('#sheetLayer .scrim:not(.leaving), .ask:not(.leaving)')) panel.close(); };
   document.addEventListener('keydown', onKey);
   const panel = {
     open(p = 'root') { page = p; render(); if (layer) layer.scrollTop = 0; },

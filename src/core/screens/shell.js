@@ -38,15 +38,28 @@ export function createShell(app, root) {
     } else main.innerHTML = homeHTML(app);
   }
 
+  // Новая вкладка или экран: содержимое поднимается, блоки — по очереди (styles/motion.css). Только при переходе,
+  // не при каждой перерисовке
+  let enterT = 0;
+  function enter() {
+    main.classList.remove('tab-enter');
+    void main.offsetWidth;
+    main.classList.add('tab-enter');
+    clearTimeout(enterT);
+    enterT = setTimeout(() => main.classList.remove('tab-enter'), 900);
+  }
+
   function go(tab, song) {
     if (panel.page) panel.close();
     if (tab === 'settings') { panel.open('week'); return; }
     if (tab === 'stats') { panel.open('stats'); return; }
     // Вкладку можно открыть и убранную (ссылкой «Все песни» и т.п.) — она просто не подсвечена внизу
+    const changed = view.tab !== tab || (view.song || null) !== (song || null);
     view.tab = TAB_IDS.includes(tab) ? tab : tabsNow()[0];
     view.song = song || null;
     render();
     window.scrollTo(0, 0);
+    if (changed) enter();
   }
 
   const panel = createPanel(app, () => render());
@@ -112,6 +125,7 @@ export function createShell(app, root) {
   app.render = render;
   app.shellAct = act;
   render();
+  enter(); // первый экран тоже появляется плавно
   // Соглашение, затем регистрация (у кого ещё нет профиля — в том числе у тех, кто пользовался прототипом)
   setTimeout(() => tosGate(app, () => { if (!app.store.state.settings.profile) onboarding(app, render); }), 400);
   return { render, go, panel };

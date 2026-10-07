@@ -3,7 +3,7 @@
 // открытый инструмент перестаёт считать время. Микрофон измеряет только громкость: звук не записывается
 // и никуда не передаётся.
 import { t } from '../i18n/index.js';
-import { esc, toast } from '../ui/index.js';
+import { esc, toast, leave } from '../ui/index.js';
 import { openMic } from '../audio/mic.js';
 import { touch, noteHeard, idleAction, markAsked, confirmPlaying, saveActive, QUIET_MS } from './session.js';
 
@@ -35,7 +35,7 @@ export function createLevelGate({ margin = 10, minDb = -62, window = 120, perSec
 
 // Вопрос «Занятие продолжается?». why: 'touch' | 'quiet'; what: 'session' | 'watch'
 function askDialog(id, why, what, onGo, onEnd) {
-  if (document.querySelector('.ask[data-idle="' + id + '"]')) return;
+  if (document.querySelector('.ask[data-idle="' + id + '"]:not(.leaving)')) return;
   const d = document.createElement('div');
   d.className = 'ask';
   d.dataset.idle = id;
@@ -48,14 +48,14 @@ function askDialog(id, why, what, onGo, onEnd) {
   d.addEventListener('click', (e) => {
     const k = e.target.closest('[data-k]');
     if (!k) return;
-    d.remove();
+    leave(d, 160);
     // «Больше не спрашивать»: вопросы выключаются (вернуть — в «Уведомлениях»), сейчас — как «Продолжается»
     if (k.dataset.k === 'never') { onNever(); onGo(); return; }
     (k.dataset.k === 'go' ? onGo : onEnd)();
   });
 }
 let onNever = () => {};
-const closeAsk = (id) => document.querySelectorAll('.ask[data-idle="' + id + '"]').forEach((d) => d.remove());
+const closeAsk = (id) => document.querySelectorAll('.ask[data-idle="' + id + '"]:not(.leaving)').forEach((d) => leave(d, 160));
 
 // app: store, stopwatch, active, session (idle: { ask, autoEnd }), saveDevice; soundingAudio() — звучит ли приложение
 export function createActivity(app, { soundingAudio }) {

@@ -5,7 +5,7 @@
 // жесты DRG, finish, checkIdle, pchipHTML, pomoPanel, rotCheck).
 import '../../ui/session.css';
 import { t } from '../../i18n/index.js';
-import { esc, icb, sheet, snav, toast } from '../../ui/index.js';
+import { esc, icb, sheet, snav, toast, leave } from '../../ui/index.js';
 import { fmtDur, fmtClock } from '../format.js';
 import { getPct, ensureLib } from '../library.js';
 import { isOn } from '../settings.js';
@@ -147,7 +147,8 @@ export function createSessionScreen(app) {
     unmountAll();
     if (ro) ro.disconnect();
     clearInterval(tickT);
-    layer.remove();
+    leave(layer.firstElementChild, 260);
+    { const l = layer; setTimeout(() => l.remove(), 280); }
     layer = wsEl = null;
     app.openTool = prevOpenTool;
     app.render();

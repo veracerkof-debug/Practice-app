@@ -41,7 +41,8 @@ export function openToolView(app, id, onClose) {
     app.openTool = null;
     document.removeEventListener('keydown', onKey);
     inst.unmount();
-    layer.remove();
+    ui.leave(layer.firstElementChild || layer, 260);
+    setTimeout(() => layer.remove(), 280);
     const sec = track.stop();
     if (sec) ui.toast(t('tools.recorded', { tool: name, dur: fmtDur(sec) }));
     if (next) openToolView(app, next, onClose);
