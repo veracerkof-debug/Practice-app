@@ -112,6 +112,7 @@ function makeNoise(c) {
 // onSave() — сохранить настройки (если это общие настройки, а не копия песни)
 export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = () => {}, onSave = () => {} }) {
   let c = null, noise = null, timer = null, next = 0, pos = newPosition(), lastTick = 0;
+  const beatSubs = new Set();
 
   const m = {
     cfg,
@@ -130,6 +131,11 @@ export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = 
         const ev = step(pos, m.cfg);
         if (ev.level) voice(c, mixer.bus('metro'), next, ev.level, m.cfg.sound, noise);
         m.queue.push({ t: next, b: ev.b, s: ev.s, bar: ev.bar, silent: ev.silent });
+        // Сигналы без звука (вспышка, вибрация): только доли, не дробления; через сколько мс удар станет слышен
+        if (ev.s === 0 && ev.level && beatSubs.size) {
+          const ms = (next - c.currentTime + (c.outputLatency || c.baseLatency || 0)) * 1000;
+          beatSubs.forEach((fn) => fn({ level: ev.level, b: ev.b, ms }));
+        }
         next += ev.dur;
         if (ev.tempoUp) {
           const nb = m.cfg.bpm;
@@ -176,6 +182,9 @@ export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = 
       m.flush();
       m.cfg.bpm = clampBpm(v);
     },
+
+    // Подписка на доли: fn({ level, b, ms }) — вызывается заранее, при планировании; ms — через сколько удар
+    onBeat(fn) { beatSubs.add(fn); return () => beatSubs.delete(fn); },
 
     // Удары, время которых уже наступило (для мигающих точек)
     due() {

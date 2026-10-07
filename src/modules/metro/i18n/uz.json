@@ -74,5 +74,18 @@
   "gap.ftr": "Metronom bir necha takt jim turadi: tempni o‘zingiz ushlab tura olasizmi, shunday tekshiriladi.",
   "resetAcc": "Urg‘ularni tiklash",
   "resetAccDone": "Urg‘ular tiklandi",
-  "about": "Oʻlchamlar, urgʻular, boʻlinishlar"
+  "about": "Oʻlchamlar, urgʻular, boʻlinishlar",
+  "sig.title": "Tovushsiz signallar",
+  "sig.flash": "Ekran chaqnashi",
+  "sig.torch": "Fonar",
+  "sig.vibe": "Tebranish",
+  "sig.flash.short": "ekran",
+  "sig.torch.short": "fonar",
+  "sig.vibe.short": "vibro",
+  "sig.strong": "Kuchli ulush rangi",
+  "sig.other": "Boshqa ulushlar rangi",
+  "sig.color": "Rang {c}",
+  "sig.on": "Yoqilgan: {list}. Sozlamalarni ochish",
+  "sig.ftr": "Signallar ulushlarga mos ravishda, tovush bilan yoki tovushsiz beriladi (klik ovozini mikserda oʻchirish mumkin). Tebranish telefon choʻntakda boʻlganda ham tempni ushlab turishga yordam beradi. Tez-tez chaqnash yorugʻlikka sezgir odamlar uchun noqulay boʻlishi mumkin.",
+  "sig.android": "Fonar va tebranish Android ilovasida, ular mavjud qurilmalarda ishlaydi."
 }

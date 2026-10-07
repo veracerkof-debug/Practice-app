@@ -35,3 +35,7 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 .goldshine{background:linear-gradient(110deg,var(--gold) 0 38%,#fff3bf 50%,var(--gold) 62% 100%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;
   color:transparent!important;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 8px color-mix(in srgb,var(--gold) 35%,transparent));animation:goldshine 3.6s ease-in-out infinite}
 @keyframes goldshine{0%{background-position:110% 0}60%,100%{background-position:-60% 0}}
+/* Вспышка экрана в такт метронома (src/core/pulse.js) */
+.mflash{position:fixed;inset:0;pointer-events:none;z-index:90;opacity:0}
+.mflash.on{animation:mflash .18s ease-out}
+@keyframes mflash{from{opacity:.75}to{opacity:0}}

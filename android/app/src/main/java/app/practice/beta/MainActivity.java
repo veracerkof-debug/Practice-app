@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Свои плагины регистрируются до запуска моста
         registerPlugin(VolumePlugin.class);
+        registerPlugin(PulsePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

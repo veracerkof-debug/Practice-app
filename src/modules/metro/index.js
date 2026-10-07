@@ -37,12 +37,36 @@ function arcD(cx, cy, r, a0, a1) {
   return 'M' + x0.toFixed(2) + ' ' + y0.toFixed(2) + 'A' + r + ' ' + r + ' 0 ' + (a1 - a0 > 180 ? 1 : 0) + ' 1 ' + x1.toFixed(2) + ' ' + y1.toFixed(2);
 }
 
+// Кольцевой сектор — невидимая зона нажатия доли (сама полоска тонкая, попасть в неё пальцем трудно)
+function sectorD(cx, cy, r0, r1, a0, a1) {
+  const p = (r, a) => (cx + r * Math.cos((a * Math.PI) / 180)).toFixed(2) + ' ' + (cy + r * Math.sin((a * Math.PI) / 180)).toFixed(2);
+  const big = a1 - a0 > 180 ? 1 : 0;
+  return 'M' + p(r1, a0) + 'A' + r1 + ' ' + r1 + ' 0 ' + big + ' 1 ' + p(r1, a1) + 'L' + p(r0, a1) + 'A' + r0 + ' ' + r0 + ' 0 ' + big + ' 0 ' + p(r0, a0) + 'Z';
+}
+
 // Начала групп (доли со средним или сильным акцентом, кроме первой) — отступ в полоске долей
 const groupsOf = (c) => new Set(c.accents.map((a, i) => (i > 0 && a >= 2 ? i : -1)).filter((i) => i >= 0));
 
 let host = null, ctx = null, size = 'full', raf = 0, lit = -1;
 let rot = 0, wheelMovedAt = 0, taps = [];
 const offs = [];
+
+// Сигналы без звука (src/core/pulse.js): настройки на устройстве — ctx.store 'sig'
+const SIG_DEF = { flash: false, strong: '#FF3B30', other: '#FFFFFF', torch: false, vibe: false };
+const FLASH_COLORS = ['#FFFFFF', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#AF52DE'];
+const sig = () => ({ ...SIG_DEF, ...(ctx.store.get('sig', {}) || {}) });
+const SIG_IC = {
+  flash: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M12 7v2M12 15v2M7.5 12h2M14.5 12h2"/></svg>',
+  torch: '<svg viewBox="0 0 24 24"><path d="M8 3h8l-1 6H9zM9 9h6v11a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/><path d="M12 13v3"/></svg>',
+  vibe: '<svg viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4.5 8v8M19.5 8v8M2 10v4M22 10v4"/></svg>',
+};
+// Включённые сигналы — значками под колесом; нажатие открывает настройки
+function sigHTML() {
+  const s = sig(), on = ['flash', 'torch', 'vibe'].filter((k) => s[k]);
+  if (!on.length) return '';
+  return '<button class="msig" data-s="more" aria-label="' + ctx.ui.esc(ctx.t('sig.on', { list: on.map((k) => ctx.t('sig.' + k)).join(', ') })) + '">' +
+    on.map((k) => '<span class="msi" title="' + ctx.ui.esc(ctx.t('sig.' + k)) + '">' + SIG_IC[k] + '<i>' + ctx.t('sig.' + k + '.short') + '</i></span>').join('') + '</button>';
+}
 
 const M = () => ctx.audio.metro;
 const cfg = () => ctx.audio.metro.cfg;
@@ -82,7 +106,7 @@ function view() {
   const meter = tile('data-s="meter"', '<b class="num">' + meterTxt + '</b>', t('meterBtn', { meter: meterTxt }));
   const sub = tile('data-x="msub"', SUBICON[c.sub], t('subBtn', { sub: t('sub.' + c.sub) }));
   if (size === 'strip') {
-    return '<div class="vs"><div class="beats mini" id="beats"></div><div class="srow2">' + meter + ui.icb('data-hold="-1"', ui.icons.left, t('slower'), 'round') +
+    return '<div class="vs"><div class="beats mini" id="beats"></div>' + sigHTML() + '<div class="srow2">' + meter + ui.icb('data-hold="-1"', ui.icons.left, t('slower'), 'round') +
       '<div class="bpmbox">' + bpmButton(c) + '<div class="bpmlbl" id="tname">' + tempoName(c.bpm) + '</div></div>' +
       ui.icb('data-hold="1"', ui.icons.right, t('faster'), 'round') + playButton() + '</div></div>';
   }
@@ -91,7 +115,7 @@ function view() {
   const ctl = size === 'quarter' ? [meter, sub]
     : [meter, tile('data-s="tap"', '<b class="tapt">TAP</b>', t('tap')), sub, tile('data-s="more"', ui.icons.gear, t('settings'))];
   return '<div class="mv ' + size + '">' + wheelHTML() + '<div class="mside"><div class="mctl n' + ctl.length + '">' + ctl.join('') +
-    '</div><div class="barct num" id="barct" aria-live="off">' + tags.join(' · ') + '</div></div></div>';
+    '</div><div class="barct num" id="barct" aria-live="off">' + tags.join(' · ') + '</div>' + sigHTML() + '</div></div>';
 }
 
 function drawBeats() {
@@ -99,6 +123,11 @@ function drawBeats() {
   if (wb) {
     const n = c.num, gap = n > 1 ? (n > 8 ? 5 : 9) : 0, seg = 360 / n;
     let s = '';
+    // зоны нажатия: весь сектор доли от центрального круга до делений колеса
+    for (let i = 0; i < n; i++) {
+      const h0 = -90 + i * seg + (n > 1 ? 0.5 : 0), h1 = -90 + (i + 1) * seg - (n > 1 ? 0.5 : 0.01);
+      s += '<path class="whit" data-beat="' + i + '" aria-hidden="true" d="' + sectorD(100, 100, 46, 77, h0, h1) + '"/>';
+    }
     for (let i = 0; i < n; i++) {
       const a0 = -90 + i * seg + gap / 2, a1 = -90 + (i + 1) * seg - gap / 2 - (n === 1 ? 0.01 : 0), l = c.accents[i];
       s += '<path class="wseg l' + l + '" data-beat="' + i + '" data-l="' + l + '" d="' + arcD(100, 100, 64, a0, a1) + '" role="button" aria-label="' +
@@ -250,14 +279,26 @@ function meterSheet() {
   });
 }
 
-function moreSheet() {
+async function moreSheet() {
   const { t, tn, ui } = ctx, c = cfg();
+  const caps = ctx.pulse ? await ctx.pulse.info() : { vibrate: false, torch: false };
+  const sw = (k, s, extra = '') => '<div class="cell"><span class="grow">' + t('sig.' + k) + extra + '</span>' + ui.sw('sig_' + k, s[k], t('sig.' + k)) + '</div>';
+  const colors = (k, cur) => '<div class="cellcol"><div style="margin-bottom:8px">' + t('sig.' + k) + '</div><div class="sigcols">' +
+    FLASH_COLORS.map((col) => '<button type="button" class="sigc' + (cur === col ? ' on' : '') + '" data-sigc="' + k + '" data-col="' + col + '" style="background:' + col + '" aria-pressed="' + (cur === col) + '" aria-label="' + ui.esc(t('sig.color', { c: col })) + '"></button>').join('') + '</div></div>';
+  const sigGroup = () => {
+    const s = sig();
+    return '<div class="hdr">' + t('sig.title') + '</div><div class="group">' + sw('flash', s) +
+      (s.flash ? colors('strong', s.strong) + colors('other', s.other) : '') +
+      (caps.torch ? sw('torch', s) : '') + (caps.vibrate ? sw('vibe', s) : '') + '</div>' +
+      '<p class="ftr">' + t('sig.ftr') + (caps.torch && caps.vibrate ? '' : ' ' + t('sig.android')) + '</p>';
+  };
   const val = (s) => '<span class="val num" style="color:var(--ink);margin-right:6px">' + s + '</span>';
   const body = () => ui.snav(t('more.title')) +
     '<div class="hdr" style="margin-top:4px">' + t('adj') + '</div><div class="group"><div class="cellcol">' +
     ui.seg('adj', [['wheel', t('adj.wheel')], ['arrows', t('adj.arrows')], ['both', t('adj.both')]], adj(), t('adj')) + '</div></div><p class="ftr">' + t('adj.ftr') + '</p>' +
     '<div class="hdr">' + t('sound') + '</div><div class="group"><div class="cellcol">' +
     ui.seg('sound', [['click', t('sound.click')], ['wood', t('sound.wood')], ['beep', t('sound.beep')]], c.sound, t('sound')) + '</div></div>' +
+    sigGroup() +
     '<div class="hdr">' + t('subdiv') + '</div><div class="group"><div class="cellcol">' +
     ui.seg('sub2', [1, 2, 3, 4].map((n) => [n, t('subdiv.' + n)]), c.sub, t('subdiv')) + '</div>' +
     (c.sub === 2 ? '<div class="cell"><span class="grow">' + t('swing') + '</span>' + ui.sw('swing', c.swing, t('swing')) + '</div>' : '') + '</div>' +
@@ -273,7 +314,10 @@ function moreSheet() {
     '<div class="group" style="margin-top:24px"><button class="cell act center" id="rst">' + t('resetAcc') + '</button></div>';
   ui.sheet(body, (el, sh) => {
     const changed = () => { M().save(); sh.update(); render(); };
+    const setSig = (k, v) => { ctx.store.set('sig', { ...sig(), [k]: v }); sh.update(); render(); };
     el.addEventListener('click', (e) => {
+      const sc = e.target.closest('[data-sigc]');
+      if (sc) { setSig(sc.dataset.sigc, sc.dataset.col); return; }
       const sg = e.target.closest('[data-seg] [data-v]');
       if (sg) {
         const k = sg.closest('[data-seg]').dataset.seg, v = sg.dataset.v;
@@ -300,6 +344,7 @@ function moreSheet() {
     el.addEventListener('change', (e) => {
       const k = e.target.dataset.sw;
       if (!k) return;
+      if (k.startsWith('sig_')) { setSig(k.slice(4), e.target.checked); return; }
       if (k === 'swing') c.swing = e.target.checked;
       if (k === 'tr') { c.trainer.on = e.target.checked; if (c.trainer.max <= c.bpm) c.trainer.max = Math.min(300, c.bpm + 20); }
       if (k === 'gap') c.gap.on = e.target.checked;
@@ -362,7 +407,7 @@ function bind() {
     if (tk) tk.style.transform = 'rotate(' + rot + 'deg)';
     const st = Math.trunc(wh.acc / 4);
     if (st) { setBpm(cfg().bpm + st); wh.acc -= st * 4; }
-    if (wh.moved > 6) wheelMovedAt = Date.now();
+    if (wh.moved > 8) wheelMovedAt = Date.now(); // небольшое дрожание пальца при нажатии на долю — не поворот
   }, { passive: true });
   const wheelUp = (e) => { if (wh && e.pointerId === wh.pid) { if (wh.moved > 6) M().save(); wh = null; } };
   on(window, 'pointerup', wheelUp, true);

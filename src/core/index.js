@@ -17,6 +17,7 @@ import { pause as pauseActive, resume as resumeActive, awayStart, awayEnd, count
 import { createStopwatch } from './stopwatch.js';
 import { createActivity } from './activity.js';
 import { initNoSound } from './nosound.js';
+import { createPulse } from './pulse.js';
 import { BUSES } from '../audio/mixer.js';
 import { toast, confirm } from '../ui/index.js';
 import { createFiles } from './files.js';
@@ -116,6 +117,8 @@ export function boot(root) {
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },
   };
+  // Вспышка, фонарик и вибрация в такт метронома
+  app.pulse = createPulse(app);
   const session = createSessionScreen(app);
   app.session = session;
   // Признаки занятия: касания, звук, микрофон — и проверки бездействия сессии и секундомера

@@ -71,6 +71,8 @@ export function makeCtx(app, mod) {
     store: moduleStore(app, mod.id),
     audio: app.audio,
     mic: { request: () => app.audio.openMic() },
+    // Сигналы метронома без звука (вспышка, фонарик, вибрация): info() → { vibrate, torch } — что есть на устройстве
+    pulse: app.pulse,
     presets: (kind) => presetsApi(app, kind),
     // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
     files: app.files,

@@ -41,4 +41,8 @@
     <!-- Микрофон: тюнер, спектр и шумомер. Звук обрабатывается только на устройстве -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Вибрация в такт метронома -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Фонарик: только наличие вспышки, камера не нужна -->
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
 </manifest>

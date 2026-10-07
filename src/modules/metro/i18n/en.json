@@ -77,5 +77,18 @@
   "gap.ftr": "The metronome goes quiet for a few bars, so you can check whether you keep the tempo yourself.",
   "resetAcc": "Reset accents",
   "resetAccDone": "Accents reset",
-  "about": "Meters, accents, subdivisions"
+  "about": "Meters, accents, subdivisions",
+  "sig.title": "Silent signals",
+  "sig.flash": "Screen flash",
+  "sig.torch": "Flashlight",
+  "sig.vibe": "Vibration",
+  "sig.flash.short": "screen",
+  "sig.torch.short": "light",
+  "sig.vibe.short": "vibe",
+  "sig.strong": "Downbeat colour",
+  "sig.other": "Other beats colour",
+  "sig.color": "Colour {c}",
+  "sig.on": "On: {list}. Open settings",
+  "sig.ftr": "Signals follow the beats, with or without sound (the click volume can be turned down in the mixer). Vibration makes it possible to keep time with the phone in a pocket. Frequent flashes may be unpleasant for people with photosensitivity.",
+  "sig.android": "Flashlight and vibration are available in the Android app on devices that have them."
 }

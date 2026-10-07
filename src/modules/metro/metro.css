@@ -141,3 +141,14 @@
 .pane.half .mv,.pane.quarter .mv{gap:10px!important}
 .mwheel .wcenter .bigplay{width:max(40px,13cqw)!important;height:max(40px,13cqw)!important}
 .mwheel .wcenter .bpm{font-size:max(26px,15cqw)!important}
+/* Зона нажатия доли — шире самой полоски */
+.whit{fill:transparent;pointer-events:all;cursor:pointer;-webkit-tap-highlight-color:transparent}
+/* Включённые сигналы без звука — под колесом */
+.msig{display:flex;justify-content:center;gap:10px;margin:6px auto 0;min-height:40px;padding:0 10px;border-radius:999px;color:var(--tint);align-items:center}
+.msig .msi{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600}
+.msig svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.vs .msig{margin:2px auto}
+.sigcols{display:flex;flex-wrap:wrap;gap:10px}
+.sigc{width:40px;height:40px;border-radius:50%;border:1px solid color-mix(in srgb,var(--ink) 18%,transparent)}
+.sigc.on{box-shadow:0 0 0 3px var(--cell),0 0 0 5px var(--tint)}
+.msig .msi i{font-style:normal}
