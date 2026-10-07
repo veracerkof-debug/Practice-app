@@ -32,8 +32,8 @@
 .glrange{display:flex;align-items:center;gap:0;font-size:14px;font-weight:600}
 .glrange span{min-width:4.8em;text-align:center}
 .glsnap{min-height:36px;padding:0 12px;border-radius:999px;background:var(--fill);color:var(--ink);font-size:13px;font-weight:600;white-space:nowrap}
-.gltitle{position:absolute;z-index:1;left:64px;top:calc(4px + env(safe-area-inset-top,0px));font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;
-  font-size:clamp(30px,6cqmin,46px);line-height:1.2;letter-spacing:.01em;color:var(--ink);opacity:.86;pointer-events:none}
+.gltitle{position:absolute;z-index:1;left:64px;top:calc(4px + env(safe-area-inset-top,0px));font-family:'Comfortaa',system-ui,sans-serif;font-weight:400;
+  font-size:clamp(26px,5.2cqmin,40px);line-height:1.25;letter-spacing:0;color:var(--ink);opacity:.86;pointer-events:none}
 .glaxis{position:absolute;left:12px;top:56px;font-size:11px;font-weight:600;color:var(--l2);pointer-events:none;max-width:60%}
 .gl:not(.full) .glaxis{top:8px}
 .tview.imm .glaxis{top:calc(62px + env(safe-area-inset-top,0px))}

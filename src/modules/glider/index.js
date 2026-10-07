@@ -6,9 +6,9 @@
 // Звукоряд — хроматика или лад от любой тоники; диапазон — от ноты и ширина (шире — больше нот, но меньше места на ноту).
 // Звук — как у пианино приложения (или любой его пресет). В отдельном окне глайдер занимает весь экран.
 import './glider.css';
-import '@fontsource/cormorant-garamond/latin-500-italic.css';
-import '@fontsource/cormorant-garamond/latin-ext-500-italic.css';
-import '@fontsource/cormorant-garamond/cyrillic-500-italic.css';
+import '@fontsource/comfortaa/latin-400.css';
+import '@fontsource/comfortaa/latin-ext-400.css';
+import '@fontsource/comfortaa/cyrillic-400.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
