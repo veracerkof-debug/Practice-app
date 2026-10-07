@@ -277,3 +277,8 @@
 :root[data-style="mono"] .helpcard .hcic { background: var(--ink) !important; color: var(--bg); }
 :root[data-style="mono"] .helpcard .hcic svg { stroke: var(--bg); }
 :root[data-style="mono"] .helpcard .hctip { background: var(--fill); }
+/* строчка под приветствием создателя — тихо, прописными, с разрядкой */
+.mono-home .mrole { margin: 10px 0 0; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--l2); font-weight: 600; }
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-style="mono"] #main.tab-enter .mono-home .mrole { animation: mm-track 900ms cubic-bezier(.16, 1, .3, 1) backwards 220ms; }
+}

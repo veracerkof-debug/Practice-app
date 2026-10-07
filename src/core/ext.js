@@ -10,6 +10,9 @@ const mark = (st) => sha256(S + 'p' + ((st.profile && st.profile.createdAt) || 0
 // Доступно ли сейчас
 export const extOn = (st, now = Date.now()) => st.vx === mark(st) || (+st.vy > now && +st.vy - now <= EXT_TEMP_MS);
 
+// Постоянный доступ — у создателя: «Минимал» обращается к нему по роли (временный доступ — пробный, без обращения)
+export const extOwner = (st) => st.vx === mark(st);
+
 // Код: 'p' — насовсем, 't' — на время, null — нет
 export function extTry(st, code, now = Date.now()) {
   const h = sha256(S + String(code)).slice(0, 24);
