@@ -693,5 +693,7 @@
   "page.notif.sub": "Questions and messages",
   "page.look.sub": "Language, theme, style",
   "page.data.sub": "Backup and reset",
-  "lic.onest.sub": "Font of the Minimal style"
+  "lic.onest.sub": "Font of the Minimal style",
+  "mono.lang": "Greek and Latin",
+  "mono.langHint": "The language of Minimal: mostly Greek, and Latin wherever Russian and English use Latin words. Off — the language chosen above."
 }

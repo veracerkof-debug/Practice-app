@@ -101,5 +101,6 @@
   "sens.low": "Past",
   "sens.normal": "Oddiy",
   "sens.high": "Yuqori",
-  "sens.hint": "Yuqori — past ovozli cholgʻular va uzoqdagi telefon uchun; past — shovqinli xonada, tyuner begona tovushlarga javob bermasligi uchun."
+  "sens.hint": "Yuqori — past ovozli cholgʻular va uzoqdagi telefon uchun; past — shovqinli xonada, tyuner begona tovushlarga javob bermasligi uchun.",
+  "monoFixed": "«Minimal»da koʻrinish qatʼiy: {v}."
 }

@@ -4,6 +4,7 @@ import './metro.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
+import el from './i18n/el.json';
 import { defaultAccents, tempoName } from '../../audio/metronome.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M8 21h8l-3-17h-2zM12 14l5-7"/></svg>';
@@ -70,7 +71,7 @@ function sigHTML() {
 
 const M = () => ctx.audio.metro;
 const cfg = () => ctx.audio.metro.cfg;
-const adj = () => ctx.store.get('adj', 'wheel');
+const adj = () => (ctx.mono ? 'both' : ctx.store.get('adj', 'wheel')); // «Минимал» — колесо и стрелки
 
 /* ---------- разметка ---------- */
 
@@ -295,7 +296,7 @@ async function moreSheet() {
   const val = (s) => '<span class="val num" style="color:var(--ink);margin-right:6px">' + s + '</span>';
   const body = () => ui.snav(t('more.title')) +
     '<div class="hdr" style="margin-top:4px">' + t('adj') + '</div><div class="group"><div class="cellcol">' +
-    ui.seg('adj', [['wheel', t('adj.wheel')], ['arrows', t('adj.arrows')], ['both', t('adj.both')]], adj(), t('adj')) + '</div></div><p class="ftr">' + t('adj.ftr') + '</p>' +
+    (ctx.mono ? t('monoFixed', { v: t('adj.both') }) : ui.seg('adj', [['wheel', t('adj.wheel')], ['arrows', t('adj.arrows')], ['both', t('adj.both')]], adj(), t('adj'))) + '</div></div><p class="ftr">' + t('adj.ftr') + '</p>' +
     '<div class="hdr">' + t('sound') + '</div><div class="group"><div class="cellcol">' +
     ui.seg('sound', [['click', t('sound.click')], ['wood', t('sound.wood')], ['beep', t('sound.beep')]], c.sound, t('sound')) + '</div></div>' +
     sigGroup() +
@@ -438,8 +439,8 @@ function bind() {
 export default {
   id: 'metro',
   order: 10,
-  name: { ru: ru.name, uz: uz.name, en: en.name },
-  i18n: { ru, uz, en },
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#FF9500',
   sizes: ['full', 'half', 'quarter', 'strip'],

@@ -49,5 +49,6 @@
   "w.noteLabel": "Note for this practice",
   "w.saved": "Saved: {time}",
   "w.statusRun": "Stopwatch, {time}",
-  "w.statusPaused": "Stopwatch paused, {time}"
+  "w.statusPaused": "Stopwatch paused, {time}",
+  "monoFixed": "In Minimal the view is fixed: {v}."
 }

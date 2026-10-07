@@ -46,5 +46,6 @@
   "w.noteLabel": "Mashgʻulotga eslatma",
   "w.saved": "Yozildi: {time}",
   "w.statusRun": "Sekundomer, {time}",
-  "w.statusPaused": "Sekundomer pauzada, {time}"
+  "w.statusPaused": "Sekundomer pauzada, {time}",
+  "monoFixed": "«Minimal»da koʻrinish qatʼiy: {v}."
 }

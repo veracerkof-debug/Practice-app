@@ -25,7 +25,9 @@ import { createFiles } from './files.js';
 export function boot(root) {
   const store = createStore();
   // Язык из настроек (выбран в «Оформлении»), иначе — язык системы
-  initI18n(store.state.settings.lang);
+  // «Минимал» говорит по-гречески и по-латыни (выключается в «Оформлении»)
+  const st0 = store.state.settings;
+  initI18n(st0.uiStyle === 'mono' && st0.monoLang !== false ? 'el' : st0.lang);
   ensureLib(store.state, t);
   applyTheme(store.state.settings);
   recoverToolView(store);

@@ -50,5 +50,6 @@
   "w.noteLabel": "Заметка к занятию",
   "w.saved": "Записано: {time}",
   "w.statusRun": "Секундомер, {time}",
-  "w.statusPaused": "Секундомер на паузе, {time}"
+  "w.statusPaused": "Секундомер на паузе, {time}",
+  "monoFixed": "В «Минимале» вид закреплён: {v}."
 }

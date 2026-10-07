@@ -73,6 +73,8 @@ export function makeCtx(app, mod) {
     mic: { request: () => app.audio.openMic() },
     // Сигналы метронома без звука (вспышка, фонарик, вибрация): info() → { vibrate, torch } — что есть на устройстве
     pulse: app.pulse,
+    // Вид «Минимал» (эксперимент): у инструментов с выбором вида он закреплён — самый простой и функциональный
+    get mono() { return app.store.state.settings.uiStyle === 'mono'; },
     presets: (kind) => presetsApi(app, kind),
     // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
     files: app.files,

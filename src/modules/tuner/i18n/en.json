@@ -104,5 +104,6 @@
   "sens.low": "Low",
   "sens.normal": "Normal",
   "sens.high": "High",
-  "sens.hint": "High — for quiet instruments and a phone further away; low — in a noisy room, so the tuner ignores other sounds."
+  "sens.hint": "High — for quiet instruments and a phone further away; low — in a noisy room, so the tuner ignores other sounds.",
+  "monoFixed": "In Minimal the view is fixed: {v}."
 }

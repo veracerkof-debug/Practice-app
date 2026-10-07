@@ -6,6 +6,7 @@ import './timer.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
+import el from './i18n/el.json';
 import { POMO_LIMITS } from '../../core/pomodoro.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M10 3h4"/></svg>';
@@ -93,7 +94,7 @@ function ringHTML() {
 }
 
 function render() {
-  if (host) host.innerHTML = cfg().style === 'flip' ? flipHTML() : ringHTML();
+  if (host) host.innerHTML = cfg().style === 'flip' && !ctx.mono ? flipHTML() : ringHTML(); // «Минимал» — кольцо
 }
 
 /* ---------- ход времени ---------- */
@@ -134,9 +135,10 @@ function tick() {
 function settingsSheet() {
   const { t, tn, ui } = ctx, c = cfg();
   const body = () => ui.snav(t('set.title')) +
+    (ctx.mono ? '<div class="hdr">' + t('set.view') + '</div><p class="ftr" style="margin-top:0">' + t('monoFixed', { v: t('style.ring') }) + '</p>' :
     '<div class="hdr">' + t('set.view') + '</div><div class="stycards" role="group" aria-label="' + t('set.view') + '">' + ['ring', 'flip'].map((k) => '<button class="stycard' +
       ((c.style || 'ring') === k ? ' on' : '') + '" data-sty="' + k + '" aria-pressed="' + ((c.style || 'ring') === k) + '"><span class="sprev ' + k + '"><i></i><i></i><i></i><i></i></span><b>' +
-      t('style.' + k) + '</b></button>').join('') + '</div><div style="height:10px"></div>' +
+      t('style.' + k) + '</b></button>').join('') + '</div><div style="height:10px"></div>') +
     '<div class="group">' + ['work', 'short', 'long', 'every'].map((k) => '<div class="cell"><span class="grow">' + t('set.' + k) +
       '</span><span class="val num" style="color:var(--ink);margin-right:6px">' + (k === 'every' ? tn('u.cycles', c[k]) : t('u.min', { n: c[k] })) + '</span>' +
       ui.stepper(k, t('set.' + k)) + '</div>').join('') + '</div>' +
@@ -218,8 +220,8 @@ function bind() {
 export default {
   id: 'timer',
   order: 70,
-  name: { ru: ru.name, uz: uz.name, en: en.name },
-  i18n: { ru, uz, en },
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#FF3B30',
   sizes: ['full', 'half', 'quarter', 'strip'],

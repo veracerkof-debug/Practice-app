@@ -78,7 +78,7 @@ function statsHTML(app) {
       '<div class="split"><i style="width:' + (tot ? (sAll / tot) * 100 : 0) + '%;background:var(--gold)"></i><i style="flex:1;background:var(--l3)"></i></div>' +
       '<div class="legend"><span><i style="background:var(--gold)"></i>' + t('track.strict', { d: fmtDur(sAll) }) + '</span><span><i style="background:var(--l3)"></i>' + t('track.normal', { d: fmtDur(tot - sAll) }) + '</span></div>');
   }
-  const hm = heatmap(all, now), loc = getLang() === 'en' ? 'en-GB' : getLang() === 'uz' ? 'uz-Latn' : 'ru-RU';
+  const hm = heatmap(all, now), loc = getLang() === 'en' ? 'en-GB' : getLang() === 'uz' ? 'uz-Latn' : getLang() === 'el' ? 'el-GR' : 'ru-RU';
   h += card(t('stats.12w'), tn('stats.activeDays', hm.active), '<div class="heat" role="img" aria-label="' + t('stats.heatAria') + '">' + hm.cells.map((c) =>
     '<i title="' + esc(new Date(c.t).toLocaleDateString(loc) + ': ' + (c.v ? fmtDur(c.v) : t('stats.none'))) + '" style="' + (c.future ? 'opacity:.35;' : '') +
     (c.v ? 'background:color-mix(in srgb,var(--tint) ' + Math.round(c.level * 100) + '%,var(--fill))' : '') + '"></i>').join('') + '</div>');
@@ -149,13 +149,15 @@ function notifHTML(app) {
 
 function lookHTML(app) {
   const st = app.store.state.settings;
-  return '<div class="large">' + t('look.title') + '</div>' +
+  const monoLang = st.uiStyle === 'mono' && st.monoLang !== false;
+  return '<div class="large">' + t('look.title') + '</div>' + (monoLang ? '' :
     '<div class="hdr">' + t('look.lang') + '</div><div class="group"><div class="cellcol"><div class="seg uc" role="group" aria-label="' + t('look.lang') + '">' +
-    LANGS.map((k) => '<button data-lang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>' +
+    LANGS.map((k) => '<button data-lang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>') +
     '<div class="hdr">' + t('look.theme') + '</div><div class="group"><div class="cellcol">' + seg('theme', [['system', t('look.auto')], ['light', t('look.light')], ['dark', t('look.dark')]], st.theme, t('look.theme')) + '</div></div>' +
     // «Минимал» — экспериментальный вид интерфейса: чёрно-белый, без акцента и цветных тем
     '<div class="hdr">' + t('mono.title') + '</div><div class="group"><div class="cellcol">' + seg('uistyle', [['default', t('mono.default')], ['mono', t('mono.name')]], st.uiStyle === 'mono' ? 'mono' : 'default', t('mono.title')) +
     '<div class="segcap">' + t('mono.hint') + '</div></div></div>' +
+    (st.uiStyle === 'mono' ? '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('mono.lang') + '</span>' + psw('monoLang', st.monoLang !== false, t('mono.lang')) + '</div></div><p class="ftr">' + t('mono.langHint') + '</p>' : '') +
     (st.uiStyle === 'mono' ? '' : '<div class="hdr">' + t('look.style') + '</div><div class="skins">' + [['paper', t('look.paper'), '#F4EFE6', '#2B2620'], ['oled', 'OLED', '#000', '#fff']].map(([k, n, bg, fg]) =>
       '<button class="skin' + (st.theme === k ? ' on' : '') + '" data-skin="' + k + '" aria-pressed="' + (st.theme === k) + '" style="background:' + bg + ';color:' + fg + '">' + n + '</button>').join('') + '</div>') +
     (st.uiStyle === 'mono' ? '' :
@@ -255,7 +257,14 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-day]'))) { toggleDay(app.store, +b.dataset.day); render(); onChange(); return; }
       if ((b = g('[data-goal]'))) { changeGoal(app.store, +b.dataset.goal); render(); onChange(); return; }
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
-      if ((b = g('[data-seg="uistyle"] [data-v]'))) { app.store.state.settings.uiStyle = b.dataset.v === 'mono' ? 'mono' : 'default'; applyTheme(app.store.state.settings); changed(); return; }
+      if ((b = g('[data-seg="uistyle"] [data-v]'))) {
+        const st = app.store.state.settings, was = st.uiStyle === 'mono' && st.monoLang !== false;
+        st.uiStyle = b.dataset.v === 'mono' ? 'mono' : 'default';
+        applyTheme(st); changed();
+        // у «Минимала» свой язык (греческий и латынь) — строки перечитываются после перезапуска
+        if (was !== (st.uiStyle === 'mono' && st.monoLang !== false)) setTimeout(() => location.reload(), 150);
+        return;
+      }
       if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
       if ((b = g('[data-acc]'))) { app.store.state.settings.accent = b.dataset.acc; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-meinst]'))) {
@@ -286,7 +295,7 @@ export function createPanel(app, onChange) {
     layer.addEventListener('change', (e) => {
       const d = e.target.dataset;
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); return; }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly') { render(); onChange(); } }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly') { render(); onChange(); } if (d.psw === 'monoLang') setTimeout(() => location.reload(), 150); }
       if (d.me) { saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value }); onChange(); }
     });
   }

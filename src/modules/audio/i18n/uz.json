@@ -105,5 +105,6 @@
   "toSongsInfo": "Belgi — qoʻshiqda barcha tanlangan fayllar bor. Bosish ularning hammasini qoʻshiqqa qoʻshadi yoki hammasini olib tashlaydi.",
   "delSelTitle": "{files} oʻchirilsinmi?",
   "notMedia": "Bu audio ham, video ham emas",
-  "addedN": "Qoʻshildi: {files}"
+  "addedN": "Qoʻshildi: {files}",
+  "monoFixed": "«Minimal»da koʻrinish qatʼiy: {v}."
 }

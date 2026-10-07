@@ -7,6 +7,7 @@ import './tuner.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
+import el from './i18n/el.json';
 import { yin, createPitchSmoother } from '../../audio/pitch.js';
 import { TUNINGS, TOL, STYLES, normalizeTuner, curTuning, reading, inRange, mName, splitN } from '../../music/tuning.js';
 
@@ -99,7 +100,7 @@ function micNote() {
 }
 
 function view() {
-  const { t, ui } = ctx, s = st(), tn = tuning(), style = s.style;
+  const { t, ui } = ctx, s = st(), tn = tuning(), style = ctx.mono ? 'bar' : s.style; // «Минимал» — шкала
   const cents = '<div id="tcent" class="tcent" aria-live="polite">' + t('play') + '</div>';
   const hz = '<div id="thz" class="thz num">' + t('hzNone') + '</div>';
   if (size === 'quarter') return '<div class="tq">' + noteHTML() + barHTML('sm') + cents + micNote() + '</div>';
@@ -341,9 +342,10 @@ function settingsSheet() {
       '<div class="group" style="margin-top:4px"><div class="cell"><span class="grow">' + t('beginner') + '</span>' + ui.sw('tbeg', s.beginner, t('beginner')) + '</div>' +
       (s.beginner ? '<button class="cell" data-tpk><span class="grow">' + t('set.tuning') + '</span><span class="val">' + ui.esc(tn ? tuningName(tn) : t('set.noTuning')) + '</span>' + ui.icons.chev + '</button>' : '') + '</div>' +
       '<p class="ftr">' + t(s.beginner ? 'set.begOn' : 'set.begOff') + '</p>' +
+      (ctx.mono ? '<div class="hdr">' + t('set.view') + '</div><p class="ftr" style="margin-top:0">' + t('monoFixed', { v: t('style.bar') }) + '</p>' :
       '<div class="hdr">' + t('set.view') + '</div><div class="tstys" role="group" aria-label="' + t('set.view') + '">' +
       STYLES.map((k) => '<button class="tsty' + (s.style === k ? ' on' : '') + '" data-tsty="' + k + '" aria-pressed="' + (s.style === k) + '"><span class="tsi ' + k +
-        '"><i></i><i></i><i></i></span><b>' + t('style.' + k) + '</b></button>').join('') + '</div>' +
+        '"><i></i><i></i><i></i></span><b>' + t('style.' + k) + '</b></button>').join('') + '</div>') +
       '<div class="hdr">' + t('set.sens') + '</div><div class="group"><div class="cellcol">' + ui.seg('tsens', Object.keys(SENS).map((k) => [k, t('sens.' + k)]), s.sens || 'normal', t('set.sens')) +
       '<div class="segcap">' + t('sens.hint') + '</div></div></div>' +
       '<div class="hdr">' + t('set.tol') + '</div><div class="group">' + Object.keys(TOL).map((k) => '<button class="cell" data-ttol="' + k + '" aria-pressed="' + (s.tol === k) +
@@ -456,8 +458,8 @@ function bind() {
 export default {
   id: 'tuner',
   order: 20,
-  name: { ru: ru.name, uz: uz.name, en: en.name },
-  i18n: { ru, uz, en },
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#AF52DE',
   sizes: ['full', 'half', 'quarter', 'strip'],

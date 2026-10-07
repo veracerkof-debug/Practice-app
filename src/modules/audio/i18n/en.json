@@ -106,5 +106,6 @@
   "toSongsInfo": "A tick means the song has all selected files. Tapping adds them all to the song or removes them all.",
   "delSelTitle": "Delete {files}?",
   "notMedia": "That’s not audio or video",
-  "addedN": "Added: {files}"
+  "addedN": "Added: {files}",
+  "monoFixed": "In Minimal the view is fixed: {v}."
 }

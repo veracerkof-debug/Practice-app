@@ -6,6 +6,7 @@ import './media.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
+import el from './i18n/el.json';
 import { fileSongs, inSong, linkSong } from '../../core/files.js';
 import { fmtDur } from '../../core/format.js';
 import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
@@ -41,7 +42,7 @@ const st = () => ctx.store.all();
 const tracks = () => ctx.files.list('audio');
 const curSong = () => (ctx.session && ctx.session.songId) || null;
 const audKey = () => (curSong() ? 'song:' + curSong() : 'free');
-const style = () => (st().style === 'vinyl' ? 'vinyl' : 'wave');
+const style = () => (st().style === 'vinyl' && !ctx.mono ? 'vinyl' : 'wave'); // «Минимал» — волна
 const rateTxt = () => ctx.num(AU.rate, AU.rate * 100 % 10 ? 2 : AU.rate % 1 ? 1 : 0) + '×';
 const sizeMb = (r) => ctx.t('mb', { n: ctx.num((r.size || 0) / MB, 1) });
 
@@ -289,7 +290,7 @@ function controls() {
     stepb: '<button class="ic txt sm' + (AU.step ? ' act' : '') + '" data-x="astep" aria-pressed="' + AU.step + '" aria-label="' + t('stepUp') + '">+5%↻</button>',
     list: icb('data-x="alist"', I.list, t('files.btn')),
     time: '<span id="acur" class="num">' + fmtT(AU.el.currentTime) + '</span>',
-    sty: (cls) => icb('data-x="astyle"', I.disc, t('styleBtn'), cls),
+    sty: (cls) => (ctx.mono ? '' : icb('data-x="astyle"', I.disc, t('styleBtn'), cls)), // в «Минимале» вид закреплён
     back2: !curSong() && ML.view === 'player' ? '<button class="mlback" data-x="mllib">' + t('backLib') + '</button>' : '',
   };
 }
@@ -868,8 +869,8 @@ function bind() {
 export default {
   id: 'audio',
   order: 80,
-  name: { ru: ru.name, uz: uz.name, en: en.name },
-  i18n: { ru, uz, en },
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#FF2D55',
   sizes: ['full', 'half', 'quarter', 'strip'],

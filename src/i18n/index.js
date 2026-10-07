@@ -1,17 +1,21 @@
 // Строки интерфейса только через t('key'). Языки: ru (основной), uz (латиница), en.
+// el — «Graeca · Latina», язык вида «Минимал» (эксперимент): в основном греческий, а там, где в русском и
+// английском стоят латинские (и итальянские музыкальные) слова, — латынь. В обычный список языков не входит.
 import ru from './ru.json';
 import uz from './uz.json';
 import en from './en.json';
+import el from './el.json';
 
-const dicts = { ru, uz, en };
-export const LANGS = Object.keys(dicts);
+const dicts = { ru, uz, en, el };
+export const LANGS = ['ru', 'uz', 'en'];
+export const MONO_LANG = 'el';
 // Название языка на нём самом
 export const LANG_NAMES = { ru: 'Русский', uz: 'Oʻzbekcha', en: 'English' };
 let lang = 'ru';
 
 export function initI18n(preferred) {
   const sys = (navigator.language || 'ru').slice(0, 2);
-  lang = [preferred, sys].find((l) => LANGS.includes(l)) || 'ru';
+  lang = [preferred, sys].find((l) => LANGS.includes(l) || l === MONO_LANG) || 'ru';
   document.documentElement.lang = lang;
   return lang;
 }
@@ -26,7 +30,7 @@ const fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? 
 // Словарь с запасным русским
 export function makeT(byLang) {
   return (key, vars) => {
-    const v = byLang[lang]?.[key] ?? byLang.ru?.[key];
+    const v = byLang[lang]?.[key] ?? (lang === MONO_LANG ? byLang.en?.[key] : null) ?? byLang.ru?.[key];
     if (v == null) return key;
     return fill(Array.isArray(v) ? v[0] : v, vars);
   };
@@ -41,16 +45,17 @@ export function pluralForm(n, forms, l = lang) {
     const m100 = a % 100, m10 = a % 10;
     return forms[m100 > 10 && m100 < 20 ? 2 : m10 > 1 && m10 < 5 ? 1 : m10 === 1 ? 0 : 2] ?? forms.at(-1);
   }
-  if (l === 'en') return forms[a === 1 ? 0 : 1] ?? forms.at(-1);
+  if (l === 'en' || l === 'el') return forms[a === 1 ? 0 : 1] ?? forms.at(-1);
   return forms[0];
 }
 
 // t с числом: tn('cents', 5) → «5 центов»; vars.n подставляется в {n}
 export function makeTn(byLang) {
   return (key, n, vars) => {
-    const v = byLang[lang]?.[key] ?? byLang.ru?.[key];
+    const fb = lang === MONO_LANG && byLang.en?.[key] != null;
+    const v = byLang[lang]?.[key] ?? (fb ? byLang.en[key] : byLang.ru?.[key]);
     if (v == null) return key;
-    return fill(pluralForm(n, v), { n: fmtNum(n), ...vars });
+    return fill(pluralForm(n, v, byLang[lang]?.[key] != null || fb ? lang : 'ru'), { n: fmtNum(n), ...vars });
   };
 }
 
