@@ -223,3 +223,4 @@
 .namehero .tr{color:var(--l2);font-size:15px;margin-top:6px;letter-spacing:.06em}
 .nameq{font-family:"GFS Didot",Georgia,serif;font-size:20px;line-height:1.45;margin:0 0 8px}
 .nameref{color:var(--l2);font-size:13px}
+.nameq b{font-weight:700}
