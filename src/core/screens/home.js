@@ -17,6 +17,7 @@ import { weekday } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
+import { logoHTML } from '../../ui/logo.js';
 import { nextEventsHTML } from './calendar.js';
 
 // Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
@@ -44,7 +45,7 @@ function homeMonoHTML(app) {
   const st = app.store.state.settings, plain = !!st.toolsOnly, now = new Date();
   const lang = getLang() === 'uz' ? 'uz-Latn' : getLang();
   const date = new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'short' }).format(now);
-  let h = '<div class="mono-home">' + topbar() + '<h1 class="mhello">' + esc(greet(now.getHours())) + '</h1><div class="mdate">' + esc(date) + '</div>';
+  let h = '<div class="mono-home">' + topbar(logoHTML()) + '<h1 class="mhello">' + esc(greet(now.getHours())) + '</h1><div class="mdate">' + esc(date) + '</div>';
   if (!plain) {
     const w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st), today = weekday(Date.now()), WD = weekdays();
     h += mhead(t('home.week'), '<button class="mbtn" data-pp="' + (st.configured ? 'stats' : 'week') + '" aria-label="' + esc(t('home.stats')) + '">' + ARROW + '</button>') +
@@ -76,7 +77,7 @@ export function homeHTML(app) {
   if (app.store.state.settings.uiStyle === 'mono') return homeMonoHTML(app);
   const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
   const today = weekday(Date.now()), plan = st.days, WD = weekdays();
-  let h = topbar() + '<div class="large">' + t('home.title') + '</div><div class="hcols"><div>';
+  let h = topbar(logoHTML()) + '<div class="large">' + t('home.title') + '</div><div class="hcols"><div>';
   // «Только инструменты»: без недели, цели, камня и звания — сразу рабочее место и инструменты
   const plain = !!st.toolsOnly;
   if (!plain) h += '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
@@ -206,4 +207,15 @@ export function rankCheck(app) {
   st.rankSeen = r.i;
   app.store.settingsChanged();
   if (st.rankNote !== false && isOn(st, 'mastery')) toast(t('rank.new', { name: rankName(r.id, r.level) }));
+}
+
+// Справка о названии: что значит Μελέτη, муза упражнения у Павсания, стих из Первого послания к Тимофею
+const VERSE_GR = 'Ταῦτα μελέτα, ἐν τούτοις ἴσθι, ἵνα σου ἡ προκοπὴ φανερὰ ᾖ πᾶσιν.';
+export function nameSheet() {
+  sheet(() => snav(t('name.title')) +
+    '<div class="namehero">' + logoHTML() + '<div class="tr">' + esc(t('name.tr')) + '</div></div>' +
+    '<div class="group"><div class="cellcol"><p style="margin:0">' + esc(t('name.meaning')) + '</p></div><div class="cellcol"><p style="margin:0">' + esc(t('name.muse')) + '</p></div></div>' +
+    '<div class="hdr">' + esc(t('name.verseHdr')) + '</div><div class="group"><div class="cellcol"><p class="nameq" lang="grc">' + VERSE_GR + '</p>' +
+    (t('name.verse') ? '<p style="margin:0 0 6px">' + esc(t('name.verse')) + '</p>' : '') + '<div class="nameref">' + esc(t('name.ref')) + '</div></div></div>' +
+    '<p class="ftr">' + esc(t('name.hint')) + '</p>');
 }

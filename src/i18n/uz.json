@@ -1,5 +1,5 @@
 {
-  "app.title": "Mashq",
+  "app.title": "Melete",
   "lib.cats.work": "Ish",
   "lib.cats.church": "Cherkov",
   "lib.cats.growth": "O‘z-o‘zini rivojlantirish",
@@ -528,7 +528,7 @@
   ],
   "cal.exportEmpty": "Taqvimda hozircha tadbir yoʻq",
   "cal.exported": "Saqlandi: {n}",
-  "cal.icsName": "Mashq",
+  "cal.icsName": "Melete",
   "cal.soon": "Tez orada",
   "cal.songCal": "Taqvimda",
   "cal.songNone": "Shu qoʻshiq boʻyicha repetitsiyalar, konsertlar va maqsadlar shu yerda paydo boʻladi.",
@@ -686,5 +686,15 @@
   "page.data.sub": "Zaxira nusxa va tiklash",
   "lic.onest.sub": "«Minimal» koʻrinishi shrifti",
   "mono.lang": "Grek va lotin",
-  "mono.langHint": "«Minimal» tili: asosan grekcha, rus va ingliz tilida lotincha soʻz turgan joyda — lotincha. Oʻchirilgan — yuqoridagi til."
+  "mono.langHint": "«Minimal» tili: asosan grekcha, rus va ingliz tilida lotincha soʻz turgan joyda — lotincha. Oʻchirilgan — yuqoridagi til.",
+  "name.aria": "Μελέτη — nom haqida",
+  "name.title": "Nom haqida",
+  "name.tr": "Melete · «melete»",
+  "name.meaning": "Yunoncha μελέτη — mashq, tirishqoq mashgʻulot, ishga doimiy eʼtibor. μελετάω feʼli — «mashq qilmoq, oʻylamoq».",
+  "name.muse": "Mashq ilhom parisi. Pavsaniy yozishicha, Gelikonda dastlab faqat uchta muza ulugʻlangan: Μελέτη — mashq, Μνήμη — xotira va Ἀοιδή — qoʻshiq («Elladaning tasviri», IX, 29, 2).",
+  "name.verseHdr": "Muqaddas Kitobda",
+  "name.verse": "«Bularga eʼtibor ber, bularda boʻl, toki muvaffaqiyating hammaga ayon boʻlsin».",
+  "name.ref": "1 Timoʻtiyga 4:15. «Eʼtibor ber» — μελέτα, «muvaffaqiyat» — προκοπή.",
+  "name.hint": "Nomning yunoncha yozilishi — ilova logotipi.",
+  "lic.didot.sub": "«Μελέτη» logotipi shrifti"
 }

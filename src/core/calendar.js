@@ -184,7 +184,7 @@ function fold(line) {
 const BYDAY = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
 
 // Время — «плавающее» местное (без часового пояса), как его видит пользователь
-export function toICS(events, { cal, songs = [], now = Date.now(), name = 'Practice' } = {}) {
+export function toICS(events, { cal, songs = [], now = Date.now(), name = 'Melete' } = {}) {
   const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Practice//Calendar//RU', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:' + icsEsc(name)];
   events.filter((e) => !e.deleted).forEach((ev) => {
     const k = cal ? kindOf(cal, ev.kind) : null, sn = (ev.songs || []).map((id) => (songs.find((s) => s.id === id) || {}).title).filter(Boolean);

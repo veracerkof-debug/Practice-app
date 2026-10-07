@@ -214,3 +214,12 @@
 .gemli.locked .gem,.gemli.locked .rank{filter:grayscale(1);opacity:.35}
 .gemli.locked .grow{color:var(--l2)}
 .gemli.cur{background:color-mix(in srgb,var(--tint) 8%,var(--cell))}
+/* Логотип: «Μελέτη» шрифтом GFS Didot — по центру верхней строки; нажатие — справка о названии */
+.topbar{position:relative}
+.logo{font-family:"GFS Didot",Georgia,"Times New Roman",serif;font-size:27px;line-height:1;letter-spacing:.02em;color:var(--ink);min-height:44px;padding:0 10px;font-weight:400}
+.topbar .logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.namehero{text-align:center;margin:6px 0 18px}
+.namehero .logo{font-size:64px;min-height:0;padding:0;pointer-events:none}
+.namehero .tr{color:var(--l2);font-size:15px;margin-top:6px;letter-spacing:.06em}
+.nameq{font-family:"GFS Didot",Georgia,serif;font-size:20px;line-height:1.45;margin:0 0 8px}
+.nameref{color:var(--l2);font-size:13px}
