@@ -9,7 +9,7 @@ import { visibleTabs } from '../settings.js';
 import { homeHTML, quickEdit, streakSheet, gemSheet, rankSheet, rankCheck, nameSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
-import { createPanel, donateSheet, legalSheet, tosGate } from './panel.js';
+import { createPanel, donateSheet, legalSheet, tosGate, unverifiedSheet } from './panel.js';
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
 import { onboarding } from './onboard.js';
 
@@ -85,6 +85,7 @@ export function createShell(app, root) {
     else if (d.act === 'donate') donateSheet();
     else if (d.act === 'legal') legalSheet(d.v);
     else if (d.act === 'streak') streakSheet(app);
+    else if (d.act === 'unver') unverifiedSheet(app);
     else if (d.act === 'gem') gemSheet(app);
     else if (d.act === 'rank') rankSheet(app);
     else if (d.act === 'name') nameSheet();

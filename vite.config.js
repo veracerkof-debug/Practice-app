@@ -30,6 +30,8 @@ function pdfjsAssets() {
 export default defineConfig({
   // относительные пути — нужны для Capacitor (этап 3)
   base: './',
+  // дата сборки: часы устройства раньше неё — сбиты (src/core/clock.js)
+  define: { __BUILD_TIME__: Date.now() },
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
   plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets()],
   // воркеры alphaTab сжимаются так же, как основной код

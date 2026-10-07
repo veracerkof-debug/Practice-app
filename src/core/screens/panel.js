@@ -21,6 +21,7 @@ import { INSTRUMENTS, LEVELS, PRIOR_MAX, lifetimeSec, saveProfile, newProfile } 
 import { rankOf } from '../rank.js';
 import { rankSVG, rankName, RANK_COLORS } from '../../ui/rank.js';
 import { gemSVG } from '../../ui/gems.js';
+import { problemOf } from '../integrity.js';
 
 const PAGES = {
   me: ['#FF9500', '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M5 19.5c1.4-3.2 4-4.6 7-4.6s5.6 1.4 7 4.6"/></svg>'],
@@ -62,7 +63,7 @@ const ddmm = (ts) => { const d = new Date(ts); return d.getDate() + '.' + String
 function statsHTML(app) {
   const all = app.store.sessions(), st = app.store.state.settings, now = Date.now();
   let h = '<div class="large">' + t('stats.title') + '</div>';
-  if (!all.length) return h + '<div class="empty"><b>' + t('stats.emptyTitle') + '</b>' + t('stats.emptyText') + '<br><button class="btn fill" data-go="home">' + t('stats.toPractice') + '</button></div>';
+  if (!all.length) return h + unverCard(app) + '<div class="empty"><b>' + t('stats.emptyTitle') + '</b>' + t('stats.emptyText') + '<br><button class="btn fill" data-go="home">' + t('stats.toPractice') + '</button></div>';
   const w = weekData(all, now), m = monthSplit(all, now), goal = st.goalMin * 60, pw = goalProgress(w.total, st), sk = streakInfo(all, st, now);
   h += '<div class="tiles num"><div class="tile"><b>' + fmtDur(w.total) + '</b><span>' + t('stats.week') + '</span></div><div class="tile"><b>' + fmtDur(m.total) + '</b><span>' + t('stats.month') +
     '</span></div><div class="tile"><b>' + fmtDur(totalTime(all)) + '</b><span>' + t('stats.total') + '</span></div></div><div class="sgrid">';
@@ -100,7 +101,26 @@ function statsHTML(app) {
   if (d.length) h += card(t('stats.difficulty'), '', hbars(d));
   const tags = byFreeTag(all).map((x) => ({ n: x.n ? freeTagName(x.n) : t('stats.noTag'), v: x.v }));
   if (tags.length) h += card(t('stats.freeTitle'), t('stats.byTag'), hbars(tags));
-  return h + '</div>';
+  return h + '</div>' + unverCard(app);
+}
+
+// Неподтверждённые записи (src/core/integrity.js): в статистику не идут, видны только здесь
+function unverCard(app) {
+  const bad = app.store.unverified();
+  if (!bad.length) return '';
+  return '<button class="group" data-act="unver" style="display:block;width:100%;text-align:left;margin-top:14px"><div class="cell"><span class="grow">' + t('unver.title') +
+    '</span><span class="val num">' + bad.length + ' · ' + fmtDur(totalTime(bad)) + '</span>' + CHEV + '</div></button><p class="ftr">' + t('unver.hint') + '</p>';
+}
+
+export function unverifiedSheet(app) {
+  const bad = app.store.unverified().slice().sort((a, b) => b.start - a.start), songs = app.store.songs();
+  const loc = getLang() === 'en' ? 'en-GB' : getLang() === 'uz' ? 'uz-Latn' : getLang() === 'el' ? 'el-GR' : 'ru-RU';
+  const what = (r) => (r.songId && songs.find((s) => s.id === r.songId) ? songs.find((s) => s.id === r.songId).title
+    : r.tool ? (moduleById(r.tool) ? moduleName(moduleById(r.tool)) : r.tool) : t('ses.free'));
+  const when = (r) => { try { return new Date(r.start).toLocaleString(loc, { dateStyle: 'medium', timeStyle: 'short' }); } catch { return '—'; } };
+  sheet(() => snav(t('unver.title')) + '<p class="ftr" style="margin-top:0">' + t('unver.text') + '</p>' +
+    '<div class="group">' + bad.slice(0, 300).map((r) => '<div class="cell"><span class="grow"><b style="font-weight:500">' + esc(what(r)) + '</b><br><span class="l2" style="font-size:13px">' +
+      esc(when(r)) + ' · ' + t('unver.why.' + (problemOf(r) || 'day')) + '</span></span><span class="val num">' + fmtDur(r.dur || 0) + '</span></div>').join('') + '</div>');
 }
 
 export { freeTagName };
@@ -119,7 +139,7 @@ function meHTML(app) {
     '<div class="hdr">' + t('ob.levelTitle') + '</div><div class="group"><div class="cellcol">' + seg('melevel', LEVELS.map((k) => [k, t('level.' + k)]), p.level, t('ob.levelTitle')).replace('class="seg"', 'class="seg g2"') +
     '<div class="segcap">' + t('level.' + p.level + '.text') + '</div></div></div>' +
     '<div class="hdr">' + t('ob.expTitle') + '</div><div class="group"><label class="cell"><span class="grow">' + t('ob.hours') + '</span><input class="inp num" data-me="priorHours" type="number" inputmode="numeric" min="0" max="' + PRIOR_MAX + '" placeholder="0" aria-label="' + t('ob.hours') + '" value="' + (p.priorHours || '') + '"></label></div>' +
-    '<p class="ftr">' + t('me.hint') + '</p>';
+    '<p class="ftr">' + t('me.hint') + ' ' + t('me.lockHint') + '</p>';
 }
 
 function weekHTML(app) {
@@ -299,7 +319,11 @@ export function createPanel(app, onChange) {
       const d = e.target.dataset;
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); return; }
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly') { render(); onChange(); } if (d.psw === 'monoLang') setTimeout(() => location.reload(), 150); }
-      if (d.me) { saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value }); onChange(); }
+      if (d.me) {
+        const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
+        if (r.locked) { toast(t('me.priorLocked')); e.target.value = r.priorHours || ''; }
+        onChange();
+      }
     });
   }
   // Выбор файла копии живёт вне панели: панель перерисовывается целиком

@@ -15,7 +15,7 @@ const mk = (init) => { let t = NOW; const st = memStorage(init); return { st, st
 
 describe('store', () => {
   it('загружает данные прототипа и дополняет настройки', () => {
-    const { store } = mk({ [LS]: JSON.stringify({ version: 1, songs: [], sessions: [{ id: 'a', start: 1, dur: 5 }], settings: { goalMin: 60 } }) });
+    const { store } = mk({ [LS]: JSON.stringify({ version: 1, songs: [], sessions: [{ id: 'a', start: NOW - 864e5, dur: 5 }], settings: { goalMin: 60 } }) });
     expect(store.state.settings.goalMin).toBe(60);
     expect(store.state.settings.metro.bpm).toBe(90);
     expect(store.sessions()).toHaveLength(1);
@@ -169,7 +169,7 @@ describe('инструмент вне сессии', () => {
     const { st, store } = mk();
     S.saveToolView(S.createToolView('metro', { now: NOW - 30000 }), st, NOW);
     expect(S.recoverToolView(store, st)).toBe(true);
-    expect(store.sessions()[0]).toMatchObject({ type: 'tool', tool: 'metro', dur: 30 });
+    expect(store.allSessions()[0]).toMatchObject({ type: 'tool', tool: 'metro', dur: 30 });
     expect(st.getItem(S.LS_TV)).toBe(null);
   });
 });

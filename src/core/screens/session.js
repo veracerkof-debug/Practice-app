@@ -20,6 +20,7 @@ import { modules, moduleById } from '../../modules/index.js';
 import { mountModule, moduleName } from '../modules.js';
 import { mInput, bindM } from './common.js';
 import { freeTagName } from './panel.js';
+import { clockNotice } from './clock.js';
 
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -88,6 +89,7 @@ export function createSessionScreen(app) {
       return;
     }
     const s = songId ? store.songById(songId) : null;
+    if (app.clock && app.clock.bad) clockNotice(app); // занятие при сбитых часах не подтвердится — предупредить
     app.active = createActive({ type, songId, tool, mode: trackMode(st()) });
     audio.metro.cfg = metroForSession(s, st().metro);
     lockWake();

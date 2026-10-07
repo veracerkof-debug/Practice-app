@@ -1,4 +1,5 @@
 // Хранение состояния: песни, сессии, события календаря, настройки. Local-first, формат совместим с прототипом (version: 1).
+import { seal, splitVerified, profileSeal } from './integrity.js';
 export const LS = 'practice.v1';
 
 export const METRO_DEF = {
@@ -67,7 +68,8 @@ function safeStorage() {
   try { return globalThis.localStorage || null; } catch { return null; }
 }
 
-export function createStore({ storage = safeStorage(), now = Date.now } = {}) {
+// clockBad() — часы устройства сбиты (src/core/clock.js): записи в это время не подтверждаются
+export function createStore({ storage = safeStorage(), now = Date.now, clockBad = () => false } = {}) {
   const subs = new Set();
   let state = blank();
   try {
@@ -78,6 +80,21 @@ export function createStore({ storage = safeStorage(), now = Date.now } = {}) {
     }
   } catch { /* повреждённые данные — начинаем с пустого */ }
   state = normalize(state);
+  // Переход на печати: всё, что записано до них, — подтверждено (один раз; позже записи без печати — нет)
+  if (!state.settings.sealed) {
+    state.sessions.forEach((r) => { if (!r.sig) seal(r); });
+    const pr = state.settings.profile;
+    if (pr && !pr.sig) pr.sig = profileSeal(pr);
+    state.settings.sealed = 1;
+    try { storage && storage.setItem(LS, JSON.stringify(state)); } catch { /* */ }
+  }
+  // Подтверждённые и нет — считаются один раз на каждое изменение списка
+  let vKey = '', vCache = { ok: [], bad: [] };
+  const verified = () => {
+    const live = liveSessions(state), key = live.length + ':' + state.updatedAt;
+    if (key !== vKey) { vKey = key; vCache = splitVerified(live, now()); }
+    return vCache;
+  };
 
   const write = () => {
     try { storage && storage.setItem(LS, JSON.stringify(state)); } catch { /* нет места или запрещено */ }
@@ -103,16 +120,28 @@ export function createStore({ storage = safeStorage(), now = Date.now } = {}) {
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
 
     songs: () => liveSongs(state),
-    sessions: () => liveSessions(state),
+    // Для статистики, недели, камня и звания — только подтверждённые записи
+    sessions: () => verified().ok,
+    // Неподтверждённые: видны только в истории
+    unverified: () => verified().bad,
+    allSessions: () => liveSessions(state),
+    // Новая запись о занятии — с печатью; при сбитых часах — с пометкой и потому не подтверждённая
+    addSession(rec) {
+      if (clockBad()) rec.clk = 'bad';
+      seal(rec);
+      state.sessions.push(rec);
+      store.save();
+      return rec;
+    },
     songById: (id) => state.songs.find((s) => s.id === id && !s.deleted),
 
     // Импорт резервной копии; возвращает число новых сессий
     importBackup(p) {
       if (!isBackup(p)) throw new Error('not a backup');
-      const before = store.sessions().length;
+      const before = store.allSessions().length;
       state = normalize(merge(state, p));
       store.save();
-      return store.sessions().length - before;
+      return store.allSessions().length - before;
     },
     exportBackup: () => JSON.stringify(state, null, 1),
 

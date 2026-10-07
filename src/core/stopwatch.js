@@ -46,7 +46,7 @@ export function createStopwatch(state, { now = Date.now, onChange = () => {} } =
       state.running = false; state.since = null; changed();
     },
     toggle() { if (state.running) sw.pause(); else sw.start(); },
-    reset() { state.running = false; state.since = null; state.segs = []; changed(); },
+    reset() { state.running = false; state.since = null; state.segs = []; delete state.clk; changed(); },
     // Сколько секунд попадёт в статистику: время секундомера минус уже учтённое
     credit(sessions, active = null, t = now()) {
       const segs = sw.segments(t), total = segs.reduce((s, [a, b]) => s + (b - a), 0);
@@ -58,8 +58,8 @@ export function createStopwatch(state, { now = Date.now, onChange = () => {} } =
       if (dur < MIN_SESSION_S) return null;
       const rec = { id: uid(), type: 'free', songId: null, tool: null, start: segs[0][0], end: t, dur, bpm: null, tag: tag || null,
         note: (note || '').trim() || null, src: 'stopwatch', mode: 'normal', updatedAt: t };
-      store.state.sessions.push(rec);
-      store.save();
+      if (state.clk) rec.clk = state.clk; // пока шёл секундомер, часы переводили
+      if (store.addSession) store.addSession(rec); else { store.state.sessions.push(rec); store.save(); }
       sw.reset();
       return rec;
     },

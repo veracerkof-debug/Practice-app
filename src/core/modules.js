@@ -158,6 +158,7 @@ export function trackToolTime(app, toolId) {
   const quiet = () => !!act && act.quiet();
   const counting = () => (document.visibilityState === 'visible' || countsWhileHidden(mode, app.sounding ? app.sounding() : false)) && !quiet();
   const tv = createToolView(toolId, { visible: counting() });
+  const jumps0 = app.clock ? app.clock.jumps : 0; // перевод часов, пока окно открыто, — время не подтверждается
   const onVis = () => {
     const on = counting();
     // затихло — время останавливается на последнем действии, а не на моменте проверки
@@ -182,7 +183,8 @@ export function trackToolTime(app, toolId) {
       // То, что уже записал секундомер, второй раз не засчитывается
       const now = Date.now(), sw = mergeSegs(app.store.sessions().filter((s) => s.src === 'stopwatch').map((s) => [s.start, s.end]));
       const ov = overlapMs([[tv.start, now]], sw);
-      return recordToolTime(app.store, toolId, tv.start, ms, now, { mode, overlapMs: ov }) ? Math.max(0, ms - ov) / 1000 : 0;
+      const clk = app.clock && (app.clock.bad || app.clock.jumps !== jumps0) ? 'jump' : '';
+      return recordToolTime(app.store, toolId, tv.start, ms, now, { mode, overlapMs: ov, clk }) ? Math.max(0, ms - ov) / 1000 : 0;
     },
   };
 }

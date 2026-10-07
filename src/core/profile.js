@@ -1,6 +1,7 @@
 // Профиль музыканта: имя, инструменты, уровень, опыт до приложения. Хранится только на устройстве (settings.profile,
 // попадает в резервную копию). Без DOM.
 import { totalTime } from './stats.js';
+import { profileSeal, profileOk, priorLocked } from './integrity.js';
 
 // Порядок — как в списке при регистрации. Названия — ключи i18n inst.<id>
 export const INSTRUMENTS = ['guitar', 'egtr', 'bass', 'uke', 'piano', 'vocal', 'drums', 'violin', 'viola', 'cello', 'dbass',
@@ -17,7 +18,8 @@ export function tuningFor(instruments = []) {
   return i ? TUNING[i] : null;
 }
 
-export const priorHours = (settings) => Math.max(0, Math.min(PRIOR_MAX, +((settings.profile || {}).priorHours) || 0));
+// Опыт до приложения — только если его печать сходится (правка в файле копии — не учитывается)
+export const priorHours = (settings) => (profileOk(settings.profile) ? Math.max(0, Math.min(PRIOR_MAX, +((settings.profile || {}).priorHours) || 0)) : 0);
 
 // Всё время музыканта, с: записанные занятия плюс опыт до приложения (для звания и «всего»)
 export const lifetimeSec = (sessions, settings) => totalTime(sessions) + priorHours(settings) * 3600;
@@ -33,19 +35,23 @@ export function newProfile() {
   return { name: '', instruments: [], level: 'amateur', priorHours: 0 };
 }
 
-// Сохранить профиль; done — регистрация пройдена (её больше не показывать)
+// Сохранить профиль; done — регистрация пройдена (её больше не показывать).
+// Через 7 дней после регистрации опыт до приложения можно только уменьшить: тогда возвращает { locked: true }
 export function saveProfile(store, p, { done = false } = {}) {
-  const st = store.state.settings;
+  const st = store.state.settings, old = st.profile;
+  let want = Math.round(Math.max(0, Math.min(PRIOR_MAX, +p.priorHours || 0))), locked = false;
+  if (old && priorLocked(old, store.now()) && want > priorHours(st)) { want = priorHours(st); locked = true; }
   st.profile = {
     name: String(p.name || '').trim().slice(0, 40),
     instruments: INSTRUMENTS.filter((x) => (p.instruments || []).includes(x)),
     level: LEVELS.includes(p.level) ? p.level : 'amateur',
-    priorHours: Math.round(Math.max(0, Math.min(PRIOR_MAX, +p.priorHours || 0))),
-    createdAt: (st.profile && st.profile.createdAt) || store.now(),
+    priorHours: want,
+    createdAt: (old && old.createdAt) || store.now(),
   };
+  st.profile.sig = profileSeal(st.profile);
   if (done) st.configured = true;
   store.settingsChanged();
-  return st.profile;
+  return locked ? { ...st.profile, locked } : st.profile;
 }
 
 // Настройки инструментов под уровень (применяются при регистрации). Новичку: тюнер в режиме новичка со строем

@@ -18,12 +18,16 @@ import { createStopwatch } from './stopwatch.js';
 import { createActivity } from './activity.js';
 import { initNoSound } from './nosound.js';
 import { createPulse } from './pulse.js';
+import { createClock } from './clock.js';
+import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
 import { toast, confirm } from '../ui/index.js';
 import { createFiles } from './files.js';
 
 export function boot(root) {
-  const store = createStore();
+  // Часы устройства: пока сбиты, новые записи о занятиях не подтверждаются
+  let clock = null;
+  const store = createStore({ clockBad: () => !!(clock && clock.bad) });
   // Язык из настроек (выбран в «Оформлении»), иначе — язык системы
   // «Минимал» говорит по-гречески и по-латыни (выключается в «Оформлении»)
   const st0 = store.state.settings;
@@ -121,6 +125,16 @@ export function boot(root) {
   };
   // Вспышка, фонарик и вибрация в такт метронома
   app.pulse = createPulse(app);
+  // Часы перевели или они сбиты: идущая сессия и секундомер не подтверждаются; окно с проверкой по интернету
+  clock = app.clock = createClock({
+    onChange: (c) => {
+      if (!c.bad) return;
+      if (active && !active.clk) { active.clk = c.reason; saveActive(active); }
+      if (stopwatch.running && !device.watch.clk) { device.watch.clk = c.reason; saveDevice(device); }
+      clockNotice(app);
+    },
+  });
+  setTimeout(() => clockNotice(app), 1500);
   const session = createSessionScreen(app);
   app.session = session;
   // Признаки занятия: касания, звук, микрофон — и проверки бездействия сессии и секундомера
