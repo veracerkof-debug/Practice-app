@@ -9,7 +9,7 @@ import { fileSongs, inSong } from '../../core/files.js';
 import { lyricsHTML, chordsIn, degreesIn } from '../../music/lyrics.js';
 import { tonicIsMinor } from '../../music/degrees.js';
 import { detectKey, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
-import { isPdf, openPdf, createPdfView } from './pdf.js';
+import { isPdf, openPdf, createPdfView, closePdfDoc } from './pdf.js';
 // Шрифт нот и звуковой банк — файлы проекта, никаких CDN
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
 import SONIVOX from '@coderline/alphatab/soundfont/sonivox.sf3?url';
@@ -52,12 +52,19 @@ const prof = (at) => (st().prof === 'both' ? at.StaveProfile.ScoreTab : at.Stave
 
 const PDF = { view: null, rec: null, page: 1, pages: 0, zoom: 1, saveT: 0 };
 
-// Страница и масштаб запоминаются в записи файла — при следующем открытии с того же места
+// Страница и масштаб запоминаются в настройках модуля (не в записи файла: её сохранение переписало бы
+// весь файл в базе — у тяжёлого PDF это десятки мегабайт на каждую перелистнутую страницу)
+const posOf = (r) => (st().pdfPos || {})[r.id] || r.pos || {};
 function savePdfPos() {
   const r = PDF.rec;
   if (!r || !ctx) return;
-  r.pos = { page: PDF.page, zoom: PDF.zoom };
-  ctx.files.save(r);
+  const all = st().pdfPos || (st().pdfPos = {});
+  delete all[r.id];
+  all[r.id] = { page: PDF.page, zoom: PDF.zoom };
+  // хранится место в 50 последних файлах
+  const ids = Object.keys(all);
+  ids.slice(0, Math.max(0, ids.length - 50)).forEach((id) => delete all[id]);
+  ctx.store.save();
 }
 
 // Во весь экран (удобно с повёрнутым телефоном): только страницы и маленькая панель поверх
@@ -102,8 +109,8 @@ async function openPdfRec(rec) {
   render();
   let doc;
   try { doc = await openPdf(rec.blob); } catch { AT.state = 'error'; render(); if (ctx) ctx.ui.toast(ctx.t('openFail')); return; }
-  if (AT.cur !== rec) { doc.destroy(); return; }
-  const pos = rec.pos || {};
+  if (AT.cur !== rec) { closePdfDoc(doc); return; }
+  const pos = posOf(rec);
   PDF.rec = rec;
   PDF.view = createPdfView(doc, {
     page: pos.page || 1, zoom: pos.zoom || 1,
@@ -121,6 +128,8 @@ async function openPdfRec(rec) {
 }
 
 async function openTab(rec) {
+  st().lastTab = rec.id; // при следующем запуске откроется он же, с того же места
+  ctx.store.save();
   if (isPdf(rec)) { openPdfRec(rec); return; }
   closePdf();
   AT.state = 'loading';
@@ -451,7 +460,11 @@ export default {
     offs.push(c.audio.mixer.subscribe(() => { if (AT.api && ATP.sf) AT.api.masterVolume = vol(); }));
     if (!ATP.probed) { ATP.probed = true; c.audio.mixer.probe('media', () => ATP.playing); }
     offs.push(c.files.subscribe(() => { if (!AT.cur || AT.state === 'error') render(); }));
-    c.files.ready.then(render);
+    c.files.ready.then(() => {
+      // последний открытый файл (табы или ноты) открывается сам, с того же места
+      const last = !AT.cur && st().lastTab && c.files.get(st().lastTab);
+      if (last && host) openTab(last); else render();
+    });
     render();
   },
   resize(sz) { size = sz; render(); },

@@ -604,7 +604,7 @@
   "inst.mando": "Mandolin",
   "inst.banjo": "Banjo",
   "inst.other": "Other",
-  "lic.cg.sub": "Font of the glider title",
+  "lic.cg.sub": "Font of the note on the glider board",
   "lic.cg.text": "Distributed under the SIL Open Font License 1.1 (openfontlicense.org), like the Bravura font above. Used without changes.",
   "ob.needHours": "Enter an approximate number of hours — the estimate below can help",
   "ob.expRequired": "This field is required for the chosen level.",
@@ -721,5 +721,14 @@
   "unver.why.seal": "changed outside the app",
   "unver.why.clock": "clock was off",
   "unver.why.time": "impossible time",
-  "unver.why.day": "over 24 h in a day"
+  "unver.why.day": "over 24 h in a day",
+  "stone.title": "Stone",
+  "stone.round": "{p}% rounder",
+  "stone.now": "Now",
+  "stone.then": "At the start",
+  "stone.hours": "in the app",
+  "stone.edges": "edges smoothed",
+  "stone.form": "shape rounded",
+  "stone.text": "An ordinary stone from the road. With every hour of practice in the app it loses its edges and bumps and grows rounder, like a pebble in a river. Sharp edges smooth out first (over the first hundreds of hours), then the angular shape slowly goes (thousands of hours). The stone can be turned with a finger.",
+  "mix.glider": "Glider"
 }

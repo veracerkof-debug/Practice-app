@@ -595,7 +595,7 @@
   "inst.mando": "Mandolina",
   "inst.banjo": "Banjo",
   "inst.other": "Boshqa",
-  "lic.cg.sub": "Glayder nomi shrifti",
+  "lic.cg.sub": "Glayder taxtasidagi nota shrifti",
   "lic.cg.text": "SIL Open Font License 1.1 litsenziyasi boʻyicha tarqatiladi (openfontlicense.org), yuqoridagi Bravura shrifti kabi. Oʻzgarishsiz ishlatiladi.",
   "ob.needHours": "Taxminiy soatlar sonini koʻrsatish kerak — quyidagi hisoblashdan foydalanish mumkin",
   "ob.expRequired": "Tanlangan daraja uchun bu maydon majburiy.",
@@ -712,5 +712,14 @@
   "unver.why.seal": "ilovadan tashqarida oʻzgartirilgan",
   "unver.why.clock": "soat notoʻgʻri edi",
   "unver.why.time": "imkonsiz vaqt",
-  "unver.why.day": "bir kunda 24 soatdan koʻp"
+  "unver.why.day": "bir kunda 24 soatdan koʻp",
+  "stone.title": "Tosh",
+  "stone.round": "{p}% yumaloqroq",
+  "stone.now": "Hozir",
+  "stone.then": "Avval",
+  "stone.hours": "ilovada",
+  "stone.edges": "qirralar silliqlangan",
+  "stone.form": "shakl yumaloqlangan",
+  "stone.text": "Yoʻldagi oddiy tosh. Ilovadagi har bir soat mashgʻulot bilan u qirra va boʻrtiqlarini yoʻqotib, daryodagi shagʻal kabi yumaloqlashadi. Avval oʻtkir qirralar silliqlanadi (dastlabki yuzlab soatlarda), soʻng shaklning burchakliligi asta-sekin yoʻqoladi (minglab soatlarda). Toshni barmoq bilan aylantirish mumkin.",
+  "mix.glider": "Glayder"
 }

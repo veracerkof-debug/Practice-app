@@ -68,3 +68,20 @@ describe('часы устройства', async () => {
     expect(judge({ wall: BUILD_TIME + 60000 + 1e6, prev: { wall: BUILD_TIME + 1e6, mono: 0 }, mono: 60000 }).bad).toBe(false);
   });
 });
+
+describe('камень «Минимала»', async () => {
+  const { wear, stoneMesh } = await import('../src/ui/stone.js');
+  it('рёбра сглаживаются быстрее формы, к 10 000 ч — почти круглый', () => {
+    expect(wear(0)).toEqual({ edges: 0, form: 0 });
+    const a = wear(300), z = wear(10000);
+    expect(a.edges).toBeGreaterThan(0.6);
+    expect(a.form).toBeLessThan(0.1);
+    expect(z.form).toBeGreaterThan(0.95);
+  });
+  it('у каждого свой камень, сетка в единичном размере', () => {
+    const m = stoneMesh(7, 0, 2), n = stoneMesh(8, 0, 2);
+    expect(m.V.length).toBe(n.V.length);
+    expect(m.V[5]).not.toEqual(n.V[5]);
+    expect(Math.max(...m.V.map((p) => Math.hypot(...p)))).toBeCloseTo(1, 5);
+  });
+});

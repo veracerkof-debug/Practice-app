@@ -209,9 +209,8 @@ export default {
     offs.splice(0).forEach((f) => f());
     ptr.forEach((p) => ctx.audio.synth.off(p.key));
     ptr.clear();
-    hold.on = false;
-    hold.k.forEach((key) => ctx.audio.synth.off(key));
-    hold.k.clear();
+    // Hold переживает закрытие окна: удержанные ноты звучат, пока занимаются другим инструментом
+    // (выключить — кнопкой Hold, когда пианино снова открыто, или звуком пианино в микшере)
     host = null;
   },
 };

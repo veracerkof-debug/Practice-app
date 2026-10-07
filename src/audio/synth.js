@@ -58,7 +58,8 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
       mixer.setReverb('piano', s.rev * 0.9);
       const bus = mixer.bus(busName);
       last[busName] = Date.now();
-      while (order.length >= MAX_VOICES) syn.off(order.shift(), true);
+      // голосов не хватает — замолкает самый старый, но удержанные (Hold) не трогаем, пока есть другие
+      while (order.length >= MAX_VOICES) syn.off(order.find((k) => !voices.get(k)?.held) ?? order[0], true);
 
       const g = c.createGain(), lp = c.createBiquadFilter(), os = [];
       lp.type = 'lowpass';
@@ -111,7 +112,7 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
         n.connect(bp).connect(ng).connect(g);
         n.start(t); n.stop(t + 0.04);
       }
-      const vo = { g, os, rel: Math.max(0.03, s.rel), key, bus: busName };
+      const vo = { g, os, rel: Math.max(0.03, s.rel), key, bus: busName, held: !!opts.hold };
       voices.set(key, vo);
       order.push(key);
       if (SU < 0.02) { // затухающий звук — освобождаем голос сами

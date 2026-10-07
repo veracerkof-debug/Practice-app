@@ -3,8 +3,8 @@
 import { getContext, masterNode, reverbNode } from './context.js';
 
 // Шины по контракту модуля. 'media' хранится в mix под ключом 'audio' (совместимость с прототипом)
-export const BUSES = ['metro', 'piano', 'drone', 'media', 'theory'];
-const KEY = { metro: 'metro', piano: 'piano', drone: 'drone', media: 'audio', theory: 'theory' };
+export const BUSES = ['metro', 'piano', 'glider', 'drone', 'media', 'theory'];
+const KEY = { metro: 'metro', piano: 'piano', glider: 'glider', drone: 'drone', media: 'audio', theory: 'theory' };
 export const mixKey = (bus) => KEY[bus] || bus;
 
 export const MIX_MAX = 1.5;
@@ -45,7 +45,7 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
       const g = c.createGain();
       g.gain.value = value(name);
       g.connect(name === 'metro' ? c.destination : masterNode());
-      if (name === 'theory' || name === 'piano') {
+      if (name === 'theory' || name === 'piano' || name === 'glider') {
         const rv = reverbNode();
         if (rv) {
           const s = c.createGain();

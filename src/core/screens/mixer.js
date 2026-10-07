@@ -1,12 +1,12 @@
 // Микшер сбоку экрана: язычок справа появляется, когда что-то звучит; потянуть или нажать — пять ползунков
-// (клик, пианино, пэды и дрон, медиа, теория и слух), нажатие на значок — выключить звук источника.
+// (клик, пианино, глайдер, пэды и дрон, медиа, теория и слух), нажатие на значок — выключить звук источника.
 // Перенесено из legacy/practice.html (MIXSRC, mxFader, mxInit, mxSet, mxOpen, mxTick).
 import { t } from '../../i18n/index.js';
 import { esc } from '../../ui/index.js';
 import { MIX_MAX } from '../../audio/mixer.js';
 import { moduleById } from '../../modules/index.js';
 
-const SRC = [['metro', '#FF9500', 'metro'], ['piano', '#5856D6', 'piano'], ['drone', '#30B0C7', 'drone'], ['media', '#FF2D55', 'audio'], ['theory', '#34C759', 'theory']];
+const SRC = [['metro', '#FF9500', 'metro'], ['piano', '#5856D6', 'piano'], ['glider', '#AF52DE', 'glider'], ['drone', '#30B0C7', 'drone'], ['media', '#FF2D55', 'audio'], ['theory', '#34C759', 'theory']];
 
 export function createMixerDrawer(app) {
   const mixer = app.audio.mixer;

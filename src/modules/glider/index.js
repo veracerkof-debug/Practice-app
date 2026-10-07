@@ -62,16 +62,18 @@ function padHTML(s, over) {
     cols + lines + (ax ? '<span class="glaxis" aria-hidden="true">' + ax + '</span>' : '') + '<div id="gltouch"></div>' + over + '</div>';
 }
 
+// Всё окно — доска (политика приложения: пространство работает на функцию). Поверх неё — только то,
+// что не мешает игре: нота крупно и полупрозрачно (касания проходят сквозь), подпись эффектов вдоль левого края
+// и одна узкая панель в углу: диапазон, привязка, настройки
 function view() {
-  const { t, ui } = ctx, s = cfg(), full = size === 'full', big = full || size === 'half';
+  const { t, ui } = ctx, s = cfg(), big = size === 'full' || size === 'half';
   const gear = ui.icb('data-x="gset"', ui.icons.gear, t('settings'), 'sm');
   if (size === 'strip') return '<div class="gl strip">' + padHTML(s, '<div class="glov">' + gear + '</div>') + '</div>';
-  const note = '<div class="glread" aria-live="off"><b class="num" id="glnote">—</b><span class="num" id="glc"></span></div>';
+  const note = '<div class="glnote" aria-live="off"><b class="num" id="glnote">' + (big ? mName(s.lo) + '–' + mName(s.lo + s.width) : '—') + '</b><span class="num" id="glc"></span></div>';
   const range = big ? '<div class="glrange">' + ui.icb('data-x="glo" data-d="-12"', I.left, t('octDown'), 'sm') + '<span class="num">' + rangeTxt(s) + '</span>' + ui.icb('data-x="glo" data-d="12"', I.right, t('octUp'), 'sm') + '</div>' : '';
   // привязка — одной кнопкой: нажатие переключает «без ладов → магнит → ноты»
-  const snap = full ? '<button class="glsnap" data-x="gsnap" aria-label="' + ui.esc(t('snapBtn', { mode: t('snap.' + s.snap) })) + '">' + t('snap.' + s.snap) + '</button>' : '';
-  const title = full ? '<div class="gltitle" aria-hidden="true">' + t('name') + '</div>' : '';
-  return '<div class="gl ' + size + '">' + padHTML(s, title + '<div class="glov">' + note + range + snap + gear + '</div>') + '</div>';
+  const snap = big ? '<button class="glsnap" data-x="gsnap" aria-label="' + ui.esc(t('snapBtn', { mode: t('snap.' + s.snap) })) + '">' + t('snap.' + s.snap) + '</button>' : '';
+  return '<div class="gl ' + size + '">' + padHTML(s, note + '<div class="glov">' + range + snap + gear + '</div>') + '</div>';
 }
 
 function render() {
@@ -96,6 +98,7 @@ function show(m) {
   if (!n) return;
   const { n: k, cents } = nearest(m);
   n.textContent = mName(k);
+  n.parentNode.classList.add('on');
   if (c) c.textContent = cfg().snap === 'note' ? '' : (cents > 0 ? '+' : cents < 0 ? '−' : '±') + Math.abs(cents) + '¢';
 }
 
@@ -121,9 +124,9 @@ function down(e) {
   e.preventDefault();
   if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('noAudio')); return; }
   try { pad.setPointerCapture(e.pointerId); } catch { /* ignore */ }
-  const s = cfg(), p = patch(s), dest = ctx.audio.bus('piano');
+  const s = cfg(), p = patch(s), dest = ctx.audio.bus('glider');
   if (!dest) return;
-  ctx.audio.mixer.setReverb('piano', (p.rev || 0) * 0.9);
+  ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
   if (!bus || bus.ctx !== dest.context) { bus = createFxBus(dest.context, dest); bus.ctx = dest.context; }
   const a = at(e, pad), voice = createGlideVoice(dest.context, bus.input, p, { hold: s.hold, a4: ctx.audio.mf(69) });
   voice.start(a.m, voiceFx(s.fx, a.y));
@@ -155,6 +158,7 @@ function up(e) {
   tc.el.classList.add('out');
   setTimeout(() => tc.el.remove(), 260);
   touches.delete(e.pointerId);
+  if (!touches.size) { const n = host && host.querySelector('.glnote'); if (n) n.classList.remove('on'); }
   // хвосты эха и реверберации доигрывают с последней силой
 }
 
@@ -282,7 +286,7 @@ export default {
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
     // Пока звучит глайдер, шина пианино в микшере подсвечена
-    if (!probed) { c.audio.mixer.probe('piano', () => touches.size > 0); probed = true; }
+    if (!probed) { c.audio.mixer.probe('glider', () => touches.size > 0); probed = true; }
     render();
     bind();
     ro = new ResizeObserver(() => dense());

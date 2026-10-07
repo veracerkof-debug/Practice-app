@@ -6,7 +6,7 @@ import { confirm } from '../../ui/index.js';
 import { deleteSong } from '../library.js';
 import { TAB_ICONS, TAB_IDS } from './common.js';
 import { visibleTabs } from '../settings.js';
-import { homeHTML, quickEdit, streakSheet, gemSheet, rankSheet, rankCheck, nameSheet } from './home.js';
+import { homeHTML, mountStones, quickEdit, streakSheet, gemSheet, rankSheet, rankCheck, nameSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { createPanel, donateSheet, legalSheet, tosGate, unverifiedSheet } from './panel.js';
@@ -35,7 +35,7 @@ export function createShell(app, root) {
       const h = view.song && songHTML(app, view.song);
       if (!h) view.song = null;
       main.innerHTML = h || libraryHTML(app, view);
-    } else main.innerHTML = homeHTML(app);
+    } else { main.innerHTML = homeHTML(app); mountStones(app, main); }
   }
 
   // Новая вкладка или экран: содержимое поднимается, блоки — по очереди (styles/motion.css). Только при переходе,

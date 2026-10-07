@@ -32,11 +32,16 @@
 :root[data-style="mono"] body { font-family: var(--font); background: var(--bg); }
 
 /* ---------- инструменты и всё цветное — оттенками серого ---------- */
-:root[data-style="mono"] .tview .tvbody, :root[data-style="mono"] .session .ws, :root[data-style="mono"] .session .sdock,
+:root[data-style="mono"] .tview .tvbody, :root[data-style="mono"] .session .ws > .pane, :root[data-style="mono"] .session .sdock,
 :root[data-style="mono"] .rank, :root[data-style="mono"] .gem, :root[data-style="mono"] .lchip, :root[data-style="mono"] .catp,
 :root[data-style="mono"] .mxp, :root[data-style="mono"] .mxh, :root[data-style="mono"] .swc, :root[data-style="mono"] .skin,
-:root[data-style="mono"] .clist, :root[data-style="mono"] .heat, :root[data-style="mono"] .chart, :root[data-style="mono"] .pdffull,
+:root[data-style="mono"] .clist, :root[data-style="mono"] .heat, :root[data-style="mono"] .chart,
 :root[data-style="mono"] .mflash, :root[data-style="mono"] .stile3, :root[data-style="mono"] .cal { filter: grayscale(1); }
+/* Ноты в PDF и видео — в цвете (решение автора): окно с ними не обесцвечивается целиком, серыми остаются только элементы управления */
+:root[data-style="mono"] .tview .tvbody:has(.pdfwrap, video), :root[data-style="mono"] .session .ws > .pane:has(.pdfwrap, video) { filter: none; }
+:root[data-style="mono"] .tvbody:has(.pdfwrap, video) :is(button, input, select, svg, .seg, .ntools, .lchip, canvas:not(.pdfpg canvas)),
+:root[data-style="mono"] .pane:has(.pdfwrap, video) :is(button, input, select, svg, .seg, .ntools, .lchip, canvas:not(.pdfpg canvas)),
+:root[data-style="mono"] .pdffull .pdffbar { filter: grayscale(1); }
 
 /* ---------- заголовки и подписи разделов ---------- */
 :root[data-style="mono"] .large { text-transform: uppercase; font-weight: 800; letter-spacing: -.01em; font-size: 30px; }
@@ -93,9 +98,19 @@
 
 /* ---------- главная «Минимал» ---------- */
 .mono-home { padding-bottom: 24px; }
-.mono-home .mhello { font-size: 40px; line-height: 1; font-weight: 850; text-transform: uppercase; letter-spacing: -.02em; margin: 26px 0 14px; }
-.mono-home .mdate { display: inline-block; padding: 8px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--fill);
-  text-transform: uppercase; letter-spacing: .2em; font-size: 11.5px; font-weight: 700; }
+.mono-home .mhello { font-size: 40px; line-height: 1; font-weight: 850; text-transform: uppercase; letter-spacing: -.02em; margin: 26px 0 4px; }
+/* место для голоса приложения: приветствие сейчас, вопросы и предложения потом */
+.mono-home .mvoice { min-height: 72px; display: flex; flex-direction: column; justify-content: flex-end; }
+/* камень: обычный, с дороги, круглеет с часами (src/ui/stone.js) */
+.mono-home .mstone { display: flex; align-items: center; gap: 14px; margin: 22px 0 0; }
+.mono-home .mstone canvas { width: 112px; height: 112px; flex: none; cursor: grab; border-radius: 50%; }
+.mono-home .mstone canvas:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+.mono-home .mstxt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mono-home .mslbl { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--l2); font-weight: 600; }
+.mono-home .msval { font-size: 30px; font-weight: 250; letter-spacing: -.02em; line-height: 1.05; }
+.stonefull { display: flex; justify-content: center; margin: 4px 0 10px; }
+.stonefull canvas { width: min(88vw, 60vh, 520px); height: min(88vw, 60vh, 520px); cursor: grab; touch-action: none; }
+.stseg { margin: 0 auto; max-width: 320px; }
 .mono-home .mhd { display: flex; align-items: center; justify-content: space-between; margin: 34px 2px 10px; }
 .mono-home .mhd h2 { font-size: 18px; font-weight: 300; text-transform: uppercase; letter-spacing: .2em; margin: 0; }
 .mono-home .mact { display: flex; gap: 4px; }
@@ -126,7 +141,8 @@
 .mono-home .mlbl { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--l2); font-weight: 700; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mono-home .mlist { display: flex; flex-direction: column; }
 .mono-home .mrow { display: flex; align-items: center; border-bottom: 1px solid var(--sep); }
-.mono-home .mrow > button:first-child { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; min-height: 58px; text-align: left; padding: 0 2px; }
+.mono-home .mrow > button:first-child { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 60px; text-align: left; padding: 0 2px; }
+.mono-home .mrow .mt { line-height: 1.2; }
 .mono-home .mt { font-size: 21px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mono-home .mm { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--l2); white-space: nowrap; }
 .mono-home .mplay { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
@@ -157,8 +173,11 @@
 :root[data-style="mono"] .cwev b::before, :root[data-style="mono"] .cebody b::before, :root[data-style="mono"] .cdt::before {
   content: var(--mg, none); margin-right: 5px; font-size: .9em; font-weight: 400; }
 /* песня: вместо цветной полосы — знак жанра слева */
-:root[data-style="mono"] .stile3 { background: var(--cell) !important; border: 1px solid var(--sep); padding-left: 34px; }
-:root[data-style="mono"] .stile3::before { content: var(--mg, "·"); width: 26px; background: none !important; display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--ink); }
+/* песня: знаки категории и жанра у каждой песни не повторяются — категория видна в полосе фильтров, жанр написан словом */
+:root[data-style="mono"] .stile3 { background: var(--cell) !important; border: 1px solid var(--sep); }
+:root[data-style="mono"] .stile3::before { content: none; display: none; }
+:root[data-style="mono"] .stile3 .cdot { display: none; }
+:root[data-style="mono"] .stile3 .tagrow .lchip::before { content: none; }
 :root[data-style="mono"] .cdot { background: none !important; width: auto; height: auto; }
 :root[data-style="mono"] .cdot::before { content: var(--mg, "·"); font-size: 11px; font-style: normal; }
 /* события: полоска цвета — пунктир разной частоты не нужна, достаточно знака; полоска — нейтральная */

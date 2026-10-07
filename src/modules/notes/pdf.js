@@ -8,34 +8,63 @@ export const ZOOM_MIN = 0.5, ZOOM_MAX = 4;
 export const isPdf = (rec) => !!rec && (rec.type === 'application/pdf' || /\.pdf$/i.test(rec.fileName || '') || rec.fmt === 'pdf');
 
 let lib = null;
-const loadLib = () => lib || (lib = import('pdfjs-dist/legacy/build/pdf.mjs').then((m) => {
-  m.GlobalWorkerOptions.workerPort = new PdfWorker();
-  return m;
-}).catch((e) => { lib = null; throw e; }));
+const loadLib = () => lib || (lib = import('pdfjs-dist/legacy/build/pdf.mjs').catch((e) => { lib = null; throw e; }));
 
 const asset = (p) => new URL('pdfjs/' + p, document.baseURI).href;
 
+// Большой файл не читается в память целиком: pdf.js просит нужные куски, они берутся из файла по месту
+export const RANGE_FROM = 4 * 1024 * 1024;
+export const CHUNK = 256 * 1024;
+
+// У каждого документа свой поток pdf.js: закрытие одного не мешает открыть следующий
+// (общий поток, закрытый без ожидания, ломал повторное открытие)
+const docs = new WeakMap();
+let closing = Promise.resolve();
+
 export async function openPdf(blob) {
   const pdfjs = await loadLib();
-  const data = new Uint8Array(await blob.arrayBuffer());
-  return pdfjs.getDocument({
-    data,
+  await closing;
+  const port = new PdfWorker(), worker = new pdfjs.PDFWorker({ port });
+  const opts = {
+    worker,
     standardFontDataUrl: asset('standard_fonts/'),
     cMapUrl: asset('cmaps/'), cMapPacked: true,
     wasmUrl: asset('wasm/'),
     isEvalSupported: false, // без eval — безопаснее для файлов из интернета
-  }).promise;
+  };
+  if (blob.size > RANGE_FROM) {
+    const range = new pdfjs.PDFDataRangeTransport(blob.size, null);
+    range.requestDataRange = (begin, end) => {
+      blob.slice(begin, end).arrayBuffer().then((b) => range.onDataRange(begin, new Uint8Array(b)), () => {});
+    };
+    Object.assign(opts, { range, length: blob.size, rangeChunkSize: CHUNK, disableAutoFetch: true, disableStream: true });
+  } else opts.data = new Uint8Array(await blob.arrayBuffer());
+  const task = pdfjs.getDocument(opts);
+  let doc;
+  try { doc = await task.promise; } catch (e) { task.destroy().finally(() => port.terminate()); throw e; }
+  docs.set(doc, { task, port });
+  return doc;
+}
+
+// Закрыть документ и его поток; следующее открытие дождётся
+export function closePdfDoc(doc) {
+  const d = docs.get(doc);
+  if (!d) return closing;
+  docs.delete(doc);
+  closing = closing.then(() => d.task.destroy()).catch(() => {}).then(() => d.port.terminate());
+  return closing;
 }
 
 // Масштаб в пределах; шаг кнопок — 25 %
 export const clampZoom = (z) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(z * 100) / 100));
 export const zoomStep = (z, d) => clampZoom(d > 0 ? z * 1.25 : z / 1.25);
 
-// Предел размера холста (память телефона): не больше 16 Мп и 4096 по стороне
+// Предел размера холста (память телефона): не больше 8 Мп и 4096 по стороне — сканы нот бывают огромными
+export const CANVAS_MAX = 8e6;
 export function canvasScale(cssW, cssH, dpr) {
   let k = dpr;
   const px = cssW * cssH * k * k;
-  if (px > 16e6) k *= Math.sqrt(16e6 / px);
+  if (px > CANVAS_MAX) k *= Math.sqrt(CANVAS_MAX / px);
   if (Math.max(cssW, cssH) * k > 4096) k = 4096 / Math.max(cssW, cssH);
   return k;
 }
@@ -50,7 +79,7 @@ export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = 
   el.appendChild(inner);
 
   const pages = [], sizes = [];
-  let last = null, z = clampZoom(zoom), width = 0, cur = Math.max(1, Math.min(doc.numPages, page)), destroyed = false;
+  let spot = null, z = clampZoom(zoom), width = 0, cur = Math.max(1, Math.min(doc.numPages, page)), destroyed = false, def = null;
   const PAD = 8;
 
   for (let i = 1; i <= doc.numPages; i++) {
@@ -62,20 +91,32 @@ export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = 
     pages.push({ el: d, canvas: null, task: null, drawn: 0 });
   }
 
-  // Размеры страниц без масштаба (для разметки до отрисовки)
-  const ready = (async () => {
-    for (let i = 1; i <= doc.numPages; i++) {
-      const p = await doc.getPage(i), v = p.getViewport({ scale: 1 });
-      sizes[i - 1] = { w: v.width, h: v.height, p };
+  // Размер страницы узнаётся, когда она понадобится (у тяжёлого файла чтение всех страниц заранее — долгое);
+  // до того — размер первой: у нот и табов страницы почти всегда одинаковые
+  const sizeOf = (i) => sizes[i] || def;
+  const loading = new Map();
+  function pageAt(i) {
+    if (sizes[i]) return Promise.resolve(sizes[i]);
+    if (!loading.has(i)) {
+      loading.set(i, doc.getPage(i + 1).then((p) => {
+        const v = p.getViewport({ scale: 1 }), s = { w: v.width, h: v.height, p };
+        const old = sizeOf(i);
+        sizes[i] = s;
+        // страница другого размера — пересчитать разметку, оставшись на том же месте
+        if (old && width && Math.abs(old.h / old.w - s.h / s.w) > 0.001) { const a = anchor(); layout(); restore(a); }
+        return s;
+      }));
     }
-  })();
+    return loading.get(i);
+  }
+  const ready = pageAt(0).then((s) => { def = s; return cur > 1 ? pageAt(cur - 1) : s; });
 
   const pageW = () => Math.max(50, (width - PAD * 2) * z);
   function layout() {
     const w = pageW();
     inner.style.width = (w + PAD * 2) + 'px';
     pages.forEach((pg, i) => {
-      const s = sizes[i];
+      const s = sizeOf(i);
       const h = s ? (w * s.h) / s.w : w * 1.414;
       pg.el.style.width = w + 'px';
       pg.el.style.height = h + 'px';
@@ -83,8 +124,9 @@ export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = 
   }
 
   async function draw(i) {
-    const pg = pages[i], s = sizes[i];
-    if (!s || destroyed) return;
+    const pg = pages[i];
+    const s = await pageAt(i);
+    if (destroyed) return;
     const w = pageW(), h = (w * s.h) / s.w, k = canvasScale(w, h, window.devicePixelRatio || 1);
     const key = Math.round(w * k);
     if (pg.drawn === key) return;
@@ -94,40 +136,52 @@ export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = 
     c.height = Math.round(h * k);
     const task = s.p.render({ canvasContext: c.getContext('2d'), viewport: s.p.getViewport({ scale: (w * k) / s.w }) });
     pg.task = task;
-    try { await task.promise; } catch { return; }
-    if (destroyed || pg.task !== task) return;
+    try { await task.promise; } catch { c.width = c.height = 0; return; }
+    if (destroyed || pg.task !== task) { c.width = c.height = 0; return; }
     pg.task = null;
     pg.drawn = key;
-    if (pg.canvas) pg.canvas.remove();
+    if (pg.canvas) { pg.canvas.width = pg.canvas.height = 0; pg.canvas.remove(); }
     pg.canvas = c;
     pg.el.appendChild(c);
   }
   function free(i) {
     const pg = pages[i];
     if (pg.task) { try { pg.task.cancel(); } catch { /* */ } pg.task = null; }
-    if (pg.canvas) { pg.canvas.remove(); pg.canvas = null; pg.drawn = 0; }
+    // обнулённый холст отдаёт память сразу, не дожидаясь сборщика мусора
+    if (pg.canvas) { pg.canvas.width = pg.canvas.height = 0; pg.canvas.remove(); pg.canvas = null; pg.drawn = 0; }
   }
 
-  // Видимые страницы и по одной соседней — рисовать; дальние (на 3 страницы и больше) — освобождать
+  // Рисуется по одной странице за раз, ближние к текущей — первыми: тяжёлые сканы не забивают память разом
+  let want = [], busy = false;
+  async function pump() {
+    if (busy) return;
+    busy = true;
+    while (want.length && !destroyed) await draw(want.shift()).catch(() => {});
+    busy = false;
+  }
+
+  // Видимые страницы и по одной соседней — рисовать; дальние (на 2 страницы и больше) — освобождать
   function refresh() {
     if (destroyed || !width) return;
     const top = el.scrollTop, bot = top + el.clientHeight;
-    let first = -1, last = -1;
+    let a0 = -1, a1 = -1;
     pages.forEach((pg, i) => {
       const a = pg.el.offsetTop, b = a + pg.el.offsetHeight;
-      if (b >= top && a <= bot) { if (first < 0) first = i; last = i; }
+      if (b >= top && a <= bot) { if (a0 < 0) a0 = i; a1 = i; }
     });
-    if (first < 0) return;
-    pages.forEach((_, i) => {
-      if (i >= first - 1 && i <= last + 1) draw(i);
-      else if (i < first - 3 || i > last + 3) free(i);
-    });
+    if (a0 < 0) return;
     // текущая страница — та, что занимает верхнюю треть окна
     const mark = top + el.clientHeight / 3;
     const n = pages.findIndex((pg) => pg.el.offsetTop + pg.el.offsetHeight > mark) + 1 || doc.numPages;
     if (n !== cur) { cur = n; emit(); }
+    const lo = Math.max(0, a0 - 1), hi = Math.min(pages.length - 1, a1 + 1);
+    pages.forEach((_, i) => { if (i < lo - 1 || i > hi + 1) free(i); });
+    want = [];
+    for (let i = lo; i <= hi; i++) want.push(i);
+    want.sort((x, y) => Math.abs(x - (cur - 1)) - Math.abs(y - (cur - 1)));
+    pump();
     // место запоминается сейчас: при повороте экрана размеры окна меняются раньше, чем придёт событие
-    last = anchor();
+    spot = anchor();
   }
   const emit = () => onState({ page: cur, pages: doc.numPages, zoom: z });
 
@@ -148,8 +202,8 @@ export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = 
 
   const ro = new ResizeObserver(() => {
     const w = el.clientWidth;
-    if (!w || Math.abs(w - width) < 1) return;
-    const a = width && last ? last : { i: cur - 1, f: 0, x: 0.5 };
+    if (!w || !def || Math.abs(w - width) < 1) return;
+    const a = width && spot ? spot : { i: cur - 1, f: 0, x: 0.5 };
     width = w;
     layout();
     restore(a);
@@ -222,7 +276,7 @@ export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = 
     // Вставлена в страницу: размеры известны — разметка и переход на сохранённую страницу
     async mounted() {
       ro.observe(el);
-      await ready;
+      try { await ready; } catch { /* страница не читается — останется пустой */ }
       if (destroyed) return;
       width = el.clientWidth;
       layout();
@@ -247,9 +301,10 @@ export function createPdfView(doc, { page = 1, zoom = 1, onState = () => {} } = 
     destroy() {
       destroyed = true;
       ro.disconnect();
+      want = [];
       pages.forEach((_, i) => free(i));
       el.remove();
-      doc.destroy();
+      return closePdfDoc(doc);
     },
   };
   return view;

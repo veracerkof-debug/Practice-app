@@ -18,6 +18,7 @@ import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
+import { stoneView, wear } from '../../ui/stone.js';
 import { nextEventsHTML } from './calendar.js';
 
 // Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
@@ -43,9 +44,8 @@ const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><
 
 function homeMonoHTML(app) {
   const st = app.store.state.settings, plain = !!st.toolsOnly, now = new Date();
-  const lang = getLang() === 'uz' ? 'uz-Latn' : getLang();
-  const date = new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'short' }).format(now);
-  let h = '<div class="mono-home">' + topbar(logoHTML()) + '<h1 class="mhello">' + esc(greet(now.getHours())) + '</h1><div class="mdate">' + esc(date) + '</div>';
+  // Приветствие — место, где приложение потом будет говорить: спрашивать, предлагать, напоминать (без даты: это не календарь)
+  let h = '<div class="mono-home">' + topbar(logoHTML()) + '<div class="mvoice" aria-live="polite"><h1 class="mhello">' + esc(greet(now.getHours())) + '</h1></div>';
   if (!plain) {
     const w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st), today = weekday(Date.now()), WD = weekdays();
     h += mhead(t('home.week'), '<button class="mbtn" data-pp="' + (st.configured ? 'stats' : 'week') + '" aria-label="' + esc(t('home.stats')) + '">' + ARROW + '</button>') +
@@ -54,7 +54,11 @@ function homeMonoHTML(app) {
       '<div class="mdays">' + WD.map((d, i) => '<span class="' + (w.per[i] > 0 ? 'done' : st.days[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '">' + d + '</span>').join('') + '</div>';
     if (isOn(st, 'mastery')) {
       const all = app.store.sessions(), r = rankOf(lifetimeSec(all, st) / 3600), g = gemOf(gemSec(all) / 3600);
-      h += '<div class="mtags"><button data-act="rank">' + esc(rankName(r.id, r.level)) + '</button><button data-act="gem">' + esc(t('gem.' + g.gem.id)) + ' · ' + fmtDur(gemSec(all)) + '</button>' +
+      // Камень вместо самоцвета: обычный, с дороги; с часами занятий круглеет (src/ui/stone.js)
+      const sec = gemSec(all), wr = wear(sec / 3600);
+      h += '<div class="mstone"><canvas data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title') + ', ' + fmtDur(sec)) + '"></canvas>' +
+        '<div class="mstxt"><span class="mslbl">' + t('stone.title') + '</span><span class="msval num">' + fmtDur(sec) + '</span><span class="mslbl">' + esc(t('stone.round', { p: Math.round((wr.edges * 0.4 + wr.form * 0.6) * 100) })) + '</span></div></div>';
+      h += '<div class="mtags"><button data-act="rank">' + esc(rankName(r.id, r.level)) + '</button>' +
         (isOn(st, 'streak') && streakInfo(all, st).weeks ? '<button data-act="streak">' + esc(tn('streak.weeks', streakInfo(all, st).weeks)) + '</button>' : '') + '</div>';
     }
   }
@@ -169,6 +173,41 @@ function gemRow(app) {
     '<span class="gtxt"><b class="num">' + fmtDur(total) + '</b><span class="l2">' + esc(name) + '</span></span></button>' +
     '<button class="gemrow rkrow" data-act="rank" style="--rk:' + RANK_COLORS[r.id] + '" aria-label="' + esc(t('rank.aria', { name: rn })) + '">' + rankSVG(r.id, r.level, 44) +
     '<span class="gtxt"><b>' + esc(rn) + '</b>' + (r.next ? '<span class="rkbar"><i style="width:' + r.frac * 100 + '%"></i></span>' : '<span class="l2">' + t('rank.topShort') + '</span>') + '</span></button></div>';
+}
+
+/* ---------- камень (режим «Минимал») ---------- */
+
+const stoneSeed = (st) => { const c = (st.profile && st.profile.createdAt) || 0; return (c % 2147483647) || 20260915; };
+
+// Оживить камни на экране после отрисовки (холсты с data-stone)
+export function mountStones(app, root) {
+  const st = app.store.state.settings, h = gemSec(app.store.sessions()) / 3600;
+  root.querySelectorAll('canvas[data-stone="home"]').forEach((c) => {
+    stoneView(c, { seed: stoneSeed(st), hours: h, detail: 3, onTap: () => stoneSheet(app) });
+    c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); stoneSheet(app); } });
+  });
+}
+
+// Камень во весь экран: крутить, рассматривать; «Каким был» — тот же камень без единого часа
+export function stoneSheet(app) {
+  const st = app.store.state.settings, sec = gemSec(app.store.sessions()), hrs = sec / 3600, wr = wear(hrs);
+  const pct = (x) => Math.round(x * 100) + '%';
+  const api = sheet(() => snav(t('stone.title')) +
+    '<div class="stonefull"><canvas data-stone="full" aria-label="' + esc(t('stone.title')) + '"></canvas></div>' +
+    '<div class="seg stseg" role="group" aria-label="' + esc(t('stone.title')) + '"><button data-stv="now" aria-pressed="true">' + t('stone.now') + '</button><button data-stv="then" aria-pressed="false">' + t('stone.then') + '</button></div>' +
+    '<div class="tiles num" style="margin-top:14px"><div class="tile"><b>' + fmtDur(sec) + '</b><span>' + t('stone.hours') + '</span></div><div class="tile"><b>' + pct(wr.edges) + '</b><span>' + t('stone.edges') +
+    '</span></div><div class="tile"><b>' + pct(wr.form) + '</b><span>' + t('stone.form') + '</span></div></div>' +
+    '<p class="ftr">' + t('stone.text') + '</p>');
+  const root = api.el;
+  const cv = root.querySelector('canvas[data-stone="full"]');
+  if (!cv) return;
+  const v = stoneView(cv, { seed: stoneSeed(st), hours: hrs, detail: 4 });
+  root.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-stv]');
+    if (!b) return;
+    root.querySelectorAll('[data-stv]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    v.setHours(b.dataset.stv === 'then' ? 0 : hrs);
+  });
 }
 
 export function gemSheet(app) {
