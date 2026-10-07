@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fingers, readSign, palmFacing, chordOf, chordName, voicing } from '../src/modules/theremin/chords.js';
+import { fingers, readSign, palmFacing, chordOf, chordName, voicing, shapeOf, harmOffsets, harmOf } from '../src/modules/theremin/chords.js';
 
 // Правая рука в зеркальном кадре, ладонь к камере: большой палец слева. up — какие пальцы вытянуты
 // (большой, указательный, средний, безымянный, мизинец); touch — кончик большого к кончику этого пальца
@@ -70,5 +70,60 @@ describe('аккорды правой рукой: ступень → аккор�
     expect(lo[0]).toBeLessThan(lo[1]);
     expect(hi[1]).toBeGreaterThan(lo[1]);
     expect(new Set(hi.slice(1).map((m) => m % 12))).toEqual(new Set([0, 4, 7]));
+  });
+});
+
+describe('наклон руки — вид аккорда', () => {
+  const C = { root: 0, mode: 'maj' };
+  it('прямо — трезвучие, наружу — септ, внутрь — maj7 / уменьшённый, вперёд — sus4, назад — sus2', () => {
+    expect(shapeOf('M', 0, 0)).toBe('M');
+    expect(shapeOf('M', 40, 0)).toBe('7');
+    expect(shapeOf('M', -40, 0)).toBe('M7');
+    expect(shapeOf('m', 40, 0)).toBe('m7');
+    expect(shapeOf('m', -40, 0)).toBe('d');
+    expect(shapeOf('d', 40, 0)).toBe('hd');
+    expect(shapeOf('d', -40, 0)).toBe('d7');
+    expect(shapeOf('m', 0, 40)).toBe('sus4');
+    expect(shapeOf('M', 0, -40)).toBe('sus2');
+  });
+  it('названия и ступени', () => {
+    expect(chordName({ root: 7, q: '7', n: 5 }, C)).toEqual({ name: 'G7', roman: 'V7' });
+    expect(chordName({ root: 0, q: 'M7', n: 1 }, C)).toEqual({ name: 'Cmaj7', roman: 'Imaj7' });
+    expect(chordName({ root: 2, q: 'm7', n: 2 }, C)).toEqual({ name: 'Dm7', roman: 'iim7' });
+    expect(chordName({ root: 11, q: 'hd', n: 7 }, C)).toEqual({ name: 'Bø', roman: 'viiø' });
+    expect(chordName({ root: 2, q: 'sus4', n: 2 }, C).name).toBe('Dsus4');
+  });
+  it('септаккорд — бас и четыре голоса', () => {
+    const v = voicing({ root: 7, q: '7' }, 64);
+    expect(v.length).toBe(5);
+    expect(new Set(v.slice(1).map((m) => m % 12))).toEqual(new Set([7, 11, 2, 5]));
+    expect(v[0] % 12).toBe(7);
+  });
+});
+
+describe('гармония соло пальцами', () => {
+  const C = { root: 0, mode: 'maj' };
+  it('пальцы → вид гармонии; ладонь, кулак и один палец — без гармонии', () => {
+    expect(harmOf({ kind: 'num', n: 1 })).toBe(null);
+    expect(harmOf({ kind: 'num', n: 5 })).toBe(null);
+    expect(harmOf({ kind: 'fist' })).toBe(null);
+    expect(harmOf({ kind: 'num', n: 2 }, 'jazz')).toBe('jazz:2');
+  });
+  it('классика: терции и трезвучие по ступеням тональности', () => {
+    expect(harmOffsets('classic:2', 60, C)).toEqual([4]); // C → E
+    expect(harmOffsets('classic:2', 62, C)).toEqual([3]); // D → F
+    expect(harmOffsets('classic:3', 71, C)).toEqual([3, 6]); // B → D, F
+    expect(harmOffsets('classic:2', 69, { root: 9, mode: 'min' })).toEqual([3]); // A → C в ля миноре
+    expect(harmOffsets('classic:7', 60, C)).toEqual([-8]); // секста снизу: C → E
+  });
+  it('джаз: блок-аккорд под мелодией и кварты', () => {
+    expect(harmOffsets('jazz:2', 64, C)).toEqual([-4, -7, -11]); // мелодия E, под ней C, A, F — Fmaj7
+    expect(harmOffsets('jazz:3', 62, C)).toEqual([-5, -10]); // D, под ним кварты A, E
+    expect(harmOffsets('jazz:4', 60, C)).toEqual([2, 6, 9]); // верхняя структура на тон выше
+  });
+  it('рок и кино — точные интервалы', () => {
+    expect(harmOffsets('rock:3', 60, C)).toEqual([7, 12]);
+    expect(harmOffsets('film:2', 61, C)).toEqual([4, 7]);
+    expect(harmOffsets(null, 60, C)).toEqual([]);
   });
 });

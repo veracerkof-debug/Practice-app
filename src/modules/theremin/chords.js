@@ -53,7 +53,25 @@ export function readSign(h, right = true) {
 const STEPS = { maj: [0, 2, 4, 5, 7, 9, 11], min: [0, 2, 3, 5, 7, 8, 10] };
 // Лад трезвучий по тональности: мажор I ii iii IV V vi vii°, минор i ii° III iv v VI VII
 const DIATONIC = { maj: ['M', 'm', 'm', 'M', 'M', 'm', 'd'], min: ['m', 'd', 'M', 'm', 'm', 'M', 'M'] };
-const SHAPES = { M: [0, 4, 7], m: [0, 3, 7], d: [0, 3, 6] };
+// Виды аккордов: трезвучия, септаккорды, задержания. d — уменьшённое, hd — полууменьшённый (m7♭5), d7 — уменьшённый септ
+const SHAPES = { M: [0, 4, 7], m: [0, 3, 7], d: [0, 3, 6], 7: [0, 4, 7, 10], M7: [0, 4, 7, 11], m7: [0, 3, 7, 10],
+  hd: [0, 3, 6, 10], d7: [0, 3, 6, 9], sus4: [0, 5, 7], sus2: [0, 2, 7] };
+const MINORISH = ['m', 'm7', 'd', 'hd', 'd7'];
+const SUFFIX = { M: '', m: 'm', d: '°', 7: '7', M7: 'maj7', m7: 'm7', hd: 'ø', d7: '°7', sus4: 'sus4', sus2: 'sus2' };
+
+// Наклон руки высоты меняет вид аккорда (если включено): lean — наклон в плоскости кадра, как стрелка
+// (+ наружу, от себя в сторону), tilt — вперёд (+, пальцы к камере) и назад. Ладонь/тыльная сторона по-прежнему
+// задаёт мажорную или минорную семью:
+//   наружу — септаккорд (C7 / Cm7 / Cø), внутрь — большой септ у мажора (Cmaj7), уменьшённый у минора (C° / C°7);
+//   вперёд — sus4, назад — sus2. Прямо — трезвучие.
+export const LEAN_ON = 24, TILT_ON = 38; // вперёд-назад — с запасом: рука с вытянутыми пальцами и так слегка наклонена
+export function shapeOf(q, lean = 0, tilt = 0) {
+  if (tilt > TILT_ON) return 'sus4';
+  if (tilt < -TILT_ON) return 'sus2';
+  if (lean > LEAN_ON) return q === 'M' ? '7' : q === 'd' ? 'hd' : 'm7';
+  if (lean < -LEAN_ON) return q === 'M' ? 'M7' : q === 'd' ? 'd7' : 'd';
+  return q;
+}
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 
 // n — ступень 1–7; palm — ладонь к камере; key — { root 0–11, mode 'maj' | 'min' }; how — 'hand' (ладонь — мажор,
@@ -70,21 +88,21 @@ export function chordOf(n, palm, key = { root: 0, mode: 'maj' }, how = 'hand') {
 // Название: C, Am, B° — бемоли в бемольных тональностях; ступень римской цифрой (минор — строчными)
 export function chordName(c, key = { root: 0, mode: 'maj' }) {
   const flat = [5, 10, 3, 8, 1, 6].includes(((key.mode === 'min' ? key.root + 3 : key.root) % 12 + 12) % 12);
-  const nm = (flat ? FL : SH)[c.root] + (c.q === 'm' ? 'm' : c.q === 'd' ? '°' : '');
-  const r = ROMAN[c.n - 1];
-  return { name: nm, roman: c.q === 'M' ? r : r.toLowerCase() + (c.q === 'd' ? '°' : '') };
+  const nm = (flat ? FL : SH)[c.root] + (SUFFIX[c.q] ?? '');
+  const r = ROMAN[c.n - 1], sx = c.q === 'M' || c.q === 'm' ? '' : SUFFIX[c.q];
+  return { name: nm, roman: (MINORISH.includes(c.q) ? r.toLowerCase() : r) + (c.q === 'm' ? '' : c.q === 'd' ? '°' : sx) };
 }
 
-// Расположение: бас (основной тон снизу) и три голоса трезвучия в том обращении, середина которого ближе всего
-// к center (MIDI) — высота руки плавно переводит аккорд из обращения в обращение
+// Расположение: бас (основной тон снизу) и голоса аккорда (три или четыре) в том обращении, середина которого
+// ближе всего к center (MIDI) — высота руки плавно переводит аккорд из обращения в обращение
 export function voicing(c, center = 60) {
   const sh = SHAPES[c.q] || SHAPES.M;
   let best = null;
   for (let base = Math.floor(center) - 24; base <= Math.floor(center) + 12; base++) {
     if (((base - c.root) % 12 + 12) % 12 !== 0) continue;
-    for (let inv = 0; inv < 3; inv++) {
+    for (let inv = 0; inv < sh.length; inv++) {
       const notes = sh.map((x, k) => base + x + (k < inv ? 12 : 0)).sort((a, b) => a - b);
-      const mid = (notes[0] + notes[2]) / 2, dv = Math.abs(mid - center);
+      const mid = (notes[0] + notes.at(-1)) / 2, dv = Math.abs(mid - center);
       if (!best || dv < best.dv) best = { notes, dv };
     }
   }
@@ -94,3 +112,38 @@ export function voicing(c, center = 60) {
 
 // Голоса к следующему аккорду — к ближайшим нотам (по порядку снизу вверх), чтобы переход был плавным
 export const sameChord = (a, b) => !!a && !!b && a.root === b.root && a.q === b.q;
+
+/* ---------- гармония соло ---------- */
+
+// Пальцы правой руки в соло — какие голоса звучат с мелодией. Ладонь, кулак или один палец — одна мелодия.
+// Жесты 2, 3, 4, 6 (большой к мизинцу), 7 (большой к безымянному); что они делают — зависит от стиля.
+// Голос: число — точный сдвиг в полутонах, 'dK' — K ступеней тональности вверх (минус — вниз)
+export const HARM_STYLES = {
+  // классика: терции и сексты по тональности, хоральное трезвучие, октавы
+  classic: { 2: ['d2'], 3: ['d2', 'd4'], 4: ['d-2', 'd-5'], 6: [-12], 7: ['d-5'] },
+  // джаз: блок-аккорды под мелодией (Ширинг), кварты (Тайнер), «верхняя структура» на тон выше, сексты, шелл
+  jazz: { 2: ['d-2', 'd-4', 'd-6'], 3: ['d-3', 'd-6'], 4: [2, 6, 9], 6: ['d-5', -12], 7: ['d-4', 'd-6', -12] },
+  // рок: квинты, «пауэр», октавы вверх и вниз, кварты
+  rock: { 2: [-7], 3: [7, 12], 4: [-12, 12], 6: [-5], 7: [-12, -5] },
+  // кино: параллельные мажорные и минорные трезвучия, пустые квинты, sus2, мерцающая большая септима
+  film: { 2: [4, 7], 3: [3, 7], 4: [-12, -5, 7], 6: [2, 7], 7: [4, 11] },
+};
+export const HARM_IDS = Object.keys(HARM_STYLES);
+
+export function harmOf(sign, style = 'classic') {
+  if (!sign || sign.kind !== 'num') return null;
+  const set = HARM_STYLES[style] || HARM_STYLES.classic;
+  return set[sign.n] ? style + ':' + sign.n : null;
+}
+
+// Сдвиги голосов (полутоны) от ноты m для вида гармонии 'стиль:жест'; ступени — по тональности key
+export function harmOffsets(kind, m, key = { root: 0, mode: 'maj' }) {
+  if (!kind) return [];
+  const [style, n] = kind.split(':'), spec = (HARM_STYLES[style] || {})[n] || [];
+  const st = STEPS[key.mode === 'min' ? 'min' : 'maj'], r = key.root || 0, pc = ((Math.round(m) - r) % 12 + 12) % 12;
+  // ступень — ближайшая снизу нота тональности (нота вне тональности гармонизуется как ближайшая ступень)
+  let j = 0;
+  st.forEach((x, i) => { if (x <= pc) j = i; });
+  const step = (k) => { const q = j + k; return st[((q % 7) + 7) % 7] + 12 * Math.floor(q / 7) - st[j]; };
+  return spec.map((x) => (typeof x === 'number' ? x : step(+x.slice(1))));
+}
