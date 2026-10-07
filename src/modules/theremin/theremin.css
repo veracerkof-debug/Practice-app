@@ -1,13 +1,19 @@
 /* Терменвокс: кадр камеры на всё окно, поверх — линии нот, точки рук, нота и одна узкая панель в углу */
 .tm{position:relative;flex:1;width:100%;height:100%;min-height:80px;overflow:hidden;border-radius:16px;background:#0d0d10;user-select:none;-webkit-user-select:none}
 .tview.imm .tm{border-radius:0}
-.tmcam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:.55;pointer-events:none}
+.tmcam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);pointer-events:none;filter:saturate(.7) brightness(.78) contrast(1.06)}
+/* затемнение к краям — картинка спокойнее, подсказки читаются */
+.tmvig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(0,0,0,.5) 100%),linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,0) 22%,rgba(0,0,0,0) 78%,rgba(0,0,0,.3))}
 .tm.nocam .tmcam{opacity:0}
 .tmcv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .tm{--ink:#fff;color:#fff}
 .tm .glnote b,.tm .glnote span{color:#fff}
-.tm .glnote{opacity:.22}
-.tm .glnote.on{opacity:.75}
+.tm .glnote{opacity:.18}
+.tm .glnote.on{opacity:.7}
+.tm .glnote b{text-shadow:0 2px 18px rgba(0,0,0,.35)}
+.tm.hud-quiet .glnote{opacity:.08}
+.tm.hud-quiet .glnote.on{opacity:.32}
+.tm.hud-off .glnote,.tm.hud-off .tmlost{display:none}
 .tmbar{background:color-mix(in srgb,#000 45%,transparent)!important}
 .tmbar .ic,.tmbar .glsnap,.tmbar .glrange{color:#fff!important}
 .tmbar .ic svg{stroke:#fff}

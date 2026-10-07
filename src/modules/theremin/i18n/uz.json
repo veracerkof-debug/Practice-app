@@ -127,5 +127,11 @@
   "help.2": "Akkordlar: 1–5 barmoq — I–V pogʻonalar, bosh barmoq jimjiloqqa — VI, nomsizga — VII; kaft — major, orqa tomoni — minor.",
   "help.3": "Chap qoʻl — effektlar: musht — sukunat, balandroq — fazo, bilakni burish — tembr, egish — vibrato; chimdish effektlarni qotiradi.",
   "help.4": "Kamera faqat qurilmada qayta ishlanadi va oyna yopilganda oʻchadi.",
-  "help.tip": "Bir tekis yorugʻlik va kaftlar kadrda toʻliq — aniqroq taniladi."
+  "help.tip": "Bir tekis yorugʻlik va kaftlar kadrda toʻliq — aniqroq taniladi.",
+  "hud": "Ekrandagi koʻrsatmalar",
+  "hud.full": "Hammasi",
+  "hud.quiet": "Sokin",
+  "hud.off": "Yoʻq",
+  "hudHint": "«Sokin» — faqat chetdagi nota shkalasi va kaftlar yogʻdusi; «Yoʻq» — toza kamera tasviri. Ekranga ikki marta bosish almashtiradi.",
+  "hudOn": "Koʻrsatmalar: {mode}"
 }

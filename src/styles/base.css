@@ -41,7 +41,7 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 @keyframes mflash{from{opacity:.75}to{opacity:0}}
 
 /* «?» в окне инструмента во весь экран — рядом с «назад» */
-.tview.imm .tvhelp{position:absolute;z-index:5;top:calc(8px + env(safe-area-inset-top,0px));left:calc(60px + env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--cell) 80%,transparent)!important}
+.tview.imm .tvhelp{position:absolute;z-index:5;top:calc(60px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--cell) 80%,transparent)!important}
 /* инструкция к инструменту (src/core/help.js) */
 .ask .alert.helpcard{width:min(440px,100%);max-width:none;max-height:calc(100vh - 48px);display:flex;flex-direction:column}
 .helpcard .ab{overflow:auto}

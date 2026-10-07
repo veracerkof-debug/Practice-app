@@ -18,7 +18,7 @@ import { SCALE_TYPES } from '../../music/theory.js';
 import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, clampLo, notesIn } from '../glider/scale.js';
 import { createGlideVoice, createFxBus } from '../glider/voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, PRESETS } from '../glider/fx.js';
-import { assign, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, PINCH_ON, PINCH_OFF } from './map.js';
+import { assign, palm, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, PINCH_ON, PINCH_OFF } from './map.js';
 import { startHands } from './hands.js';
 import { readSign, chordOf, chordName, voicing } from './chords.js';
 
@@ -36,6 +36,7 @@ const PINCH_MS = 150; // щепоть держится столько — пер
 const VOICE_FX = ['bright', 'vib', 'trem', 'drive', 'fuzz'];
 const CHORD_MS = 180; // знак держится столько — аккорд меняется (пока пальцы разгибаются, рука «показывает» лишнее)
 const OK_MS = 300; // «окей» держится столько — переключает «соло ↔ аккорды»
+const HUDS = ['full', 'quiet', 'off']; // подсказки на экране; двойное касание по кадру переключает
 const CHORD_GAIN = 0.42; // четыре голоса аккорда вместе — не громче одного голоса соло
 
 let host = null, ctx = null, size = 'full', ro = null, probed = false;
@@ -57,7 +58,8 @@ const cfg = () => {
   s.lo = clampLo(s.lo, s.width);
   if (!s.fx) s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
   s.gmap = { ...DEFAULT_MAP, ...(s.gmap || {}) };
-  s.mode ??= 'solo'; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand';
+  s.mode ??= 'solo'; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.hud ??= 'full';
+  if (!HUDS.includes(s.hud)) s.hud = 'full';
   normalizeFx(s);
   return s;
 };
@@ -72,7 +74,7 @@ function view() {
   const gear = ui.icb('data-x="tset"', ui.icons.gear, t('settings'), 'sm');
   const camBtn = ui.icb('data-x="tcam"', on || S.state === 'loading' ? I.camOff : I.cam, t(on || S.state === 'loading' ? 'stop' : 'start'), 'sm');
   const range = big ? '<div class="glrange">' + ui.icb('data-x="tlo" data-d="-12"', I.left, t('octDown'), 'sm') + '<span class="num">' + rangeTxt(s) + '</span>' + ui.icb('data-x="tlo" data-d="12"', I.right, t('octUp'), 'sm') + '</div>' : '';
-  const snap = big && s.mode !== 'chord' ? '<button class="glsnap" data-x="tsnap" aria-label="' + ui.esc(t('snapBtn', { mode: t('snap.' + s.snap) })) + '">' + t('snap.' + s.snap) + '</button>' : '';
+  const snap = size === 'full' && s.mode !== 'chord' && host && host.clientWidth > 520 ? '<button class="glsnap" data-x="tsnap" aria-label="' + ui.esc(t('snapBtn', { mode: t('snap.' + s.snap) })) + '">' + t('snap.' + s.snap) + '</button>' : '';
   // соло ↔ аккорды (то же — жестом «окей» правой рукой)
   const modeBtn = size !== 'strip' ? '<button class="glsnap" data-x="tmode" aria-label="' + ui.esc(t('modeBtn', { mode: t('mode.' + s.mode) })) + '">' + t('mode.' + s.mode) + '</button>' : '';
   let mid = '';
@@ -81,7 +83,7 @@ function view() {
       '<button class="btn fill" data-x="tcam">' + I.cam + '<span>' + t('start') + '</span></button>' +
       (size !== 'strip' && size !== 'quarter' ? '<p class="tmhint">' + t('hint.' + s.side) + '</p><p class="tmpriv">' + t('privacy') + '</p>' : '') + '</div>';
   } else if (S.state === 'loading') mid = '<div class="tmstart"><p class="tmhint">' + t('loading') + '</p></div>';
-  return '<div class="tm ' + size + (s.showCam ? '' : ' nocam') + '"><video class="tmcam" playsinline muted aria-hidden="true"></video><canvas class="tmcv" aria-hidden="true"></canvas>' +
+  return '<div class="tm ' + size + ' hud-' + s.hud + (s.showCam ? '' : ' nocam') + '"><video class="tmcam" playsinline muted aria-hidden="true"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
     '<div class="glnote tmnote" aria-live="off"><b class="num" id="tmnote">' + (on ? '—' : '') + '</b><span class="num" id="tmc"></span></div>' +
     '<span class="tmlost" id="tmlost" hidden>' + t('noHands') + '</span>' + mid +
     '<div class="glov tmbar">' + (size === 'strip' ? '' : range + modeBtn + snap) + camBtn + gear + '</div></div>';
@@ -105,6 +107,14 @@ function frameMap(W, H) {
   return { x: (x) => x * dw - (dw - W) / 2, y: (y) => y * dh - (dh - H) / 2 };
 }
 
+// Кости руки (как в MediaPipe): запястье, большой, указательный, средний, безымянный, мизинец, ладонь
+const BONES = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12],
+  [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]];
+const TIPS = [4, 8, 12, 16, 20];
+const rgba = (hex, a) => { const h = hex.replace('#', ''), v = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16); return 'rgba(' + ((v >> 16) & 255) + ',' + ((v >> 8) & 255) + ',' + (v & 255) + ',' + a + ')'; };
+const rrect = (g, x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+
+// Подсказки на экране: 'full' — все, 'quiet' — только шкала и свечение ладоней, 'off' — чистая картинка камеры
 function draw() {
   const cv = host && host.querySelector('canvas.tmcv');
   if (!cv) return;
@@ -114,60 +124,71 @@ function draw() {
   const g = cv.getContext('2d');
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, W, H);
-  if (S.state !== 'on') return;
-  const s = cfg(), pcs = allowedPcs(s), map = frameMap(W, H), css = getComputedStyle(host.querySelector('.tm') || host);
-  const ink = css.getPropertyValue('--ink').trim() || '#000', tint = css.getPropertyValue('--tint').trim() || '#AF52DE';
-  // линии нот: высота руки → нота (снизу вверх)
-  const notes = notesIn(s.lo, s.width, pcs), yOf = (m) => map.y(EDGE + (1 - midiToPos(m, s.lo, s.width)) * (1 - 2 * EDGE));
-  const gap = notes.length > 1 ? Math.abs(yOf(notes[0]) - yOf(notes[1])) : 99;
-  const right = s.side === 'right';
-  g.font = '600 11px system-ui, sans-serif';
+  const s = cfg(), hud = s.hud;
+  if (S.state !== 'on' || hud === 'off') return;
+  const full = hud === 'full', pcs = allowedPcs(s), map = frameMap(W, H), right = s.side === 'right';
+  const tint = getComputedStyle(host.querySelector('.tm') || host).getPropertyValue('--tint').trim() || '#FF9500';
+  const yOf = (m) => map.y(EDGE + (1 - midiToPos(m, s.lo, s.width)) * (1 - 2 * EDGE));
+  const notes = notesIn(s.lo, s.width, pcs), gap = notes.length > 1 ? Math.abs(yOf(notes[0]) - yOf(notes[1])) : 99;
+  // шкала нот — тонкая линейка у края руки высоты
+  const ex = right ? W - 6 : 6, dir = right ? -1 : 1;
+  g.lineCap = 'round';
+  g.font = '600 10.5px system-ui, sans-serif';
   g.textBaseline = 'middle';
   g.textAlign = right ? 'right' : 'left';
   notes.forEach((m) => {
     const y = yOf(m), pc = ((m % 12) + 12) % 12, key = pcs ? pc === s.root : pc === 0;
-    g.strokeStyle = ink; g.globalAlpha = key ? 0.35 : 0.14; g.lineWidth = key ? 1.5 : 1;
-    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
-    if (gap >= 16 || key) { g.globalAlpha = key ? 0.9 : 0.6; g.fillStyle = key ? tint : ink; g.fillText(mName(m), right ? W - 8 : 8, y - 8); }
+    g.strokeStyle = 'rgba(255,255,255,' + (key ? 0.75 : 0.35) + ')';
+    g.lineWidth = key ? 1.6 : 1;
+    g.beginPath(); g.moveTo(ex, y); g.lineTo(ex + dir * (key ? 16 : 9), y); g.stroke();
+    if (full && (key || gap >= 18)) { g.fillStyle = key ? tint : 'rgba(255,255,255,.55)'; g.fillText(mName(m), ex + dir * 22, y); }
   });
-  g.globalAlpha = 1;
-  // руки: высота — цветом акцента, эффекты — цветом текста
-  const dot = (h, col) => {
-    if (!h) return;
-    g.fillStyle = col;
-    h.lm.forEach((p, i) => { g.globalAlpha = i === 0 || i % 4 === 0 ? 0.95 : 0.55; g.beginPath(); g.arc(map.x(p.x), map.y(p.y), i % 4 === 0 && i ? 4 : 3, 0, Math.PI * 2); g.fill(); });
-    g.globalAlpha = 1;
+  // где звучит: светящаяся черта от шкалы, гаснущая к середине кадра (у аккорда — по черте на ноту)
+  const glow = (y, a = 1) => {
+    const x2 = right ? W * 0.35 : W * 0.65, gr = g.createLinearGradient(ex, 0, x2, 0);
+    gr.addColorStop(0, rgba(tint, 0.9 * a)); gr.addColorStop(1, rgba(tint, 0));
+    g.strokeStyle = gr; g.lineWidth = full ? 2.5 : 1.5;
+    g.beginPath(); g.moveTo(ex, y); g.lineTo(x2, y); g.stroke();
+    g.fillStyle = rgba(tint, a); g.beginPath(); g.arc(ex + dir * 2, y, 3.5, 0, Math.PI * 2); g.fill();
   };
-  dot(S.hands.pitch, tint);
-  dot(S.hands.fx, ink);
-  // подсказка руки эффектов: что сейчас делает каждое движение (у края руки эффектов, внизу)
-  if (S.gv || S.frozen) {
-    const rows = GESTURES.filter((k) => (s.gmap[k] || 'off') !== 'off'), bw = 56, x0 = right ? 12 : W - 12 - bw - 92;
-    let y = H - 28 - rows.length * 18;
+  if (S.cnotes) S.cnotes.forEach((m) => { if (m >= s.lo && m <= s.lo + s.width) glow(yOf(m), 0.8); });
+  else if (S.m != null) glow(yOf(S.m));
+  // руки: «Все» — тонкий скелет и светящиеся кончики пальцев, «Тихие» — мягкое свечение ладони
+  const handDraw = (h, col) => {
+    if (!h) return;
+    const P = h.lm.map((p) => [map.x(p.x), map.y(p.y)]);
+    if (!full) {
+      const c = palm(h.lm), x = map.x(c.x), y = map.y(c.y), r = 34, gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, rgba(col, 0.35)); gr.addColorStop(1, rgba(col, 0));
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+      return;
+    }
+    g.strokeStyle = rgba(col, 0.55); g.lineWidth = 2;
+    g.beginPath();
+    BONES.forEach(([a, b]) => { g.moveTo(P[a][0], P[a][1]); g.lineTo(P[b][0], P[b][1]); });
+    g.stroke();
+    g.save(); g.shadowColor = rgba(col, 0.9); g.shadowBlur = 10; g.fillStyle = rgba(col, 0.95);
+    TIPS.forEach((i) => { g.beginPath(); g.arc(P[i][0], P[i][1], 3.5, 0, Math.PI * 2); g.fill(); });
+    g.restore();
+  };
+  handDraw(S.hands.pitch, tint);
+  handDraw(S.hands.fx, '#FFFFFF');
+  // эффекты руки эффектов — на полупрозрачной подложке у её края, внизу (только «Все»)
+  if (full && (S.gv || S.frozen)) {
+    const rows = GESTURES.filter((k) => (s.gmap[k] || 'off') !== 'off'), lw = 86, bw = 58, pad = 10, rh = 17;
+    const pw = pad * 2 + lw + bw, ph = pad * 2 + rows.length * rh + (S.frozen ? rh : 0);
+    const x0 = right ? 10 : W - 10 - pw, y0 = H - 18 - ph;
+    g.fillStyle = 'rgba(0,0,0,.38)'; rrect(g, x0, y0, pw, ph, 12); g.fill();
     g.textAlign = 'left';
-    g.font = '600 10.5px system-ui, sans-serif';
-    if (S.frozen) { g.fillStyle = tint; g.globalAlpha = 0.95; g.fillText('❄ ' + ctx.t('frozen'), x0, y - 4); }
-    y += 14;
+    let y = y0 + pad + rh / 2;
+    if (S.frozen) { g.fillStyle = tint; g.fillText('❄ ' + ctx.t('frozen'), x0 + pad, y); y += rh; }
     rows.forEach((k) => {
-      const v = S.gv ? S.gv[k] || 0 : 0, frozenRow = S.frozen && s.gmap[k] !== 'vol';
-      g.globalAlpha = 0.75; g.fillStyle = ink;
-      g.fillText(ctx.t('tg.' + s.gmap[k]), x0, y);
-      g.globalAlpha = 0.25; g.fillRect(x0 + 92, y - 3, bw, 4);
-      g.globalAlpha = frozenRow ? 0.45 : 0.9; g.fillStyle = tint; g.fillRect(x0 + 92, y - 3, bw * v, 4);
-      y += 18;
+      const v = S.gv ? S.gv[k] || 0 : 0, dim = S.frozen && s.gmap[k] !== 'vol';
+      g.fillStyle = 'rgba(255,255,255,.8)'; g.fillText(ctx.t('tg.' + s.gmap[k]), x0 + pad, y);
+      g.fillStyle = 'rgba(255,255,255,.18)'; rrect(g, x0 + pad + lw, y - 2, bw, 4, 2); g.fill();
+      if (v > 0.01) { g.fillStyle = s.gmap[k] === 'vol' ? 'rgba(255,255,255,.9)' : rgba(tint, dim ? 0.45 : 0.95); rrect(g, x0 + pad + lw, y - 2, Math.max(4, bw * v), 4, 2); g.fill(); }
+      y += rh;
     });
-    g.globalAlpha = 1;
-  }
-  if (S.cnotes) { // звучащий аккорд — линии его нот
-    g.strokeStyle = tint; g.lineWidth = 2; g.globalAlpha = 0.7;
-    S.cnotes.forEach((m) => { if (m < s.lo || m > s.lo + s.width) return; const y = yOf(m); g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); });
-    g.globalAlpha = 1;
-  }
-  if (S.m != null) { // где сейчас звучит
-    const y = map.y(EDGE + (1 - midiToPos(S.m, s.lo, s.width)) * (1 - 2 * EDGE));
-    g.strokeStyle = tint; g.lineWidth = 2.5; g.globalAlpha = 0.8;
-    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
-    g.globalAlpha = 1;
   }
 }
 
@@ -397,7 +418,9 @@ function setSheet() {
       (chrom ? '' : '<div class="glsub" style="margin-top:10px">' + t('root') + '</div><div class="glroots">' + SH.map((n, i) => chip('data-tr="' + i + '"', s.root === i, n)).join('') + '</div>') + '</div></div>' +
       '<div class="hdr">' + t('range') + '</div><div class="group"><div class="cell"><span class="grow">' + t('from') + '</span>' + ui.icb('data-tlo2="-1"', I.left, t('lower'), 'sm') + '<b class="num glv">' + mName(s.lo) + '</b>' + ui.icb('data-tlo2="1"', I.right, t('higher'), 'sm') + '</div>' +
       '<div class="cellcol"><div class="glsub">' + t('width') + ' · ' + rangeTxt(s) + '</div>' + ui.seg('tw', WIDTHS.map((w) => [w, t('w.' + w)]), s.width, t('width')) + '</div></div>' +
-      '<div class="hdr">' + t('look') + '</div><div class="group"><div class="cell"><span class="grow">' + t('camShow') + '</span>' + ui.sw('tshow', s.showCam, t('camShow')) + '</div></div>' +
+      '<div class="hdr">' + t('look') + '</div><div class="group"><div class="cellcol"><div class="glsub" style="margin-top:0">' + t('hud') + '</div>' +
+      ui.seg('thud', HUDS.map((k) => [k, t('hud.' + k)]), s.hud, t('hud')) + '<div class="segcap">' + t('hudHint') + '</div></div>' +
+      '<div class="cell"><span class="grow">' + t('camShow') + '</span>' + ui.sw('tshow', s.showCam, t('camShow')) + '</div></div>' +
       '<p class="ftr">' + t('camHint') + ' ' + t('privacy') + '</p>';
   };
   ui.sheet(body, (el, sh) => {
@@ -416,6 +439,7 @@ function setSheet() {
         const k = b.closest('[data-seg]').dataset.seg, v = b.dataset.v;
         if (k === 'tside') s.side = v;
         else if (k === 'tmode2') { s.mode = v; silence(); }
+        else if (k === 'thud') s.hud = v;
         else if (k === 'tcmode') { s.cmode = v; S.chord = null; }
         else if (k === 'tcq') { s.cq = v; S.chord = null; }
         else if (k === 'tsnap') s.snap = v;
@@ -450,6 +474,22 @@ function bind() {
     else return;
     save();
     render();
+  });
+  // двойное касание по кадру — подсказки «Все → Тихие → Нет» (экран терменвокса для игры не касаются)
+  let lastTap = 0;
+  on(host, 'pointerdown', (e) => {
+    if (S.state !== 'on' || e.target.closest('button, .glov, input, select')) return;
+    const now = e.timeStamp; // время самого касания: распознавание может занимать поток, обработка опаздывает
+    if (now - lastTap < 350) {
+      lastTap = 0;
+      const s = cfg();
+      s.hud = HUDS[(HUDS.indexOf(s.hud) + 1) % HUDS.length];
+      save();
+      const tm = host.querySelector('.tm');
+      if (tm) { HUDS.forEach((k) => tm.classList.toggle('hud-' + k, k === s.hud)); }
+      ctx.ui.toast(ctx.t('hudOn', { mode: ctx.t('hud.' + s.hud) }));
+      draw();
+    } else lastTap = now;
   });
   // свернули приложение — камера выключается сразу (и не включается сама)
   on(document, 'visibilitychange', () => { if (document.visibilityState === 'hidden' && S.cam) { camOff(); render(); } });
