@@ -210,3 +210,70 @@
 .stkm { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 16px 0 8px; text-align: center; }
 .stkm b { font-size: 28px; font-weight: 400; letter-spacing: .01em; }
 .stkm span { font-size: 13px; line-height: 1.35; color: var(--l2); max-width: 300px; }
+
+/* ---------- инструменты: что «звучит» или «нажато» — заметно и без цвета ----------
+   В обычном виде горящая доля метронома оранжевая; здесь она чёрная, и сильная доля в покое (тёмно-серая)
+   сливалась с ней — казалось, горят две. Покой — светлее, горящая — чёрная и толще. */
+:root[data-style="mono"] .wseg.l1 { stroke: color-mix(in srgb, var(--ink) 9%, var(--fill2)); }
+:root[data-style="mono"] .wseg.l2 { stroke: color-mix(in srgb, var(--ink) 20%, var(--fill2)); }
+:root[data-style="mono"] .wseg.l3 { stroke: color-mix(in srgb, var(--ink) 34%, var(--fill2)); }
+:root[data-style="mono"] .wseg.lit { stroke: var(--ink) !important; stroke-width: 15 !important; filter: none; transition: stroke .04s, stroke-width .12s; }
+/* нажатая чёрная клавиша пианино была чёрной на чёрном — теперь серая с подсветкой снизу */
+:root[data-style="mono"] .mb.on { background: linear-gradient(#5c5c5c, #8a8a8a) !important; }
+:root[data-style="mono"] .mw.on { background: color-mix(in srgb, var(--ink) 18%, #fff) !important; }
+
+/* ---------- движение «Минимала»: спокойно и по-книжному ----------
+   Окна раскрываются, как лист из-под края; заголовки «садятся» по межбуквенному интервалу; блоки главной —
+   по очереди; камень ложится; под текущей вкладкой — тонкая черта. При «Уменьшить движение» — как везде. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes mm-screen { from { opacity: 0; transform: translateY(26px); clip-path: inset(5% 3% 0 3% round 34px); } to { clip-path: inset(0 0 0 0 round 0); } }
+  @keyframes mm-screen-out { to { opacity: 0; transform: translateY(12px); clip-path: inset(3% 2% 0 2% round 34px); } }
+  @keyframes mm-track { from { opacity: 0; letter-spacing: .32em; } }
+  @keyframes mm-stone { from { opacity: 0; transform: translateY(-14px) scale(.88) rotate(-10deg); } 70% { transform: translateY(1px) scale(1.01) rotate(1deg); } }
+  @keyframes mm-slide { from { opacity: 0; transform: translateX(22px); } }
+  @keyframes mm-line { from { transform: scaleX(0); } }
+  @keyframes mm-dot { from { transform: scale(0); } }
+
+  :root[data-style="mono"] .panel, :root[data-style="mono"] .tview, :root[data-style="mono"] .session {
+    animation: mm-screen 420ms cubic-bezier(.16, 1, .3, 1) !important; }
+  :root[data-style="mono"] .panel.leaving, :root[data-style="mono"] .tview.leaving, :root[data-style="mono"] .session.leaving {
+    animation: mm-screen-out 220ms var(--e-in) forwards !important; }
+
+  /* заголовки и крупные слова */
+  :root[data-style="mono"] #main.tab-enter .large, :root[data-style="mono"] #main.tab-enter .mono-home .mhello,
+  :root[data-style="mono"] #main.tab-enter .mono-home .mhd h2, :root[data-style="mono"] .panel .wrap.pfwd .large,
+  :root[data-style="mono"] .tview .tvhd .stitle2, :root[data-style="mono"] .scrim .snav b { animation: mm-track 560ms cubic-bezier(.16, 1, .3, 1) backwards; }
+
+  /* главная */
+  :root[data-style="mono"] #main.tab-enter .mono-home .mstone canvas { animation: mm-stone 700ms cubic-bezier(.2, .9, .3, 1) backwards 120ms; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mbig { animation: m-rise 520ms var(--e-out) backwards 80ms; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mdays .done::after { animation: mm-dot 360ms var(--e-out) backwards 380ms; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mtools button { animation: mm-slide 420ms var(--e-out) backwards; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mtools button:nth-child(2) { animation-delay: 40ms; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mtools button:nth-child(3) { animation-delay: 80ms; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mtools button:nth-child(4) { animation-delay: 120ms; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mtools button:nth-child(n+5) { animation-delay: 160ms; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mrow { animation: m-rise 420ms var(--e-out) backwards; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mrow:nth-child(2) { animation-delay: 45ms; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mrow:nth-child(3) { animation-delay: 90ms; }
+  :root[data-style="mono"] #main.tab-enter .mono-home .mrow:nth-child(n+4) { animation-delay: 135ms; }
+
+  /* карточки инструментов на вкладке «Инструменты» — по очереди */
+  :root[data-style="mono"] #main.tab-enter .tcard2 { animation: m-rise 420ms var(--e-out) backwards; }
+  :root[data-style="mono"] #main.tab-enter .tcard2:nth-child(2n) { animation-delay: 40ms; }
+  :root[data-style="mono"] #main.tab-enter .tcard2:nth-child(3n) { animation-delay: 80ms; }
+
+  /* текущая вкладка — тонкая черта под значком */
+  :root[data-style="mono"] .tab { position: relative; }
+  :root[data-style="mono"] .tab[aria-current="page"]::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 18px; margin-left: -9px; height: 1.5px;
+    border-radius: 1px; background: var(--ink); transform-origin: center; animation: mm-line 320ms var(--e-out); }
+  :root[data-style="mono"] .tab[aria-current="page"] svg { animation: none; }
+
+  /* нажатие: кнопки «Минимала» чуть тонут и бледнеют, без отскока */
+  :root[data-style="mono"] .mcta:active, :root[data-style="mono"] .btn.fill:active { transform: scale(.975); opacity: .86; }
+  :root[data-style="mono"] .mono-home .mrow > button:active { opacity: .55; transform: none; }
+}
+/* карточка-инструкция открывается поверх всего (вне фильтра экранов) — значок тоже без цвета */
+:root[data-style="mono"] .helpcard .hcic { background: var(--ink) !important; color: var(--bg); }
+:root[data-style="mono"] .helpcard .hcic svg { stroke: var(--bg); }
+:root[data-style="mono"] .helpcard .hctip { background: var(--fill); }
