@@ -28,6 +28,8 @@
 /* греческие буквы (с политоникой) — GFS Didot: у Onest греческого нет; только для греческих диапазонов */
 @font-face { font-family: "Melete Greek"; font-display: swap; src: url('../../node_modules/@fontsource/gfs-didot/files/gfs-didot-greek-400-normal.woff2') format('woff2'); unicode-range: U+0370-03FF; }
 @font-face { font-family: "Melete Greek"; font-display: swap; src: url('../../node_modules/@fontsource/gfs-didot/files/gfs-didot-greek-ext-400-normal.woff2') format('woff2'); unicode-range: U+1F00-1FFF; }
+/* церковнославянский в стихах «Минимала» — Ponomar (OFL, fonts/Ponomar-OFL.txt), урезан до букв стихов; грузится, только когда показан */
+@font-face { font-family: "Melete Slavonic"; font-display: swap; src: url('./fonts/ponomar-verses.woff2') format('woff2'); }
 
 :root[data-style="mono"] {
   --bg: #F4F4F4; --cell: #FFFFFF; --ink: #0B0B0B; --l2: #757575; --l3: #BDBDBD;
@@ -308,6 +310,9 @@
 .bvname { font-size: 26px; line-height: 1.1; margin-bottom: 10px; }
 .bvgr { margin: 0 0 10px; font-family: "Melete Greek", var(--font); font-size: 18px; line-height: 1.55; }
 .bvru { margin: 0 0 6px; font-size: 14.5px; line-height: 1.5; color: var(--l2); }
+.bvcs { margin: 0 0 10px; font-family: "Melete Slavonic", var(--font); font-size: 19px; line-height: 1.6; }
+.bven { margin: 0 0 8px; font-family: Georgia, "Noto Serif", serif; font-style: italic; font-size: 14.5px; line-height: 1.5; color: var(--l2); }
+.bvtext { margin: 0 0 8px; font-family: Georgia, "Noto Serif", "Times New Roman", serif; font-size: 17px; line-height: 1.55; }
 .bvref { margin: 0; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--l3); }
 /* чтение дня в «Минимале» */
 .mono-home .mread { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; text-align: left; margin: 26px 0 0; padding: 18px 2px; border-top: 1px solid var(--sep); border-bottom: 1px solid var(--sep); }

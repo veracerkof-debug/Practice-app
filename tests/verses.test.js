@@ -2,7 +2,7 @@
 // кроме составных названий без одного стиха; у каждого стиха — греческий текст, перевод и ссылка
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { CORE, MODS, TIMER, EPIGRAPH, verseByKey } from '../src/core/verses.js';
+import { CORE, MODS, TIMER, EPIGRAPH, verseByKey, verseIn } from '../src/core/verses.js';
 
 const COMPOSED = ['app.title', 'page.feat', 'feat.title', 'libm.title', 'fin.title', 'name.title'];
 const el = (m) => JSON.parse(readFileSync('src/modules/' + m + '/i18n/el.json', 'utf8'));
@@ -22,6 +22,15 @@ describe('стихи разделов', () => {
       expect(v.gr.length).toBeGreaterThan(10);
       expect(v.ru.length).toBeGreaterThan(5);
       expect(v.ref).toMatch(/\d/);
+      // обычный вид — язык интерфейса; «Минимал» — ещё церковнославянский и английский
+      expect(v.cs, id).toMatch(/[\u0400-\u04FF\uA640-\uA69F]/);
+      expect(v.en.length, id).toBeGreaterThan(5);
+      expect(v.uz.length, id).toBeGreaterThan(5);
+      expect(v.enRef, id).toMatch(/^[1-3]? ?[A-Z][a-z]+ \d+:\d+/);
+      expect(v.uzRef, id).toMatch(/\d+:\d+/);
+      expect(verseIn(v, 'en').text).toBe(v.en);
+      expect(verseIn(v, 'uz').ref).toBe(v.uzRef);
+      expect(verseIn(v, 'ru').text).toBe(v.ru);
     });
   });
 });
