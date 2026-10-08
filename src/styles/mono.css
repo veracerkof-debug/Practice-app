@@ -313,3 +313,6 @@
 .mono-home .mread { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; text-align: left; margin: 26px 0 0; padding: 18px 2px; border-top: 1px solid var(--sep); border-bottom: 1px solid var(--sep); }
 .mono-home .mread .hrr { font-size: 24px; font-weight: 300; }
 .mono-home .mread .hrs { color: var(--l2); text-transform: uppercase; letter-spacing: .12em; font-size: 10.5px; }
+/* Библия: изучение по логике MyBible работает только здесь (src/modules/bible/study.js): номера Стронга, словари,
+   комментарии и сноски, перекрёстные ссылки, подзаголовки; жесты — двойное касание слова, касание меток, долгое касание стиха,
+   смахивание по главам, щипок для шрифта. В обычном виде модуль показывает чистый текст и принимает только переводы. */

@@ -2,12 +2,16 @@
 // полоса: соседние главы, книга и глава (выбор — шторкой), размер шрифта. В конце главы — «Прочитано»
 // (отметка идёт в план чтения, ядро: ctx.bible) и переход к следующей главе.
 // Текст и список книг — src/core/bible.js, планы и отметки — src/core/reading.js (в ядре: их видят главная и календарь).
+// В «Минимале» — изучение по логике MyBible (study.js): номера Стронга, комментарии, сноски, ссылки, подзаголовки и жесты.
 import './bible.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { BOOKS, ALL, bookOf, loadBook, chKey, parseKey, refText } from '../../core/bible.js';
+// изучение (study.js с разбором модулей) загружается лениво — только в «Минимале»
+let S = null;
+const study = async () => (S ||= await import('./study.js'));
 
 // Переводы: встроенный Синодальный и модули MyBible (*.SQLite3), сохранённые на устройстве (ctx.files, вид 'bible')
 const SYN = { id: 'synodal', short: 'СП', has: () => true, chapters: (c) => bookOf(c).chapters, book: loadBook, name: (c) => bookOf(c).name, abbr: (c) => bookOf(c).abbr };
@@ -15,14 +19,21 @@ const opened = new Map(); // id → модуль MyBible (держится от�
 async function providerOf(id) {
   if (id === 'synodal' || !ctx.files.get(id)) return SYN;
   if (!opened.has(id)) {
-    const rec = ctx.files.get(id), { openMyBible } = await import('../../core/mybible.js');
-    const m = await openMyBible(new Uint8Array(await rec.blob.arrayBuffer()), rec.name);
+    const rec = ctx.files.get(id), { openModule, abbrOf } = await import('../../core/mybible-study.js');
+    const m = await openModule(new Uint8Array(await rec.blob.arrayBuffer()), rec.meta && rec.meta.file || rec.name);
+    if (m.type !== 'bible') { m.close(); throw new Error('not a Bible module'); }
     opened.forEach((x, k) => { if (k !== id) { x.close(); opened.delete(k); } }); // в памяти — один модуль
-    opened.set(id, { id, short: shortOf(rec), has: (c) => !!m.meta.books[c], chapters: (c) => m.meta.books[c] || 0, book: (c) => m.book(c), name: (c) => m.meta.names[c] || bookOf(c).name,
-      abbr: (c) => m.meta.shorts[c] || bookOf(c).abbr, close: () => m.close() });
+    const cache = new Map();
+    // главы книги строками (обычный вид); сырые стихи с тегами — для изучения
+    const book = (c) => { if (!cache.has(c)) cache.set(c, Array.from({ length: m.books[c] || 0 }, (_, i) => m.raw(c, i + 1).map((r) => m.plain(r.t)))); return Promise.resolve(cache.get(c)); };
+    opened.set(id, { id, short: shortOf(rec), has: (c) => !!m.books[c], chapters: (c) => m.books[c] || 0, book, name: (c) => m.names[c] || bookOf(c).name,
+      abbr: (c) => m.shorts[c] || bookOf(c).abbr, close: () => { cache.clear(); m.close(); },
+      raw: (c, ch) => m.raw(c, ch), plain: m.plain, stories: (c, ch) => m.stories(c, ch), strong: m.strong, prefix: m.prefix,
+      abbr0: rec.meta && rec.meta.file ? abbrOf(rec.meta.file) : null }); // сокращение модуля — по нему сноски находят свой перевод
   }
   return opened.get(id);
 }
+const isBible = (r) => !r.meta || !r.meta.type || r.meta.type === 'bible'; // старые записи — без типа
 const shortOf = (rec) => String(rec.name || '').replace(/\.[^.]+$/, '').slice(0, 10);
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M12 6.5v6M9.5 8.8h5"/></svg>';
@@ -37,6 +48,9 @@ const I = {
 const FS_MIN = 14, FS_MAX = 30;
 
 let host = null, ctx = null, size = 'full', cur = { code: 'GEN', ch: 1 }, verses = null, failed = false, onClick = null, scrollT = 0, P = SYN;
+// изучение: стихи главы ({ v, t } или строки) и метки модулей
+const NO_MARKS = { comm: [], xref: new Map(), subs: new Map(), stories: new Map() };
+let rows = null, marks = NO_MARKS, livePx = 0;
 
 const fs = () => ctx.store.get('fs', 18);
 const isRead = () => ctx.bible.isRead(chKey(cur.code, cur.ch));
@@ -58,7 +72,8 @@ function textHTML() {
   if (!verses) return '<div class="bload">' + ui.loader('book', P.name(cur.code) + ' ' + cur.ch) + '</div>';
   const n = step(1);
   return '<h2 class="bhead">' + ui.esc(P.name(cur.code)) + ' <span>' + cur.ch + '</span></h2>' +
-    '<p class="bverses">' + verses.map((v, i) => '<span class="bv" data-v="' + (i + 1) + '"><sup>' + (i + 1) + '</sup>' + ui.esc(v) + ' </span>').join('') + '</p>' +
+    (ctx.mono && S ? '<div class="bverses">' + S.chapterHTML(ctx, P, cur, rows || verses, marks) + '</div>' :
+      '<p class="bverses">' + verses.map((v, i) => '<span class="bv" data-v="' + (i + 1) + '"><sup>' + (i + 1) + '</sup>' + ui.esc(v) + ' </span>').join('') + '</p>') +
     '<div class="bend">' + (isRead() ? '<button class="btn bdone" data-x="bmark">' + I.check + '<span>' + t('read') + '</span></button>' : '<button class="btn fill" data-x="bmark">' + t('read') + '</button>') +
     (n ? '<button class="btn" data-x="bnext">' + ui.esc(t('nextCh', { ref: P.abbr(n.code) + ' ' + n.ch })) + '</button>' : '') + '</div>';
 }
@@ -66,29 +81,80 @@ function textHTML() {
 function render() {
   if (!host) return;
   const y = host.querySelector('.btext') ? host.querySelector('.btext').scrollTop : 0;
-  host.innerHTML = '<div class="bwrap ' + size + '" style="--bfs:' + fs() + 'px">' + barHTML() + (size === 'strip' ? '' : '<div class="btext">' + textHTML() + '</div>') + '</div>';
+  host.innerHTML = '<div class="bwrap ' + size + (ctx.mono ? ' study' : '') + '" style="--bfs:' + fs() + 'px">' + barHTML() + (size === 'strip' ? '' : '<div class="btext">' + textHTML() + '</div>') + '</div>';
   const tx = host.querySelector('.btext');
   if (tx) {
     tx.scrollTop = y;
     tx.addEventListener('scroll', () => { clearTimeout(scrollT); scrollT = setTimeout(() => ctx && ctx.bible.setPos({ ...cur, y: tx.scrollTop }), 400); }, { passive: true });
+    if (ctx.mono && S && verses) gestures(tx);
   }
 }
 
+/* ---------- изучение («Минимал») ---------- */
+// Переход по ссылке: глава, стих подсвечивается; mode 'comm' — сразу комментарий к стиху
+function nav(code, ch, v, mode) {
+  if (!P.has(code)) { ctx.ui.toast(ctx.t('st.noBook')); return; }
+  if (code === cur.code && ch === cur.ch && verses) { flash(v); if (mode === 'comm') S.commentary(ctx, P, code, ch, v, nav); return; }
+  open(code, ch, 0, { v, mode });
+}
+function flash(v) {
+  const el = v && host && host.querySelector('.bv[data-v="' + v + '"]');
+  if (!el) return;
+  el.scrollIntoView({ block: 'center' });
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1600);
+}
+const verseText = (v) => { const r = rows && rows.find((x) => x.v === v); return r ? (P.plain ? P.plain(r.t) : r.t) : (verses && verses[v - 1]) || ''; };
+function gestures(tx) {
+  tx.addEventListener('contextmenu', (e) => e.preventDefault());
+  S.bindGestures(tx, {
+    lexicon: (s) => S.lexicon(ctx, s, nav),
+    dict: (w) => S.dictWord(ctx, w, nav),
+    comm: (v) => S.commentary(ctx, P, cur.code, cur.ch, v, nav),
+    xref: (v) => S.xrefs(ctx, P, cur.code, cur.ch, v, marks.xref.get(v) || [], nav),
+    foot: (v, m) => S.footnote(ctx, P, cur.code, cur.ch, v, m, nav),
+    menu: (v) => S.verseMenu(ctx, P, cur, v, verseText(v), marks, nav),
+    link: (href) => S.follow(ctx, href, nav),
+    step: (d) => { const n = step(d); if (n) open(n.code, n.ch); },
+    fs: () => fs(),
+    font: (px, done) => {
+      if (px != null) { livePx = Math.max(FS_MIN, Math.min(FS_MAX, Math.round(px))); host.querySelector('.bwrap').style.setProperty('--bfs', livePx + 'px'); }
+      if (done && livePx) { ctx.store.set('fs', livePx); livePx = 0; }
+    },
+  });
+}
+// Метки главы из вспомогательных модулей — после текста, затем перерисовка на том же месте
+function loadMarks(code, ch) {
+  if (!ctx.mono || !S || (!S.auxCount(ctx) && !P.stories)) return Promise.resolve();
+  const p = P;
+  return S.chapterMarks(ctx, P, code, ch).then((x) => {
+    if (!host || cur.code !== code || cur.ch !== ch || P !== p) return;
+    marks = x;
+    render();
+  }, (e) => ctx && ctx.logErr(e));
+}
+
 // Открыть главу; y — где был текст (при возвращении к прочитанному месту)
-function open(code, ch, y = 0) {
+function open(code, ch, y = 0, go = null) {
   if (!P.has(code)) { const f = BOOKS.find((b) => P.has(b.code)); if (!f) return; code = f.code; ch = 1; y = 0; } // нет книги в переводе — первая, что есть
   if (ch > P.chapters(code)) { ch = P.chapters(code); y = 0; }
   cur = { code, ch };
-  verses = null; failed = false;
+  verses = null; rows = null; marks = NO_MARKS; failed = false;
   ctx.bible.setPos({ code, ch, y });
   render();
   const p = P;
   p.book(code).then((book) => {
     if (!host || cur.code !== code || cur.ch !== ch || P !== p) return;
     verses = book[ch - 1] || [];
+    if (ctx.mono && P.raw) rows = P.raw(code, ch);
     render();
     const tx = host.querySelector('.btext');
     if (tx) tx.scrollTop = y;
+    loadMarks(code, ch).then(() => {
+      if (!go || !host || cur.code !== code || cur.ch !== ch) return;
+      flash(go.v);
+      if (go.mode === 'comm') S.commentary(ctx, P, code, ch, go.v, nav);
+    });
   }, (e) => { ctx && ctx.logErr(e); failed = true; render(); });
 }
 
@@ -111,17 +177,30 @@ function pickSheet() {
   });
 }
 
-// Переводы: Синодальный и модули MyBible; добавить — файл .SQLite3, удалить — крестик
+// Переводы: Синодальный и модули MyBible; добавить — файл .SQLite3, удалить — крестик.
+// В «Минимале» — ещё словари, комментарии, ссылки, подзаголовки и что показывать в тексте
+const AUX = [['dictionary', 'secDict'], ['commentaries', 'secComm'], ['crossreferences', 'secXref'], ['subheadings', 'secSubs']];
 function trSheet() {
   const { t, ui } = ctx;
   const cur0 = () => ctx.store.get('tr', 'synodal');
+  const mb = (r) => (r.size / 1048576).toFixed(1);
   const row = (id, title, sub, del) => '<div class="cell"><button class="grow btrrow" data-tr="' + id + '"><span>' + (cur0() === id ? '✓ ' : '') + ui.esc(title) + '</span><span class="st l2" style="display:block;font-size:12.5px">' + ui.esc(sub) + '</span></button>' +
     (del ? ui.icb('data-trdel="' + id + '"', I.del, t('trDel'), 'sm') : '') + '</div>';
+  const auxRow = (r) => '<div class="cell"><span class="grow"><span>' + ui.esc(r.name) + '</span><span class="st l2" style="display:block;font-size:12.5px">' + ui.esc(t('modSub', { abbr: r.meta.abbr || '', mb: mb(r) })) + '</span></span>' +
+    ui.icb('data-moddel="' + r.id + '"', I.del, t('modDel'), 'sm') + '</div>';
+  const studyHTML = () => {
+    if (!ctx.mono || !S) return '';
+    const pf = S.prefs(ctx), all = ctx.files.list('bible');
+    return AUX.map(([type, key]) => { const l = all.filter((r) => r.meta && r.meta.type === type); return l.length ? '<div class="hdr">' + t(key) + '</div><div class="group">' + l.map(auxRow).join('') + '</div>' : ''; }).join('') +
+      '<div class="hdr">' + t('st.show') + '</div><div class="group">' + [['strong', 'st.strong'], ['comm', 'st.comm'], ['xref', 'st.xref'], ['subs', 'st.subs']].map(([k, l]) =>
+        '<div class="cell"><span class="grow">' + t(l) + '</span>' + ui.sw('stp-' + k, pf[k], t(l)) + '</div>').join('') + '</div>';
+  };
   const api = ui.sheet(() => ui.snav(t('tr')) + '<div class="group">' + row('synodal', t('trSyn'), t('trSynSub'), false) +
-    ctx.files.list('bible').map((r) => row(r.id, r.name, t('trSub', { n: r.meta ? r.meta.count : '?', mb: (r.size / 1048576).toFixed(1) }) + (r.meta && r.meta.lang ? ' · ' + r.meta.lang : ''), true)).join('') + '</div>' +
-    '<button class="btn" data-tradd style="width:100%;margin-top:14px">' + t('trAdd') + '</button><p class="ftr">' + t('trHint') + '</p>', (el) => {
+    ctx.files.list('bible').filter(isBible).map((r) => row(r.id, r.name, t('trSub', { n: r.meta ? r.meta.count : '?', mb: mb(r) }) + (r.meta && r.meta.lang ? ' · ' + r.meta.lang : ''), true)).join('') + '</div>' +
+    studyHTML() +
+    '<button class="btn" data-tradd style="width:100%;margin-top:14px">' + t('trAdd') + '</button><p class="ftr">' + t(ctx.mono ? 'trHintStudy' : 'trHint') + '</p>', (el) => {
     el.addEventListener('click', async (e) => {
-      const r = e.target.closest('[data-tr]'), d = e.target.closest('[data-trdel]'), add = e.target.closest('[data-tradd]');
+      const r = e.target.closest('[data-tr]'), d = e.target.closest('[data-trdel]'), md = e.target.closest('[data-moddel]'), add = e.target.closest('[data-tradd]');
       if (r) { await switchTr(r.dataset.tr); api.close(); }
       else if (d) {
         if (!(await ui.confirm(t('trDelQ'), t('trDelText'), t('trDel')))) return;
@@ -129,10 +208,24 @@ function trSheet() {
         const o = opened.get(d.dataset.trdel); if (o) { o.close(); opened.delete(d.dataset.trdel); }
         ctx.files.remove(d.dataset.trdel);
         api.update();
+      } else if (md) {
+        if (!(await ui.confirm(t('modDelQ'), t('modDelText'), t('modDel')))) return;
+        S && S.closeAux();
+        ctx.files.remove(md.dataset.moddel);
+        api.update();
+        reopen();
       } else if (add) addModule(() => api.update());
+    });
+    el.addEventListener('change', (e) => {
+      const k = (e.target.dataset.sw || '').replace(/^stp-/, '');
+      if (!e.target.dataset.sw || k === e.target.dataset.sw) return;
+      ctx.store.set('study', { ...prefs(ctx), [k]: e.target.checked });
+      reopen();
     });
   });
 }
+// перерисовать главу на том же месте (метки модулей — заново)
+const reopen = () => { const tx = host && host.querySelector('.btext'); open(cur.code, cur.ch, tx ? tx.scrollTop : 0); };
 
 async function switchTr(id) {
   try { P = await providerOf(id); ctx.store.set('tr', P.id); ctx.log('перевод: ' + P.short); }
@@ -140,7 +233,8 @@ async function switchTr(id) {
   open(cur.code, cur.ch);
 }
 
-// Добавить модуль MyBible: проверка (есть таблица verses и книги канона) → сохранение на устройстве → выбрать
+// Добавить модуль MyBible: тип по таблицам (перевод — есть стихи книг канона; в «Минимале» — и словари, комментарии,
+// ссылки, подзаголовки) → сохранение на устройстве → перевод выбирается сразу
 function addModule(done) {
   const input = document.createElement('input');
   input.type = 'file';
@@ -150,15 +244,20 @@ function addModule(done) {
     if (!f) return;
     ctx.ui.toast(ctx.t('trReading'));
     try {
-      const { openMyBible, bookCount } = await import('../../core/mybible.js');
-      const m = await openMyBible(new Uint8Array(await f.arrayBuffer()), f.name);
-      const meta = { lang: m.meta.lang, count: bookCount(m.meta) };
+      const { openModule } = await import('../../core/mybible-study.js'), { bookCount } = await import('../../core/mybible.js');
+      let m;
+      try { m = await openModule(new Uint8Array(await f.arrayBuffer()), f.name); } catch (e) { throw Object.assign(e, { reason: 'notbible' }); }
+      const bible = m.type === 'bible', count = bible ? bookCount({ books: m.books }) : 0;
       m.close();
-      const rec = { id: 'b' + Date.now().toString(36), kind: 'bible', name: m.meta.title, size: f.size, type: 'application/x-sqlite3', created: Date.now(), blob: f, meta, songs: [] };
+      if (!bible && !ctx.mono) throw Object.assign(new Error('not a Bible module'), { reason: 'notbible' });
+      if (bible && !count) throw Object.assign(new Error('no canonical books'), { reason: 'nobooks' });
+      const meta = { type: m.type, abbr: m.abbr, file: f.name, lang: m.info.language || '', count };
+      const rec = { id: 'b' + Date.now().toString(36), kind: 'bible', name: m.title, size: f.size, type: 'application/x-sqlite3', created: Date.now(), blob: f, meta, songs: [] };
       if (!(await ctx.files.add(rec))) ctx.ui.toast(ctx.t('trNotSaved'));
       else if (ctx.files.reread) await ctx.files.reread(rec);
-      ctx.log('модуль MyBible: ' + m.meta.title + ', книг ' + meta.count + ', ' + (f.size / 1048576).toFixed(1) + ' МБ');
-      await switchTr(rec.id);
+      ctx.log('модуль MyBible (' + m.type + '): ' + m.title + (bible ? ', книг ' + count : '') + ', ' + (f.size / 1048576).toFixed(1) + ' МБ');
+      if (bible) await switchTr(rec.id);
+      else { S && S.closeAux(); ctx.ui.toast(ctx.t('modAdded', { name: m.title })); reopen(); }
       done();
     } catch (e) {
       ctx.logErr(e);
@@ -197,13 +296,13 @@ export default {
     bind();
     const p = ctx.bible.pos() || { code: 'GEN', ch: 1, y: 0 };
     const go = () => open(bookOf(p.code) ? p.code : 'GEN', p.ch || 1, p.y || 0);
-    (ctx.files.ready || Promise.resolve()).then(() => providerOf(ctx.store.get('tr', 'synodal'))).then((x) => { P = x; }, (e) => { ctx.logErr(e); P = SYN; }).then(() => { if (host) go(); });
+    (ctx.files.ready || Promise.resolve()).then(() => (ctx.mono ? study() : null)).then(() => providerOf(ctx.store.get('tr', 'synodal'))).then((x) => { P = x; }, (e) => { ctx.logErr(e); P = SYN; }).then(() => { if (host) go(); });
   },
   resize(sz) { size = sz; render(); },
   unmount() {
     clearTimeout(scrollT);
-    opened.forEach((x) => x.close()); opened.clear(); P = SYN; // модуль MyBible в памяти — только пока Библия открыта
+    opened.forEach((x) => x.close()); opened.clear(); P = SYN; S && S.closeAux(); // модули MyBible в памяти — только пока Библия открыта
     if (host && onClick) host.removeEventListener('click', onClick);
-    host = null; ctx = null; verses = null;
+    host = null; ctx = null; verses = null; rows = null; marks = NO_MARKS;
   },
 };
