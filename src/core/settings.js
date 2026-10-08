@@ -97,13 +97,30 @@ export function setTheme(store, theme) {
 /* ---------- вкладки ---------- */
 
 export const DEFAULT_TABS = ['home', 'library', 'calendar', 'tools'];
+// Где появляется новая вкладка: «Библия» (церковный режим) — в середине, сразу после «Песен»
+const TAB_AFTER = { bible: 'library' };
+// Раньше «Библия» вставала в конец; один раз переносим её в середину (дальше порядок — как задал человек)
+export function tabsMigrate(settings) {
+  const t = settings.tabs;
+  if (settings.tabsBibleMid || !Array.isArray(t)) { settings.tabsBibleMid = true; return false; }
+  settings.tabsBibleMid = true;
+  const i = t.indexOf('bible'), j = t.indexOf('library');
+  if (i < 0 || i !== t.length - 1 || j < 0) return true;
+  t.splice(i, 1); t.splice(j + 1, 0, 'bible');
+  return true;
+}
 
 // Видимые вкладки по порядку. settings.tabs — порядок видимых, settings.tabsOff — убранные.
-// Вкладка, которой нет ни там, ни там (новая в обновлении), появляется в конце. Хотя бы одна остаётся всегда.
+// Вкладка, которой нет ни там, ни там (новая в обновлении), появляется в конце (у «Библии» — после «Песен»).
+// Хотя бы одна остаётся всегда.
 export function visibleTabs(settings, known) {
   const off = settings.tabsOff || [];
   const list = (settings.tabs || DEFAULT_TABS).filter((k, i, a) => known.includes(k) && !off.includes(k) && a.indexOf(k) === i);
-  known.forEach((k) => { if (!list.includes(k) && !off.includes(k) && !(settings.tabs || DEFAULT_TABS).includes(k)) list.push(k); });
+  known.forEach((k) => {
+    if (list.includes(k) || off.includes(k) || (settings.tabs || DEFAULT_TABS).includes(k)) return;
+    const i = TAB_AFTER[k] ? list.indexOf(TAB_AFTER[k]) : -1;
+    if (i >= 0) list.splice(i + 1, 0, k); else list.push(k);
+  });
   return list.length ? list : [known[0]];
 }
 

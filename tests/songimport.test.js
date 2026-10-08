@@ -70,13 +70,35 @@ describe('форматы', () => {
   });
 });
 
-import { apiBase, toSong } from '../src/core/holyrics.js';
+import { apiBase, toSong, holyricsCall, holyricsCheck } from '../src/core/holyrics.js';
+import { vi } from 'vitest';
 import { normKey } from '../src/core/screens/songimport.js';
 describe('Holyrics', () => {
   it('адрес и порт', () => {
     expect(apiBase('192.168.1.5', '8091')).toBe('http://192.168.1.5:8091');
     expect(apiBase('http://10.0.0.2:9000/')).toBe('http://10.0.0.2:9000');
     expect(apiBase('')).toBe(null);
+    // опечатки с телефона: запятые, пробелы, вставленный путь
+    expect(apiBase('192,168,1,5 ', '8091')).toBe('http://192.168.1.5:8091');
+    expect(apiBase('http://192.168.1.5:8091/api/GetSongs?token=x')).toBe('http://192.168.1.5:8091');
+  });
+  it('ошибки — с причиной и подробностью', async () => {
+    const reply = (status, body) => vi.fn(async () => ({ status, text: async () => (typeof body === 'string' ? body : JSON.stringify(body)) }));
+    const cfg = { addr: '192.168.1.5', port: '8091', token: 't' }, why = (p) => p.then(() => 'ok', (e) => e.reason);
+    globalThis.fetch = reply(200, { status: 'error', error: 'invalid token' });
+    expect(await why(holyricsCall(cfg, 'GetSongs'))).toBe('token');
+    globalThis.fetch = reply(403, { status: 'error', error: { code: 403, key: 'invalid_api_key', message: 'Invalid API Key' } });
+    expect(await why(holyricsCall(cfg, 'GetSongs'))).toBe('token');
+    globalThis.fetch = reply(404, 'Not Found');
+    expect(await why(holyricsCall(cfg, 'GetSongs'))).toBe('old');
+    globalThis.fetch = vi.fn(async () => { throw new TypeError('Failed to connect'); });
+    const e = await holyricsCall(cfg, 'GetSongs').catch((x) => x);
+    expect([e.reason, e.detail, e.base]).toEqual(['net', 'Failed to connect', 'http://192.168.1.5:8091']);
+    globalThis.fetch = reply(200, { status: 'ok', data: { version: '2.26.1', permissions: 'GetLyrics,GetSongs' } });
+    expect(await holyricsCheck(cfg)).toEqual({ version: '2.26.1', perms: ['GetLyrics', 'GetSongs'], songs: true });
+    globalThis.fetch = reply(200, '\uFEFF{"status":"ok","data":{"version":"2.25.0","permissions":"GetFavorites"}}');
+    expect((await holyricsCheck(cfg)).songs).toBe(false);
+    delete globalThis.fetch;
   });
   it('песня: слайды по частям, описание слайда — заголовок части', () => {
     const s = toSong({ title: 'Свят', artist: 'Хор', key: 'C#m', bpm: 72.0, slides: [{ text: 'Свят, свят', slide_description: 'Verse 1' }, { text: 'Господь', slide_description: 'Verse 1' }, { text: 'Аллилуйя', slide_description: 'Chorus' }] });

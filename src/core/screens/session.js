@@ -42,14 +42,14 @@ export function sessionGroups(st) {
 
 // Модули группы (окно старой «сессии с инструментом» — сам модуль)
 function members(st, g) {
-  const list = modules.filter((m) => groupOf(m) === g && inSession(st, m));
+  const list = modules.filter((m) => !m.tab && groupOf(m) === g && inSession(st, m));
   if (list.length) return list;
   const m = moduleById(g);
   return m ? [m] : [];
 }
 
 const groupName = (st, g) => {
-  const all = modules.filter((m) => groupOf(m) === g);
+  const all = modules.filter((m) => !m.tab && groupOf(m) === g);
   return all.length > 1 ? t('group.' + g) : all.length ? moduleName(all[0]) : moduleById(g) ? moduleName(moduleById(g)) : g;
 };
 // Подпись на переключателе группы: «Пэды», а не «Дрон» (как в прототипе)

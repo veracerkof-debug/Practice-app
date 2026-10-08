@@ -296,6 +296,7 @@ export default {
   id: 'bible',
   order: 5,
   church: true, // только в церковном режиме
+  tab: true, // своя вкладка внизу, а не инструмент: в «Инструментах», быстром доступе и окнах сессии её нет
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,

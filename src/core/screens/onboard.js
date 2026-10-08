@@ -59,7 +59,7 @@ export function onboarding(app, done = () => {}) {
     // Набор инструментов: по уровню и инструментам подставлен, любой можно отметить или снять
     if (s === 'tools') {
       return '<h1 class="obh">' + t('ob.toolsTitle') + '</h1><p class="obp">' + t('ob.toolsText.' + (p.level === 'beginner' ? 'beginner' : 'other')) + '</p><div class="oblist">' +
-        modules.map((m) => '<button type="button" class="obcard obtool' + (f.tools.includes(m.id) ? ' on' : '') + '" data-obtool="' + m.id + '" aria-pressed="' + f.tools.includes(m.id) + '">' +
+        modules.filter((m) => !m.tab).map((m) => '<button type="button" class="obcard obtool' + (f.tools.includes(m.id) ? ' on' : '') + '" data-obtool="' + m.id + '" aria-pressed="' + f.tools.includes(m.id) + '">' +
           '<span class="obtic" style="background:' + (m.color || '#8E8E93') + '">' + m.icon + '</span><span><b>' + esc(moduleName(m)) + '</b><small>' + esc(aboutOf(m)) + '</small></span></button>').join('') +
         '</div><p class="ftr">' + t('ob.toolsHint') + '</p>';
     }

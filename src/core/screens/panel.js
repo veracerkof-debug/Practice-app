@@ -250,7 +250,7 @@ function featHTML(app) {
       (st.bible && st.bible.plan ? '<button class="cell act" data-brestart>' + t('church.restart') + '</button>' : '') : '') + '</div>' +
     '<p class="ftr">' + t(st.church ? 'church.hintOn' : 'church.hint') + (st.church && st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
     '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
-    modules.filter((m) => !CHURCH_MODULES.includes(m.id) || st.church).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
+    modules.filter((m) => !m.tab && (!CHURCH_MODULES.includes(m.id) || st.church)).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
     // определитель аккордов и гамм в «Теории»: в «Минимале» включён по умолчанию, в обычном виде — здесь
     (isOn(st, 'theory') ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow"><span>' + t('feat.theoryFind') + '</span><span class="st l2" style="display:block;font-size:13px">' +
       t('feat.theoryFind.about') + '</span></span><label class="sw"><input type="checkbox" data-thfind' + (theoryFind(st) ? ' checked' : '') + ' aria-label="' + esc(t('feat.theoryFind')) + '"><i></i></label></div></div>' : '') +
@@ -299,11 +299,8 @@ function rootHTML(app) {
 // Полноэкранная панель профиля; page — 'root' или ключ PAGES
 export function createPanel(app, onChange) {
   let page = null, layer = null, input = null, lastPage = null;
-  // Перезапуск для смены строк (язык, вид): после него открывается та же страница настроек на том же месте
-  const reloadHere = () => {
-    try { sessionStorage.setItem('melete.reopen', JSON.stringify({ page, y: layer ? layer.scrollTop : 0 })); } catch { /* без хранилища — просто перезапуск */ }
-    setTimeout(() => location.reload(), 150);
-  };
+  // Смена языка или вида: строки и стили меняются на месте — настройки остаются открытыми на той же странице
+  const relang = () => { app.relang(); render(); onChange(); };
   const render = () => {
     if (!page) { if (layer) { leave(layer, 260); layer = null; } lastPage = null; return; }
     if (!layer) {
@@ -344,8 +341,8 @@ export function createPanel(app, onChange) {
         const st = app.store.state.settings, was = st.uiStyle === 'mono' && st.monoLang !== false;
         st.uiStyle = b.dataset.v === 'mono' && extOn(st) ? 'mono' : 'default';
         applyTheme(st); changed();
-        // у «Минимала» свой язык (греческий и латынь) — строки перечитываются после перезапуска
-        if (was !== (st.uiStyle === 'mono' && st.monoLang !== false)) reloadHere();
+        // у «Минимала» свой язык (русский с греческими названиями) — строки меняются на месте
+        if (was !== (st.uiStyle === 'mono' && st.monoLang !== false)) relang();
         return;
       }
       if ((b = g('[data-uisz]'))) {
@@ -364,7 +361,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="melevel"] [data-v]'))) { saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), level: b.dataset.v }); render(); onChange(); return; }
       if ((b = g('[data-seg="track"] [data-v]'))) { app.store.state.settings.trackMode = b.dataset.v; changed(); return; }
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
-      if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); reloadHere(); return; }
+      if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); relang(); return; }
       if (g('[data-act="export"]')) { exportBackup(app); return; }
       if (g('[data-act="import"]')) { input.click(); return; }
       if (g('[data-act="reset"]')) {
@@ -386,7 +383,7 @@ export function createPanel(app, onChange) {
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); return; }
       if (e.target.hasAttribute('data-bplan')) { const v = e.target.value; app.bible.setPlan(v === 'none' ? null : v, dayKeyOf(Date.now())); render(); onChange(); return; }
       if (e.target.hasAttribute('data-thfind')) { const st = app.store.state.settings; (st.theory ??= {}).find = e.target.checked; app.store.settingsChanged(); return; }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') reloadHere(); }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
         if (r.locked) { toast(t('me.priorLocked')); e.target.value = r.priorHours || ''; }
@@ -406,7 +403,7 @@ export function createPanel(app, onChange) {
   const panel = {
     open(p = 'root') { page = p; render(); if (layer) layer.scrollTop = 0; },
     close() { page = null; render(); },
-    // после перезапуска (reloadHere) — вернуть открытую страницу
+    // после перезапуска приложения — вернуть открытую страницу (если она была запомнена)
     reopen() {
       let r = null;
       try { r = JSON.parse(sessionStorage.getItem('melete.reopen') || 'null'); sessionStorage.removeItem('melete.reopen'); } catch { r = null; }

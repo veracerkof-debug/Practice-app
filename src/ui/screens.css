@@ -250,3 +250,10 @@
 .szin{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg)}
 .szin .wrap{padding-bottom:0}
 .szin .tabbar{position:absolute}
+/* Holyrics: две кнопки и итог проверки в окне */
+.hrbtns{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:14px}
+.hrbtns .btn{min-height:46px}
+.hrbox{margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--red) 10%,var(--cell));display:flex;flex-direction:column;gap:6px}
+.hrbox.ok{background:color-mix(in srgb,#34C759 14%,var(--cell))}
+.hrdet{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--l2);word-break:break-all}
+.hrtip{font-size:13.5px;line-height:1.4;color:var(--ink)}

@@ -6,7 +6,7 @@ import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.j
 import { loadDevice, saveDevice } from './device.js';
 import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
-import { applyTheme } from './settings.js';
+import { applyTheme, tabsMigrate } from './settings.js';
 import { extCheck } from './ext.js';
 import { createShell } from './screens/shell.js';
 import { initBack } from './back.js';
@@ -40,7 +40,9 @@ export function boot(root) {
   const st0 = store.state.settings;
   if (extCheck(st0).changed) store.settingsChanged();
   // время доступа к дополнительному оформлению вышло — вернуть обычное (строки и стили — перезапуском)
-  setInterval(() => { if (extCheck(store.state.settings).changed) { store.settingsChanged(); setTimeout(() => location.reload(), 150); } }, 15000);
+  // (строки и стили меняются на месте, без перезапуска — см. app.relang)
+  setInterval(() => { if (extCheck(store.state.settings).changed) { store.settingsChanged(); app.relang(); } }, 15000);
+  if (tabsMigrate(st0)) store.settingsChanged();
   initI18n(st0.uiStyle === 'mono' && st0.monoLang !== false ? 'el' : st0.lang);
   ensureLib(store.state, t);
   applyTheme(store.state.settings);
@@ -152,6 +154,13 @@ export function boot(root) {
   // Признаки занятия: касания, звук, микрофон — и проверки бездействия сессии и секундомера
   activity = app.activity = createActivity(app, { soundingAudio });
   app.startSession = (type, songId, tool) => session.start(type, songId, tool);
+  // Язык и вид поменялись (Оформление, доступ к «Минимал»): строки и стили — на месте, без перезапуска и без ухода с экрана
+  app.relang = () => {
+    const st = store.state.settings;
+    initI18n(st.uiStyle === 'mono' && st.monoLang !== false ? 'el' : st.lang);
+    applyTheme(st);
+    if (app.render) app.render();
+  };
   createShell(app, root);
   createMixerDrawer(app);
   // Играет, но не слышно (микшер, громкость устройства) — уведомление внизу

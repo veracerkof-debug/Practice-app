@@ -10,7 +10,7 @@ import { topbar } from './common.js';
 import { showHelp } from '../help.js';
 
 export function renderTools(app, root) {
-  const list = modules.filter((m) => isOn(app.store.state.settings, m.id));
+  const list = modules.filter((m) => !m.tab && isOn(app.store.state.settings, m.id)); // Библия — своя вкладка
   root.innerHTML = topbar() + '<div class="large">' + t('tools.title') + '</div><div class="tgrid">' + list.map((m) => {
     let st = '';
     try { st = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ }
