@@ -1,6 +1,6 @@
 // Файлы пользователя (аудио, табулатуры) — только на этом устройстве, в IndexedDB.
 // База и формат записей — как в прототипе: practice-audio / tracks, { id, name, size, type, songs[], created, blob, kind?, peaks?, dur? }.
-// kind: 'tab' — табулатура, иначе аудио.
+// kind: 'tab' — табулатура, 'bible' — модуль Библии (MyBible, SQLite), иначе аудио.
 
 const DB = 'practice-audio', STORE = 'tracks';
 
@@ -34,8 +34,8 @@ export function createFiles({ indexedDB = globalThis.indexedDB } = {}) {
       .then((r) => { all.push(...(r || [])); emit(); })
       .catch(() => { files.noDb = true; }),
 
-    // kind: 'audio' | 'tab'
-    list: (kind) => all.filter((r) => (kind === 'tab' ? r.kind === 'tab' : r.kind !== 'tab')),
+    // kind: 'audio' | 'tab' | 'bible' (модули Библии MyBible); у аудио в старых записях вида нет
+    list: (kind) => all.filter((r) => (kind === 'tab' || kind === 'bible' ? r.kind === kind : !r.kind || r.kind === 'audio')),
     get: (id) => all.find((r) => r.id === id),
 
     async add(rec) {

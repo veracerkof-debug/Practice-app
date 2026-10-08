@@ -206,7 +206,7 @@ export function fromPptx(files, name) {
 // .ewsx — zip с main.db: таблицы с RTF-текстом ищутся сами
 let wasmPath = null; // путь к sql-wasm.wasm — для тестов вне браузера
 export const setSqlWasm = (p) => { wasmPath = p; };
-async function sqlite(u8) {
+export async function sqlite(u8) {
   const [{ default: init }, wasm] = await Promise.all([import('sql.js'), wasmPath || import('sql.js/dist/sql-wasm.wasm?url').then((m) => m.default)]);
   const SQL = await init({ locateFile: () => wasm });
   return new SQL.Database(u8);

@@ -89,3 +89,23 @@ describe('Holyrics', () => {
     expect(normKey('x')).toBe(null);
   });
 });
+
+import { openMyBible, cleanVerse, NUM_OF } from '../src/core/mybible.js';
+describe('модули MyBible', () => {
+  it('разметка убирается, слова Христа и курсив остаются текстом', () => {
+    expect(cleanVerse('В начале<S>7225</S> сотворил<S>1254</S> Бог<f>[1]</f> небо <J>и</J> <i>землю</i>.<pb/>')).toBe('В начале сотворил Бог небо и землю.');
+  });
+  it('книги по номерам MyBible, главы, названия и описание модуля', async () => {
+    const SQL = await initSqlJs({ locateFile: () => WASM });
+    const db = new SQL.Database();
+    db.run('CREATE TABLE info (name TEXT, value TEXT); INSERT INTO info VALUES (\'description\', \'King James Version\'), (\'language\', \'en\');');
+    db.run('CREATE TABLE books (book_color TEXT, book_number NUMERIC, short_name TEXT, long_name TEXT); INSERT INTO books VALUES (\'#ccc\', 10, \'Gen\', \'Genesis\'), (\'#ccc\', 500, \'John\', \'John\');');
+    db.run('CREATE TABLE verses (book_number NUMERIC, chapter NUMERIC, verse NUMERIC, text TEXT)');
+    db.run('INSERT INTO verses VALUES (10, 1, 1, \'In the beginning<S>7225</S> God created\'), (10, 1, 2, \'And the earth\'), (10, 2, 1, \'Thus\'), (500, 1, 1, \'In the beginning was the Word\'), (170, 1, 1, \'Tobit\')');
+    const m = await openMyBible(db.export(), 'KJV.SQLite3');
+    expect(m.meta).toMatchObject({ title: 'King James Version', lang: 'en', books: { GEN: 2, JOH: 1 }, names: { GEN: 'Genesis', JOH: 'John' } });
+    expect(await m.book('GEN')).toEqual([['In the beginning God created', 'And the earth'], ['Thus']]);
+    expect(NUM_OF.REV).toBe(730);
+    m.close();
+  });
+});
