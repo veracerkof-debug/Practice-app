@@ -52,11 +52,22 @@ function personHello(who, d) {
   const day = Math.floor(d.getTime() / 864e5), names = t(PERSON[who] + '.names').split('|');
   return { hello: greet(d.getHours()) + ', ' + names[(day + (d.getHours() >= 12 ? 1 : 0)) % names.length], line: t(PERSON[who] + '.' + (1 + (day % PERSON_LINES))) };
 }
+// Личное обращение после кода (создатель, Михаил, Парисо) — в обоих видах; null — обращения нет
+function personal(st, now) {
+  const who = extWho(st);
+  if (PERSON[who]) return personHello(who, now);
+  if (who === 'p') return { hello: t('mono.creator', { g: greet(now.getHours()) }), line: roleLine(now) };
+  return null;
+}
+const elx = (s) => esc(s).replace(/(Μελέτη|Μιχαήλ)/g, '<span lang="el">$1</span>');
 function helloHTML(st, now) {
-  const who = extWho(st), el = (s) => esc(s).replace(/(Μελέτη|Μιχαήλ)/g, '<span lang="el">$1</span>');
-  if (PERSON[who]) { const p = personHello(who, now); return '<h1 class="mhello">' + el(p.hello) + '</h1><p class="mrole">' + el(p.line) + '</p>'; }
-  if (who === 'p') return '<h1 class="mhello">' + esc(t('mono.creator', { g: greet(now.getHours()) })) + '</h1><p class="mrole">' + el(roleLine(now)) + '</p>';
-  return '<h1 class="mhello">' + esc(greet(now.getHours())) + '</h1>';
+  const p = personal(st, now);
+  return p ? '<h1 class="mhello">' + elx(p.hello) + '</h1><p class="mrole">' + elx(p.line) + '</p>' : '<h1 class="mhello">' + esc(greet(now.getHours())) + '</h1>';
+}
+// Обычный вид: приветствие строкой под заголовком «Сегодня» — только при личном обращении
+function helloClassic(st) {
+  const p = personal(st, new Date());
+  return p ? '<div class="hgreet" aria-live="polite"><b>' + elx(p.hello) + '</b><span>' + elx(p.line) + '</span></div>' : '';
 }
 // Церковный режим: чтение дня по плану — главы, сколько прочитано, «Читать» открывает Библию на первой непрочитанной
 function readingCard(app, mono = false) {
@@ -112,7 +123,7 @@ export function homeHTML(app) {
   if (app.store.state.settings.uiStyle === 'mono') return homeMonoHTML(app);
   const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
   const today = weekday(Date.now()), plan = st.days, WD = weekdays();
-  let h = topbar(logoHTML()) + '<div class="large">' + t('home.title') + '</div><div class="hcols"><div>';
+  let h = topbar(logoHTML()) + '<div class="large">' + t('home.title') + '</div>' + helloClassic(st) + '<div class="hcols"><div>';
   // «Только инструменты»: без недели, цели, камня и звания — сразу рабочее место и инструменты
   const plain = !!st.toolsOnly;
   if (!plain) h += '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
