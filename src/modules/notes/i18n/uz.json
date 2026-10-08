@@ -80,6 +80,7 @@
   "pdf.pwWrong": "Parol mos kelmadi.",
   "pdf.pwOpen": "Ochish",
   "pdf.err.broken": "PDF shikastlangan yoki toʻliq yuklanmagan",
+  "pdf.err.reupload": "Agar fayl boshqa ilovalarda ochilsa — uni bu yerda oʻchirib (−), qayta yuklash kerak",
   "pdf.err.pw": "Fayl parol bilan himoyalangan",
   "pdf.err.mem": "Qurilma xotirasi yetmadi",
   "pdf.err.other": "PDF ochilmadi",

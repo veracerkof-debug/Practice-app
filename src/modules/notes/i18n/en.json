@@ -81,6 +81,7 @@
   "pdf.pwWrong": "Wrong password.",
   "pdf.pwOpen": "Open",
   "pdf.err.broken": "The PDF is damaged or incomplete",
+  "pdf.err.reupload": "If the file opens in other apps — delete it here (−) and upload it again",
   "pdf.err.pw": "The file is password-protected",
   "pdf.err.mem": "Not enough device memory",
   "pdf.err.other": "The PDF did not open",

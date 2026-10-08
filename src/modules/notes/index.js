@@ -108,7 +108,7 @@ const mbOf = (n) => (n / 1048576).toFixed(1) + ' МБ';
 function pdfErr(e) {
   const n = (e && e.name) || 'Error';
   const k = n === 'InvalidPDFException' ? 'pdf.err.broken' : n === 'PasswordException' ? 'pdf.err.pw' : n === 'ReadError' ? 'pdf.err.read' : /memory|allocation/i.test(String(e && e.message)) ? 'pdf.err.mem' : 'pdf.err.other';
-  return ctx.t(k) + ' (' + n + ')';
+  return ctx.t(k) + (k === 'pdf.err.broken' ? '. ' + ctx.t('pdf.err.reupload') : '') + ' (' + n + ')';
 }
 
 // Пароль к файлу: окно с полем; null — отказались
@@ -416,6 +416,45 @@ async function addFile() {
   if (await ctx.confirmUpload()) input.click();
 }
 
+// Сверка копии в хранилище с прочитанными байтами: начало, конец и четыре места между ними по 64 КБ.
+// true — совпадает; false — копия испорчена; null — копию не прочитать
+async function sameCopy(copy, bytes) {
+  try {
+    const n = bytes.length, W = 65536, at = [0, n - W, ...[1, 2, 3, 4].map((k) => Math.floor((n * k) / 5))].map((x) => Math.max(0, Math.min(x, n - W)));
+    for (const o of at) {
+      const c = new Uint8Array(await copy.slice(o, Math.min(n, o + W)).arrayBuffer()), b = bytes.subarray(o, Math.min(n, o + W));
+      if (c.length !== b.length) return false;
+      for (let i = 0; i < c.length; i++) if (c[i] !== b[i]) return false;
+    }
+    return true;
+  } catch { return null; }
+}
+
+// Файл с устройства — сначала целиком в память и сохраняется уже из памяти: на Android выбранный файл часто
+// приходит «ссылкой» на другое приложение, и копия в хранилище из такой ссылки бывала неполной или испорченной
+// (большая книга потом не открывалась — «PDF повреждён»). Копия сверяется с байтами; не совпала — сохраняется
+// ещё раз, а открывается файл из памяти
+async function storeFile(rec, f) {
+  let bytes = null;
+  try { bytes = new Uint8Array(await f.arrayBuffer()); rec.blob = new Blob([bytes], { type: f.type || (rec.fmt === 'pdf' ? 'application/pdf' : '') }); }
+  catch (err) { ctx.log('файл не читается целиком (' + (err && err.name) + ') — сохраняется как есть', 'w'); }
+  const mem = rec.blob;
+  const saved = await ctx.files.add(rec);
+  let rr = saved && ctx.files.reread ? await ctx.files.reread(rec) : false, ok = null;
+  if (rr && bytes) {
+    ok = await sameCopy(rec.blob, bytes);
+    if (ok === false) {
+      ctx.log('копия на устройстве не совпала с файлом — сохраняется заново', 'w');
+      rec.blob = mem;
+      await ctx.files.save(rec);
+      rr = await ctx.files.reread(rec);
+      ok = rr ? await sameCopy(rec.blob, bytes) : null;
+      if (ok !== true) { rec.blob = mem; rr = false; ctx.log('копия снова не совпала — файл открыт из памяти; после перезапуска может не открыться', 'w'); }
+    }
+  }
+  return { saved, rr, ok };
+}
+
 // Файлы с устройства (можно сразу несколько): все сохраняются, открывается первый
 async function onFile(e) {
   const list = [...e.target.files];
@@ -427,8 +466,9 @@ async function onFile(e) {
     const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type,
       fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' || (await sniffPdf(f)) ? 'pdf' : 'score',
       songs: song ? [song.id] : [], created: Date.now(), blob: f };
-    const saved = await ctx.files.add(rec), rr = saved && ctx.files.reread ? await ctx.files.reread(rec) : false;
-    ctx.log('загрузка: ' + mbOf(f.size) + ', тип ' + (f.type || 'нет') + ', формат ' + rec.fmt + (saved ? ', сохранён' : ', НЕ сохранён') + (rr ? ', читается из копии' : ''), saved ? 'i' : 'w');
+    const { saved, rr, ok } = await storeFile(rec, f);
+    ctx.log('загрузка: ' + mbOf(f.size) + ', тип ' + (f.type || 'нет') + ', формат ' + rec.fmt + (saved ? ', сохранён' : ', НЕ сохранён') + (rr ? ', читается из копии' : '') +
+      (ok === true ? ', копия сверена' : ok === false ? ', копия НЕ совпала' : ''), saved && ok !== false ? 'i' : 'w');
     if (!saved) lost = true;
     first = first || rec;
     if (!ctx) return;
