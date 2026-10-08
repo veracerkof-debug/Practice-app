@@ -523,8 +523,9 @@ function bridgeOf(Gf, A, B, u, St, jNut, jBr, sk, w, inside, trace) {
 
 /* ---------- главное ---------- */
 
-// Найти гриф. opts.k — известный сдвиг номеров (если номер лада задан вручную). Возвращает null или
-// { frets: [{ n, a, b, seen }], strings: [{ i, a, b }], edges: [[a, b], [a, b]], abs, conf, score, … } — точки в пикселях кадра.
+// Найти гриф. Возвращает { ok: false, reason } или { ok: true, frets: [{ n, a, b, seen }] (0 — порожек), strings: [{ i, a, b }]
+// (i — от края A, от порожка до бриджа), nut, bridge: { a, b }, edges, alts: [{ shift, prior }] — запасные номера ладов,
+// geo — для locate и pointAt }. Точки — в пикселях кадра; a — край A, b — край B. opts.trace — массив для отладки.
 export function detectFretboard(img, opts = {}) {
   const Gh = grayOf(img, HOUGH_SIDE), E = edgesOf(Gh);
   const segs = houghPeaks(Gh, E).map((L) => segmentOf(Gh, E, L.phi, L.rho, Math.max(6, Gh.W * 0.02))).filter(Boolean);
@@ -599,6 +600,7 @@ export function detectFretboard(img, opts = {}) {
   // порожек и бридж — та пара, при которой найденные лады лучше всего ложатся на закон (z = 0 у порожка, 1 у бриджа):
   // при неверном порожке или не той поперечной линии у бриджа лады между ними не сходятся
   let pick = null, anyBridge = false;
+  const byNut = new Map(); // лучший результат для каждого кандидата в порожек — для запасных вариантов номера
   for (const nut of nuts) {
     const jNut = posOf(fit0.m, nut.n), jBr = (fit0.m[0] + fit0.m[1]) / (fit0.m[2] + 1); // z = 1 — конец струны
     const brs = bridgeOf(Gf, A, B, u, St, jNut, jBr, sk, best.w, inside, opts.trace);
@@ -615,11 +617,16 @@ export function detectFretboard(img, opts = {}) {
       const sc = err - (nut.run ? 0.03 : 0); // начало сплошного ряда — при прочих равных
       if (opts.trace) opts.trace.push({ nut: nut.n, run: nut.run, br: Math.round(br.j), z: +br.z.toFixed(1), err: +err.toFixed(3) });
       if (!pick || sc < pick.sc) pick = { sc, err, m, hits, nut, br };
+      if (!byNut.has(nut.n) || err < byNut.get(nut.n).err) byNut.set(nut.n, { err, nut });
     }
   }
   if (!pick) return { ok: false, reason: anyBridge ? 'nut' : 'bridge' };
   if (!(pick.err < 0.15)) return { ok: false, reason: 'bridge' };
   const { m, hits, err } = pick;
+  // Запасные номера: каждый другой кандидат в порожек (с тем же законом) сдвигает все номера на целое число ладов.
+  // Какой верный — решают схема аккорда (у открытых аккордов звучат открытые струны) и звук; prior — исходное доверие
+  const alts = [...byNut.values()].filter((x) => x.err < 0.15).map(({ nut }) => ({ shift: pick.nut.n - nut.n, prior: nut === pick.nut ? 1 : nut.run ? 0.5 : 0.3 }))
+    .filter((a) => Math.abs(a.shift) <= 4).sort((a, b) => b.prior - a.prior);
   const last = Math.min(MAX_FRET, Math.max(...hits.map((x) => x.n)));
   // точка лада n на доле ширины v (с учётом скоса), в пикселях кадра
   const sOfJ = (j) => (St.s0 + j * St.step) / Gf.k, gA = scaleLine(A, 1 / Gf.k), gB = scaleLine(B, 1 / Gf.k);
@@ -636,7 +643,7 @@ export function detectFretboard(img, opts = {}) {
   const sN = sJ(0) / Gf.k, sBr = sJ(1) / Gf.k, strings = [];
   for (let i = 0; i < 6; i++) strings.push({ i, a: pt(sN, stringV(parts, i, sN)), b: pt(sBr, stringV(parts, i, sBr)) });
   return {
-    ok: true, frets, strings, bridge, nut: frets[0],
+    ok: true, frets, strings, bridge, nut: frets[0], alts,
     edges: [[pt(sN, 0), pt(sBr, 0)], [pt(sN, 1), pt(sBr, 1)]],
     score: best.score, strings_ev: best.strEv, err,
     // для locate: всё в пикселях исходного кадра
@@ -651,9 +658,10 @@ function stringV(parts, i, s) {
   return a.vs[i] + (b.vs[i] - a.vs[i]) * t;
 }
 
-// Где на грифе точка кадра (x, y в пикселях): { fret — лад, который зажимает палец (промежуток n−1…n → n; 0 — до порожка),
-// pos — дробная позиция в ладах, v — доля поперёк (0 — край A), string — ближайшая струна 0…5 (или null — мимо струн),
-// sd — расстояние до неё в долях промежутка между струнами }
+// Где на грифе точка кадра (x, y в пикселях): { fret — лад, который зажимает палец (промежуток n−1…n → n; 0 и меньше —
+// за порожком: если там палец, значит, номера занижены),
+// pos — дробная позиция в ладах, v — доля поперёк (0 — край A), near — ближайшая струна 0…5 от края A,
+// string — она же, если точка на ней (не дальше половины промежутка), иначе null, sd — расстояние в долях промежутка }
 export function locate(fb, x, y) {
   if (!fb || !fb.ok) return null;
   const { A, B, u, s0, step, m, k, parts } = fb.geo, s = x * u.x + y * u.y, P = onLine(A, u, s), Q = onLine(B, u, s);
@@ -664,5 +672,34 @@ export function locate(fb, x, y) {
   let si = 0;
   vs.forEach((sv, i) => { if (Math.abs(sv - v) < Math.abs(vs[si] - v)) si = i; });
   const sd = Math.abs(vs[si] - v) / gap;
-  return { pos, fret: Math.max(0, Math.ceil(pos - 1e-9)), v, string: sd <= 0.5 ? si : null, sd };
+  return { pos, fret: Math.ceil(pos - 1e-9), v, near: si, string: sd <= 0.5 ? si : null, sd };
+}
+
+// Гриф по четырём точкам — концам порожка и бриджа (край A, край B): когда гриф размечен вручную касаниями или в тестах.
+// Без перспективы вдоль грифа (лады — по закону на прямой), струны — равномерно с полями. Ответ — как у detectFretboard.
+export function boardFromPoints(nut, bridge, { nutEdge = 0.085, bridgeEdge = 0.1 } = {}) {
+  const mid = (p) => ({ x: (p.a.x + p.b.x) / 2, y: (p.a.y + p.b.y) / 2 }), N = mid(nut), Br = mid(bridge);
+  const L = Math.hypot(Br.x - N.x, Br.y - N.y) || 1, u = { x: (Br.x - N.x) / L, y: (Br.y - N.y) / L };
+  const A = lineThrough(nut.a, bridge.a), B = lineThrough(nut.b, bridge.b), sN = N.x * u.x + N.y * u.y, n = Math.max(1, Math.round(L));
+  const pt = (s, v) => { const P = onLine(A, u, s), Q = onLine(B, u, s); return { x: P.x + (Q.x - P.x) * v, y: P.y + (Q.y - P.y) * v }; };
+  const vs = (e) => [0, 1, 2, 3, 4, 5].map((i) => e + (i * (1 - 2 * e)) / 5);
+  const parts = [{ s: sN, vs: vs(nutEdge) }, { s: sN + L, vs: vs(bridgeEdge) }];
+  const frets = [];
+  for (let k = 0; k <= 20; k++) { const s = sN + L * zOf(k); frets.push({ n: k, a: pt(s, 0), b: pt(s, 1), seen: false }); }
+  const strings = [0, 1, 2, 3, 4, 5].map((i) => ({ i, a: pt(sN, parts[0].vs[i]), b: pt(sN + L, parts[1].vs[i]) }));
+  return {
+    ok: true, frets, strings, nut: frets[0], bridge: { a: pt(sN + L, 0), b: pt(sN + L, 1) }, alts: [{ shift: 0, prior: 1 }],
+    edges: [[pt(sN, 0), pt(sN + L, 0)], [pt(sN, 1), pt(sN + L, 1)]], err: 0,
+    geo: { A, B, u, s0: sN, step: 1, m: [L, 0, 0], k: 0, sk: [0, 0], n, wc: new Float32Array(n).fill(1), parts },
+  };
+}
+
+// Точка кадра на струне i (от края A) там, где палец зажимает лад n: чуть позади лада, в 35 % промежутка от него
+export function pointAt(fb, i, n) {
+  if (!fb || !fb.ok) return null;
+  const { A, B, u, s0, step, m, sk, wc, parts } = fb.geo, c = posOf(m, n - 0.35);
+  let v = 0.5, s = 0;
+  for (let it = 0; it < 3; it++) { s = s0 + (c + shiftOf(sk, c, fb.geo.n, v, wc)) * step; v = stringV(parts, i, s); }
+  const P = onLine(A, u, s), Q = onLine(B, u, s);
+  return { x: P.x + (Q.x - P.x) * v, y: P.y + (Q.y - P.y) * v };
 }
