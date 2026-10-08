@@ -15,7 +15,7 @@
      Ψῆφος — Откр 2:17; Βαθμός — 1 Тим 3:13; Ὑπομονή — Рим 5:3; Σύνεσις — Пс 110:10; Ἐν ἀρχῇ — Быт 1:1; Τάξις — 1 Кор 14:40;
      Χρόνος — Еккл 3:1; Ὄψις — Ин 7:24; Μέτρον — Мф 7:2; Συμφωνία — Лк 15:25; Ψαλτήριον — Пс 150:3; Αὐλός — 1 Кор 14:7;
      Ἔργα χειρῶν, Ἔργον — Пс 89:17; Φωνή — Откр 14:2; Σοφία, Ἐξαριθμήσασθαι — Пс 89:12; Ἀριθμός — Числ 1:2; Ἀκοή — Рим 10:17; Γράμματα — Ин 7:15;
-     Θόρυβος — Мф 26:5; Φυλακή — Пс 89:4; Ἀνάπαυσις — Мф 11:29; Σαββατισμός — Евр 4:9. Эпиграф помодоро, секундомера
+     Θόρυβος — Мф 26:5; Γραφαί — Лк 24:27; Φυλακή — Пс 89:4; Ἀνάπαυσις — Мф 11:29; Σαββατισμός — Евр 4:9. Эпиграф помодоро, секундомера
      и календаря — Пс 89:12 по Септуагинте.
    - Инструменты в закреплённом виде (ctx.mono): тюнер — шкала, помодоро — кольцо, медиатека — волна,
      метроном — колесо со стрелками. Ноты в PDF и видео — в цвете.
@@ -309,3 +309,7 @@
 .bvgr { margin: 0 0 10px; font-family: "Melete Greek", var(--font); font-size: 18px; line-height: 1.55; }
 .bvru { margin: 0 0 6px; font-size: 14.5px; line-height: 1.5; color: var(--l2); }
 .bvref { margin: 0; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--l3); }
+/* чтение дня в «Минимале» */
+.mono-home .mread { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; text-align: left; margin: 26px 0 0; padding: 18px 2px; border-top: 1px solid var(--sep); border-bottom: 1px solid var(--sep); }
+.mono-home .mread .hrr { font-size: 24px; font-weight: 300; }
+.mono-home .mread .hrs { color: var(--l2); text-transform: uppercase; letter-spacing: .12em; font-size: 10.5px; }

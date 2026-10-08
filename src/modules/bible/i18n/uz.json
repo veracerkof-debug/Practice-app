@@ -1,0 +1,23 @@
+{
+  "name": "Bibliya",
+  "about": "Sinodal tarjima (rus tilida), reja boʻyicha kunlik oʻqish",
+  "pick": "Kitob va bob",
+  "ot": "Eski Ahd",
+  "nt": "Yangi Ahd",
+  "prev": "Oldingi bob",
+  "next": "Keyingi bob",
+  "smaller": "Matn kichikroq",
+  "bigger": "Matn kattaroq",
+  "read": "Oʻqildi",
+  "markRead": "Bobni oʻqilgan deb belgilash",
+  "unmark": "Belgini olib tashlash",
+  "nextCh": "Keyingisi: {ref}",
+  "loadFail": "Matn ochilmadi.",
+  "today": "Kunlik oʻqish",
+  "chOf": "{n}-bob",
+  "help.what": "Bibliya — Sinodal tarjima (66 kitob) — va tanlangan reja boʻyicha kunlik oʻqish.",
+  "help.1": "Kitob va bob — yuqoridagi nomli tugma; strelkalar — qoʻshni boblar.",
+  "help.2": "Bob oxirida — «Oʻqildi»: belgi rejaga va bosh ekranga tushadi.",
+  "help.3": "Oʻqish rejasi «Modullar va funksiyalar» → «Cherkov rejimi»da tanlanadi.",
+  "help.tip": "Oʻtkazib yuborilgan kun yonib ketmaydi: oʻqishlar kutadi, ritm — haftalik."
+}

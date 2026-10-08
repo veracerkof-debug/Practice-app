@@ -86,6 +86,8 @@ export function createShell(app, root) {
     else if (d.act === 'libman') libManager(app, render);
     else if (d.act === 'quickedit') quickEdit(app, render);
     else if (d.act === 'donate') donateSheet();
+    // чтение дня: Библия — на нужной главе
+    else if (d.act === 'bible') { if (d.key) { const [code, ch] = d.key.split('.'); app.bible.setPos({ code, ch: +ch, y: 0 }); } openToolView(app, 'bible', render); }
     else if (d.act === 'report') reportSheet(app);
     else if (d.act === 'legal') legalSheet(d.v);
     else if (d.act === 'streak') streakSheet(app);

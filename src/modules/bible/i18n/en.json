@@ -1,0 +1,23 @@
+{
+  "name": "Bible",
+  "about": "Russian Synodal translation, daily readings by plan",
+  "pick": "Book and chapter",
+  "ot": "Old Testament",
+  "nt": "New Testament",
+  "prev": "Previous chapter",
+  "next": "Next chapter",
+  "smaller": "Smaller text",
+  "bigger": "Larger text",
+  "read": "Read",
+  "markRead": "Mark the chapter as read",
+  "unmark": "Remove the mark",
+  "nextCh": "Next: {ref}",
+  "loadFail": "The text did not open.",
+  "today": "Today's reading",
+  "chOf": "Chapter {n}",
+  "help.what": "The Bible (Russian Synodal translation, 66 books) and daily readings by the chosen plan.",
+  "help.1": "Book and chapter — the button with the name at the top; arrows — neighbouring chapters.",
+  "help.2": "At the end of a chapter — «Read»: the mark goes to the plan and the home screen.",
+  "help.3": "The reading plan is chosen in Modules and features → Church mode.",
+  "help.tip": "A missed day does not burn: readings wait, the rhythm is weekly."
+}

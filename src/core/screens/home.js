@@ -21,6 +21,8 @@ import { logoHTML } from '../../ui/logo.js';
 import { stoneView, wear, stoneKm } from '../../ui/stone.js';
 import { nextEventsHTML } from './calendar.js';
 import { extOwner } from '../ext.js';
+import { refText } from '../bible.js';
+import { nextOf } from '../reading.js';
 
 // Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
 export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
@@ -44,6 +46,16 @@ const greet = (h) => t(h < 5 ? 'mono.night' : h < 12 ? 'mono.morning' : h < 18 ?
 // Создателю — по роли: «Добрый вечер, создатель» и тихая строчка, своя на каждый день (без пафоса)
 const ROLE_LINES = 5;
 const roleLine = (d) => t('mono.role.' + (1 + (Math.floor(d.getTime() / 864e5) % ROLE_LINES)));
+// Церковный режим: чтение дня по плану — главы, сколько прочитано, «Читать» открывает Библию на первой непрочитанной
+function readingCard(app, mono = false) {
+  const st = app.store.state.settings;
+  if (!st.church || !app.bible) return '';
+  const r = app.bible.today();
+  if (!r) return '';
+  const all = r.done === r.keys.length, next = nextOf(app.bible.st(), r);
+  return '<button class="' + (mono ? 'mread' : 'hread') + '" data-act="bible" data-key="' + next + '"><span class="hrt">' + t('read.today') + ' · ' + t('read.day', { d: r.day, n: r.days }) + '</span>' +
+    '<span class="hrr">' + esc(refText(r.keys)) + '</span><span class="hrs">' + (all ? t('read.done') : t('read.progress', { done: r.done, n: r.keys.length })) + '</span></button>';
+}
 const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';
 
 function homeMonoHTML(app) {
@@ -69,6 +81,7 @@ function homeMonoHTML(app) {
         (isOn(st, 'streak') && streakInfo(all, st).weeks ? '<button data-act="streak">' + esc(tn('streak.weeks', streakInfo(all, st).weeks)) + '</button>' : '') + '</div>';
     }
   }
+  h += readingCard(app, true);
   h += '<button class="mcta" data-act="free"><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
   const q = quickList(st);
   h += mhead(t('home.quick'), '<button class="mbtn" data-act="quickedit" aria-label="' + esc(t('home.edit')) + '">' + IC.plus + '</button>') +
@@ -99,6 +112,7 @@ export function homeHTML(app) {
     '<button class="hlink" data-pp="' + (st.configured ? 'stats' : 'week') + '">' +
     (st.configured ? (plan[today] ? t('home.todayPlan') : t('home.todayRest')) + ' · ' + t('home.stats') : t('home.setup')) + ' ›</button></div>';
   h += gemRow(app);
+  h += readingCard(app);
   h += '<button class="hcta" data-act="free"' + (plain ? ' style="margin-top:4px"' : '') + '><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
   const q = quickList(st);
   h += '<div class="hhdr"><span>' + t('home.quick') + '</span><button class="link" data-act="quickedit">' + t('home.edit') + '</button></div>';

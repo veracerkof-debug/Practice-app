@@ -2,6 +2,8 @@
 // концерты, записи, дедлайны и цели по песням; типы и цвета свободные. Экспорт в .ics для других календарей.
 import '../../ui/calendar.css';
 import { epigraphHTML } from './verses.js';
+import { refText } from '../bible.js';
+import { nextOf } from '../reading.js';
 import { t, tn } from '../../i18n/index.js';
 import { esc, sheet, snav, toast, confirm, seg, sw, icb, icons } from '../../ui/index.js';
 import { fmtDur } from '../format.js';
@@ -128,12 +130,22 @@ function monthHTML(app, cv) {
   return h + dayHTML(app, cv.sel, prac[dayKey(cv.sel)] || practiceByDay(app, cv.sel, cv.sel + DAY)[dayKey(cv.sel)] || 0);
 }
 
+// Церковный режим: чтение этого дня по плану — строкой под событиями; касание открывает Библию
+function readingRow(app, day) {
+  if (!app.store.state.settings.church || !app.bible) return '';
+  const r = app.bible.today(day);
+  if (!r) return '';
+  return '<button class="cpracrow creadrow" data-act="bible" data-key="' + nextOf(app.bible.st(), r) + '"><span class="cbar"></span><span>' +
+    esc(t('read.cal', { ref: refText(r.keys) })) + (r.done ? ' · ' + (r.done === r.keys.length ? '✓' : r.done + '/' + r.keys.length) : '') + '</span></button>';
+}
+
 // Выбранный день под сеткой месяца
 function dayHTML(app, day, prac) {
   const list = onDay(events(app), day);
   return '<div class="cday-h"><b>' + esc(dayLabel(day)) + '</b>' +
     '<button class="link" data-cnew="' + day + '">' + t('cal.add') + '</button></div><div class="clist">' +
     (list.length ? list.map((o) => evRow(app, o)).join('') : '<div class="cempty l2">' + t('cal.noEvents') + '</div>') +
+    readingRow(app, day) +
     (prac ? '<button class="cpracrow" data-pp="stats"><span class="cbar"></span><span>' + t('cal.practiced', { d: fmtDur(prac) }) + '</span></button>' : '') + '</div>';
 }
 

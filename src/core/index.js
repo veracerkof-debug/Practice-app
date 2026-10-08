@@ -24,6 +24,7 @@ import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
 import { toast, confirm } from '../ui/index.js';
 import { startLog } from './log.js';
+import { createBible } from './reading.js';
 import { APP_VERSION } from './report.js';
 import { crashOffer } from './screens/report.js';
 import { bindVerses } from './screens/verses.js';
@@ -132,6 +133,8 @@ export function boot(root) {
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },
   };
+  // Церковный режим: чтение Библии — план, отметки, место (src/core/reading.js)
+  app.bible = createBible(store);
   // Вспышка, фонарик и вибрация в такт метронома
   app.pulse = createPulse(app);
   // Часы перевели или они сбиты: идущая сессия и секундомер не подтверждаются; окно с проверкой по интернету

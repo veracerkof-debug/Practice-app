@@ -1,0 +1,28 @@
+/* Библия: текст главы на всё окно, сверху — одна узкая полоса */
+.bwrap{display:flex;flex-direction:column;height:100%;min-height:80px;width:100%}
+.bbar{display:flex;align-items:center;gap:4px;padding:2px 2px 6px;flex:none}
+.bbar svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bpick{min-height:40px;padding:0 12px;border-radius:999px;background:var(--fill);font-weight:600;font-size:15px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.bgrow{flex:1}
+.bmark.on{background:var(--tint);color:var(--on-tint)}
+.btext{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:4px 6px 28px;font-family:Georgia,"Noto Serif","Times New Roman",serif;font-size:var(--bfs,18px);line-height:1.62;color:var(--ink);
+  -webkit-user-select:text;user-select:text}
+.bhead{font-size:1.25em;font-weight:600;margin:6px 0 10px;letter-spacing:.005em}
+.bhead span{color:var(--l2);font-weight:400}
+.bverses{margin:0;text-align:left;hyphens:auto}
+.bv sup{font-family:var(--font);font-size:.58em;color:var(--l3);font-weight:600;margin-right:.2em;vertical-align:.55em}
+.bend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:26px 0 10px;font-family:var(--font)}
+.bend .btn{min-height:44px;padding:0 20px}
+.bdone{display:inline-flex;align-items:center;gap:8px;color:var(--tint-text)}
+.bdone svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.bload{display:flex;align-items:center;justify-content:center;height:100%;min-height:140px}
+.bfail{text-align:center;margin-top:30px;font-family:var(--font)}
+.bwrap.quarter .bhead{display:none}
+.bwrap.quarter .btext{font-size:calc(var(--bfs,18px) * .82)}
+/* шторка выбора: книги с долей прочитанного (заливка снизу), главы — прочитанные отмечены */
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;margin-bottom:6px}
+.bgrid.ch{grid-template-columns:repeat(auto-fill,minmax(48px,1fr))}
+.bbook,.bch{min-height:44px;border-radius:12px;font-weight:600;font-size:14px;color:var(--ink);
+  background:linear-gradient(to top,color-mix(in srgb,var(--tint) 22%,transparent) var(--r,0%),var(--fill) var(--r,0%))}
+.bbook.cur,.bch.cur{box-shadow:inset 0 0 0 2px var(--tint)}
+.bch.read{background:color-mix(in srgb,var(--tint) 22%,var(--fill))}

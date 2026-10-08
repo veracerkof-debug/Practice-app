@@ -93,6 +93,8 @@ export function makeCtx(app, mod) {
     data: () => (app.store.state.settings[mod.id] ??= {}),
     saveData: () => app.store.settingsChanged(),
     pomodoro: app.pomodoro,
+    // Церковный режим: чтение Библии (src/core/reading.js: createBible)
+    bible: app.bible,
     // Секундомер «сколько я играю» (ядро; второй режим «Помодоро»). commit — записать в статистику как свободную
     // практику; время, уже учтённое сессией или инструментами, не засчитывается дважды
     stopwatch: app.stopwatch && {

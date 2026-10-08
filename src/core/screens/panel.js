@@ -10,7 +10,7 @@ import { dayKey, weekday, weekStart } from '../time.js';
 import {
   weekData, goalProgress, goalPerDay, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag, strictTime,
 } from '../stats.js';
-import { CORE_FEATURES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, applyTheme, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
+import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, applyTheme, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
@@ -25,6 +25,7 @@ import { rankSVG, rankName, RANK_COLORS } from '../../ui/rank.js';
 import { gemSVG } from '../../ui/gems.js';
 import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
+import { PLAN_IDS, dayKeyOf } from '../reading.js';
 
 const PAGES = {
   me: ['#FF9500', '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M5 19.5c1.4-3.2 4-4.6 7-4.6s5.6 1.4 7 4.6"/></svg>'],
@@ -210,8 +211,14 @@ function featHTML(app) {
   return '<div class="large">' + t('feat.title') + '</div><p class="sub" style="margin:0 4px 12px">' + t('feat.hint') + '</p>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('feat.toolsOnly') + '</span>' + psw('toolsOnly', !!st.toolsOnly, t('feat.toolsOnly')) + '</div></div>' +
     '<p class="ftr">' + t('feat.toolsOnly.hint') + '</p>' +
+    // церковный режим: Библия и чтения дня
+    '<div class="group"><div class="cell"><span class="grow">' + t('church.title') + '</span>' + psw('church', !!st.church, t('church.title')) + '</div>' +
+    (st.church ? '<label class="cellcol"><span>' + t('church.plan') + '</span><select class="sortsel" data-bplan style="width:100%;margin-top:8px;text-align:left" aria-label="' + esc(t('church.plan')) + '">' +
+      ['none', ...PLAN_IDS].map((k) => '<option value="' + k + '"' + (((st.bible && st.bible.plan) || 'none') === k ? ' selected' : '') + '>' + t('plan.' + k) + '</option>').join('') + '</select></label>' +
+      (st.bible && st.bible.plan ? '<button class="cell act" data-brestart>' + t('church.restart') + '</button>' : '') : '') + '</div>' +
+    '<p class="ftr">' + t(st.church ? 'church.hintOn' : 'church.hint') + (st.church && st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
     '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
-    modules.map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
+    modules.filter((m) => !CHURCH_MODULES.includes(m.id) || st.church).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
     '<div class="group" style="margin-top:12px"><button class="cell act" data-helpreset>' + t('help.again') + '</button></div>' +
     // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
     (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : FLAME, k === 'mastery' ? '#5856D6' : '#FF9500', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
@@ -289,6 +296,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-day]'))) { toggleDay(app.store, +b.dataset.day); render(); onChange(); return; }
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
       if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); return; }
+      if (g('[data-brestart]')) { app.bible.setPlan(app.bible.st().plan, dayKeyOf(Date.now())); toast(t('church.restarted')); render(); onChange(); return; }
       if ((b = g('[data-goal]'))) { changeGoal(app.store, +b.dataset.goal); render(); onChange(); return; }
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-seg="uistyle"] [data-v]'))) {
@@ -329,7 +337,8 @@ export function createPanel(app, onChange) {
     layer.addEventListener('change', (e) => {
       const d = e.target.dataset;
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); return; }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly') { render(); onChange(); } if (d.psw === 'monoLang') setTimeout(() => location.reload(), 150); }
+      if (e.target.hasAttribute('data-bplan')) { const v = e.target.value; app.bible.setPlan(v === 'none' ? null : v, dayKeyOf(Date.now())); render(); onChange(); return; }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') setTimeout(() => location.reload(), 150); }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
         if (r.locked) { toast(t('me.priorLocked')); e.target.value = r.priorHours || ''; }
@@ -411,6 +420,7 @@ export function legalSheet(kind) {
       lic('Onest', t('lic.onest.sub'), '<p>Copyright 2023 The Onest Project Authors (github.com/simpals/onest).</p><p>' + t('lic.cg.text') + '</p>') +
       lic('pdf.js', t('lic.pdf.sub'), '<p>© Mozilla Foundation ' + t('lic.andContrib') + '</p><p>' + t('lic.pdf.text') + '</p>') +
       lic('MediaPipe', t('lic.mp.sub'), '<p>© Google LLC</p><p>' + t('lic.mp.text') + '</p>') +
+      lic(t('lic.bible.title'), t('lic.bible.sub'), '<p>' + t('lic.bible.text') + '</p>') +
       lic('Capacitor', t('lic.cap.sub'), '<p>© Ionic ' + t('lic.andContrib') + '</p><p>' + t('lic.cap.text') + '</p>') +
       '<div class="lic"><h3>' + t('lic.snd.title') + '</h3><p>' + t('lic.snd.text') + '</p></div></div>';
   }
