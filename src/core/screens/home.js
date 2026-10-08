@@ -18,7 +18,7 @@ import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
-import { stoneView, wear, stoneKm } from '../../ui/stone.js';
+import { stoneView, wear, stoneKm, stoneSeed } from '../../ui/stone.js';
 import { nextEventsHTML } from './calendar.js';
 import { extWho } from '../ext.js';
 import { refText } from '../bible.js';
@@ -215,7 +215,6 @@ export function kmText(hours) {
   return km < 1 ? t('stone.m', { n: nf(Math.round(km * 100) * 10) }) : t('stone.km', { n: nf(km, km < 10 ? 1 : 0) });
 }
 
-const stoneSeed = (st) => { const c = (st.profile && st.profile.createdAt) || 0; return (c % 2147483647) || 20260915; };
 
 // Оживить камни на экране после отрисовки (холсты с data-stone)
 export function mountStones(app, root) {

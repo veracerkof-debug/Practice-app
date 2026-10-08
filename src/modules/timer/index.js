@@ -8,6 +8,7 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { POMO_LIMITS } from '../../core/pomodoro.js';
+import { createScene } from './scene.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M10 3h4"/></svg>';
 const I = {
@@ -19,7 +20,9 @@ const I = {
 };
 const R = 98, C = 2 * Math.PI * R;
 
-let host = null, ctx = null, size = 'full', timer = 0, unsub = () => {}, onClick = null;
+let host = null, ctx = null, size = 'full', timer = 0, unsub = () => {}, onClick = null, scene = null;
+// Сцена «как обрабатывается камень» (scene.js) — в полном окне, если в ядре есть камень пользователя
+const sceneHTML = () => (ctx.stone ? '<div class="tscene" aria-hidden="true"><div class="tgem"></div><canvas></canvas></div>' : '');
 
 const PO = () => ctx.pomodoro;
 const SW = () => ctx.stopwatch;
@@ -78,7 +81,7 @@ function flipHTML() {
   const phase = '<div class="fphase' + (brk ? ' brk' : '') + '" id="pphase">' + v.label + '</div>';
   if (size === 'strip') return '<div class="srow2 fstrip">' + phase + clock + '<span class="sgrow"></span>' + play + sk + '</div>';
   if (size === 'quarter') return '<div class="vq fq">' + phase + clock + prog + '<div class="vrow tight">' + play + sk + '</div></div>';
-  return '<div class="fwrap ' + size + '">' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'corner') + modeSeg() + phase + clock + prog + dots() + '<div class="ctrl3">' + rs + play + sk + '</div></div>';
+  return '<div class="fwrap ' + size + '">' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'corner') + modeSeg() + phase + clock + prog + sceneHTML() + dots() + '<div class="ctrl3">' + rs + play + sk + '</div></div>';
 }
 
 function ringHTML() {
@@ -92,11 +95,15 @@ function ringHTML() {
   if (size === 'half') return '<div class="ph2">' + ring + '<div class="ph2side">' + modeSeg() + phase + dots() + '<div class="vrow">' + rs + play + sk + '</div>' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'sm') + '</div></div>';
   // стих эпиграфом под кнопками — Пс 89:12 (даёт ядро)
   const verse = ctx.epigraph ? ctx.epigraph() : '';
-  return '<div class="mcard" style="text-align:center;position:relative">' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'corner') + modeSeg() + phase + ring + dots() + '<div class="ctrl3">' + rs + play + sk + '</div>' + verse + '</div>';
+  return '<div class="mcard" style="text-align:center;position:relative">' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'corner') + modeSeg() + phase + ring + sceneHTML() + dots() + '<div class="ctrl3">' + rs + play + sk + '</div>' + verse + '</div>';
 }
 
 function render() {
-  if (host) host.innerHTML = cfg().style === 'flip' && !ctx.mono ? flipHTML() : ringHTML(); // «Минимал» — кольцо
+  if (!host) return;
+  if (scene) { scene.destroy(); scene = null; }
+  host.innerHTML = cfg().style === 'flip' && !ctx.mono ? flipHTML() : ringHTML(); // «Минимал» — кольцо
+  const sc = host.querySelector('.tscene');
+  if (sc) try { scene = createScene(sc, ctx, view); } catch (e) { ctx.logErr(e); }
 }
 
 /* ---------- ход времени ---------- */
@@ -246,6 +253,7 @@ export default {
   // Таймер продолжает идти в ядре; здесь останавливаем только отрисовку
   unmount() {
     clearInterval(timer);
+    if (scene) { scene.destroy(); scene = null; }
     unsub();
     if (host && onClick) host.removeEventListener('click', onClick);
     host = null;

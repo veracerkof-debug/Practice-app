@@ -107,6 +107,9 @@ const ROCKS = [
   { id: 'slate', base: -0.08, tint: [-3, 0, 4], veins: 1, speck: 0.02, mottle: 0.08, layers: true },
 ];
 export const rockOf = (seed) => ROCKS[(seed >>> 0) % ROCKS.length];
+// Зерно камня — от даты создания профиля: у каждого свой
+export const stoneSeed = (st) => { const c = (st.profile && st.profile.createdAt) || 0; return (c % 2147483647) || 20260915; };
+export { qmul, qaxis };
 
 // Поворот: кватернион [w, x, y, z]
 const qmul = (a, b) => [a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3], a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
@@ -116,6 +119,44 @@ function qmat(q) {
   const [w, x, y, z] = q;
   return [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y), 2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x),
     2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)];
+}
+
+// Нарисовать камень: mesh — stoneMesh, q — поворот, (cx, cy) — центр, s — радиус в пикселях.
+// dark — тёмная тема, polish — полировка 0…1, shadow — тень снизу. Общая для главной и сцен помодоро.
+const L = norm([-0.55, -0.75, 0.6]);
+export const dark = () => matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.dataset.theme !== 'light' || document.documentElement.dataset.theme === 'dark' || document.documentElement.dataset.theme === 'oled';
+export function paintStone(ctx, mesh, q, cx, cy, s, { dark: dk = false, polish = 0, shadow = true } = {}) {
+  const M = qmat(q);
+  const P = mesh.V.map((v) => [M[0] * v[0] + M[1] * v[1] + M[2] * v[2], M[3] * v[0] + M[4] * v[1] + M[5] * v[2], M[6] * v[0] + M[7] * v[1] + M[8] * v[2]]);
+  const list = [];
+  mesh.F.forEach((f) => {
+    const a = P[f[0]], b = P[f[1]], c = P[f[2]];
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], wx = c[0] - a[0], wy = c[1] - a[1], wz = c[2] - a[2];
+    const n = norm([uy * wz - uz * wy, uz * wx - ux * wz, ux * wy - uy * wx]);
+    if (n[2] <= 0) return; // обратная сторона
+    list.push([a[2] + b[2] + c[2], f, n]);
+  });
+  list.sort((x, y) => x[0] - y[0]);
+  if (shadow) {
+    ctx.fillStyle = dk ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.10)';
+    ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.98, s * 0.7, s * 0.09, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  const K = mesh.kind, tn = K.tint;
+  list.forEach(([, f, n]) => {
+    const lam = Math.max(0, n[0] * L[0] + n[1] * L[1] + n[2] * L[2]);
+    const alb = (mesh.A[f[0]] + mesh.A[f[1]] + mesh.A[f[2]]) / 3 + K.base;
+    // блик: у полированной гальки — острее и ярче; переливы — блик чуть гуляет по узору породы
+    const hv = Math.max(0, n[2] * 0.6 + lam * 0.4), spec = Math.pow(hv, 18 + 30 * polish) * (0.08 + 0.16 * polish) * (0.7 + 0.6 * alb);
+    const rim = Math.pow(1 - Math.max(0, n[2]), 3) * (6 + 10 * polish); // край светлее — объём
+    let v = (dk ? 28 : 34) + (dk ? 150 : 185) * (0.16 + 0.84 * lam) * (0.6 + 0.72 * alb) + spec * 255 + rim;
+    v = Math.max(8, Math.min(245, Math.round(v)));
+    const sh = (k) => Math.max(0, Math.min(255, v + Math.round(k * (0.6 + 0.4 * lam))));
+    const col = 'rgb(' + sh(tn[0]) + ',' + sh(tn[1]) + ',' + sh(tn[2]) + ')';
+    ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(cx + P[f[0]][0] * s, cy + P[f[0]][1] * s); ctx.lineTo(cx + P[f[1]][0] * s, cy + P[f[1]][1] * s); ctx.lineTo(cx + P[f[2]][0] * s, cy + P[f[2]][1] * s);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  });
 }
 
 // Положение камня: в памяти (между перерисовками экрана) и на устройстве (между запусками)
@@ -139,8 +180,6 @@ export function stoneView(canvas, { seed = 1, hours = 0, detail = 3, spin = true
   let q = loadQ(key) || norm4(qmul(qaxis(1, 0, 0, 0.5), qaxis(0, 1, 0, 0.6)));
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const ctx = canvas.getContext('2d');
-  const dark = () => matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.dataset.theme !== 'light' || document.documentElement.dataset.theme === 'dark' || document.documentElement.dataset.theme === 'oled';
-  const L = norm([-0.55, -0.75, 0.6]);
 
   function draw() {
     const dpr = Math.min(2.5, window.devicePixelRatio || 1), W = canvas.clientWidth, H = canvas.clientHeight;
@@ -148,36 +187,7 @@ export function stoneView(canvas, { seed = 1, hours = 0, detail = 3, spin = true
     if (canvas.width !== Math.round(W * dpr)) { canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    const M = qmat(q), s = Math.min(W, H) * 0.44, cx = W / 2, cy = H / 2;
-    const P = mesh.V.map((v) => [M[0] * v[0] + M[1] * v[1] + M[2] * v[2], M[3] * v[0] + M[4] * v[1] + M[5] * v[2], M[6] * v[0] + M[7] * v[1] + M[8] * v[2]]);
-    const dk = dark(), list = [];
-    mesh.F.forEach((f) => {
-      const a = P[f[0]], b = P[f[1]], c = P[f[2]];
-      const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], wx = c[0] - a[0], wy = c[1] - a[1], wz = c[2] - a[2];
-      const n = norm([uy * wz - uz * wy, uz * wx - ux * wz, ux * wy - uy * wx]);
-      if (n[2] <= 0) return; // обратная сторона
-      list.push([a[2] + b[2] + c[2], f, n]);
-    });
-    list.sort((x, y) => x[0] - y[0]);
-    // тень под камнем
-    ctx.fillStyle = dk ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.10)';
-    ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.98, s * 0.7, s * 0.09, 0, 0, Math.PI * 2); ctx.fill();
-    const K = mesh.kind, tn = K.tint;
-    list.forEach(([, f, n]) => {
-      const lam = Math.max(0, n[0] * L[0] + n[1] * L[1] + n[2] * L[2]);
-      const alb = (mesh.A[f[0]] + mesh.A[f[1]] + mesh.A[f[2]]) / 3 + K.base;
-      // блик: у полированной гальки — острее и ярче; переливы — блик чуть гуляет по узору породы
-      const hv = Math.max(0, n[2] * 0.6 + lam * 0.4), spec = Math.pow(hv, 18 + 30 * polish) * (0.08 + 0.16 * polish) * (0.7 + 0.6 * alb);
-      const rim = Math.pow(1 - Math.max(0, n[2]), 3) * (6 + 10 * polish); // край светлее — объём
-      let v = (dk ? 28 : 34) + (dk ? 150 : 185) * (0.16 + 0.84 * lam) * (0.6 + 0.72 * alb) + spec * 255 + rim;
-      v = Math.max(8, Math.min(245, Math.round(v)));
-      const sh = (k) => Math.max(0, Math.min(255, v + Math.round(k * (0.6 + 0.4 * lam))));
-      const col = 'rgb(' + sh(tn[0]) + ',' + sh(tn[1]) + ',' + sh(tn[2]) + ')';
-      ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 0.6;
-      ctx.beginPath();
-      ctx.moveTo(cx + P[f[0]][0] * s, cy + P[f[0]][1] * s); ctx.lineTo(cx + P[f[1]][0] * s, cy + P[f[1]][1] * s); ctx.lineTo(cx + P[f[2]][0] * s, cy + P[f[2]][1] * s);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    });
+    paintStone(ctx, mesh, q, W / 2, H / 2, Math.min(W, H) * 0.44, { dark: dark(), polish });
   }
   function norm4(a) { const l = Math.hypot(...a) || 1; return a.map((x) => x / l); }
   const turn = (dx, dy) => { const a = Math.hypot(dx, dy); if (a > 1e-5) q = norm4(qmul(qaxis(dy / a, -dx / a, 0, a), q)); };
