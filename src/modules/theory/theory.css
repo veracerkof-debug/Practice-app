@@ -100,3 +100,20 @@
 .ib2 span{font-size:12px;color:var(--tint-text);font-weight:600}
 .ib2 small{font-size:9.5px;color:var(--l2);line-height:1.1;text-align:center}
 .ib2:active{transform:scale(.95)}
+/* определитель: выбор нот, аккорд, семьи ладов, лестница ладов */
+.fpick .pill.ftonic{box-shadow:inset 0 0 0 2px var(--tint)}
+.frow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 2px}
+.frow .pill.sm{min-height:34px;padding:0 12px}
+.fact{justify-content:flex-start;margin:6px 0}
+.fact .ic.on{background:var(--tint);color:var(--on-tint)}
+.fcard{display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin:12px 0 4px;padding:12px 14px;border-radius:14px;background:var(--fill)}
+.fhd{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--l2)}
+.fbig{font-size:30px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
+.fbig.sm{font-size:22px;margin-top:6px}
+.fsub{font-size:13.5px}
+.ffam{margin:8px 0 12px}
+.ffh{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:6px}
+.ffh .l2{font-size:13px}
+.fmodes{flex-wrap:wrap}
+.fmodes .chip.on{background:var(--tint);color:var(--on-tint)}
+.fsame{margin:6px 2px 0;font-size:13.5px;color:var(--l2);line-height:1.4}

@@ -232,6 +232,7 @@ function dataHTML() {
 }
 
 // Модули (встроенные и личные из src/modules-local) и функции ядра: включить и выключить
+const theoryFind = (st) => { const d = st.theory || {}; return st.uiStyle === 'mono' ? d.find !== false : d.find === true; };
 function featHTML(app) {
   const st = app.store.state.settings, lang = getLang();
   const row = (id, icon, color, name, about, extra = '', help = false) => '<div class="cell"><span class="ticon" style="background:' + color + '">' + icon + '</span><span class="grow"><span>' + esc(name) + extra +
@@ -250,6 +251,9 @@ function featHTML(app) {
     '<p class="ftr">' + t(st.church ? 'church.hintOn' : 'church.hint') + (st.church && st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
     '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
     modules.filter((m) => !CHURCH_MODULES.includes(m.id) || st.church).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
+    // определитель аккордов и гамм в «Теории»: в «Минимале» включён по умолчанию, в обычном виде — здесь
+    (isOn(st, 'theory') ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow"><span>' + t('feat.theoryFind') + '</span><span class="st l2" style="display:block;font-size:13px">' +
+      t('feat.theoryFind.about') + '</span></span><label class="sw"><input type="checkbox" data-thfind' + (theoryFind(st) ? ' checked' : '') + ' aria-label="' + esc(t('feat.theoryFind')) + '"><i></i></label></div></div>' : '') +
     '<div class="group" style="margin-top:12px"><button class="cell act" data-helpreset>' + t('help.again') + '</button></div>' +
     // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
     (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : FLAME, k === 'mastery' ? '#5856D6' : '#FF9500', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
@@ -381,6 +385,7 @@ export function createPanel(app, onChange) {
       const d = e.target.dataset;
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); return; }
       if (e.target.hasAttribute('data-bplan')) { const v = e.target.value; app.bible.setPlan(v === 'none' ? null : v, dayKeyOf(Date.now())); render(); onChange(); return; }
+      if (e.target.hasAttribute('data-thfind')) { const st = app.store.state.settings; (st.theory ??= {}).find = e.target.checked; app.store.settingsChanged(); return; }
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') reloadHere(); }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });

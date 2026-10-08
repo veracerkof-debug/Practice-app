@@ -323,6 +323,8 @@
   "data.imported": "Loaded, new sessions: {n}",
   "data.notBackup": "This isn’t a backup from this app",
   "feat.title": "Modules and features",
+  "feat.theoryFind": "Finder in Theory",
+  "feat.theoryFind.about": "Chord and scale from notes or by ear; modes as one family of notes with different centres",
   "feat.hint": "Turn off what you don’t use — it disappears from tools, quick access and sessions. Your data is kept.",
   "feat.streak": "Streak",
   "freeTag.exercises": "Exercises",

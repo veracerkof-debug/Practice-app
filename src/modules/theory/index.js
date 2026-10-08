@@ -9,19 +9,26 @@ import { SH, MAJ_NAMES, MIN_NAMES, enh } from '../../music/notes.js';
 import { CIRC, keyInfo, circleStep, SCALES, SCALE_TYPES, scaleInfo, CHORDS, chordLabel, chordInfo, INTERVALS, intervalNote, intervalBase } from '../../music/theory.js';
 import { curTuning } from '../../music/tuning.js';
 import { kbHTML } from '../../ui/keyboard.js';
+import { chordsOf, familiesOf, ladderOf, degreesOf, colorNote } from '../../music/identify.js';
+import { chroma } from '../../music/analyze.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v4.5"/></svg>';
 const SECS = ['circle', 'scales', 'chords', 'intervals'];
+// Определитель — в «Минимале» по умолчанию, в обычном виде включается в «Модулях и функциях» (settings.theory.find)
+const findOn = () => { const d = ctx.data(); return ctx.mono ? d.find !== false : d.find === true; };
+const secs = () => (findOn() ? [...SECS, 'find'] : SECS);
+const curSec = () => { const s = TH().sec || 'circle'; return secs().includes(s) ? s : 'circle'; };
 const I = {
   play: '<svg viewBox="0 0 24 24" class="f" style="width:18px"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z"/></svg>',
   wave: '<svg viewBox="0 0 24 24"><path d="M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0"/></svg>',
   piano: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v14M13 5v14M10.5 5v8M15.5 5v8"/></svg>',
   drone: '<svg viewBox="0 0 24 24"><path d="M3 12h3l2-5 3 10 3-8 2 5 2-2h3"/></svg>',
   scales: '<svg viewBox="0 0 24 24"><path d="M4 19h4v-4h4v-4h4V7h4"/></svg>',
+  mic: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>',
   fret: '<svg viewBox="0 0 24 24"><path d="M3 6h18M3 10h18M3 14h18M3 18h18M8 4v16M14 4v16"/></svg>',
 };
 
-let host = null, ctx = null, size = 'full', onClick = null, onKey = null, onDown = null;
+let host = null, ctx = null, size = 'full', onClick = null, onKey = null, onDown = null, lis = null;
 
 // Настройки: device.theory (+ scale: тоника и тип гаммы)
 function TH() {
@@ -172,19 +179,94 @@ function intervalsHTML() {
     '<p class="ftr">' + t('ivFtr') + '</p></div>';
 }
 
+/* ---------- определитель: аккорд и гамма по нотам, лады как одна семья ---------- */
+
+const NN = (pc) => SH[pc];
+const parentName = (f) => (f.fam === 'major' ? MAJ_NAMES : MIN_NAMES)[f.parent] + ' ' + scaleName(f.fam === 'major' ? 'major' : f.fam);
+function findHTML() {
+  const th = TH(), { t, ui } = ctx, notes = (th.fnotes ||= []), tonic = notes.includes(th.ftonic) ? th.ftonic : notes[0];
+  const picker = '<div class="hscroll fpick">' + SH.map((n, i) => '<button class="pill' + (i === tonic ? ' ftonic' : '') + '" data-x="fnote" data-v="' + i + '" aria-pressed="' + notes.includes(i) + '">' + n + '</button>').join('') + '</div>';
+  const acts = '<div class="vrow tight fact">' + icb('data-x="flisten"', lis ? '…' : I.mic, t(lis ? 'find.listening' : 'find.listen'), 'sm' + (lis ? ' on' : '')) +
+    icb('data-x="fplay"', I.play, t('find.play'), 'sm') + icb('data-x="fclear"', '×', t('find.clear'), 'sm txt') + '</div>';
+  const ch = notes.length > 1 ? chordsOf(notes, tonic) : [], fams = notes.length ? familiesOf(notes, tonic) : [];
+  const chordCard = ch.length ? '<div class="fcard"><span class="fhd">' + t('find.chord') + '</span><b class="fbig">' + ui.esc(ch[0].name) + '</b>' +
+    (ch.length > 1 ? '<span class="l2 fsub">' + t('find.also') + ' ' + ch.slice(1, 4).map((c) => ui.esc(c.name)).join(' · ') + '</span>' : '') + '</div>'
+    : notes.length > 1 && notes.length < 6 ? '<div class="fcard"><span class="fhd">' + t('find.chord') + '</span><span class="l2">' + t('find.noChord') + '</span></div>' : '';
+  const famHTML = (f) => '<div class="ffam"><div class="ffh"><b>' + ui.esc(parentName(f)) + '</b><span class="l2">' + t('find.fam.' + f.fam) + (f.extra ? ' · ' + ctx.tn('find.extra', f.extra) : '') + '</span></div>' +
+    '<div class="chips fmodes">' + f.modes.map((m) => '<button class="chip' + (m.pc === tonic ? ' on' : '') + '" data-x="fmode" data-pc="' + m.pc + '" data-id="' + m.id + '"><span class="fnb fS">' + (m.deg + 1) + '</span>' +
+      NN(m.pc) + ' ' + ui.esc(scaleName(m.id)) + '</button>').join('') + '</div>' +
+    (f.at ? '<p class="fsame">' + ui.esc(t('find.same', { mode: NN(f.at.pc) + ' ' + scaleName(f.at.id), parent: parentName(f), deg: f.at.deg + 1 })) + '</p>' : '') + '</div>';
+  if (size === 'quarter' || size === 'strip') {
+    return '<div class="vq">' + picker + '<div class="fbig sm">' + (ch.length ? ui.esc(ch[0].name) : '—') + '</div><div class="l2">' +
+      (fams[0] && fams[0].at ? ui.esc(NN(fams[0].at.pc) + ' ' + scaleName(fams[0].at.id)) : '') + '</div></div>';
+  }
+  if (!notes.length) return '<div class="swrap">' + picker + acts + '<p class="ftr">' + t('find.hint') + '</p>' + ladderHTML(th.flad ?? 0, []) + '<p class="ftr">' + t('find.ftr') + '</p></div>';
+  const tonicRow = notes.length > 1 ? '<div class="frow"><span class="l2">' + t('find.tonic') + '</span>' + notes.map((pc) => '<button class="pill sm" data-x="ftonic" data-v="' + pc + '" aria-pressed="' + (pc === tonic) + '">' + NN(pc) + '</button>').join('') + '</div>' : '';
+  return '<div class="swrap">' + picker + tonicRow + acts + '<div style="margin-top:6px">' + kbHTML(60, 15, new Set(notes), tonic) + '</div>' + chordCard +
+    '<div class="hdr">' + t('find.scales') + '</div>' + (fams.length ? fams.slice(0, 4).map(famHTML).join('') + (fams.length > 4 ? '<p class="ftr">' + ctx.tn('find.more', fams.length - 4) + '</p>' : '')
+      : '<p class="ftr">' + t('find.noScale') + '</p>') +
+    ladderHTML(tonic, notes) + '<p class="ftr">' + t('find.ftr') + '</p></div>';
+}
+// Лестница ладов от одной тоники: от светлого к тёмному, соседние — на одну ноту
+function ladderHTML(tonic, notes) {
+  const { t, ui } = ctx;
+  return '<div class="hdr">' + ui.esc(t('find.ladder', { note: NN(tonic) })) + '</div><div class="group fladder">' + ladderOf(tonic, notes).map((r) => {
+    const c = colorNote(r.id);
+    return '<button class="cell" data-x="fmode" data-pc="' + tonic + '" data-id="' + r.id + '"><span class="fnb fS" style="width:34px">' + (r.lowered ? '↓' + r.lowered : '·') + '</span>' +
+      '<span class="grow"><b style="font-weight:600">' + ui.esc(NN(tonic) + ' ' + scaleName(r.id)) + '</b><span class="st l2" style="display:block;font-size:12.5px">' + degreesOf(r.id).join(' ') +
+      (c ? ' · ' + ui.esc(t('find.color.' + c.base, { notes: c.notes.join(' ') })) : '') + '</span></span>' + (r.fits ? ui.icons.check : '') + '</button>';
+  }).join('') + '</div>';
+}
+
+// Слушать: ~2,5 с с микрофона → энергия по 12 нотам → самые сильные ноты (до шести), тоника — самая громкая
+async function listen() {
+  if (lis) return;
+  const { t, ui } = ctx;
+  try {
+    const m = await ctx.mic.request();
+    if (!host) { m.stop(); return; }
+    lis = { m, chunks: [], t0: performance.now() };
+    render();
+    const step = () => {
+      if (!lis) return;
+      lis.chunks.push(Float32Array.from(lis.m.read()));
+      if (performance.now() - lis.t0 < 2600) lis.timer = setTimeout(step, 80); else heard();
+    };
+    step();
+  } catch (e) { ui.toast(t(e && e.reason === 'denied' ? 'find.micDenied' : 'find.micFail')); }
+}
+function heard() {
+  const { m, chunks } = lis, th = TH();
+  m.stop(); lis = null;
+  const n = chunks[0] ? chunks[0].length : 0, x = new Float32Array(chunks.length * n);
+  chunks.forEach((c, i) => x.set(c, i * n));
+  const rms = Math.sqrt(x.reduce((s, v) => s + v * v, 0) / Math.max(1, x.length));
+  if (rms < 0.004) { ctx.ui.toast(ctx.t('find.quiet')); render(); return; }
+  const c = chroma(x, m.sampleRate), mx = Math.max(...c);
+  const pcs = [...c.keys()].filter((i) => c[i] >= mx * 0.55).sort((a, b) => c[b] - c[a]).slice(0, 6);
+  th.fnotes = pcs; th.ftonic = pcs[0];
+  ctx.log('определитель: по микрофону ' + pcs.length + ' нот');
+  ctx.store.save(); render();
+}
+function stopListen() { if (lis) { clearTimeout(lis.timer); lis.m.stop(); lis = null; } }
+
 /* ---------- окно ---------- */
 
 function view() {
-  const s = TH().sec || 'circle', big = size === 'full' || size === 'half', { t } = ctx;
-  const sw = big ? '<div class="tsw" role="tablist">' + SECS.map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' +
+  const s = curSec(), big = size === 'full' || size === 'half', { t } = ctx;
+  const sw = big ? '<div class="tsw" role="tablist">' + secs().map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' +
     t('sec.' + k) + '</button>').join('') + '</div>'
     : '<div class="csw"><button class="cswb on txt" data-x="tsecnext" aria-label="' + t('secNext') + '">' + t('sec.' + s) + ' ›</button></div>';
-  const body = s === 'circle' ? circleHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : intervalsHTML();
+  const body = s === 'circle' ? circleHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : intervalsHTML();
   return '<div class="comp ' + size + '">' + sw + '<div class="cbody">' + body + '</div></div>';
 }
 
 function render() {
-  if (host) host.innerHTML = view();
+  if (!host) return;
+  host.innerHTML = view();
+  // выбранная вкладка не уходит за край полосы (вкладок пять — «Определитель» последний)
+  const on = host.querySelector('.tswb.on'), bar = on && on.parentElement;
+  if (bar && on.offsetLeft + on.offsetWidth > bar.clientWidth) bar.scrollLeft = on.offsetLeft + on.offsetWidth - bar.clientWidth + 4;
 }
 
 // Шторка выбора гаммы или аккорда
@@ -221,7 +303,18 @@ function act(a, el) {
   const th = TH(), A = ctx.audio, save = () => { ctx.store.save(); render(); };
   switch (a) {
     case 'tsec': th.sec = el.dataset.v; save(); break;
-    case 'tsecnext': th.sec = SECS[(SECS.indexOf(th.sec || 'circle') + 1) % SECS.length]; save(); break;
+    case 'tsecnext': th.sec = secs()[(secs().indexOf(curSec()) + 1) % secs().length]; save(); break;
+    case 'fnote': {
+      const pc = +el.dataset.v, n = (th.fnotes ||= []);
+      if (n.includes(pc)) { th.fnotes = n.filter((x) => x !== pc); if (th.ftonic === pc) th.ftonic = th.fnotes[0]; }
+      else { n.push(pc); if (th.ftonic == null || !n.includes(th.ftonic)) th.ftonic = pc; if (A.unlock()) A.playNote(60 + pc, { bus: 'theory', dur: 0.5 }); }
+      save(); break;
+    }
+    case 'ftonic': th.ftonic = +el.dataset.v; save(); break;
+    case 'fclear': th.fnotes = []; th.ftonic = null; save(); break;
+    case 'flisten': if (lis) { stopListen(); render(); } else listen(); break;
+    case 'fplay': { const n = th.fnotes || [], tn = n.includes(th.ftonic) ? th.ftonic : n[0]; if (n.length) A.playChord(n.map((pc) => 48 + tn + ((pc - tn + 12) % 12)).sort((a, b) => a - b)); break; }
+    case 'fmode': th.scale = { pc: +el.dataset.pc, type: el.dataset.id }; th.sec = 'scales'; save(); break;
     case 'key': th.pc = +el.dataset.pc; th.minor = el.dataset.minor === '1'; save(); break;
     case 'sevt': th.sev = !th.sev; save(); break;
     case 'kprev': case 'knext': th.pc = circleStep(th.pc, th.minor, a === 'knext' ? 1 : -1); save(); break;
@@ -275,6 +368,8 @@ function bind() {
     const k = e.target.closest('.kb [data-m]');
     if (!k) return;
     e.preventDefault();
+    // в определителе клавиша добавляет или убирает ноту
+    if (curSec() === 'find') { act('fnote', { dataset: { v: String(+k.dataset.m % 12) } }); return; }
     if (ctx.audio.unlock()) ctx.audio.playNote(+k.dataset.m, { bus: 'theory', dur: 0.6 });
   };
   host.addEventListener('click', onClick);
@@ -301,6 +396,7 @@ export default {
   },
   resize(sz) { size = sz; render(); },
   unmount() {
+    stopListen();
     if (host) {
       host.removeEventListener('click', onClick);
       host.removeEventListener('keydown', onKey);

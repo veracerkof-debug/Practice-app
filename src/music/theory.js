@@ -51,8 +51,12 @@ export const SCALES = {
   dorian: [[0, 2, 3, 5, 7, 9, 10]], phrygian: [[0, 1, 3, 5, 7, 8, 10]], lydian: [[0, 2, 4, 6, 7, 9, 11]], mixo: [[0, 2, 4, 5, 7, 9, 10]],
   locrian: [[0, 1, 3, 5, 6, 8, 10]],
   pmaj: [[0, 2, 4, 7, 9], [0, 1, 2, 4, 5]], pmin: [[0, 3, 5, 7, 10], [0, 2, 3, 4, 6]], blues: [[0, 3, 5, 6, 7, 10], [0, 2, 3, 4, 4, 6]],
+  // лады гармонического и мелодического минора (определитель, src/music/identify.js); в общем списке гамм их нет
+  locrian6: [[0, 1, 3, 5, 6, 9, 10]], ionian5: [[0, 2, 4, 5, 8, 9, 11]], dorian4: [[0, 2, 3, 6, 7, 9, 10]], phrygdom: [[0, 1, 4, 5, 7, 8, 10]],
+  lydian2: [[0, 3, 4, 6, 7, 9, 11]], ultraloc: [[0, 1, 3, 4, 6, 8, 9]], dorianb2: [[0, 1, 3, 5, 7, 9, 10]], lydaug: [[0, 2, 4, 6, 8, 9, 11]],
+  lyddom: [[0, 2, 4, 6, 7, 9, 10]], mixob6: [[0, 2, 4, 5, 7, 8, 10]], locrian2: [[0, 2, 3, 5, 6, 8, 10]], altered: [[0, 1, 3, 4, 6, 8, 10]],
 };
-export const SCALE_TYPES = Object.keys(SCALES);
+export const SCALE_TYPES = ['major', 'minor', 'harm', 'mel', 'dorian', 'phrygian', 'lydian', 'mixo', 'locrian', 'pmaj', 'pmin', 'blues'];
 export const SCALE_GROUPS = [['main', ['major', 'minor', 'harm', 'mel']], ['modes', ['dorian', 'phrygian', 'lydian', 'mixo', 'locrian']], ['penta', ['pmaj', 'pmin', 'blues']]];
 
 // steps — шаги между нотами в полутонах (1 — полутон, 2 — тон, 3 — тон+полутон)
