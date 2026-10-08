@@ -11,6 +11,7 @@ import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { bindExt } from './ext.js';
 import { reportSheet } from './report.js';
+import { songImportMenu } from './songimport.js';
 import { createPanel, donateSheet, legalSheet, tosGate, unverifiedSheet } from './panel.js';
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
 import { onboarding } from './onboard.js';
@@ -102,6 +103,7 @@ export function createShell(app, root) {
     else if (d.openTool) openToolView(app, d.openTool, render);
     else if (d.act === 'free') app.startSession('free');
     else if (d.act === 'addSong') songForm(app, null, (id) => go('library', id));
+    else if (d.act === 'songImport') songImportMenu(app, () => go('library'));
     else if (calAct(app, b, view.tab === 'calendar' ? view.cal : null, render)) { /* календарь и строки событий */ }
     else return false;
     return true;

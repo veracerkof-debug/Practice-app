@@ -22,11 +22,17 @@ const ADD_IC = '<svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12"/></svg>';
 
 /* ---------- список ---------- */
 
+// Импорт: стрелка в лоток
+const IMPORT_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14"/></svg>';
+
 export function libraryHTML(app, view) {
   const L = ensureLib(app.store.state, t), songs = app.store.songs(), st = app.store.state.settings;
   let h = topbar('<div class="vrow tight"><button class="addbtn" style="margin:0" data-act="libman" aria-label="' + t('songs.labelsAria') + '">' + TAG_IC + '</button>' +
+    // церковный режим: импорт песен из программ для вывода текста и Holyrics
+    (st.church ? '<button class="addbtn" style="margin:0" data-act="songImport" aria-label="' + t('songs.import') + '">' + IMPORT_IC + '</button>' : '') +
     '<button class="addbtn" style="margin:0" data-act="addSong" aria-label="' + t('songs.add') + '">' + ADD_IC + '</button></div>') + '<div class="large">' + t('songs.title') + '</div>';
-  if (!songs.length) return h + '<div class="empty"><b>' + t('songs.emptyTitle') + '</b>' + t('songs.emptyText') + '<br><button class="btn fill" data-act="addSong">' + t('songs.add') + '</button></div>';
+  if (!songs.length) return h + '<div class="empty"><b>' + t('songs.emptyTitle') + '</b>' + t('songs.emptyText') + '<br><button class="btn fill" data-act="addSong">' + t('songs.add') + '</button>' +
+    (st.church ? '<br><button class="btn" style="margin-top:10px" data-act="songImport">' + t('songs.import') + '</button>' : '') + '</div>';
   h += '<div class="hscroll catbar"><button class="catp' + (!view.cat ? ' on' : '') + '" data-cat="" style="--c:var(--ink);--t:var(--bg)">' + t('songs.all') + ' <i>' + songs.length + '</i></button>' +
     L.cats.map((c) => '<button class="catp' + (view.cat === c.id ? ' on' : '') + '" data-cat="' + c.id + '" style="--c:' + c.color + ';--t:' + textColor(c) + '">' + esc(c.name) + ' <i>' + countInCat(songs, c.id) + '</i></button>').join('') +
     (countInCat(songs, '') && L.cats.length ? '<button class="catp' + (view.cat === '_none' ? ' on' : '') + '" data-cat="_none" style="--c:var(--l2);--t:#fff">' + t('songs.noCat') + ' <i>' + countInCat(songs, '') + '</i></button>' : '') + '</div>';
