@@ -221,7 +221,7 @@ const stoneSeed = (st) => { const c = (st.profile && st.profile.createdAt) || 0;
 export function mountStones(app, root) {
   const st = app.store.state.settings, h = gemSec(app.store.sessions()) / 3600;
   root.querySelectorAll('canvas[data-stone="home"]').forEach((c) => {
-    stoneView(c, { seed: stoneSeed(st), hours: h, detail: 3, onTap: () => stoneSheet(app) });
+    stoneView(c, { seed: stoneSeed(st), hours: h, detail: 3, key: 'home', onTap: () => stoneSheet(app) });
     c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); stoneSheet(app); } });
   });
 }
@@ -240,7 +240,7 @@ export function stoneSheet(app) {
   const root = api.el;
   const cv = root.querySelector('canvas[data-stone="full"]');
   if (!cv) return;
-  const v = stoneView(cv, { seed: stoneSeed(st), hours: hrs, detail: 4 });
+  const v = stoneView(cv, { seed: stoneSeed(st), hours: hrs, detail: 4, key: 'home' });
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-stv]');
     if (!b) return;

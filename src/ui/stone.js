@@ -4,6 +4,9 @@
 //   • потом медленно уходит сама угловатая форма: половина за ~2100 ч (FORM_H), почти вся — к ~10 000 ч.
 // Так у реальной гальки: острые углы скалываются в первые километры пути, а округлой она становится за сотни.
 // Рисуется без библиотек — сеткой из треугольников на <canvas>, оттенками серого. Камень можно крутить пальцем.
+// Порода у каждого своя (по зерну): гранит с крапом, кварцевые жилы, слоистый песчаник, тёмный базальт — как галька
+// в реках Узбекистана. Узор привязан к телу камня, поэтому стороны различимы и у совсем круглого; полировка
+// с часами растёт — блик и переливы сильнее. Положение, в котором камень оставили, сохраняется.
 
 export const EDGE_H = 300, FORM_H = 3000;
 
@@ -57,6 +60,12 @@ export function stoneMesh(seed, hours, detail = 3) {
   const ax = [1.12 + r() * 0.12, 0.62 + r() * 0.14, 0.9 + r() * 0.12];
   const bumps = Array.from({ length: 5 }, () => ({ n: norm([r() * 2 - 1, r() * 2 - 1, r() * 2 - 1]), f: 1.5 + r() * 2.5, ph: r() * 6.3, a: 0.02 + r() * 0.03 }));
   const grain = Array.from({ length: 6 }, () => ({ n: norm([r() * 2 - 1, r() * 2 - 1, r() * 2 - 1]), f: 6 + r() * 20, ph: r() * 6.3 }));
+  const kind = rockOf(seed), rv = () => norm([r() * 2 - 1, r() * 2 - 1, r() * 2 - 1]);
+  // пятна (крупная неоднородность), жилы (светлые полосы по плоскостям), слои (у песчаника)
+  const mottle = Array.from({ length: 3 }, () => ({ n: rv(), f: 1.6 + r() * 2.4, ph: r() * 6.3 }));
+  const veins = Array.from({ length: kind.veins }, () => ({ n: rv(), c: (r() - 0.5) * 0.9, w: 0.05 + r() * 0.05, a: 0.38 + r() * 0.25 }));
+  const layer = { n: rv(), f: 7 + r() * 8, ph: r() * 6.3 };
+  const hash = (v) => { const x = Math.sin(v[0] * 127.1 + v[1] * 311.7 + v[2] * 74.7 + seed * 0.013) * 43758.5453; return x - Math.floor(x); };
   const k = 0.018 + 0.11 * edges; // мягкость рёбер (новый камень тоже не бритвенно острый)
   const { V: S, F } = sphere(detail);
   const V = [], A = [];
@@ -74,15 +83,30 @@ export function stoneMesh(seed, hours, detail = 3) {
     bumps.forEach((b) => { bump += b.a * Math.sin(b.f * (v[0] * b.n[0] + v[1] * b.n[1] + v[2] * b.n[2]) + b.ph); });
     const R = (rough * (1 - form) + ell * 0.86 * form) * (1 + bump * (1 - form));
     V.push([v[0] * R, v[1] * R, v[2] * R]);
-    let g = 0;
-    grain.forEach((q) => { g += Math.sin(q.f * (v[0] * q.n[0] + v[1] * q.n[1] + v[2] * q.n[2]) + q.ph); });
-    A.push(0.5 + g / 14 + (r() - 0.5) * 0.12);
+    const dot = (n) => v[0] * n[0] + v[1] * n[1] + v[2] * n[2];
+    let g = 0, mo = 0, vn = 0;
+    grain.forEach((q) => { g += Math.sin(q.f * dot(q.n) + q.ph); });
+    mottle.forEach((q) => { mo += Math.sin(q.f * dot(q.n) + q.ph); });
+    veins.forEach((q) => { const d = (dot(q.n) - q.c) / q.w; vn += q.a * Math.exp(-d * d); });
+    const h = hash(v), speck = h < kind.speck ? -0.34 : h > 1 - kind.speck * 0.6 ? 0.24 : 0;
+    const lay = kind.layers ? 0.13 * Math.sin(layer.f * dot(layer.n) + layer.ph) : 0;
+    A.push(Math.max(0, Math.min(1.25, 0.5 + g / 22 + mo * kind.mottle + vn + speck + lay + (r() - 0.5) * 0.08)));
   });
   // в единичный размер
   const m = Math.max(...V.map((p) => Math.hypot(p[0], p[1], p[2])));
   V.forEach((p) => { p[0] /= m; p[1] /= m; p[2] /= m; });
-  return { V, F, A };
+  return { V, F, A, kind };
 }
+
+// Порода по зерну профиля: светлота основы, лёгкий тёплый или холодный оттенок (почти серый), жилы, крап, слои
+const ROCKS = [
+  { id: 'granite', base: 0.02, tint: [4, 1, -3], veins: 1, speck: 0.16, mottle: 0.1, layers: false },
+  { id: 'quartzite', base: 0.04, tint: [1, 1, 2], veins: 3, speck: 0.03, mottle: 0.1, layers: false },
+  { id: 'sandstone', base: 0.04, tint: [6, 3, -4], veins: 0, speck: 0.06, mottle: 0.1, layers: true },
+  { id: 'basalt', base: -0.2, tint: [-1, 0, 3], veins: 2, speck: 0.03, mottle: 0.08, layers: false },
+  { id: 'slate', base: -0.08, tint: [-3, 0, 4], veins: 1, speck: 0.02, mottle: 0.08, layers: true },
+];
+export const rockOf = (seed) => ROCKS[(seed >>> 0) % ROCKS.length];
 
 // Поворот: кватернион [w, x, y, z]
 const qmul = (a, b) => [a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3], a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
@@ -94,9 +118,25 @@ function qmat(q) {
     2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)];
 }
 
+// Положение камня: в памяти (между перерисовками экрана) и на устройстве (между запусками)
+const SAVED = new Map();
+function loadQ(key) {
+  if (!key) return null;
+  if (SAVED.has(key)) return SAVED.get(key);
+  try { const a = JSON.parse(localStorage.getItem('practice.v1.stone.' + key) || 'null'); if (Array.isArray(a) && a.length === 4 && a.every(Number.isFinite)) return a; } catch { /* нет хранилища */ }
+  return null;
+}
+function saveQ(key, q) {
+  if (!key) return;
+  SAVED.set(key, q);
+  try { localStorage.setItem('practice.v1.stone.' + key, JSON.stringify(q.map((x) => +x.toFixed(5)))); } catch { /* нет хранилища */ }
+}
+
 // Живой камень на холсте: сам медленно поворачивается, тянется пальцем; onTap — касание без поворота
-export function stoneView(canvas, { seed = 1, hours = 0, detail = 3, spin = true, onTap = null } = {}) {
-  let mesh = stoneMesh(seed, hours, detail), q = norm4(qmul(qaxis(1, 0, 0, 0.5), qaxis(0, 1, 0, 0.6))), vx = 0, vy = 0, drag = null, raf = 0, lastT = 0;
+export function stoneView(canvas, { seed = 1, hours = 0, detail = 3, spin = true, onTap = null, key = null } = {}) {
+  let mesh = stoneMesh(seed, hours, detail), polish = wear(hours).edges, vx = 0, vy = 0, drag = null, raf = 0, lastT = 0;
+  // положение, в котором камень оставили (для того же места: главная, шторка)
+  let q = loadQ(key) || norm4(qmul(qaxis(1, 0, 0, 0.5), qaxis(0, 1, 0, 0.6)));
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const ctx = canvas.getContext('2d');
   const dark = () => matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.dataset.theme !== 'light' || document.documentElement.dataset.theme === 'dark' || document.documentElement.dataset.theme === 'oled';
@@ -122,13 +162,17 @@ export function stoneView(canvas, { seed = 1, hours = 0, detail = 3, spin = true
     // тень под камнем
     ctx.fillStyle = dk ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.10)';
     ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.98, s * 0.7, s * 0.09, 0, 0, Math.PI * 2); ctx.fill();
+    const K = mesh.kind, tn = K.tint;
     list.forEach(([, f, n]) => {
       const lam = Math.max(0, n[0] * L[0] + n[1] * L[1] + n[2] * L[2]);
-      const alb = (mesh.A[f[0]] + mesh.A[f[1]] + mesh.A[f[2]]) / 3;
-      const spec = Math.pow(Math.max(0, n[2] * 0.6 + lam * 0.4), 24) * 0.12;
-      let v = (dk ? 28 : 34) + (dk ? 150 : 185) * (0.16 + 0.84 * lam) * (0.82 + 0.36 * alb) + spec * 255;
+      const alb = (mesh.A[f[0]] + mesh.A[f[1]] + mesh.A[f[2]]) / 3 + K.base;
+      // блик: у полированной гальки — острее и ярче; переливы — блик чуть гуляет по узору породы
+      const hv = Math.max(0, n[2] * 0.6 + lam * 0.4), spec = Math.pow(hv, 18 + 30 * polish) * (0.08 + 0.16 * polish) * (0.7 + 0.6 * alb);
+      const rim = Math.pow(1 - Math.max(0, n[2]), 3) * (6 + 10 * polish); // край светлее — объём
+      let v = (dk ? 28 : 34) + (dk ? 150 : 185) * (0.16 + 0.84 * lam) * (0.6 + 0.72 * alb) + spec * 255 + rim;
       v = Math.max(8, Math.min(245, Math.round(v)));
-      const col = 'rgb(' + v + ',' + v + ',' + Math.min(255, v + 2) + ')';
+      const sh = (k) => Math.max(0, Math.min(255, v + Math.round(k * (0.6 + 0.4 * lam))));
+      const col = 'rgb(' + sh(tn[0]) + ',' + sh(tn[1]) + ',' + sh(tn[2]) + ')';
       ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 0.6;
       ctx.beginPath();
       ctx.moveTo(cx + P[f[0]][0] * s, cy + P[f[0]][1] * s); ctx.lineTo(cx + P[f[1]][0] * s, cy + P[f[1]][1] * s); ctx.lineTo(cx + P[f[2]][0] * s, cy + P[f[2]][1] * s);
@@ -148,6 +192,7 @@ export function stoneView(canvas, { seed = 1, hours = 0, detail = 3, spin = true
       else if (spin && !still) turn(-0.00012 * dt, 0.00004 * dt);
     }
     draw();
+    if (key) SAVED.set(key, q);
     if (spin && !still || drag || Math.abs(vx) + Math.abs(vy) > 1e-4) raf = requestAnimationFrame(frame);
   }
   const kick = () => { if (!raf) { lastT = 0; raf = requestAnimationFrame(frame); } };
@@ -175,16 +220,17 @@ export function stoneView(canvas, { seed = 1, hours = 0, detail = 3, spin = true
     tapped = e.type === 'pointerup' && drag.moved < 8;
     drag = null;
     if (tapped) vx = vy = 0;
+    saveQ(key, q);
     kick();
   };
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointercancel', up);
   canvas.addEventListener('click', (e) => { if (!tapped || !onTap) return; tapped = false; e.stopPropagation(); onTap(); });
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') kick(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') kick(); else saveQ(key, q); });
 
   kick();
   return {
-    setHours(h) { mesh = stoneMesh(seed, h, detail); kick(); },
+    setHours(h) { mesh = stoneMesh(seed, h, detail); polish = wear(h).edges; kick(); },
     redraw: draw,
   };
 }
