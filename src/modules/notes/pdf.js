@@ -33,8 +33,47 @@ export const IMG_MAX_BYTES = 64 * 1024 * 1024;
 const docs = new WeakMap();
 let closing = Promise.resolve();
 
-// askPassword(wrong) — файл под паролем: спросить (wrong — прошлый не подошёл); null — отказались
-export async function openPdf(blob, { password, askPassword, log = () => {} } = {}) {
+// Начало и конец файла: «%PDF-» в начале и «%%EOF» в конце — иначе копия файла неполная или испорчена
+async function checkEnds(blob, log) {
+  try {
+    const head = new Uint8Array(await blob.slice(0, 1029).arrayBuffer()), tail = new Uint8Array(await blob.slice(Math.max(0, blob.size - 2048)).arrayBuffer());
+    const eof = new TextDecoder('latin1').decode(tail).includes('%%EOF');
+    log('проверка файла: начало ' + (pdfBytes(head) ? 'PDF' : 'не PDF') + ', конец ' + (eof ? 'есть %%EOF' : 'без %%EOF (файл неполный?)'), eof && pdfBytes(head) ? 'i' : 'w');
+  } catch (e) { log('проверка файла не удалась (' + (e && e.name) + ')', 'w'); }
+}
+
+// askPassword(wrong) — файл под паролем: спросить (wrong — прошлый не подошёл); null — отказались.
+// Большой файл сначала открывается по частям; если не вышло (на некоторых Android части сохранённой копии
+// читаются неверно — pdf.js видит «Invalid PDF structure»), — второй попыткой целиком в память
+// Устройство, где части файла читаются неверно, запоминается — дальше большие файлы сразу целиком
+const WHOLE_KEY = 'practice.v1.pdfWhole';
+const wholeOnly = () => { try { return localStorage.getItem(WHOLE_KEY) === '1'; } catch { return false; } };
+const markWhole = () => { try { localStorage.setItem(WHOLE_KEY, '1'); } catch { /* нет хранилища */ } };
+// Конец файла, прочитанный куском, должен содержать «%%EOF»; если нет — куски на этом устройстве читаются неверно
+async function tailOk(blob) {
+  try { return new TextDecoder('latin1').decode(new Uint8Array(await blob.slice(Math.max(0, blob.size - 2048), blob.size).arrayBuffer())).includes('%%EOF'); } catch { return false; }
+}
+export async function openPdf(blob, opt = {}) {
+  const log = opt.log || (() => {});
+  if (blob.size <= RANGE_FROM) return openOnce(blob, opt, false);
+  if (wholeOnly()) { log('на этом устройстве — целиком'); return openOnce(blob, opt, false); }
+  if (!(await tailOk(blob))) {
+    log('конец файла по частям не читается — открывается целиком', 'w');
+    await checkEnds(blob, log);
+    markWhole();
+    return openOnce(blob, opt, false);
+  }
+  try { return await openOnce(blob, opt, true); } catch (e) {
+    if (e && /Password/.test(e.name || '')) throw e;
+    log('по частям не открылся (' + ((e && e.name) || 'ошибка') + ') — читается целиком', 'w');
+    await checkEnds(blob, log);
+    const doc = await openOnce(blob, opt, false);
+    markWhole(); // целиком открылось — значит, дело в чтении частей
+    return doc;
+  }
+}
+
+async function openOnce(blob, { password, askPassword, log = () => {} } = {}, ranged) {
   const pdfjs = await loadLib();
   await closing;
   const port = new PdfWorker(), worker = new pdfjs.PDFWorker({ port });
@@ -48,18 +87,22 @@ export async function openPdf(blob, { password, askPassword, log = () => {} } = 
     // для экрана телефона хватает и при увеличении, а память не кончается на первой же странице
     canvasMaxAreaInBytes: IMG_MAX_BYTES,
   };
-  if (blob.size > RANGE_FROM) {
+  if (ranged) {
     const range = new pdfjs.PDFDataRangeTransport(blob.size, null);
-    // если кусок с середины не читается (поток без перемотки) — файл читается один раз подряд, куски — из него;
-    // не вышло и так — открытие обрывается с ошибкой, а не ждёт вечно
+    // если кусок с середины не читается (поток без перемотки) или приходит не той длины — файл читается один раз
+    // подряд, куски — из него; не вышло и так — открытие обрывается с ошибкой, а не ждёт вечно
     // (кусок отдаётся копией: pdf.js может передать его буфер в поток, и общий буфер стал бы пустым)
     let whole = null;
+    const readWhole = () => (whole ||= blob.arrayBuffer().then((x) => { log('прочитан целиком'); return new Uint8Array(x); }));
     const read = async (b, e) => {
       if (!whole) {
-        try { return new Uint8Array(await blob.slice(b, e).arrayBuffer()); } catch (err) { log('кусок ' + b + '–' + e + ' не читается (' + (err && err.name) + ') — файл читается целиком', 'w'); }
-        whole = blob.arrayBuffer().then((x) => { log('прочитан целиком'); return new Uint8Array(x); });
+        try {
+          const d = new Uint8Array(await blob.slice(b, e).arrayBuffer()), want = Math.min(e, blob.size) - b;
+          if (d.length === want) return d;
+          log('кусок ' + b + '–' + e + ': пришло ' + d.length + ' байт вместо ' + want + ' — файл читается целиком', 'w');
+        } catch (err) { log('кусок ' + b + '–' + e + ' не читается (' + (err && err.name) + ') — файл читается целиком', 'w'); }
       }
-      return (await whole).slice(b, e);
+      return (await readWhole()).slice(b, e);
     };
     range.requestDataRange = (begin, end) => {
       read(begin, end).then((d) => range.onDataRange(begin, d), (e) => fail(Object.assign(new Error(String(e && e.message || e)), { name: 'ReadError' })));
@@ -86,6 +129,7 @@ export async function openPdf(blob, { password, askPassword, log = () => {} } = 
   try { doc = await Promise.race([task.promise, failed]); } catch (e) { task.destroy().finally(() => port.terminate()); throw e; }
   docs.set(doc, { task, port });
   doc._pw = pw; // подошедший пароль — чтобы в следующий раз не спрашивать
+  if (!ranged && blob.size > RANGE_FROM) log('открыт целиком в памяти');
   return doc;
 }
 
