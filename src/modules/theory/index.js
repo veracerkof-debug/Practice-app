@@ -351,9 +351,16 @@ function view() {
   return '<div class="comp ' + size + '">' + sw + '<div class="cbody">' + body + '</div></div>';
 }
 
+let lastSec = null;
 function render() {
   if (!host) return;
+  // в том же разделе прокрутка остаётся на месте (переключение лада, тоники, вида — без прыжка наверх)
+  const sec = curSec(), box = host.querySelector('.swrap, .cwrap.f'), y = box && lastSec === sec ? box.scrollTop : 0, hy = lastSec === sec ? host.scrollTop : 0;
   host.innerHTML = view();
+  lastSec = sec;
+  const nb = host.querySelector('.swrap, .cwrap.f');
+  if (nb && y) nb.scrollTop = y;
+  if (hy) host.scrollTop = hy;
   // выбранная вкладка не уходит за край полосы (вкладок пять — «Определитель» последний)
   const on = host.querySelector('.tswb.on'), bar = on && on.parentElement;
   if (bar && on.offsetLeft + on.offsetWidth > bar.clientWidth) bar.scrollLeft = on.offsetLeft + on.offsetWidth - bar.clientWidth + 4;
