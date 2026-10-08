@@ -264,6 +264,11 @@ function rootHTML(app) {
 // Полноэкранная панель профиля; page — 'root' или ключ PAGES
 export function createPanel(app, onChange) {
   let page = null, layer = null, input = null, lastPage = null;
+  // Перезапуск для смены строк (язык, вид): после него открывается та же страница настроек на том же месте
+  const reloadHere = () => {
+    try { sessionStorage.setItem('melete.reopen', JSON.stringify({ page, y: layer ? layer.scrollTop : 0 })); } catch { /* без хранилища — просто перезапуск */ }
+    setTimeout(() => location.reload(), 150);
+  };
   const render = () => {
     if (!page) { if (layer) { leave(layer, 260); layer = null; } lastPage = null; return; }
     if (!layer) {
@@ -304,7 +309,7 @@ export function createPanel(app, onChange) {
         st.uiStyle = b.dataset.v === 'mono' && extOn(st) ? 'mono' : 'default';
         applyTheme(st); changed();
         // у «Минимала» свой язык (греческий и латынь) — строки перечитываются после перезапуска
-        if (was !== (st.uiStyle === 'mono' && st.monoLang !== false)) setTimeout(() => location.reload(), 150);
+        if (was !== (st.uiStyle === 'mono' && st.monoLang !== false)) reloadHere();
         return;
       }
       if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
@@ -317,7 +322,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="melevel"] [data-v]'))) { saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), level: b.dataset.v }); render(); onChange(); return; }
       if ((b = g('[data-seg="track"] [data-v]'))) { app.store.state.settings.trackMode = b.dataset.v; changed(); return; }
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
-      if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); setTimeout(() => location.reload(), 150); return; }
+      if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); reloadHere(); return; }
       if (g('[data-act="export"]')) { exportBackup(app); return; }
       if (g('[data-act="import"]')) { input.click(); return; }
       if (g('[data-act="reset"]')) {
@@ -338,7 +343,7 @@ export function createPanel(app, onChange) {
       const d = e.target.dataset;
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); return; }
       if (e.target.hasAttribute('data-bplan')) { const v = e.target.value; app.bible.setPlan(v === 'none' ? null : v, dayKeyOf(Date.now())); render(); onChange(); return; }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') setTimeout(() => location.reload(), 150); }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') reloadHere(); }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
         if (r.locked) { toast(t('me.priorLocked')); e.target.value = r.priorHours || ''; }
@@ -358,6 +363,15 @@ export function createPanel(app, onChange) {
   const panel = {
     open(p = 'root') { page = p; render(); if (layer) layer.scrollTop = 0; },
     close() { page = null; render(); },
+    // после перезапуска (reloadHere) — вернуть открытую страницу
+    reopen() {
+      let r = null;
+      try { r = JSON.parse(sessionStorage.getItem('melete.reopen') || 'null'); sessionStorage.removeItem('melete.reopen'); } catch { r = null; }
+      if (!r || !r.page) return false;
+      page = r.page; render();
+      if (layer) layer.scrollTop = r.y || 0;
+      return true;
+    },
     refresh() { if (page) render(); },
     get page() { return page; },
   };

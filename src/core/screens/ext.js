@@ -3,27 +3,21 @@ import { t } from '../../i18n/index.js';
 import { leave } from '../../ui/index.js';
 import { extTry } from '../ext.js';
 
-const ARM_MS = 650, HOLD_MS = 5000, ARMED_FOR = 20000;
+import { buzz } from '../pulse.js';
 
-// open() — что показать после входа
+const HOLD_MS = 15000;
+
+// Удержание названия приложения 15 секунд — окно кода (с вибрацией). open() — что показать после входа
 export function bindExt(app, open) {
-  let timer = 0, armed = 0, swallow = false, start = null;
+  let timer = 0, swallow = false, start = null;
   const clear = () => { clearTimeout(timer); timer = 0; start = null; };
   addEventListener('pointerdown', (e) => {
-    const logo = e.target.closest && e.target.closest('.logo');
-    if (!logo) return;
+    if (!(e.target.closest && e.target.closest('.logo'))) return;
     start = { x: e.clientX, y: e.clientY };
-    // «Μ» — первая буква; палец шире буквы, поэтому засчитывается левая треть названия
-    const r = logo.getBoundingClientRect();
-    const deep = Date.now() < armed && (e.target.closest('.lg0') || e.clientX < r.left + r.width * 0.34);
-    timer = setTimeout(() => {
-      timer = 0;
-      swallow = true;
-      if (deep) { armed = 0; dialog(app, open); }
-      else { armed = Date.now() + ARMED_FOR; if (navigator.vibrate) try { navigator.vibrate(8); } catch { /* */ } }
-    }, deep ? HOLD_MS : ARM_MS);
+    clearTimeout(timer);
+    timer = setTimeout(() => { timer = 0; swallow = true; start = null; dialog(app, open); }, HOLD_MS);
   }, { capture: true, passive: true });
-  addEventListener('pointermove', (e) => { if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 12) clear(); }, { capture: true, passive: true });
+  addEventListener('pointermove', (e) => { if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 16) clear(); }, { capture: true, passive: true });
   addEventListener('pointerup', clear, { capture: true });
   addEventListener('pointercancel', clear, { capture: true });
   // долгое нажатие — не обычное нажатие (справка о названии не открывается)
@@ -41,6 +35,7 @@ function dialog(app, open) {
     'border:1px solid var(--sep);border-radius:12px;background:var(--fill);color:var(--ink)"></div>' +
     '<div class="abtns"><button data-k="no">' + t('ui.cancel') + '</button><button data-k="ok">OK</button></div></div>';
   document.body.appendChild(d);
+  buzz(60, 220);
   const inp = d.querySelector('input');
   setTimeout(() => inp.focus(), 50);
   const done = () => leave(d, 160);
@@ -53,7 +48,7 @@ function dialog(app, open) {
     }
     app.store.settingsChanged();
     done();
-    if (navigator.vibrate) try { navigator.vibrate([10, 60, 10]); } catch { /* */ }
+    buzz(35, 160); setTimeout(() => buzz(35, 160), 120);
     open();
   };
   inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, '').slice(0, 4); if (inp.value.length === 4) go(); });

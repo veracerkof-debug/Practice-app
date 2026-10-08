@@ -66,11 +66,11 @@
 
 /* ---------- отклик на нажатие ---------- */
 .btn, .hcta, .mcta, .tcard2, .qbtn, .stile3, .gemrow, .lchip, .pill, .chip, .catp, .fchip, .mtags button, .mtools button, .ic, .tab,
-.prank, .avatar, .logo, .tile.stile, .addbtn, .swc, .skin, .mrow > button, .sigc, .trkey, .trview {
+.prank, .avatar, .tile.stile, .addbtn, .swc, .skin, .mrow > button, .sigc, .trkey, .trview {
   transition: transform var(--t-fast) var(--e-out), background-color var(--t-mid) var(--e-out), color var(--t-mid) var(--e-out), box-shadow var(--t-mid) var(--e-out), opacity var(--t-mid);
 }
 .btn:active, .hcta:active, .mcta:active, .qbtn:active, .lchip:active, .pill:active, .chip:active, .catp:active, .fchip:active,
-.mtags button:active, .ic:active, .prank:active, .avatar:active, .logo:active, .addbtn:active, .swc:active, .skin:active, .sigc:active, .trkey:active, .trview:active { transform: scale(.95); }
+.mtags button:active, .ic:active, .prank:active, .avatar:active, .addbtn:active, .swc:active, .skin:active, .sigc:active, .trkey:active, .trview:active { transform: scale(.95); }
 .tcard2:active, .stile3:active, .gemrow:active, .tile.stile:active, .mrow > button:active { transform: scale(.98); }
 .mtools button:active .mcirc { transform: scale(.92); }
 .mtools .mcirc { transition: transform var(--t-fast) var(--e-out), background-color var(--t-mid); }

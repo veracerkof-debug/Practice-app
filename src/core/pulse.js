@@ -12,6 +12,12 @@ export const SIG_DEF = { flash: false, strong: '#FF3B30', other: '#FFFFFF', torc
 
 export const sigOf = (device) => ({ ...SIG_DEF, ...((device.metro ??= {}).sig || {}) });
 
+// Короткий отклик вибрацией вне метронома (на Android — плагин Pulse: navigator.vibrate в WebView часто молчит)
+export function buzz(ms = 45, amp = 200) {
+  if (Pulse) Pulse.vibrate({ ms, amp }).catch(() => {});
+  else try { if (navigator.vibrate) navigator.vibrate(ms); } catch { /* нет вибрации */ }
+}
+
 // Вибрация: сильная доля — длиннее и сильнее
 export const vibeFor = (level) => (level >= 3 ? { ms: 70, amp: 255 } : level === 2 ? { ms: 50, amp: 190 } : { ms: 35, amp: 120 });
 

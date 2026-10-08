@@ -157,6 +157,8 @@ export function createShell(app, root) {
   render();
   enter(); // первый экран тоже появляется плавно
   // Соглашение, затем регистрация (у кого ещё нет профиля — в том числе у тех, кто пользовался прототипом)
-  setTimeout(() => tosGate(app, () => { if (!app.store.state.settings.profile) onboarding(app, render); }), 400);
+  // перезапуск из настроек (язык, вид) — обратно на ту же страницу настроек, а не на главную
+  const reopened = panel.reopen();
+  if (!reopened) setTimeout(() => tosGate(app, () => { if (!app.store.state.settings.profile) onboarding(app, render); }), 400);
   return { render, go, panel };
 }

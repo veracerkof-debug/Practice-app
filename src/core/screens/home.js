@@ -20,7 +20,7 @@ import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
 import { stoneView, wear, stoneKm } from '../../ui/stone.js';
 import { nextEventsHTML } from './calendar.js';
-import { extOwner } from '../ext.js';
+import { extWho } from '../ext.js';
 import { refText } from '../bible.js';
 import { nextOf } from '../reading.js';
 
@@ -46,6 +46,18 @@ const greet = (h) => t(h < 5 ? 'mono.night' : h < 12 ? 'mono.morning' : h < 18 ?
 // Создателю — по роли: «Добрый вечер, создатель» и тихая строчка, своя на каждый день (без пафоса)
 const ROLE_LINES = 5;
 const roleLine = (d) => t('mono.role.' + (1 + (Math.floor(d.getTime() / 864e5) % ROLE_LINES)));
+// Личные бета-тестеры (Михаил — 'm', Парисо — 'r'): имя в разных формах и строчка о значении имени — своя на каждый день
+const PERSON = { m: 'mono.mi', r: 'mono.pa' }, PERSON_LINES = 6;
+function personHello(who, d) {
+  const day = Math.floor(d.getTime() / 864e5), names = t(PERSON[who] + '.names').split('|');
+  return { hello: greet(d.getHours()) + ', ' + names[(day + (d.getHours() >= 12 ? 1 : 0)) % names.length], line: t(PERSON[who] + '.' + (1 + (day % PERSON_LINES))) };
+}
+function helloHTML(st, now) {
+  const who = extWho(st), el = (s) => esc(s).replace(/(Μελέτη|Μιχαήλ)/g, '<span lang="el">$1</span>');
+  if (PERSON[who]) { const p = personHello(who, now); return '<h1 class="mhello">' + el(p.hello) + '</h1><p class="mrole">' + el(p.line) + '</p>'; }
+  if (who === 'p') return '<h1 class="mhello">' + esc(t('mono.creator', { g: greet(now.getHours()) })) + '</h1><p class="mrole">' + el(roleLine(now)) + '</p>';
+  return '<h1 class="mhello">' + esc(greet(now.getHours())) + '</h1>';
+}
 // Церковный режим: чтение дня по плану — главы, сколько прочитано, «Читать» открывает Библию на первой непрочитанной
 function readingCard(app, mono = false) {
   const st = app.store.state.settings;
@@ -59,11 +71,10 @@ function readingCard(app, mono = false) {
 const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';
 
 function homeMonoHTML(app) {
-  const st = app.store.state.settings, plain = !!st.toolsOnly, now = new Date(), owner = extOwner(st);
+  const st = app.store.state.settings, plain = !!st.toolsOnly, now = new Date();
   // (имя приложения в строчке — с lang="el": прописными по-гречески, без ударения)
   // Приветствие — место, где приложение потом будет говорить: спрашивать, предлагать, напоминать (без даты: это не календарь)
-  let h = '<div class="mono-home">' + topbar(logoHTML()) + '<div class="mvoice" aria-live="polite"><h1 class="mhello">' + esc(owner ? t('mono.creator', { g: greet(now.getHours()) }) : greet(now.getHours())) + '</h1>' +
-    (owner ? '<p class="mrole">' + esc(roleLine(now)).replace('Μελέτη', '<span lang="el">Μελέτη</span>') + '</p>' : '') + '</div>';
+  let h = '<div class="mono-home">' + topbar(logoHTML()) + '<div class="mvoice" aria-live="polite">' + helloHTML(st, now) + '</div>';
   if (!plain) {
     const w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st), today = weekday(Date.now()), WD = weekdays();
     h += mhead(t('home.week'), '<button class="mbtn" data-pp="' + (st.configured ? 'stats' : 'week') + '" aria-label="' + esc(t('home.stats')) + '">' + ARROW + '</button>') +
