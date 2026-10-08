@@ -239,3 +239,14 @@
 /* вкладка «Библия» (церковный режим): модуль на всё окно между верхом экрана и вкладками */
 #main.wbible{padding-bottom:0}
 .btab{height:calc(100dvh - var(--tabh,64px) - 18px - env(safe-area-inset-top,0px));display:flex;flex-direction:column}
+/* Оформление → размер интерфейса: −/+, «Авто», предпросмотр двух экранов в рамках */
+.szrow{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.szval{min-width:56px;text-align:center;font-size:20px;font-weight:600}
+.szauto{margin-left:auto}
+.szprev{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.szprev figure{margin:0;text-align:center}
+.szprev figcaption{font-size:12px;color:var(--l2);margin-top:6px}
+.szfr{position:relative;overflow:hidden;border-radius:16px;border:1px solid var(--sep);background:var(--bg);pointer-events:none}
+.szin{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg)}
+.szin .wrap{padding-bottom:0}
+.szin .tabbar{position:absolute}

@@ -47,6 +47,32 @@ export const ACCENTS = [['orange', '#FF9500'], ['red', '#FF3B30'], ['pink', '#FF
 export const UI_STYLES = ['default', 'mono'];
 export const isMono = (settings) => settings.uiStyle === 'mono';
 
+/* ---------- масштаб интерфейса ---------- */
+// Размер всех элементов: 'auto' (по короткой стороне экрана) или число от SCALE_MIN до SCALE_MAX.
+// Делается через ширину области просмотра (meta viewport): шире область — мельче элементы, уже — крупнее;
+// раскладка, касания и холсты работают как обычно (на Android нужен useWideViewPort — MainActivity).
+export const SCALE_MIN = 0.8, SCALE_MAX = 1.3, SCALE_STEP = 0.05;
+// Авто: маленькие телефоны — мельче, обычные — как задумано, планшеты — чуть крупнее (смотрят издалека)
+export const autoScale = (short) => (short < 340 ? 0.86 : short < 375 ? 0.93 : short < 600 ? 1 : 1.1);
+export const screenShort = () => (typeof screen !== 'undefined' ? Math.min(screen.width, screen.height) : 390);
+export function uiScale(settings, short = screenShort()) {
+  const s = +settings.uiScale;
+  return s >= SCALE_MIN - 1e-9 && s <= SCALE_MAX + 1e-9 ? s : autoScale(short);
+}
+// Ширина раскладки при масштабе s: ширина экрана в CSS-пикселях, делённая на s
+export const layoutWidth = (deviceWidth, s) => Math.round(deviceWidth / s);
+export function applyScale(settings) {
+  if (typeof document === 'undefined') return;
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) return;
+  const s = uiScale(settings), land = matchMedia('(orientation: landscape)').matches;
+  const w = land ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+  const want = Math.abs(s - 1) < 1e-3 ? 'width=device-width, initial-scale=1, viewport-fit=cover' : 'width=' + layoutWidth(w, s) + ', viewport-fit=cover';
+  if (meta.content !== want) meta.content = want;
+  document.documentElement.style.setProperty('--uiscale', s);
+  if (!applyScale.bound) { applyScale.bound = true; addEventListener('orientationchange', () => setTimeout(() => applyScale(settings), 200)); }
+}
+
 export function applyTheme(settings, de = document.documentElement) {
   const t = settings.theme;
   if (t === 'system' || !THEMES.includes(t)) de.removeAttribute('data-theme');
@@ -54,6 +80,7 @@ export function applyTheme(settings, de = document.documentElement) {
   if (isMono(settings)) de.setAttribute('data-style', 'mono');
   else de.removeAttribute('data-style');
   if (typeof document !== 'undefined' && document.body) watchMarks(isMono(settings));
+  applyScale(settings);
   const a = !isMono(settings) && settings.accent && settings.accent !== 'orange' ? ACCENTS.find((x) => x[0] === settings.accent) : null;
   if (a) {
     de.style.setProperty('--tint', a[1]);

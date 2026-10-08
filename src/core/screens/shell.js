@@ -83,6 +83,12 @@ export function createShell(app, root) {
     if (changed) enter();
   }
 
+  // Предпросмотр масштаба в «Оформлении»: разметка главной и инструментов без обработчиков
+  app.preview = {
+    home: (el) => { el.innerHTML = homeHTML(app); mountStones(app, el); },
+    tools: (el) => { renderTools(app, el); el.onclick = null; },
+    tabs: () => tabs.innerHTML,
+  };
   const panel = createPanel(app, () => render());
   bindExt(app, () => panel.open('look'));
 

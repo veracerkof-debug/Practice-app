@@ -10,7 +10,7 @@ import { dayKey, weekday, weekStart } from '../time.js';
 import {
   weekData, goalProgress, goalPerDay, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag, strictTime,
 } from '../stats.js';
-import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, applyTheme, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
+import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
@@ -173,12 +173,43 @@ function notifHTML(app) {
     row('askIdle', st.askIdle !== false) + row('noSoundNote', st.noSoundNote !== false) + row('rankNote', st.rankNote !== false);
 }
 
+// Размер интерфейса: «Авто» или −/+ с шагом 5 %; предпросмотр главной и инструментов — телефон или планшет
+let prevDev = null;
+function sizeHTML(app) {
+  const st = app.store.state.settings, s = uiScale(st), auto = !(+st.uiScale), pct = Math.round(s * 100);
+  const dev = prevDev || (screenShort() < 600 ? 'phone' : 'tablet');
+  return '<div class="hdr">' + t('look.size') + '</div><div class="group"><div class="cellcol">' +
+    '<div class="szrow"><button class="ic sm" data-uisz="-1" aria-label="' + esc(t('look.smaller')) + '"' + (s <= SCALE_MIN + 1e-6 ? ' disabled' : '') + '>' + IC.minus + '</button>' +
+    '<b class="num szval">' + pct + '%</b>' +
+    '<button class="ic sm" data-uisz="1" aria-label="' + esc(t('look.bigger')) + '"' + (s >= SCALE_MAX - 1e-6 ? ' disabled' : '') + '>' + IC.plus + '</button>' +
+    '<button class="pill szauto" data-uisz="auto" aria-pressed="' + auto + '">' + t('look.sizeAuto') + (auto ? '' : ' · ' + Math.round(autoScale(screenShort()) * 100) + '%') + '</button></div>' +
+    seg('szdev', [['phone', t('look.phone')], ['tablet', t('look.tablet')]], dev, t('look.prevDev')) +
+    '<div class="szprev" data-szprev="' + dev + '"><figure><div class="szfr"></div><figcaption>' + t('look.prevHome') + '</figcaption></figure>' +
+    '<figure><div class="szfr"></div><figcaption>' + t('look.prevTools') + '</figcaption></figure></div></div></div>' +
+    '<p class="ftr">' + t('look.sizeHint') + '</p>';
+}
+// Нарисовать предпросмотр: раскладка шириной (ширина экрана / масштаб), уменьшенная до рамки
+function mountSizePreview(app, root) {
+  const box = root.querySelector('[data-szprev]');
+  if (!box || !app.preview) return;
+  const dev = box.dataset.szprev, short = screenShort(), base = dev === 'tablet' ? 820 : (short < 600 ? short : 390), h = dev === 'tablet' ? 1180 : base * 2.1;
+  const st = app.store.state.settings, s = +st.uiScale ? uiScale(st) : autoScale(base), L = layoutWidth(base, s), tabsH = app.preview.tabs();
+  box.querySelectorAll('.szfr').forEach((fr, i) => {
+    const W = fr.clientWidth || 140, k = W / L, H = Math.round(h / s);
+    fr.style.height = Math.round(H * k) + 'px';
+    fr.innerHTML = '<div class="szin" style="width:' + L + 'px;height:' + H + 'px;transform:scale(' + k + ')"><main class="wrap"></main>' +
+      '<nav class="tabbar"><div class="in" style="grid-template-columns:repeat(' + ((tabsH.match(/class="tab"/g) || [1]).length) + ',1fr)">' + tabsH + '</div></nav></div>';
+    try { (i ? app.preview.tools : app.preview.home)(fr.querySelector('main')); } catch { /* предпросмотр необязателен */ }
+  });
+}
+
 function lookHTML(app) {
   const st = app.store.state.settings;
   const monoLang = st.uiStyle === 'mono' && st.monoLang !== false;
   return '<div class="large">' + t('look.title') + '</div>' + (monoLang ? '' :
     '<div class="hdr">' + t('look.lang') + '</div><div class="group"><div class="cellcol"><div class="seg uc" role="group" aria-label="' + t('look.lang') + '">' +
     LANGS.map((k) => '<button data-lang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>') +
+    sizeHTML(app) +
     '<div class="hdr">' + t('look.theme') + '</div><div class="group"><div class="cellcol">' + seg('theme', [['system', t('look.auto')], ['light', t('look.light')], ['dark', t('look.dark')]], st.theme, t('look.theme')) + '</div></div>' +
     (!extOn(st) ? '' : '<div class="hdr">' + t('mono.title') + '</div><div class="group"><div class="cellcol">' + seg('uistyle', [['default', t('mono.default')], ['mono', t('mono.name')]], st.uiStyle === 'mono' ? 'mono' : 'default', t('mono.title')) +
     '<div class="segcap">' + t('mono.hint') + '</div></div></div>') +
@@ -289,6 +320,7 @@ export function createPanel(app, onChange) {
     if (lastPage && lastPage !== page) layer.firstChild.classList.add(page === 'root' ? 'pback' : 'pfwd');
     layer.scrollTop = lastPage && lastPage !== page ? 0 : y;
     lastPage = page;
+    if (page === 'look') mountSizePreview(app, layer);
   };
   const changed = () => { app.store.settingsChanged(); render(); onChange(); };
   function bind() {
@@ -312,6 +344,12 @@ export function createPanel(app, onChange) {
         if (was !== (st.uiStyle === 'mono' && st.monoLang !== false)) reloadHere();
         return;
       }
+      if ((b = g('[data-uisz]'))) {
+        const st = app.store.state.settings, v = b.dataset.uisz;
+        st.uiScale = v === 'auto' ? null : Math.round(Math.min(SCALE_MAX, Math.max(SCALE_MIN, uiScale(st) + +v * SCALE_STEP)) * 100) / 100;
+        applyScale(st); changed(); return;
+      }
+      if ((b = g('[data-seg="szdev"] [data-v]'))) { prevDev = b.dataset.v; render(); return; }
       if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
       if ((b = g('[data-acc]'))) { app.store.state.settings.accent = b.dataset.acc; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-meinst]'))) {

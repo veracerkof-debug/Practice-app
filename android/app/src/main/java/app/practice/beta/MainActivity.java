@@ -12,5 +12,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ClockPlugin.class);
         registerPlugin(ReportPlugin.class);
         super.onCreate(savedInstanceState);
+        // Масштаб интерфейса (Оформление → Размер): ширина области просмотра из meta viewport
+        if (getBridge() != null && getBridge().getWebView() != null) getBridge().getWebView().getSettings().setUseWideViewPort(true);
     }
 }
