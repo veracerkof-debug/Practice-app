@@ -19,6 +19,7 @@ import { createStopwatch } from './stopwatch.js';
 import { createActivity } from './activity.js';
 import { initNoSound } from './nosound.js';
 import { createPulse } from './pulse.js';
+import { initBackground } from './background.js';
 import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
@@ -162,6 +163,8 @@ export function boot(root) {
     if (app.render) app.render();
   };
   createShell(app, root);
+  // Работа в фоне на Android: пока что-то идёт — служба с уведомлением, приложение не замораживается
+  initBackground(app);
   createMixerDrawer(app);
   // Играет, но не слышно (микшер, громкость устройства) — уведомление внизу
   initNoSound(app);

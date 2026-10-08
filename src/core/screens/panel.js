@@ -17,6 +17,7 @@ import { moduleName } from '../modules.js';
 import { AVATAR, CHEV, BACK, IC, tabIds, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
 import { extOn } from '../ext.js';
+import { bgAvailable, bgStatus, bgRows, bindBg } from '../background.js';
 import { helpOf, showHelp, resetHelp } from '../help.js';
 import { freeTagName, trackMode } from '../session.js';
 import { INSTRUMENTS, LEVELS, PRIOR_MAX, lifetimeSec, saveProfile, newProfile } from '../profile.js';
@@ -254,6 +255,8 @@ function featHTML(app) {
     // определитель аккордов и гамм в «Теории»: в «Минимале» включён по умолчанию, в обычном виде — здесь
     (isOn(st, 'theory') ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow"><span>' + t('feat.theoryFind') + '</span><span class="st l2" style="display:block;font-size:13px">' +
       t('feat.theoryFind.about') + '</span></span><label class="sw"><input type="checkbox" data-thfind' + (theoryFind(st) ? ' checked' : '') + ' aria-label="' + esc(t('feat.theoryFind')) + '"><i></i></label></div></div>' : '') +
+    // работа в фоне (Android): разрешения — батарея, уведомления, настройки приложения
+    (bgAvailable() ? '<div class="hdr">' + t('bg.feat') + '</div><div data-bgbox><p class="ftr" style="margin-top:0">' + t('bg.featHint') + '</p>' + bgRows(null) + '</div>' : '') +
     '<div class="group" style="margin-top:12px"><button class="cell act" data-helpreset>' + t('help.again') + '</button></div>' +
     // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
     (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : FLAME, k === 'mastery' ? '#5856D6' : '#FF9500', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
@@ -322,6 +325,12 @@ export function createPanel(app, onChange) {
     layer.scrollTop = lastPage && lastPage !== page ? 0 : y;
     lastPage = page;
     if (page === 'look') mountSizePreview(app, layer);
+    // работа в фоне: отметки ✓ у выданных разрешений — после ответа системы
+    const bb = page === 'feat' && layer.querySelector('[data-bgbox]');
+    if (bb) {
+      bgStatus().then((st) => { if (st && bb.isConnected) bb.innerHTML = '<p class="ftr" style="margin-top:0">' + t('bg.featHint') + '</p>' + bgRows(st); });
+      bindBg(bb, () => setTimeout(render, 1500));
+    }
   };
   const changed = () => { app.store.settingsChanged(); render(); onChange(); };
   function bind() {

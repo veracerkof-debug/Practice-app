@@ -4,6 +4,9 @@ import { getContext } from './context.js';
 
 export const BPM_MIN = 20, BPM_MAX = 300;
 const LOOKAHEAD = 0.12;  // с — насколько вперёд планируем удары
+// Приложение свёрнуто: таймеры будят реже (раз в секунду и реже) — удары планируются на 1,6 с вперёд, без пропусков
+const LOOK_HIDDEN = 1.6;
+const lookahead = () => (typeof document !== 'undefined' && document.visibilityState === 'hidden' ? LOOK_HIDDEN : LOOKAHEAD);
 const TICK_MS = 25;      // как часто планировщик просыпается
 
 export const clampBpm = (v) => Math.max(BPM_MIN, Math.min(BPM_MAX, Math.round(v)));
@@ -127,10 +130,12 @@ export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = 
     },
 
     sched() {
-      while (next < c.currentTime + LOOKAHEAD) {
+      const ahead = lookahead();
+      while (next < c.currentTime + ahead) {
         const ev = step(pos, m.cfg);
         if (ev.level) voice(c, mixer.bus('metro'), next, ev.level, m.cfg.sound, noise);
         m.queue.push({ t: next, b: ev.b, s: ev.s, bar: ev.bar, silent: ev.silent });
+        if (m.queue.length > 256) m.queue.splice(0, m.queue.length - 128); // свёрнуто — анимация не разбирает очередь
         // Сигналы без звука (вспышка, вибрация): только доли, не дробления; через сколько мс удар станет слышен
         if (ev.s === 0 && ev.level && beatSubs.size) {
           const ms = (next - c.currentTime + (c.outputLatency || c.baseLatency || 0)) * 1000;

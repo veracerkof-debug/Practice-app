@@ -34,6 +34,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- Работа в фоне (KeepAliveService): пока идёт занятие или звучит инструмент -->
+        <service
+            android:name=".KeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
     </application>
 
     <!-- Permissions -->
@@ -44,6 +50,13 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Вибрация в такт метронома -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Работа в фоне: пока идёт занятие или звучит инструмент — служба с тихим уведомлением, процессор не засыпает;
+         снятие ограничения батареи — только по согласию человека (системный запрос) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Фонарик: только наличие вспышки -->
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
     <!-- Камера: только терменвокс (руки перед камерой), кадры обрабатываются на устройстве и не сохраняются.
