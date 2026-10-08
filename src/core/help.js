@@ -10,10 +10,10 @@ const WAIT_MS = 1000;
 const queue = [];
 let showing = false;
 
-// Текст инструкции модуля на текущем языке (греческий и латынь — по-английски, как и остальное, чего нет)
+// Текст инструкции модуля на текущем языке (чего нет — по-русски)
 export function helpOf(mod) {
   const l = getLang(), d = mod.i18n || {};
-  const pick = (k) => d[l]?.[k] ?? (l === 'el' ? d.en?.[k] : null) ?? d.ru?.[k] ?? null;
+  const pick = (k) => d[l]?.[k] ?? d.ru?.[k] ?? null;
   const what = pick('help.what');
   if (!what) return null;
   const items = [1, 2, 3, 4, 5].map((i) => pick('help.' + i)).filter(Boolean);

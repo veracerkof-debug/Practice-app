@@ -6,9 +6,17 @@
    - Доступ: по умолчанию вид и его язык не видны нигде. Вход — src/core/screens/ext.js (жест на логотипе),
      проверка и сроки — src/core/ext.js (коды хранятся только хешами; временный доступ — 5 минут, затем вид и язык
      возвращаются к обычным; постоянный — до сброса данных). Коды знает автор, в репозиторий они не пишутся.
-   - Язык Graeca · Latina (src/i18n/el.json, i18n/el.json у модулей): в основном современный греческий (монотоника),
-     где в ru/en латинское или итальянское слово — латынь (Instrumenta, Sessio, Calendarium, Studens…); чего нет —
-     по-английски. Включён по умолчанию в этом виде (settings.monoLang), в обычный список языков не входит.
+   - Язык вида (src/i18n/el.json, i18n/el.json у модулей): по-гречески — только названия, и каждое — слово Септуагинты
+     или Нового Завета, политоникой (решение автора); всё остальное — по-русски. Включён по умолчанию в этом виде
+     (settings.monoLang), в обычный список языков не входит. Греческие буквы набираются GFS Didot (у Onest их нет).
+     Источники: Μελέτη — Пс 118:77; Σήμερον — Пс 94:7; ᾨδαί — Еф 5:19; Ὄργανα — Пс 136:2; Αἱ ἡμέραι ἡμῶν — Пс 89:9–10;
+     Ἡ μερίς μου — Пс 72:26; Περὶ ἐμοῦ — Пс 39:8; Ἑβδομάς — Лев 23:15; σκοπός — Флп 3:14; Ἀριθμοί — книга Чисел;
+     Εἶδος — Лк 3:22; Θησαυρός — Мф 6:21; Πύλαι — Пс 23:7; Σάλπιγξ — 1 Кор 15:52; Ἀντίλημψις — Пс 21:20; Ἦχος — Пс 150:3;
+     Ψῆφος — Откр 2:17; Βαθμός — 1 Тим 3:13; Ὑπομονή — Рим 5:3; Σύνεσις — Пс 110:10; Ἐν ἀρχῇ — Быт 1:1; Τάξις — 1 Кор 14:40;
+     Χρόνος — Еккл 3:1; Ὄψις — Ин 7:24; Μέτρον — Мф 7:2; Συμφωνία — Лк 15:25; Ψαλτήριον — Пс 150:3; Αὐλός — 1 Кор 14:7;
+     Ἔργα χειρῶν, Ἔργον — Пс 89:17; Φωνή — Откр 14:2; Σοφία, Ἐξαριθμήσασθαι — Пс 89:12; Ἀριθμός — Числ 1:2; Ἀκοή — Рим 10:17; Γράμματα — Ин 7:15;
+     Θόρυβος — Мф 26:5; Φυλακή — Пс 89:4; Ἀνάπαυσις — Мф 11:29; Σαββατισμός — Евр 4:9. Эпиграф помодоро, секундомера
+     и календаря — Пс 89:12 по Септуагинте.
    - Инструменты в закреплённом виде (ctx.mono): тюнер — шкала, помодоро — кольцо, медиатека — волна,
      метроном — колесо со стрелками. Ноты в PDF и видео — в цвете.
    - Цвета меток — знаками-кружками (src/ui/marks.js), у песен в списке не повторяются.
@@ -17,6 +25,9 @@
      звание, чёрная кнопка практики, инструменты кружками, песни списком по центру строк.
    - Движение в этом виде — короче и без отскоков (styles/motion.css). */
 @import '@fontsource-variable/onest';
+/* греческие буквы (с политоникой) — GFS Didot: у Onest греческого нет; только для греческих диапазонов */
+@font-face { font-family: "Melete Greek"; font-display: swap; src: url('../../node_modules/@fontsource/gfs-didot/files/gfs-didot-greek-400-normal.woff2') format('woff2'); unicode-range: U+0370-03FF; }
+@font-face { font-family: "Melete Greek"; font-display: swap; src: url('../../node_modules/@fontsource/gfs-didot/files/gfs-didot-greek-ext-400-normal.woff2') format('woff2'); unicode-range: U+1F00-1FFF; }
 
 :root[data-style="mono"] {
   --bg: #F4F4F4; --cell: #FFFFFF; --ink: #0B0B0B; --l2: #757575; --l3: #BDBDBD;
@@ -24,7 +35,7 @@
   --tint: #0B0B0B; --tint-text: #0B0B0B; --on-tint: #FFFFFF; --red: #0B0B0B; --bar: rgba(244,244,244,.92);
   --gold: #0B0B0B; --gold-bg: rgba(0,0,0,.06);
   --line: #CFCFCF;
-  --font: "Onest Variable", -apple-system, system-ui, Roboto, Arial, sans-serif;
+  --font: "Melete Greek", "Onest Variable", -apple-system, system-ui, Roboto, Arial, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -282,3 +293,11 @@
 @media (prefers-reduced-motion: no-preference) {
   :root[data-style="mono"] #main.tab-enter .mono-home .mrole { animation: mm-track 900ms cubic-bezier(.16, 1, .3, 1) backwards 220ms; }
 }
+
+/* стих-эпиграф (Пс 89:12) — в календаре и таймере, тихо, книжным шрифтом */
+.mverse { margin: 10px auto 18px; max-width: 420px; font-size: 15px; line-height: 1.5; color: var(--l2); font-style: normal; text-align: center; }
+.mverse span { display: block; margin-top: 6px; font-size: 11px; letter-spacing: .14em; color: var(--l3); }
+.mcard .mverse { margin: 18px auto 2px; font-size: 13.5px; }
+.large + .mverse { text-align: left; margin-left: 2px; }
+/* у GFS Didot одно начертание — жирное не подделывается, греческие названия остаются тонкими */
+:root[data-style="mono"] { font-synthesis-weight: none; }

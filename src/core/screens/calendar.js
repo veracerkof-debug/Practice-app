@@ -78,7 +78,9 @@ export function calendarHTML(app, cv) {
     (cv.view === 'list' ? '' : icb('data-cnav="-1"', I.left, t(cv.view === 'week' ? 'cal.prevWeek' : 'cal.prevMonth'), 'sm') + icb('data-cnav="1"', I.right, t(cv.view === 'week' ? 'cal.nextWeek' : 'cal.nextMonth'), 'sm')) +
     '<button class="link ctoday" data-cnav="0">' + t('cal.todayBtn') + '</button></div>';
   const right = '<span class="ctop">' + icb('data-cics', I.share, t('cal.export'), 'plain') + icb('data-cnew', IC.plus, t('cal.new'), 'plain') + '</span>';
-  let h = topbar(right) + '<div class="large">' + t('cal.title') + '</div><div class="calw">' + head +
+  // в «Минимале» — стих эпиграфом (Пс 89:12, только там, где он есть в словаре)
+  const vs = t('verse.ps89'), verse = vs === 'verse.ps89' ? '' : '<p class="mverse" lang="el">' + vs + '<span>' + t('verse.ps89ref') + '</span></p>';
+  let h = topbar(right) + '<div class="large">' + t('cal.title') + '</div>' + verse + '<div class="calw">' + head +
     seg('cview', [['month', t('cal.v.month')], ['week', t('cal.v.week')], ['list', t('cal.v.list')]], cv.view, t('cal.view'));
   h += cv.view === 'week' ? weekHTML(app, cv) : cv.view === 'list' ? listHTML(app, cv) : monthHTML(app, cv);
   return h + '</div>';

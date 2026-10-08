@@ -1,6 +1,6 @@
 // Строки интерфейса только через t('key'). Языки: ru (основной), uz (латиница), en.
-// el — «Graeca · Latina», язык вида «Минимал» (эксперимент): в основном греческий, а там, где в русском и
-// английском стоят латинские (и итальянские музыкальные) слова, — латынь. В обычный список языков не входит.
+// el — язык вида «Минимал»: названия (вкладки, инструменты, разделы) — слова Септуагинты и Нового Завета,
+// политоникой; всё остальное — по-русски (чего нет в el, берётся из ru). В обычный список языков не входит.
 import ru from './ru.json';
 import uz from './uz.json';
 import en from './en.json';
@@ -30,7 +30,7 @@ const fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? 
 // Словарь с запасным русским
 export function makeT(byLang) {
   return (key, vars) => {
-    const v = byLang[lang]?.[key] ?? (lang === MONO_LANG ? byLang.en?.[key] : null) ?? byLang.ru?.[key];
+    const v = byLang[lang]?.[key] ?? byLang.ru?.[key];
     if (v == null) return key;
     return fill(Array.isArray(v) ? v[0] : v, vars);
   };
@@ -52,10 +52,9 @@ export function pluralForm(n, forms, l = lang) {
 // t с числом: tn('cents', 5) → «5 центов»; vars.n подставляется в {n}
 export function makeTn(byLang) {
   return (key, n, vars) => {
-    const fb = lang === MONO_LANG && byLang.en?.[key] != null;
-    const v = byLang[lang]?.[key] ?? (fb ? byLang.en[key] : byLang.ru?.[key]);
+    const v = byLang[lang]?.[key] ?? byLang.ru?.[key];
     if (v == null) return key;
-    return fill(pluralForm(n, v, byLang[lang]?.[key] != null || fb ? lang : 'ru'), { n: fmtNum(n), ...vars });
+    return fill(pluralForm(n, v, byLang[lang]?.[key] != null ? lang : 'ru'), { n: fmtNum(n), ...vars });
   };
 }
 
