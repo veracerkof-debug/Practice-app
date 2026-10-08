@@ -98,3 +98,65 @@ export function colorNote(id) {
   if (!dMaj.length || !dMin.length) return null;
   return dMaj.length <= dMin.length ? { base: 'major', notes: dMaj } : { base: 'minor', notes: dMin };
 }
+
+/* ---------- гармония лада и квинтовый круг ---------- */
+
+// Семья и ступень гаммы по её id: { fam, deg } (у пентатоник и блюза — null)
+export function familyOfType(id) {
+  for (const [fam, f] of Object.entries(FAMILIES)) { const d = f.modes.indexOf(id); if (d >= 0) return { fam, deg: d }; }
+  return null;
+}
+// Тоника родительской гаммы: у ре-дорийского — до (ре — 2-я ступень до мажора)
+export const parentOf = (pc, id) => { const f = familyOfType(id); return f ? mod12(pc - FAMILIES[f.fam].ivs[f.deg]) : null; };
+// Соседний лад той же семьи: те же ноты, тоника — следующая (dir = +1) или предыдущая ступень
+export function rotateMode(pc, id, dir) {
+  const f = familyOfType(id);
+  if (!f) return null;
+  const F = FAMILIES[f.fam], d = (f.deg + dir + 7) % 7, parent = mod12(pc - F.ivs[f.deg]);
+  return { pc: mod12(parent + F.ivs[d]), id: F.modes[d] };
+}
+
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+// Трезвучия на ступенях семинотного лада: римская цифра (относительно мажора от той же тоники: ♭III, ♭VII…),
+// качество (maj, min, dim, aug), высоты нот и «характерные» — те, в которых есть нота, отличающая лад от мажора или минора
+export function modeChords(pc, id, sev = false) {
+  const ivs = MODE_IVS[id];
+  if (!ivs || ivs.length !== 7) return [];
+  const deg = degreesOf(id), c = colorNote(id), colorIdx = new Set((c ? c.notes : []).map((n) => deg.indexOf(n)));
+  const at = (i) => ivs[i % 7] + (i >= 7 ? 12 : 0);
+  return ivs.map((iv, i) => {
+    const th = at(i + 2) - iv, fi = at(i + 4) - iv, se = at(i + 6) - iv;
+    const q = th === 4 && fi === 7 ? 'maj' : th === 3 && fi === 7 ? 'min' : th === 3 && fi === 6 ? 'dim' : th === 4 && fi === 8 ? 'aug' : 'other';
+    const acc = deg[i].replace(/\d/g, ''), num = ROMAN[i];
+    let rn = acc + (q === 'min' || q === 'dim' ? num.toLowerCase() : num) + (q === 'dim' ? '°' : q === 'aug' ? '+' : '');
+    let suf = { maj: '', min: 'm', dim: '°', aug: '+', other: '' }[q];
+    if (sev) {
+      const s7 = se === 11 ? 'maj7' : se === 10 ? '7' : se === 9 ? 'dim7' : '';
+      if (q === 'maj') { suf = s7 === 'maj7' ? 'maj7' : '7'; rn += suf; }
+      else if (q === 'min') { suf = s7 === 'maj7' ? 'm(maj7)' : 'm7'; rn += s7 === 'maj7' ? '(maj7)' : '7'; }
+      else if (q === 'dim') { suf = s7 === 'dim7' ? 'dim7' : 'm7♭5'; rn = rn.replace('°', s7 === 'dim7' ? '°7' : 'ø7'); }
+      else if (q === 'aug') { suf = '+maj7'; rn += 'maj7'; }
+    }
+    const tones = [0, 2, 4].concat(sev ? [6] : []).map((k) => at(i + k));
+    const color = [0, 2, 4].concat(sev ? [6] : []).some((k) => colorIdx.has((i + k) % 7));
+    return { deg: i, rn, q, suf, pc: mod12(pc + iv), pcs: tones.map((x) => mod12(pc + x)), rel: tones, color: i > 0 && color };
+  });
+}
+
+// Квинтовый круг (до сверху, по часовой — на квинту вверх)
+export const FIFTHS = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
+// Где лад лежит на круге: у семи «народных» ладов ноты — дуга из семи соседних квинт; чем ближе тоника к «бемольному»
+// (левому, против часовой) краю дуги, тем светлее лад: лидийский — с края, локрийский — с другого. У пентатоник дуга —
+// пять квинт. У гармонического и мелодического минора дуга — от натурального, а повышенная нота выходит за неё:
+// outside — ноты гаммы вне дуги, missing — ноты дуги, которых в гамме нет (их заменили).
+// { arc: [позиции на круге], start, len, tonicPos, outside: [pc], missing: [pc] }
+export function onFifths(pc, pcs) {
+  const set = new Set(uniq(pcs)), L = Math.min(7, set.size), tn = mod12(pc);
+  let best = null;
+  for (let s = 0; s < 12; s++) {
+    const win = Array.from({ length: L }, (_, i) => FIFTHS[(s + i) % 12]), n = win.filter((x) => set.has(x)).length, hasT = win.includes(tn);
+    if (!best || n > best.n || (n === best.n && hasT && !best.hasT)) best = { s, n, hasT, win };
+  }
+  const arc = Array.from({ length: L }, (_, i) => (best.s + i) % 12);
+  return { arc, start: best.s, len: L, tonicPos: best.win.indexOf(tn), outside: [...set].filter((p) => !best.win.includes(p)), missing: best.win.filter((p) => !set.has(p)) };
+}

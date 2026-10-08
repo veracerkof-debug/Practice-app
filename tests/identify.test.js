@@ -51,3 +51,27 @@ describe('лестница ладов', () => {
     expect(MODE_IVS.phrygdom).toEqual([0, 1, 4, 5, 7, 8, 10]);
   });
 });
+
+import { modeChords, onFifths, rotateMode, parentOf, familyOfType } from '../src/music/identify.js';
+describe('гармония ладов и квинтовый круг', () => {
+  it('аккорды ступеней и характерные', () => {
+    const d = modeChords(2, 'dorian'); // ре дорийский
+    expect(d.map((c) => c.rn).join(' ')).toBe('i ii ♭III IV v vi° ♭VII');
+    expect(d.filter((c) => c.color).map((c) => c.rn)).toEqual(['ii', 'IV', 'vi°']); // где есть си (большая шестая)
+    expect(modeChords(9, 'harm').map((c) => c.rn).join(' ')).toBe('i ii° ♭III+ iv V ♭VI vii°');
+    expect(modeChords(7, 'mixo', true)[0].rn).toBe('I7');
+  });
+  it('лады — дуга квинт, светлее — ближе к бемольному краю', () => {
+    expect(onFifths(5, [5, 7, 9, 11, 0, 2, 4]).tonicPos).toBe(0); // фа лидийский
+    expect(onFifths(11, [11, 0, 2, 4, 5, 7, 9]).tonicPos).toBe(6); // си локрийский
+    const h = onFifths(9, [9, 11, 0, 2, 4, 5, 8]); // ля гармонический: соль-диез вне дуги
+    expect([h.outside, h.missing, h.len]).toEqual([[8], [7], 7]); // соль-диез вместо соли
+    expect(onFifths(0, [0, 2, 4, 7, 9]).len).toBe(5); // пентатоника — пять квинт
+  });
+  it('поворот лада: те же ноты, другая тоника', () => {
+    expect(rotateMode(0, 'major', 1)).toEqual({ pc: 2, id: 'dorian' });
+    expect(rotateMode(4, 'phrygdom', -1)).toEqual({ pc: 2, id: 'dorian4' });
+    expect(parentOf(2, 'dorian')).toBe(0);
+    expect(familyOfType('blues')).toBe(null);
+  });
+});

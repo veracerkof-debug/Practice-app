@@ -5,11 +5,11 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { SH, MAJ_NAMES, MIN_NAMES, enh } from '../../music/notes.js';
+import { SH, FL, MAJ_NAMES, MIN_NAMES, enh } from '../../music/notes.js';
 import { CIRC, keyInfo, circleStep, SCALES, SCALE_TYPES, scaleInfo, CHORDS, chordLabel, chordInfo, INTERVALS, intervalNote, intervalBase } from '../../music/theory.js';
 import { curTuning } from '../../music/tuning.js';
 import { kbHTML } from '../../ui/keyboard.js';
-import { chordsOf, familiesOf, ladderOf, degreesOf, colorNote } from '../../music/identify.js';
+import { chordsOf, familiesOf, ladderOf, degreesOf, colorNote, familyOfType, parentOf, rotateMode, modeChords, onFifths, FIFTHS, FAMILIES, LADDER } from '../../music/identify.js';
 import { chroma } from '../../music/analyze.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v4.5"/></svg>';
@@ -112,7 +112,7 @@ function circleHTML() {
   return '<div class="cwrap f"><div class="csvg">' + circleSVG(k) + '</div><div class="prow" style="margin:8px 0 4px;justify-content:center">' + modes + '</div>' + cgrid +
     '<p class="ftr">' + (k.signs.length ? k.signs.join(' ') : t('noSignsCap')) + ' · ' + t('rel', { key: rel }) + (th.minor ? ' · ' + t('harmV', { note: k.notes[4] }) : '') + '</p>' +
     '<div class="ctrl4">' + icb('data-x="kscale"', I.play, t('playScale')) + icb('data-x="kdrone"', I.drone, t('droneTonic')) + icb('data-x="kpiano"', I.piano, t('pianoHl')) +
-    icb('data-x="kscales"', I.scales, t('openScales')) + '</div></div>';
+    icb('data-x="kscales"', I.scales, t('openScales')) + '</div>' + modesCircleHTML() + '</div>';
 }
 
 /* ---------- гаммы ---------- */
@@ -138,7 +138,96 @@ function scalesHTML() {
   const tog = '<div class="vtog"><div class="seg" style="width:auto"><button data-x="tview" data-v="fret" aria-pressed="' + (vw === 'fret') + '">' + t('fret') +
     '</button><button data-x="tview" data-v="keys" aria-pressed="' + (vw === 'keys') + '">' + t('keys') + '</button></div></div>';
   return '<div class="swrap">' + head + '<div class="ch2"><b>' + ui.esc(title) + '</b><span class="num l2">' + k.steps.map(stepTxt).join(' ') + '</span></div>' + notes + tog +
-    (vw === 'fret' ? fretHTML(new Set(k.pcs), k.rootPc, 15) : '<div style="margin-top:8px">' + kbHTML(60, 15, new Set(k.pcs), k.rootPc) + '</div>') + acts + '</div>';
+    (vw === 'fret' ? fretHTML(new Set(k.pcs), k.rootPc, 15) : '<div style="margin-top:8px">' + kbHTML(60, 15, new Set(k.pcs), k.rootPc) + '</div>') + acts + schemeHTML(sc) + '</div>';
+}
+
+/* ---------- как устроена гамма: круг из 12 нот, повороты лада, лестница, семья ---------- */
+
+const STEP_SHORT = { 1: 'stp.1', 2: 'stp.2', 3: 'stp.3', 4: 'stp.4' };
+// Круг из 12 нот (до сверху, по часовой — на полутон вверх): ноты гаммы — точки, связанные многоугольником;
+// между соседними — шаг (п, т, 1½); тоника — крупнее; нота, отличающая лад от мажора или минора, — в кольце.
+// Касание ноты гаммы — лад от этой ноты (те же ноты, другой центр)
+function ringSVG(sc, k) {
+  const { t } = ctx, C = 120, R = 86, ang = (x) => ((x * 30 - 90) * Math.PI) / 180, P = (r, x) => [C + r * Math.cos(ang(x)), C + r * Math.sin(ang(x))];
+  const f = (n) => n.toFixed(1), c = colorNote(sc.type), colorSet = new Set(c ? k.pcs.filter((p, i) => c.notes.includes(k.degs[i])) : []);
+  const name = (p) => { const i = k.pcs.indexOf(p); return i >= 0 ? k.notes[i] : SH[p]; };
+  let s = '<svg viewBox="0 0 240 240" class="sring" role="group" aria-label="' + ctx.ui.esc(k.root + ' ' + scaleName(sc.type)) + '">';
+  s += '<circle cx="' + C + '" cy="' + C + '" r="' + R + '" class="sr-base"/>';
+  // многоугольник гаммы
+  s += '<polygon class="sr-poly" points="' + k.pcs.map((p) => P(R, p).map(f).join(',')).join(' ') + '"/>';
+  // шаги между соседними нотами
+  k.pcs.forEach((p, i) => {
+    const st = k.steps[i], mid = p + st / 2, [x, y] = P(R - 24, mid);
+    s += '<text x="' + f(x) + '" y="' + f(y) + '" class="sr-step' + (st === 1 ? ' h' : st >= 3 ? ' w' : '') + '" text-anchor="middle" dominant-baseline="central">' + t(STEP_SHORT[st] || 'stp.2') + '</text>';
+  });
+  for (let p = 0; p < 12; p++) {
+    const inS = k.pcs.includes(p), [x, y] = P(R, p), [lx, ly] = P(R + 20, p), root = p === k.rootPc;
+    s += '<g class="sr-n' + (inS ? ' on' : '') + (root ? ' r' : '') + (colorSet.has(p) ? ' c' : '') + '" data-x="sring" data-pc="' + p + '" role="button" aria-label="' + name(p) + '">' +
+      '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + (root ? 11 : inS ? 8.5 : 3.5) + '"/>' +
+      (inS ? '<text x="' + f(x) + '" y="' + f(y) + '" text-anchor="middle" dominant-baseline="central" class="sr-d">' + k.degs[k.pcs.indexOf(p)].replace(/[♭♯]/g, '') + '</text>' : '') +
+      '<text x="' + f(lx) + '" y="' + f(ly) + '" text-anchor="middle" dominant-baseline="central" class="sr-l">' + name(p) + '</text></g>';
+  }
+  return s + '<text x="' + C + '" y="' + (C - 6) + '" text-anchor="middle" class="sr-c1">' + k.root + '</text><text x="' + C + '" y="' + (C + 13) + '" text-anchor="middle" class="sr-c2">' + scaleName(sc.type) + '</text></svg>';
+}
+function schemeHTML(sc) {
+  const { t, ui } = ctx, th = TH(), k = scaleInfo(sc.pc, sc.type), fam = familyOfType(sc.type), vw = th.sview || 'rel';
+  const parent = fam ? parentOf(sc.pc, sc.type) : null, F = fam && FAMILIES[fam.fam];
+  const parentTitle = fam ? (fam.fam === 'major' ? MAJ_NAMES : MIN_NAMES)[parent] + ' ' + scaleName(F.modes[0]) : '';
+  const li = LADDER.indexOf(sc.type), lowered = ['', '4', '7', '3', '6', '2', '5'];
+  // подпись: в «Те же ноты» — от какой ступени какой гаммы; в «Та же тоника» — что изменилось по лестнице
+  const cap = vw === 'rel'
+    ? (fam ? t('sch.rel', { mode: k.root + ' ' + scaleName(sc.type), parent: parentTitle, deg: fam.deg + 1 }) : t('sch.noFam'))
+    : (li > 0 ? t('sch.par', { d: lowered[li], prev: scaleName(LADDER[li - 1]) }) : li === 0 ? t('sch.parTop') : t('sch.parOut'));
+  const c = colorNote(sc.type);
+  const side = '<div class="sside">' + ui.seg('sview', [['rel', t('sch.same')], ['par', t('sch.tonic')]], vw, t('sch.view')) +
+    '<div class="srot">' + icb('data-x="smrot" data-d="-1"', '‹', t(vw === 'rel' ? 'sch.prevMode' : 'sch.brighter'), 'sm txt') +
+    '<b>' + ui.esc(k.root + ' ' + scaleName(sc.type)) + '</b>' + icb('data-x="smrot" data-d="1"', '›', t(vw === 'rel' ? 'sch.nextMode' : 'sch.darker'), 'sm txt') + '</div>' +
+    '<p class="scap">' + ui.esc(cap) + '</p>' +
+    '<p class="scap l2">' + k.steps.map(stepTxt).join(' · ') + (c ? '<br>' + ui.esc(t('find.color.' + c.base, { notes: c.notes.join(' ') })) : '') + '</p></div>';
+  const famRow = fam ? '<div class="hdr">' + ui.esc(t('sch.family', { parent: parentTitle })) + '</div><div class="chips fmodes">' + F.modes.map((id, d) => {
+    const pc = (parent + F.ivs[d]) % 12, name = (fam.fam === 'major' ? (id === 'minor' || id === 'dorian' || id === 'phrygian' || id === 'locrian' ? MIN_NAMES : MAJ_NAMES) : MIN_NAMES)[pc];
+    return '<button class="chip' + (id === sc.type ? ' on' : '') + '" data-x="fmode" data-pc="' + pc + '" data-id="' + id + '"><span class="fnb fS">' + (d + 1) + '</span>' + name + ' ' + ui.esc(scaleName(id)) + '</button>';
+  }).join('') + '</div>' : '';
+  return '<div class="hdr">' + t('sch.title') + '</div><div class="sscheme">' + ringSVG(sc, k) + side + '</div>' + famRow +
+    ladderHTML(sc.pc, [], sc.type) + '<div class="philo">' + t('sch.philo').split('\n').map((x) => '<p>' + ui.esc(x) + '</p>').join('') + '</div>';
+}
+
+/* ---------- лады на квинтовом круге: дуга, тоника, аккорды ступеней ---------- */
+
+const CMODES = ['lydian', 'major', 'mixo', 'dorian', 'minor', 'phrygian', 'locrian', 'harm', 'phrygdom', 'mel', 'lyddom', 'pmaj', 'pmin'];
+function fifthsSVG(tn, id, k, on, chords) {
+  const C = 130, R = 96, ang = (i) => ((i * 30 - 90) * Math.PI) / 180, P = (r, i) => [C + r * Math.cos(ang(i)), C + r * Math.sin(ang(i))], f = (n) => n.toFixed(1);
+  const arcPath = (r, i0, n) => { const a0 = ang(i0 - 0.42), a1 = ang(i0 + n - 1 + 0.42), [x0, y0] = [C + r * Math.cos(a0), C + r * Math.sin(a0)], [x1, y1] = [C + r * Math.cos(a1), C + r * Math.sin(a1)];
+    return 'M' + f(x0) + ' ' + f(y0) + 'A' + r + ' ' + r + ' 0 ' + ((n - 1 + 0.84) * 30 > 180 ? 1 : 0) + ' 1 ' + f(x1) + ' ' + f(y1); };
+  const acc = k.notes.some((n) => n.includes('♭')) ? FL : SH, name = (p) => { const i = k.pcs.indexOf(p); return i >= 0 ? k.notes[i] : acc[p]; }, set = new Set(k.pcs);
+  let s = '<svg viewBox="0 0 260 260" class="fring" role="img" aria-label="' + ctx.ui.esc(k.root + ' ' + scaleName(id)) + '">';
+  s += '<circle cx="' + C + '" cy="' + C + '" r="' + R + '" class="fr-base"/>';
+  s += '<path d="' + arcPath(R, on.start, on.len) + '" class="fr-arc"/>';
+  // повышенная нота вне дуги — пунктиром к той, которую заменила
+  on.outside.forEach((p) => on.missing.forEach((m) => { const [x1, y1] = P(R, FIFTHS.indexOf(p)), [x2, y2] = P(R, FIFTHS.indexOf(m)); s += '<line x1="' + f(x1) + '" y1="' + f(y1) + '" x2="' + f(x2) + '" y2="' + f(y2) + '" class="fr-alt"/>'; }));
+  FIFTHS.forEach((p, i) => {
+    const inS = set.has(p), [x, y] = P(R, i), [lx, ly] = P(R + 22, i), [cx2, cy2] = P(R - 25, i), ch = chords.find((c) => c.pc === p);
+    s += '<g class="fr-n' + (inS ? ' on' : '') + (p === tn ? ' r' : '') + (on.outside.includes(p) ? ' out' : '') + (on.missing.includes(p) ? ' miss' : '') + (ch && ch.color ? ' c' : '') + '">' +
+      '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + (p === tn ? 12 : inS ? 9 : 4) + '"/>' +
+      '<text x="' + f(lx) + '" y="' + f(ly) + '" text-anchor="middle" dominant-baseline="central" class="fr-l">' + name(p) + '</text>' +
+      (ch ? '<text x="' + f(cx2) + '" y="' + f(cy2) + '" text-anchor="middle" dominant-baseline="central" class="fr-rn">' + ch.rn + '</text>' : '') + '</g>';
+  });
+  return s + '<text x="' + C + '" y="' + (C - 6) + '" text-anchor="middle" class="sr-c1">' + k.root + '</text><text x="' + C + '" y="' + (C + 13) + '" text-anchor="middle" class="sr-c2">' + scaleName(id) + '</text></svg>';
+}
+function modesCircleHTML() {
+  const th = TH(), { t, ui } = ctx, id = CMODES.includes(th.cmode) ? th.cmode : 'dorian', tn = th.pc, k = scaleInfo(tn, id), on = onFifths(tn, k.pcs), chords = modeChords(tn, id, th.sev);
+  const chips = '<div class="hscroll">' + CMODES.map((m) => '<button class="pill" data-x="cmode" data-v="' + m + '" aria-pressed="' + (m === id) + '">' + ui.esc(scaleName(m)) + '</button>').join('') + '</div>';
+  const nm = (c) => k.notes[c.deg] + c.suf;
+  const chordRow = chords.length ? '<div class="chips cmch">' + chords.map((c, i) => '<button class="chip' + (c.color ? ' on' : '') + '" data-x="cmchord" data-i="' + i + '"><span class="fnb fS">' + c.rn + '</span>' + ui.esc(nm(c)) + '</button>').join('') + '</div>' : '';
+  const names = (a) => a.map((p) => { const i = k.pcs.indexOf(p); return i >= 0 ? k.notes[i] : SH[p]; }).join(', ');
+  const pos = on.outside.length ? t('cm.out', { out: names(on.outside), miss: on.missing.map((p) => (k.notes.some((n) => n.includes('♭')) ? FL : SH)[p]).join(', ') })
+    : on.len === 7 ? t('cm.pos', { n: on.tonicPos + 1 }) : t('cm.penta');
+  const colors = chords.filter((c) => c.color).map(nm);
+  return '<div class="hdr">' + t('cm.title') + '</div>' + chips + '<div class="cmode">' + fifthsSVG(tn, id, k, on, chords) +
+    '<div class="cmtext"><p><b>' + ui.esc(k.root + ' ' + scaleName(id)) + '</b> — ' + ui.esc(t('cm.d.' + id)) + '</p><p class="l2">' + ui.esc(pos) + '</p>' +
+    (colors.length ? '<p class="l2">' + ui.esc(t('cm.color', { list: colors.join(', ') })) + '</p>' : '') +
+    '<div class="vrow tight">' + icb('data-x="cmplay"', I.play, t('playScale'), 'sm') + icb('data-x="cmopen"', I.scales, t('openScales'), 'sm') + '</div></div></div>' + chordRow +
+    '<p class="ftr">' + t('cm.ftr') + '</p>';
 }
 
 /* ---------- аккорды ---------- */
@@ -200,21 +289,22 @@ function findHTML() {
     return '<div class="vq">' + picker + '<div class="fbig sm">' + (ch.length ? ui.esc(ch[0].name) : '—') + '</div><div class="l2">' +
       (fams[0] && fams[0].at ? ui.esc(NN(fams[0].at.pc) + ' ' + scaleName(fams[0].at.id)) : '') + '</div></div>';
   }
-  if (!notes.length) return '<div class="swrap">' + picker + acts + '<p class="ftr">' + t('find.hint') + '</p>' + ladderHTML(th.flad ?? 0, []) + '<p class="ftr">' + t('find.ftr') + '</p></div>';
+  const more = '<button class="cell act fmore" data-x="tsec" data-v="scales">' + t('find.toScales') + '</button>';
+  if (!notes.length) return '<div class="swrap">' + picker + acts + '<p class="ftr">' + t('find.hint') + '</p><div class="group">' + more + '</div></div>';
   const tonicRow = notes.length > 1 ? '<div class="frow"><span class="l2">' + t('find.tonic') + '</span>' + notes.map((pc) => '<button class="pill sm" data-x="ftonic" data-v="' + pc + '" aria-pressed="' + (pc === tonic) + '">' + NN(pc) + '</button>').join('') + '</div>' : '';
   return '<div class="swrap">' + picker + tonicRow + acts + '<div style="margin-top:6px">' + kbHTML(60, 15, new Set(notes), tonic) + '</div>' + chordCard +
     '<div class="hdr">' + t('find.scales') + '</div>' + (fams.length ? fams.slice(0, 4).map(famHTML).join('') + (fams.length > 4 ? '<p class="ftr">' + ctx.tn('find.more', fams.length - 4) + '</p>' : '')
       : '<p class="ftr">' + t('find.noScale') + '</p>') +
-    ladderHTML(tonic, notes) + '<p class="ftr">' + t('find.ftr') + '</p></div>';
+    '<div class="group">' + more + '</div></div>';
 }
-// Лестница ладов от одной тоники: от светлого к тёмному, соседние — на одну ноту
-function ladderHTML(tonic, notes) {
+// Лестница ладов от одной тоники: от светлого к тёмному, соседние — на одну ноту; cur — текущий лад
+function ladderHTML(tonic, notes, cur = null) {
   const { t, ui } = ctx;
   return '<div class="hdr">' + ui.esc(t('find.ladder', { note: NN(tonic) })) + '</div><div class="group fladder">' + ladderOf(tonic, notes).map((r) => {
     const c = colorNote(r.id);
-    return '<button class="cell" data-x="fmode" data-pc="' + tonic + '" data-id="' + r.id + '"><span class="fnb fS" style="width:34px">' + (r.lowered ? '↓' + r.lowered : '·') + '</span>' +
+    return '<button class="cell' + (r.id === cur ? ' on' : '') + '" data-x="fmode" data-pc="' + tonic + '" data-id="' + r.id + '" aria-pressed="' + (r.id === cur) + '"><span class="fnb fS" style="width:34px">' + (r.lowered ? '↓' + r.lowered : '·') + '</span>' +
       '<span class="grow"><b style="font-weight:600">' + ui.esc(NN(tonic) + ' ' + scaleName(r.id)) + '</b><span class="st l2" style="display:block;font-size:12.5px">' + degreesOf(r.id).join(' ') +
-      (c ? ' · ' + ui.esc(t('find.color.' + c.base, { notes: c.notes.join(' ') })) : '') + '</span></span>' + (r.fits ? ui.icons.check : '') + '</button>';
+      (c ? ' · ' + ui.esc(t('find.color.' + c.base, { notes: c.notes.join(' ') })) : '') + '</span></span>' + (r.fits || r.id === cur ? ui.icons.check : '') + '</button>';
   }).join('') + '</div>';
 }
 
@@ -315,6 +405,27 @@ function act(a, el) {
     case 'flisten': if (lis) { stopListen(); render(); } else listen(); break;
     case 'fplay': { const n = th.fnotes || [], tn = n.includes(th.ftonic) ? th.ftonic : n[0]; if (n.length) A.playChord(n.map((pc) => 48 + tn + ((pc - tn + 12) % 12)).sort((a, b) => a - b)); break; }
     case 'fmode': th.scale = { pc: +el.dataset.pc, type: el.dataset.id }; th.sec = 'scales'; save(); break;
+    case 'sring': {
+      const p = +el.dataset.pc, k = scaleInfo(th.scale.pc, th.scale.type);
+      if (A.unlock()) A.playNote(60 + p, { bus: 'theory', dur: 0.5 });
+      // нота гаммы — лад от неё: те же ноты, другой центр
+      if (k.pcs.includes(p) && p !== th.scale.pc && familyOfType(th.scale.type)) {
+        let r = { pc: th.scale.pc, id: th.scale.type };
+        for (let i = 0; i < 7 && r.pc !== p; i++) r = rotateMode(r.pc, r.id, 1);
+        th.scale = { pc: r.pc, type: r.id }; save();
+      }
+      break;
+    }
+    case 'smrot': {
+      const d = +el.dataset.d;
+      if ((th.sview || 'rel') === 'rel') { const r = rotateMode(th.scale.pc, th.scale.type, d); if (r) th.scale = { pc: r.pc, type: r.id }; }
+      else { const i = LADDER.indexOf(th.scale.type), j = i < 0 ? 1 : Math.max(0, Math.min(LADDER.length - 1, i + d)); th.scale.type = LADDER[j]; }
+      save(); A.playSeq(scaleInfo(th.scale.pc, th.scale.type).seq.slice(0, 8), { step: 0.2 }); break;
+    }
+    case 'cmode': th.cmode = el.dataset.v; save(); break;
+    case 'cmchord': { const id = CMODES.includes(th.cmode) ? th.cmode : 'dorian', c = modeChords(th.pc, id, th.sev)[+el.dataset.i]; if (c) A.playChord(c.rel.map((x) => intervalBase(th.pc) + x)); break; }
+    case 'cmplay': A.playSeq(scaleInfo(th.pc, CMODES.includes(th.cmode) ? th.cmode : 'dorian').seq, { step: 0.26 }); break;
+    case 'cmopen': th.scale = { pc: th.pc, type: CMODES.includes(th.cmode) ? th.cmode : 'dorian' }; th.sec = 'scales'; save(); break;
     case 'key': th.pc = +el.dataset.pc; th.minor = el.dataset.minor === '1'; save(); break;
     case 'sevt': th.sev = !th.sev; save(); break;
     case 'kprev': case 'knext': th.pc = circleStep(th.pc, th.minor, a === 'knext' ? 1 : -1); save(); break;
@@ -356,6 +467,8 @@ function bind() {
   onClick = (e) => {
     const sg = e.target.closest('[data-seg="kmode"] [data-v]');
     if (sg) { TH().minor = sg.dataset.v === '1'; ctx.store.save(); render(); return; }
+    const sv = e.target.closest('[data-seg="sview"] [data-v]');
+    if (sv) { TH().sview = sv.dataset.v; ctx.store.save(); render(); return; }
     const x = e.target.closest('[data-x]');
     if (x) act(x.dataset.x, x);
   };

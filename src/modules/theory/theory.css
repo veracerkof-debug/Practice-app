@@ -117,3 +117,41 @@
 .fmodes{flex-wrap:wrap}
 .fmodes .chip.on{background:var(--tint);color:var(--on-tint)}
 .fsame{margin:6px 2px 0;font-size:13.5px;color:var(--l2);line-height:1.4}
+/* как устроена гамма: круг из 12 нот и подписи; лады на квинтовом круге */
+.sscheme,.cmode{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-items:center}
+@container (min-width:560px){.sscheme,.cmode{grid-template-columns:minmax(0,300px) 1fr}}
+.sring,.fring{width:100%;max-width:300px;margin:0 auto;display:block;overflow:visible}
+.sr-base,.fr-base{fill:none;stroke:var(--sep);stroke-width:1.2}
+.sr-poly{fill:color-mix(in srgb,var(--tint) 12%,transparent);stroke:var(--tint);stroke-width:1.6;stroke-linejoin:round;transition:all .3s}
+.sr-step{font:600 10.5px var(--font);fill:var(--l2)}
+.sr-step.h{fill:var(--red)}
+.sr-step.w{fill:var(--tint-text)}
+.sr-n,.fr-n{cursor:pointer}
+.sr-n circle,.fr-n circle{fill:var(--sep);stroke:var(--cell);stroke-width:2}
+.sr-n.on circle,.fr-n.on circle{fill:var(--ink)}
+.sr-n.r circle,.fr-n.r circle{fill:var(--tint)}
+.sr-n.c circle,.fr-n.c circle{stroke:var(--red);stroke-width:2.6}
+.sr-d{font:700 9.5px var(--font);fill:var(--cell);pointer-events:none}
+.sr-l,.fr-l{font:500 11.5px var(--font);fill:var(--l3)}
+.sr-n.on .sr-l,.fr-n.on .fr-l{fill:var(--ink);font-weight:600}
+.sr-c1{font:700 18px var(--font);fill:var(--ink)}
+.sr-c2{font:500 11.5px var(--font);fill:var(--l2)}
+.sside{display:flex;flex-direction:column;gap:8px}
+.srot{display:flex;align-items:center;gap:6px}
+.srot b{flex:1;text-align:center;font-size:16px}
+.scap{margin:0;font-size:14px;line-height:1.45}
+.scap.l2{font-size:13px}
+.fladder .cell.on{background:color-mix(in srgb,var(--tint) 14%,var(--cell))}
+.philo{margin:14px 2px 4px;padding:12px 14px;border-radius:14px;background:var(--fill)}
+.philo p{margin:0 0 8px;font-size:14px;line-height:1.5}
+.philo p:last-child{margin-bottom:0}
+.fr-arc{fill:none;stroke:color-mix(in srgb,var(--tint) 30%,transparent);stroke-width:22;stroke-linecap:round}
+.fr-alt{stroke:var(--red);stroke-width:1.4;stroke-dasharray:4 3}
+.fr-n.out circle{fill:var(--red)}
+.fr-n.miss circle{fill:none;stroke:var(--red);stroke-dasharray:2 2;stroke-width:1.4}
+.fr-rn{font:700 10px var(--font);fill:var(--l2)}
+.fr-n.c .fr-rn{fill:var(--red)}
+.cmtext p{margin:0 0 8px;font-size:14px;line-height:1.45}
+.cmch{flex-wrap:wrap;margin-top:8px}
+.cmch .chip.on{box-shadow:inset 0 0 0 2px var(--red)}
+.fmore{color:var(--tint-text)}
