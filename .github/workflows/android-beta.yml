@@ -1,6 +1,7 @@
-# Бета-версия для Android: собирает APK и кладёт его в релиз «beta» (ссылка не меняется:
-# releases/download/beta/Melete-Beta.apk). Сборка — на серверах GitHub, там уже есть Android SDK.
-name: Android beta APK
+# Предрелиз для Android: собирает APK и кладёт его в релиз «pre» (releases/download/pre/Melete-PreRelease.apk);
+# тот же файл — и в старый релиз «beta» (releases/download/beta/Melete-Beta.apk), чтобы старая ссылка давала свежую сборку.
+# Сборка — на серверах GitHub, там уже есть Android SDK.
+name: Android pre-release APK
 
 on:
   push:
@@ -49,18 +50,25 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
-          cp app/build/outputs/apk/debug/app-debug.apk ../Melete-Beta.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ../Melete-PreRelease.apk
+          cp ../Melete-PreRelease.apk ../Melete-Beta.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Melete-Beta-${{ github.run_number }}
-          path: Melete-Beta.apk
+          name: Melete-PreRelease-${{ github.run_number }}
+          path: Melete-PreRelease.apk
 
-      - name: Выложить в релиз «beta»
+      - name: Выложить в релиз «pre» (и в старый «beta»)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES="Melete Beta 1.1, сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ветка ${GITHUB_REF_NAME}). Скачать на телефон: Melete-Beta.apk"
+          PNOTES="Melete 1.2 — предрелиз, сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ветка ${GITHUB_REF_NAME}). Скачать на телефон: Melete-PreRelease.apk. Ставится поверх беты, данные сохраняются."
+          if ! gh release view pre >/dev/null 2>&1; then
+            gh release create pre --prerelease --title "Melete 1.2 Pre-release" --notes "$PNOTES" --target "$GITHUB_SHA"
+          fi
+          gh release edit pre --title "Melete 1.2 Pre-release" --notes "$PNOTES"
+          gh release upload pre Melete-PreRelease.apk --clobber
+          NOTES="Бета завершена — это уже предрелиз Melete 1.2, сборка ${{ github.run_number }} (${GITHUB_SHA::7}). Новая ссылка: релиз «pre», файл Melete-PreRelease.apk"
           if ! gh release view beta >/dev/null 2>&1; then
             gh release create beta --prerelease --title "Melete Beta" --notes "$NOTES" --target "$GITHUB_SHA"
           fi

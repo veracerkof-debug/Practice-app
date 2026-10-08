@@ -58,6 +58,7 @@
 
 ## Этап 3. Android
 - [x] Capacitor, бета-сборка APK на GitHub Actions (`app.practice.beta`, «Melete Beta», значок «Μ beta», версия 1.1-beta)
+- [x] Предрелиз: «Melete», значок «Μ» с меткой PRE, заставка «pre-release 1.2», версия 1.2-pre; релиз «pre» на GitHub
 - [ ] Сборки `prod` и `dev` (разные applicationId, названия, иконки)
 - [ ] Сохранение файлов в Android (копия данных, `.ics`, видео) — через «Поделиться» / папку приложения
 - [ ] Живая перезагрузка `dev` на телефоне

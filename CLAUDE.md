@@ -101,4 +101,4 @@
 - `npm run preview` — посмотреть собранную версию
 - `npm test` — тесты (Vitest). `tests/parity.test.js` сверяет ядро с функциями из `legacy/practice.html`
 - `npx cap sync android` / `npx cap run android -l --external` — Android с живой перезагрузкой
-- Бета-APK собирает GitHub Actions (`.github/workflows/android-beta.yml`) при каждом пуше → релиз «beta», файл `Melete-Beta.apk` (Melete Beta, версия 1.1-beta)
+- Предрелизный APK собирает GitHub Actions (`.github/workflows/android-beta.yml`) при каждом пуше → релиз «pre», файл `Melete-PreRelease.apk` (Melete, версия 1.2-pre); тот же файл — и в старом релизе «beta» (`Melete-Beta.apk`), чтобы старая ссылка давала свежую сборку

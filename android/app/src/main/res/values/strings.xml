@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Melete Beta</string>
-    <string name="title_activity_main">Melete Beta</string>
+    <string name="app_name">Melete</string>
+    <string name="title_activity_main">Melete</string>
     <string name="package_name">app.practice.beta</string>
     <string name="custom_url_scheme">app.practice.beta</string>
 </resources>

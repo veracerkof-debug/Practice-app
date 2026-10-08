@@ -1,6 +1,6 @@
 {
   "appId": "app.practice.beta",
-  "appName": "Melete Beta",
+  "appName": "Melete",
   "webDir": "dist",
   "android": {
     "allowMixedContent": false
