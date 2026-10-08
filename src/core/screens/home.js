@@ -64,7 +64,7 @@ function helloHTML(st, now) {
   const p = personal(st, now);
   return p ? '<h1 class="mhello">' + elx(p.hello) + '</h1><p class="mrole">' + elx(p.line) + '</p>' : '<h1 class="mhello">' + esc(greet(now.getHours())) + '</h1>';
 }
-// Обычный вид: приветствие строкой под заголовком «Сегодня» — только при личном обращении
+// Обычный вид: приветствие строкой над неделей — только при личном обращении
 function helloClassic(st) {
   const p = personal(st, new Date());
   return p ? '<div class="hgreet" aria-live="polite"><b>' + elx(p.hello) + '</b><span>' + elx(p.line) + '</span></div>' : '';
@@ -123,7 +123,8 @@ export function homeHTML(app) {
   if (app.store.state.settings.uiStyle === 'mono') return homeMonoHTML(app);
   const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
   const today = weekday(Date.now()), plan = st.days, WD = weekdays();
-  let h = topbar(logoHTML()) + '<div class="large">' + t('home.title') + '</div>' + helloClassic(st) + '<div class="hcols"><div>';
+  // заголовка «Сегодня» нет: место — неделе и делу (личное обращение после кода — строкой сверху)
+  let h = topbar(logoHTML()) + helloClassic(st) + '<div class="hcols"><div>';
   // «Только инструменты»: без недели, цели, камня и звания — сразу рабочее место и инструменты
   const plain = !!st.toolsOnly;
   if (!plain) h += '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
