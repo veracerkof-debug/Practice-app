@@ -301,3 +301,11 @@
 .large + .mverse { text-align: left; margin-left: 2px; }
 /* у GFS Didot одно начертание — жирное не подделывается, греческие названия остаются тонкими */
 :root[data-style="mono"] { font-synthesis-weight: none; }
+/* стихи названий (src/core/screens/verses.js): название — касание открывает стих */
+:root[data-style="mono"]:lang(el) :is(.large, .stitle2, .hdr, .mhd h2, .mverse) { cursor: pointer; }
+.bvcard { padding: 18px 4px 20px; border-bottom: 1px solid var(--sep); }
+.bvcard:last-child { border-bottom: 0; }
+.bvname { font-size: 26px; line-height: 1.1; margin-bottom: 10px; }
+.bvgr { margin: 0 0 10px; font-size: 18px; line-height: 1.55; }
+.bvru { margin: 0 0 6px; font-size: 14.5px; line-height: 1.5; color: var(--l2); }
+.bvref { margin: 0; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--l3); }

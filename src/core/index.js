@@ -26,6 +26,7 @@ import { toast, confirm } from '../ui/index.js';
 import { startLog } from './log.js';
 import { APP_VERSION } from './report.js';
 import { crashOffer } from './screens/report.js';
+import { bindVerses } from './screens/verses.js';
 import { createFiles } from './files.js';
 
 export function boot(root) {
@@ -160,6 +161,8 @@ export function boot(root) {
   files.ready.then(() => { if (!app.openTool) app.render(); });
   // прошлый запуск закрылся неожиданно — предложить отправить отчёт
   crashOffer(app);
+  // «Минимал»: касание библейского названия — его стих
+  bindVerses();
   return app;
 }
 
