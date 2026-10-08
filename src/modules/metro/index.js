@@ -444,7 +444,6 @@ export default {
   icon: ICON,
   color: '#FF9500',
   sizes: ['full', 'half', 'quarter', 'strip'],
-  group: 'rhythm',
   status: (c) => c.t('status', { bpm: c.audio.metro.cfg.bpm, meter: c.audio.metro.cfg.num + '/' + c.audio.metro.cfg.den }),
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;

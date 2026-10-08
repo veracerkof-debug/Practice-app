@@ -1,13 +1,16 @@
 // Рабочее пространство сессии: раскладка окон и что в каком окне. Логика без DOM.
 // Раскладка: 'F' — весь экран, иначе две буквы — верхняя и нижняя половины: H — половина, Q — две четверти,
-// S — две полосы. В окне — группа (rhythm: метроном и тюнер, keys: пианино и пэды) или модуль.
+// S — две полосы. В окне — инструмент; метроном, тюнер, пианино и пэды — каждый в своём окне
+// (в старых версиях метроном с тюнером и пианино с пэдами делили окно — группы rhythm и keys).
 // Хранится на устройстве: tools.wsMap[ключ сессии] — { layout, panes, focus, sub, ratio, rt, rb }.
 // Перенесено из legacy/practice.html (LMAP, lsizes, lpos, WS, wsFix, halves, setLayout, closePane, addPane, dropTool, sizeOf).
 
 export const LMAP = { L1: 'F', L2: 'HH', L12: 'HQ', L21: 'QH', L4: 'QQ' };
-export const DEFAULT_PANES = ['rhythm', 'keys', 'theory', 'audio', 'notes'];
+export const DEFAULT_PANES = ['metro', 'tuner', 'piano', 'drone', 'theory', 'audio', 'notes'];
 // Окна старых версий прототипа
-const LEGACY = { metro: 'rhythm', tuner: 'rhythm', piano: 'keys', drone: 'keys', circle: 'theory', scales: 'theory' };
+const LEGACY = { circle: 'theory', scales: 'theory' };
+// Бывшие общие окна: в окне остаётся тот инструмент, что был в нём открыт; второй получает своё окно
+const SPLIT = { rhythm: 'metro', keys: 'piano' };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 export function lsizes(l) {
@@ -46,7 +49,7 @@ export function getWS(device, a) {
     device.wsMap[k] = w;
   }
   if (LMAP[w.layout]) w.layout = LMAP[w.layout];
-  if (!w.sub) w.sub = { rhythm: 'metro', keys: 'piano' };
+  if (!w.sub) w.sub = {};
   if (!w.ratio) w.ratio = 0.5;
   return w;
 }
@@ -54,7 +57,7 @@ export function getWS(device, a) {
 // Окна — только включённые инструменты (all), без повторов; не хватает — добавить
 export function fixWS(w, all, a) {
   if (a && a.type === 'tool') { w.layout = 'F'; w.panes = [a.tool]; w.focus = 0; return w; }
-  w.panes = w.panes.map((x) => LEGACY[x] || x).filter((x, i, arr) => all.includes(x) && arr.indexOf(x) === i);
+  w.panes = w.panes.map((x) => (SPLIT[x] ? (w.sub && w.sub[x]) || SPLIT[x] : LEGACY[x] || x)).filter((x, i, arr) => all.includes(x) && arr.indexOf(x) === i);
   all.forEach((x) => { if (!w.panes.includes(x)) w.panes.push(x); });
   const n = lsizes(w.layout).length;
   while (w.panes.length < n) w.panes.push(all[0]);

@@ -463,7 +463,6 @@ export default {
   icon: ICON,
   color: '#AF52DE',
   sizes: ['full', 'half', 'quarter', 'strip'],
-  group: 'rhythm',
   status(c) {
     const s = normalizeTuner(c.store.all()), beg = s.beginner ?? !!s.useTuning, tn = beg ? curTuning({ ...s, useTuning: true }) : null;
     return c.t('status', { tuning: tn ? (tn.custom ? tn.name : c.t(tn.nameKey)) : c.t('chromatic'), a4: s.a4 });

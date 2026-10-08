@@ -184,8 +184,6 @@ export default {
   icon: ICON,
   color: '#5856D6',
   sizes: ['full', 'half', 'quarter', 'strip'],
-  group: 'keys',
-  groupSizes: ['full', 'half'], // в окне сессии меньше половины группа показывает пэды (как в прототипе)
   // «Поворот — весь экран»: сессия поворачивает весь экран, пока пианино в окне
   rotate: (c) => { const p = c.store.all(); return p.rot && p.rotMode === 'screen' ? (p.rotDir === 'l' ? 'l' : 'r') : null; },
   status(c) {

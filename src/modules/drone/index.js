@@ -136,7 +136,6 @@ export default {
   icon: ICON,
   color: '#30B0C7',
   sizes: ['full', 'half', 'quarter', 'strip'],
-  group: 'keys',
   status: (c) => { const d = c.store.all(); return c.t('status', { note: SH[d.pc], sound: c.t('snd.' + (SOUNDS[d.sound] != null ? d.sound : 'soft') + '.s') }); },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
