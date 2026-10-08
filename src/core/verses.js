@@ -47,6 +47,7 @@ const V = {
 export const CORE = {
   'nav.home': 'ps118_77', 'home.title': 'ps94_7', 'nav.library': 'eph5_19', 'songs.title': 'eph5_19',
   'nav.calendar': 'ps89_9', 'cal.title': 'ps89_9', 'nav.tools': 'ps136_2', 'tools.title': 'ps136_2',
+  'nav.bible': 'lk24_27',
   'panel.title': 'ps72_26', 'page.me': 'ps39_8', 'page.week': 'phil3_14', 'week.title': 'lev23_15',
   'page.stats': 'num1_2', 'stats.title': 'num1_2', 'page.look': 'lk3_22', 'look.title': 'lk3_22',
   'page.data': 'mt6_21', 'data.title': 'mt6_21', 'page.tabs': 'ps23_7', 'tabs.title': 'ps23_7',

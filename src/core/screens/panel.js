@@ -14,7 +14,7 @@ import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay,
 import { scaleOf } from '../library.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
-import { AVATAR, CHEV, BACK, IC, TAB_IDS, TAB_ICONS, weekdays, mBadge } from './common.js';
+import { AVATAR, CHEV, BACK, IC, tabIds, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
 import { extOn } from '../ext.js';
 import { helpOf, showHelp, resetHelp } from '../help.js';
@@ -228,7 +228,7 @@ function featHTML(app) {
 
 // Вкладки внизу: порядок и состав
 function tabsHTML(app) {
-  const st = app.store.state.settings, vis = visibleTabs(st, TAB_IDS), hid = hiddenTabs(st, TAB_IDS);
+  const st = app.store.state.settings, vis = visibleTabs(st, tabIds(st)), hid = hiddenTabs(st, tabIds(st));
   const row = (k, on, i) => '<div class="cell"><span class="ticon" style="background:var(--tint)">' + TAB_ICONS[k] + '</span><span class="grow">' + t('nav.' + k) + '</span>' +
     (on ? (i > 0 ? '<button class="ic sm plain" data-tabmv="up" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.up', { name: t('nav.' + k) })) + '">' + IC.up + '</button>' : '') +
       (vis.length > 1 ? '<button class="ic sm plain" data-tabmv="off" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.off', { name: t('nav.' + k) })) + '" style="color:var(--red)">' + IC.minus + '</button>' : '')
@@ -292,7 +292,7 @@ export function createPanel(app, onChange) {
       let b;
       if ((b = g('[data-pp]'))) { page = b.dataset.pp; render(); layer.scrollTop = 0; return; }
       if (g('[data-act="pclose"]')) { panel.close(); return; }
-      if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, TAB_IDS, b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
+      if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, tabIds(app.store.state.settings), b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
       if ((b = g('[data-day]'))) { toggleDay(app.store, +b.dataset.day); render(); onChange(); return; }
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
       if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); return; }

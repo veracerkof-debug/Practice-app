@@ -159,7 +159,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
     },
     unmount() {
       log('mod', 'закрыт ' + mod.id);
-      try { mod.unmount(); } catch (e) { logErr('mod', e); }
+      try { mod.unmount(host); } catch (e) { logErr('mod', e); } // host — какое из мест закрывается (модуль может быть открыт в двух)
       host.replaceChildren();
     },
   };

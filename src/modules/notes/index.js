@@ -416,20 +416,27 @@ async function addFile() {
   if (await ctx.confirmUpload()) input.click();
 }
 
+// Файлы с устройства (можно сразу несколько): все сохраняются, открывается первый
 async function onFile(e) {
-  const f = e.target.files[0];
+  const list = [...e.target.files];
   e.target.value = '';
-  if (!f) return;
+  if (!list.length) return;
   const song = ctx.song();
-  const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type,
-    fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' || (await sniffPdf(f)) ? 'pdf' : 'score',
-    songs: song ? [song.id] : [], created: Date.now(), blob: f };
-  const saved = await ctx.files.add(rec), rr = saved && ctx.files.reread ? await ctx.files.reread(rec) : false;
-  ctx.log('загрузка: ' + mbOf(f.size) + ', тип ' + (f.type || 'нет') + ', формат ' + rec.fmt + (saved ? ', сохранён' : ', НЕ сохранён') + (rr ? ', читается из копии' : ''), saved ? 'i' : 'w');
-  if (!saved) ctx.ui.toast(ctx.t('notSaved'));
+  let first = null, lost = false;
+  for (const f of list) {
+    const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type,
+      fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' || (await sniffPdf(f)) ? 'pdf' : 'score',
+      songs: song ? [song.id] : [], created: Date.now(), blob: f };
+    const saved = await ctx.files.add(rec), rr = saved && ctx.files.reread ? await ctx.files.reread(rec) : false;
+    ctx.log('загрузка: ' + mbOf(f.size) + ', тип ' + (f.type || 'нет') + ', формат ' + rec.fmt + (saved ? ', сохранён' : ', НЕ сохранён') + (rr ? ', читается из копии' : ''), saved ? 'i' : 'w');
+    if (!saved) lost = true;
+    first = first || rec;
+    if (!ctx) return;
+  }
+  if (lost) ctx.ui.toast(ctx.t('notSaved'));
   st().sec = 'tabs';
   ctx.store.save();
-  openTab(rec);
+  openTab(first);
 }
 
 function act(a, el) {
@@ -492,6 +499,7 @@ export default {
     input = document.createElement('input');
     input.type = 'file';
     input.accept = ACCEPT;
+    input.multiple = true;
     input.hidden = true;
     input.addEventListener('change', onFile);
     document.body.appendChild(input);

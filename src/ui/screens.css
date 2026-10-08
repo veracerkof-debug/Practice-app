@@ -236,3 +236,6 @@
 .hread .hrt,.mread .hrt{font-size:12.5px;color:var(--l2);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .hread .hrr{font-size:20px;font-weight:600;font-family:Georgia,"Noto Serif",serif}
 .hread .hrs,.mread .hrs{font-size:13px;color:var(--tint-text)}
+/* вкладка «Библия» (церковный режим): модуль на всё окно между верхом экрана и вкладками */
+#main.wbible{padding-bottom:0}
+.btab{height:calc(100dvh - var(--tabh,64px) - 18px - env(safe-area-inset-top,0px));display:flex;flex-direction:column}

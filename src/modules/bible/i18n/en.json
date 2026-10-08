@@ -59,5 +59,7 @@
   "st.noCommMod": "No commentaries — add a module under «Translation»",
   "st.noFoot": "Footnote not found: no footnote module for this translation",
   "st.noBook": "This book is not in the translation",
-  "modSub": "{abbr} · {mb} MB"
+  "modSub": "{abbr} · {mb} MB",
+  "modAddedN": "Modules added: {n} of {all}",
+  "modSkipped": "not added: {list}"
 }

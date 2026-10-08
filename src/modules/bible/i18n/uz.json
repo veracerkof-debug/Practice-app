@@ -59,5 +59,7 @@
   "st.noCommMod": "Sharhlar yoʻq — modul «Tarjima» boʻlimida qoʻshiladi",
   "st.noFoot": "Izoh topilmadi: tarjima uchun izohlar moduli yoʻq",
   "st.noBook": "Bu kitob tarjimada yoʻq",
-  "modSub": "{abbr} · {mb} MB"
+  "modSub": "{abbr} · {mb} MB",
+  "modAddedN": "Ulangan modullar: {n} / {all}",
+  "modSkipped": "mos kelmadi: {list}"
 }

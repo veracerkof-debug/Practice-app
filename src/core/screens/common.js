@@ -4,6 +4,7 @@ import { t, tn } from '../../i18n/index.js';
 import { esc, seg } from '../../ui/index.js';
 import { dayStart, DAY } from '../time.js';
 import { scaleOf, toScale, fromScale, masteryLevel } from '../library.js';
+import { isOn } from '../settings.js';
 
 export const AVATAR = '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M5 19.5c1.4-3.2 4-4.6 7-4.6s5.6 1.4 7 4.6"/></svg>';
 export const CHEV = '<svg class="chev" viewBox="0 0 8 13"><path d="M1.5 1.5 6.5 6.5 1.5 11.5"/></svg>';
@@ -22,10 +23,13 @@ export const IC = {
 };
 // Вкладки приложения (экраны ядра); порядок и видимость — settings.tabs / settings.tabsOff
 export const TAB_IDS = ['home', 'library', 'calendar', 'tools'];
+// В церковном режиме — ещё вкладка «Библия» (модуль bible на весь экран)
+export const tabIds = (st) => (isOn(st, 'bible') ? [...TAB_IDS, 'bible'] : TAB_IDS);
 export const TAB_ICONS = {
   home: '<svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="10"/><path d="M14 8.5V14l3.6 2.4"/></svg>',
   library: '<svg viewBox="0 0 28 28"><path d="M11 20V7.5l11-2.5V17.5"/><circle cx="8" cy="20" r="3"/><circle cx="19" cy="17.5" r="3"/></svg>',
   calendar: '<svg viewBox="0 0 28 28"><rect x="4.5" y="6" width="19" height="17.5" rx="3.5"/><path d="M4.5 11.5h19M9.5 3.5v4.5M18.5 3.5v4.5"/><circle cx="10" cy="16.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="14" cy="16.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="18" cy="16.5" r="1.3" fill="currentColor" stroke="none"/></svg>',
+  bible: '<svg viewBox="0 0 28 28"><path d="M7 5.5A1.5 1.5 0 0 1 8.5 4H22v17H8.5A1.5 1.5 0 0 0 7 22.5z"/><path d="M7 22.5A1.5 1.5 0 0 0 8.5 24H22M14.5 7.5v7M12 10h5"/></svg>',
   tools: '<svg viewBox="0 0 28 28"><path d="M7 6v16M14 6v16M21 6v16"/><rect x="4.5" y="9" width="5" height="3.5" rx="1"/><rect x="11.5" y="15" width="5" height="3.5" rx="1"/><rect x="18.5" y="11" width="5" height="3.5" rx="1"/></svg>',
 };
 

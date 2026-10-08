@@ -51,6 +51,7 @@ let host = null, ctx = null, size = 'full', cur = { code: 'GEN', ch: 1 }, verses
 // изучение: стихи главы ({ v, t } или строки) и метки модулей
 const NO_MARKS = { comm: [], xref: new Map(), subs: new Map(), stories: new Map() };
 let rows = null, marks = NO_MARKS, livePx = 0;
+const waiting = []; // места, где Библия была открыта раньше (см. mount)
 
 const fs = () => ctx.store.get('fs', 18);
 const isRead = () => ctx.bible.isRead(chKey(cur.code, cur.ch));
@@ -233,36 +234,46 @@ async function switchTr(id) {
   open(cur.code, cur.ch);
 }
 
-// Добавить модуль MyBible: тип по таблицам (перевод — есть стихи книг канона; в «Минимале» — и словари, комментарии,
-// ссылки, подзаголовки) → сохранение на устройстве → перевод выбирается сразу
+// Добавить модули MyBible (можно сразу несколько): тип по таблицам (перевод — есть стихи книг канона; в «Минимале» —
+// и словари, комментарии, ссылки, подзаголовки) → сохранение на устройстве → первый добавленный перевод выбирается сразу
+async function addOne(f) {
+  const { openModule } = await import('../../core/mybible-study.js'), { bookCount } = await import('../../core/mybible.js');
+  let m;
+  try { m = await openModule(new Uint8Array(await f.arrayBuffer()), f.name); } catch (e) { throw Object.assign(e, { reason: 'notbible' }); }
+  const bible = m.type === 'bible', count = bible ? bookCount({ books: m.books }) : 0;
+  m.close();
+  if (!bible && !ctx.mono) throw Object.assign(new Error('not a Bible module'), { reason: 'notbible' });
+  if (bible && !count) throw Object.assign(new Error('no canonical books'), { reason: 'nobooks' });
+  const meta = { type: m.type, abbr: m.abbr, file: f.name, lang: m.info.language || '', count };
+  const rec = { id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind: 'bible', name: m.title, size: f.size, type: 'application/x-sqlite3', created: Date.now(), blob: f, meta, songs: [] };
+  if (!(await ctx.files.add(rec))) throw Object.assign(new Error('not saved'), { reason: 'notsaved' });
+  if (ctx.files.reread) await ctx.files.reread(rec);
+  ctx.log('модуль MyBible (' + m.type + '): ' + m.title + (bible ? ', книг ' + count : '') + ', ' + (f.size / 1048576).toFixed(1) + ' МБ');
+  return rec;
+}
+const ERR = { notbible: 'trNotBible', nobooks: 'trNoBooks', notsaved: 'trNotSaved' };
 function addModule(done) {
   const input = document.createElement('input');
   input.type = 'file';
+  input.multiple = true;
   input.accept = '.SQLite3,.sqlite3,.sqlite,.db';
   input.addEventListener('change', async () => {
-    const f = input.files[0];
-    if (!f) return;
+    const list = [...input.files];
+    if (!list.length) return;
     ctx.ui.toast(ctx.t('trReading'));
-    try {
-      const { openModule } = await import('../../core/mybible-study.js'), { bookCount } = await import('../../core/mybible.js');
-      let m;
-      try { m = await openModule(new Uint8Array(await f.arrayBuffer()), f.name); } catch (e) { throw Object.assign(e, { reason: 'notbible' }); }
-      const bible = m.type === 'bible', count = bible ? bookCount({ books: m.books }) : 0;
-      m.close();
-      if (!bible && !ctx.mono) throw Object.assign(new Error('not a Bible module'), { reason: 'notbible' });
-      if (bible && !count) throw Object.assign(new Error('no canonical books'), { reason: 'nobooks' });
-      const meta = { type: m.type, abbr: m.abbr, file: f.name, lang: m.info.language || '', count };
-      const rec = { id: 'b' + Date.now().toString(36), kind: 'bible', name: m.title, size: f.size, type: 'application/x-sqlite3', created: Date.now(), blob: f, meta, songs: [] };
-      if (!(await ctx.files.add(rec))) ctx.ui.toast(ctx.t('trNotSaved'));
-      else if (ctx.files.reread) await ctx.files.reread(rec);
-      ctx.log('модуль MyBible (' + m.type + '): ' + m.title + (bible ? ', книг ' + count : '') + ', ' + (f.size / 1048576).toFixed(1) + ' МБ');
-      if (bible) await switchTr(rec.id);
-      else { S && S.closeAux(); ctx.ui.toast(ctx.t('modAdded', { name: m.title })); reopen(); }
-      done();
-    } catch (e) {
-      ctx.logErr(e);
-      ctx.ui.toast(ctx.t(e && e.reason === 'notbible' ? 'trNotBible' : e && e.reason === 'nobooks' ? 'trNoBooks' : 'trFail'));
+    const added = [], failed = [];
+    for (const f of list) {
+      try { added.push(await addOne(f)); }
+      catch (e) { ctx.logErr(e); failed.push({ name: f.name, reason: e && e.reason }); }
+      if (!ctx) return; // Библию закрыли, пока читались файлы
     }
+    const tr = added.find((r) => r.meta.type === 'bible');
+    if (added.some((r) => r.meta.type !== 'bible')) S && S.closeAux();
+    if (tr) await switchTr(tr.id); else if (added.length) reopen();
+    // итог: один файл — как раньше; несколько — сколько подключено и что не подошло
+    if (list.length === 1) ctx.ui.toast(failed.length ? ctx.t(ERR[failed[0].reason] || 'trFail') : tr ? ctx.t('modAdded', { name: tr.name }) : ctx.t('modAdded', { name: added[0].name }));
+    else ctx.ui.toast(ctx.t('modAddedN', { n: added.length, all: list.length }) + (failed.length ? ' · ' + ctx.t('modSkipped', { list: failed.map((x) => x.name).join(', ') }) : ''));
+    done();
   });
   input.click();
 }
@@ -292,6 +303,8 @@ export default {
   sizes: ['full', 'half', 'quarter', 'strip'],
   status(c) { const p = c.bible.pos(); return p ? refText([chKey(p.code, p.ch)]) : c.t('name'); },
   mount(el, c, sz = 'full') {
+    // Библия уже открыта в другом месте (вкладка внизу, а теперь — окно сессии): то место ждёт и вернётся после закрытия этого
+    if (host && host !== el && host.isConnected) { if (onClick) host.removeEventListener('click', onClick); clearTimeout(scrollT); waiting.push({ el: host, c: ctx, sz: size }); }
     host = el; ctx = c; size = sz;
     bind();
     const p = ctx.bible.pos() || { code: 'GEN', ch: 1, y: 0 };
@@ -299,10 +312,14 @@ export default {
     (ctx.files.ready || Promise.resolve()).then(() => (ctx.mono ? study() : null)).then(() => providerOf(ctx.store.get('tr', 'synodal'))).then((x) => { P = x; }, (e) => { ctx.logErr(e); P = SYN; }).then(() => { if (host) go(); });
   },
   resize(sz) { size = sz; render(); },
-  unmount() {
+  unmount(el) {
+    // закрывается место, которое ждёт (Библия сейчас открыта в другом) — просто забыть его
+    if (el && host && el !== host) { const i = waiting.findIndex((w) => w.el === el); if (i >= 0) waiting.splice(i, 1); return; }
     clearTimeout(scrollT);
     opened.forEach((x) => x.close()); opened.clear(); P = SYN; S && S.closeAux(); // модули MyBible в памяти — только пока Библия открыта
     if (host && onClick) host.removeEventListener('click', onClick);
     host = null; ctx = null; verses = null; rows = null; marks = NO_MARKS;
+    const w = waiting.pop();
+    if (w && w.el.isConnected) this.mount(w.el, w.c, w.sz);
   },
 };

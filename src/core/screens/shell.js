@@ -4,7 +4,9 @@ import '../../ui/screens.css';
 import { t } from '../../i18n/index.js';
 import { confirm } from '../../ui/index.js';
 import { deleteSong } from '../library.js';
-import { TAB_ICONS, TAB_IDS } from './common.js';
+import { TAB_ICONS, tabIds } from './common.js';
+import { moduleById } from '../../modules/index.js';
+import { mountModule } from '../modules.js';
 import { visibleTabs } from '../settings.js';
 import { homeHTML, mountStones, quickEdit, streakSheet, gemSheet, rankSheet, rankCheck, nameSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
@@ -17,7 +19,7 @@ import { calendarHTML, bindCalendar, calAct } from './calendar.js';
 import { onboarding } from './onboard.js';
 
 export function createShell(app, root) {
-  const tabsNow = () => visibleTabs(app.store.state.settings, TAB_IDS);
+  const tabsNow = () => visibleTabs(app.store.state.settings, tabIds(app.store.state.settings));
   const view = { tab: tabsNow()[0], song: null, q: '', genre: '', tag: '', cat: '', sort: 'recent', cal: {} };
   root.innerHTML = '<main class="wrap" id="main"></main><nav class="tabbar" aria-label="' + t('nav.aria') + '"><div class="in" id="tabs"></div></nav>';
   const main = root.querySelector('#main'), tabs = root.querySelector('#tabs');
@@ -28,9 +30,25 @@ export function createShell(app, root) {
     tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + '>' + TAB_ICONS[k] + '<span>' + t('nav.' + k) + '</span></button>').join('');
   };
 
+  // Вкладка «Библия» (церковный режим): модуль на всё окно над вкладками; остаётся открытым, пока выбрана вкладка
+  let bible = null;
+  const unmountBible = () => { if (bible) { bible.unmount(); bible = null; } main.classList.remove('wbible'); };
+  function renderBible() {
+    if (bible && main.contains(bible.host)) return;
+    unmountBible();
+    main.onclick = null;
+    main.classList.add('wbible');
+    main.innerHTML = '<div class="toolhost btab"></div>';
+    const host = main.firstElementChild;
+    bible = { host, ...mountModule(app, moduleById('bible'), host, 'full') };
+  }
+
   function render() {
     rankCheck(app);
     renderTabs();
+    document.documentElement.style.setProperty('--tabh', tabs.parentElement.offsetHeight + 'px');
+    if (view.tab === 'bible') { renderBible(); return; }
+    unmountBible();
     if (view.tab === 'tools') { renderTools(app, main); return; }
     main.onclick = null;
     if (view.tab === 'calendar') { main.innerHTML = calendarHTML(app, view.cal); bindCalendar(app, main, view.cal, render); return; }
@@ -58,7 +76,7 @@ export function createShell(app, root) {
     if (tab === 'stats') { panel.open('stats'); return; }
     // Вкладку можно открыть и убранную (ссылкой «Все песни» и т.п.) — она просто не подсвечена внизу
     const changed = view.tab !== tab || (view.song || null) !== (song || null);
-    view.tab = TAB_IDS.includes(tab) ? tab : tabsNow()[0];
+    view.tab = tabIds(app.store.state.settings).includes(tab) ? tab : tabsNow()[0];
     view.song = song || null;
     render();
     window.scrollTo(0, 0);
@@ -88,7 +106,10 @@ export function createShell(app, root) {
     else if (d.act === 'quickedit') quickEdit(app, render);
     else if (d.act === 'donate') donateSheet();
     // чтение дня: Библия — на нужной главе
-    else if (d.act === 'bible') { if (d.key) { const [code, ch] = d.key.split('.'); app.bible.setPos({ code, ch: +ch, y: 0 }); } openToolView(app, 'bible', render); }
+    else if (d.act === 'bible') {
+      if (d.key) { const [code, ch] = d.key.split('.'); app.bible.setPos({ code, ch: +ch, y: 0 }); }
+      if (tabsNow().includes('bible')) { unmountBible(); go('bible'); } else openToolView(app, 'bible', render); // есть вкладка — в неё
+    }
     else if (d.act === 'report') reportSheet(app);
     else if (d.act === 'legal') legalSheet(d.v);
     else if (d.act === 'streak') streakSheet(app);
