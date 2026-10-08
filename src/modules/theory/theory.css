@@ -153,5 +153,12 @@
 .fr-n.c .fr-rn{fill:var(--red)}
 .cmtext p{margin:0 0 8px;font-size:14px;line-height:1.45}
 .cmch{flex-wrap:wrap;margin-top:8px}
-.cmch .chip.on{box-shadow:inset 0 0 0 2px var(--red)}
+.cmch .chip.on{background:var(--fill);color:var(--ink);box-shadow:inset 0 0 0 2px var(--red)}
+.cmch .chip.on .fnb{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red)}
 .fmore{color:var(--tint-text)}
+/* полное окно «Круга» и «Гамм» прокручивается, а блоки в нём не сжимаются по высоте
+   (иначе ряд кнопок ладов сплющивался и схема наезжала на него) */
+.cwrap.f{flex:1;overflow-y:auto;scrollbar-width:none}
+.cwrap.f>*,.swrap>*{flex-shrink:0}
+.cwrap.f .circle{max-height:none;max-width:min(100%,420px)}
+.cwrap.f .hscroll{padding-bottom:8px}
