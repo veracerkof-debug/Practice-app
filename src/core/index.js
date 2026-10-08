@@ -161,7 +161,7 @@ export function boot(root) {
   files.ready.then(() => { if (!app.openTool) app.render(); });
   // прошлый запуск закрылся неожиданно — предложить отправить отчёт
   crashOffer(app);
-  // «Минимал»: касание библейского названия — его стих
+  // касание названия раздела — его стих (в обоих видах)
   bindVerses();
   return app;
 }

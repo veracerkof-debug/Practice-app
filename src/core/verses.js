@@ -41,21 +41,24 @@ const V = {
   num1_2: { ref: 'Числ 1:2', gr: '…κατὰ ἀριθμὸν ἐξ ὀνόματος…', ru: '…по числу имён…' },
 };
 
-// Название → стих (по порядку: так же идут в списке «Названия и стихи»)
-export const NAMES = [
-  ['Μελέτη', 'ps118_77'], ['Σήμερον', 'ps94_7'], ['ᾨδαί', 'eph5_19'], ['Ἡμέραι', 'ps89_9'], ['Αἱ ἡμέραι ἡμῶν', 'ps89_9'],
-  ['Ὄργανα', 'ps136_2'], ['Φυλακή', 'ps89_4'], ['Ἐξαριθμήσασθαι', 'ps89_12'], ['Ἀριθμός', 'num1_2'], ['Ἔργον', 'ps89_17'],
-  ['Ἀνάπαυσις', 'mt11_29'], ['Σαββατισμός', 'heb4_9'], ['Μέτρον', 'mt7_2'], ['Συμφωνία', 'lk15_25'], ['Ψαλτήριον', 'ps150_3'],
-  ['Αὐλός', 'co1_14_7'], ['Ἔργα χειρῶν', 'ps89_17'], ['Φωνή', 'rev14_2'], ['Σοφία', 'ps89_12'], ['Ἀκοή', 'rom10_17'],
-  ['Γράμματα', 'jn7_15'], ['Θόρυβος', 'mt26_5'], ['Ἦχος', 'ps150_3'], ['Ψῆφος', 'rev2_17'], ['Βαθμός', 'tim1_3_13'],
-  ['Ὑπομονή', 'rom5_3'], ['Σύνεσις', 'ps110_10'], ['Ἑβδομάς', 'lev23_15'], ['Ἑβδομὰς καὶ σκοπός', 'phil3_14'],
-  ['Ἡ μερίς μου', 'ps72_26'], ['Περὶ ἐμοῦ', 'ps39_8'], ['Ἀριθμοί', 'num1_2'], ['Θησαυρός', 'mt6_21'], ['Πύλαι', 'ps23_7'],
-  ['Σάλπιγξ', 'co1_15_52'], ['Ἀντίλημψις', 'ps21_20'], ['Εἶδος', 'lk3_22'], ['Ὄψις', 'jn7_24'], ['Ἐν ἀρχῇ', 'gen1_1'],
-  ['Τάξις', 'co1_14_40'], ['Χρόνος', 'eccl3_1'],
-];
-const BY = new Map(NAMES.map(([n, k]) => [n, k]));
+// Раздел → стих. Стихи — в обоих видах; греческие названия (i18n/el.json) — только в «Минимале».
+// Ключи строк ядра:
+export const CORE = {
+  'nav.home': 'ps118_77', 'home.title': 'ps94_7', 'nav.library': 'eph5_19', 'songs.title': 'eph5_19',
+  'nav.calendar': 'ps89_9', 'cal.title': 'ps89_9', 'nav.tools': 'ps136_2', 'tools.title': 'ps136_2',
+  'panel.title': 'ps72_26', 'page.me': 'ps39_8', 'page.week': 'phil3_14', 'week.title': 'lev23_15',
+  'page.stats': 'num1_2', 'stats.title': 'num1_2', 'page.look': 'lk3_22', 'look.title': 'lk3_22',
+  'page.data': 'mt6_21', 'data.title': 'mt6_21', 'page.tabs': 'ps23_7', 'tabs.title': 'ps23_7',
+  'page.notif': 'co1_15_52', 'donate.title': 'ps21_20', 'mix.title': 'ps150_3', 'stone.title': 'rev2_17',
+  'rank.title': 'tim1_3_13', 'streak.title': 'rom5_3', 'mastery.title': 'ps110_10', 'tos.title': 'gen1_1',
+  'lay.title': 'co1_14_40', 'track.title': 'eccl3_1', 'mono.title': 'jn7_24',
+};
+// Инструменты (по id модуля) и строки помодоро и секундомера
+export const MODS = { metro: 'mt7_2', tuner: 'lk15_25', piano: 'ps150_3', glider: 'co1_14_7', theremin: 'ps89_17', drone: 'rev14_2',
+  theory: 'ps89_12', audio: 'rom10_17', notes: 'jn7_15', spectrum: 'mt26_5', timer: 'ps89_4' };
+export const TIMER = { 'set.title': 'ps89_4', 'mode.pomo': 'ps89_4', 'mode.watch': 'num1_2', 'w.label': 'ps89_12',
+  'ph.work': 'ps89_17', 'ph.short': 'mt11_29', 'ph.long': 'heb4_9' };
+// Эпиграф помодоро, секундомера и календаря
+export const EPIGRAPH = 'ps89_12';
 
-// Стих названия или null
-export const verseOf = (name) => { const k = BY.get(String(name || '').trim()); return k ? { name: String(name).trim(), ...V[k] } : null; };
-export const verseByKey = (k) => (V[k] ? { ...V[k] } : null);
-export const verseList = () => NAMES.map(([n, k]) => ({ name: n, ...V[k] }));
+export const verseByKey = (k) => (V[k] ? { id: k, ...V[k] } : null);

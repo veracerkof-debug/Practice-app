@@ -1,6 +1,7 @@
 // Вкладка «Календарь»: месяц (с днём под сеткой), неделя по часам, список ближайших. События — репетиции, уроки,
 // концерты, записи, дедлайны и цели по песням; типы и цвета свободные. Экспорт в .ics для других календарей.
 import '../../ui/calendar.css';
+import { epigraphHTML } from './verses.js';
 import { t, tn } from '../../i18n/index.js';
 import { esc, sheet, snav, toast, confirm, seg, sw, icb, icons } from '../../ui/index.js';
 import { fmtDur } from '../format.js';
@@ -78,9 +79,8 @@ export function calendarHTML(app, cv) {
     (cv.view === 'list' ? '' : icb('data-cnav="-1"', I.left, t(cv.view === 'week' ? 'cal.prevWeek' : 'cal.prevMonth'), 'sm') + icb('data-cnav="1"', I.right, t(cv.view === 'week' ? 'cal.nextWeek' : 'cal.nextMonth'), 'sm')) +
     '<button class="link ctoday" data-cnav="0">' + t('cal.todayBtn') + '</button></div>';
   const right = '<span class="ctop">' + icb('data-cics', I.share, t('cal.export'), 'plain') + icb('data-cnew', IC.plus, t('cal.new'), 'plain') + '</span>';
-  // в «Минимале» — стих эпиграфом (Пс 89:12, только там, где он есть в словаре)
-  const vs = t('verse.ps89'), verse = vs === 'verse.ps89' ? '' : '<p class="mverse" lang="el">' + vs + '<span>' + t('verse.ps89ref') + '</span></p>';
-  let h = topbar(right) + '<div class="large">' + t('cal.title') + '</div>' + verse + '<div class="calw">' + head +
+  // стих эпиграфом — Пс 89:12 (src/core/verses.js)
+  let h = topbar(right) + '<div class="large">' + t('cal.title') + '</div>' + epigraphHTML() + '<div class="calw">' + head +
     seg('cview', [['month', t('cal.v.month')], ['week', t('cal.v.week')], ['list', t('cal.v.list')]], cv.view, t('cal.view'));
   h += cv.view === 'week' ? weekHTML(app, cv) : cv.view === 'list' ? listHTML(app, cv) : monthHTML(app, cv);
   return h + '</div>';

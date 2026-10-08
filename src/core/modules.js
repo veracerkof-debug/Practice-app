@@ -7,6 +7,7 @@ import { overlapMs, mergeSegs } from './stopwatch.js';
 import { fmtDur } from './format.js';
 import '../ui/pane.css';
 import { log, logErr } from './log.js';
+import { epigraphHTML } from './screens/verses.js';
 import { firstHelp } from './help.js';
 
 export const SIZES = ['full', 'half', 'quarter', 'strip'];
@@ -78,6 +79,8 @@ export function makeCtx(app, mod) {
     // Вид «Минимал» (эксперимент): у инструментов с выбором вида он закреплён — самый простой и функциональный
     get mono() { return app.store.state.settings.uiStyle === 'mono'; },
     presets: (kind) => presetsApi(app, kind),
+    // Стих-эпиграф (Пс 89:12) — помодоро и секундомер
+    epigraph: () => epigraphHTML(),
     // Технический журнал (src/core/log.js): только события и ошибки, без названий и личных данных
     log: (msg, lvl) => log(mod.id, msg, lvl),
     logErr: (e) => logErr(mod.id, e),

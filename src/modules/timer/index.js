@@ -90,8 +90,8 @@ function ringHTML() {
   if (size === 'quarter') return '<div class="vq">' + phase + ring + '<div class="vrow">' + rs + play + sk + '</div></div>';
   if (size === 'strip') return '<div class="srow2"><div class="sgrow" style="text-align:left">' + phase + '<div id="ptime" class="num pstrip" role="timer">' + fmtClock(rem) + '</div></div>' + rs + play + sk + '</div>';
   if (size === 'half') return '<div class="ph2">' + ring + '<div class="ph2side">' + modeSeg() + phase + dots() + '<div class="vrow">' + rs + play + sk + '</div>' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'sm') + '</div></div>';
-  // в «Минимале» — стих эпиграфом под кнопками (Пс 89:12); в других языках его нет
-  const vs = t('verse.ps89'), verse = vs === 'verse.ps89' ? '' : '<p class="mverse" lang="el">' + vs + '<span>' + t('verse.ps89ref') + '</span></p>';
+  // стих эпиграфом под кнопками — Пс 89:12 (даёт ядро)
+  const verse = ctx.epigraph ? ctx.epigraph() : '';
   return '<div class="mcard" style="text-align:center;position:relative">' + ui.icb('data-x="psettings"', ui.icons.gear, t('settings'), 'corner') + modeSeg() + phase + ring + dots() + '<div class="ctrl3">' + rs + play + sk + '</div>' + verse + '</div>';
 }
 
