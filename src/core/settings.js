@@ -67,7 +67,11 @@ export function applyScale(settings) {
   if (!meta) return;
   const s = uiScale(settings), land = matchMedia('(orientation: landscape)').matches;
   const w = land ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-  const want = Math.abs(s - 1) < 1e-3 ? 'width=device-width, initial-scale=1, viewport-fit=cover' : 'width=' + layoutWidth(w, s) + ', viewport-fit=cover';
+  // ширина раскладки и масштаб страницы задаются вместе (и закрепляются): иначе Android WebView оставляет масштаб 1,
+  // и широкая раскладка вылезает за экран, а узкая — не растягивается
+  const k = String(+s.toFixed(3));
+  const want = Math.abs(s - 1) < 1e-3 ? 'width=device-width, initial-scale=1, viewport-fit=cover'
+    : 'width=' + layoutWidth(w, s) + ', initial-scale=' + k + ', minimum-scale=' + k + ', maximum-scale=' + k + ', viewport-fit=cover';
   if (meta.content !== want) meta.content = want;
   document.documentElement.style.setProperty('--uiscale', s);
   if (!applyScale.bound) { applyScale.bound = true; addEventListener('orientationchange', () => setTimeout(() => applyScale(settings), 200)); }
