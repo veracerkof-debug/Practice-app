@@ -71,12 +71,18 @@ describe('часы устройства', async () => {
 
 describe('камень «Минимала»', async () => {
   const { wear, stoneMesh } = await import('../src/ui/stone.js');
-  it('рёбра сглаживаются быстрее формы, к 10 000 ч — почти круглый', () => {
-    expect(wear(0)).toEqual({ edges: 0, form: 0 });
-    const a = wear(300), z = wear(10000);
+  it('рёбра — быстрее сколов, сколы — быстрее круглоты; к десяткам тысяч часов — почти шар', () => {
+    expect(wear(0)).toEqual({ edges: 0, form: 0, round: 0 });
+    const a = wear(300), z = wear(10000), w = wear(30000);
     expect(a.edges).toBeGreaterThan(0.6);
     expect(a.form).toBeLessThan(0.1);
     expect(z.form).toBeGreaterThan(0.95);
+    expect(z.round).toBeLessThan(z.form);
+    expect(w.round).toBeGreaterThan(0.95);
+    // круглый, а не яйцо: радиусы почти одинаковы
+    const spread = (h) => { const r = stoneMesh(7, h, 2).V.map((p) => Math.hypot(...p)); return Math.max(...r) / Math.min(...r); };
+    expect(spread(40000)).toBeLessThan(1.05);
+    expect(spread(0)).toBeGreaterThan(1.3);
   });
   it('у каждого свой камень, сетка в единичном размере', () => {
     const m = stoneMesh(7, 0, 2), n = stoneMesh(8, 0, 2);

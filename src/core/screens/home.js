@@ -19,7 +19,7 @@ import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
-import { stoneView, wear, stoneKm, stoneSeed } from '../../ui/stone.js';
+import { stoneView, wear, stoneKm, stoneSeed, roundness } from '../../ui/stone.js';
 import { nextEventsHTML } from './calendar.js';
 import { extWho } from '../ext.js';
 import { refText } from '../bible.js';
@@ -98,7 +98,7 @@ function homeMonoHTML(app) {
       // Камень вместо самоцвета: обычный, с дороги; с часами занятий круглеет (src/ui/stone.js)
       const sec = gemSec(all), wr = wear(sec / 3600);
       h += '<div class="mstone"><canvas data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title') + ', ' + fmtDur(sec)) + '"></canvas>' +
-        '<div class="mstxt"><span class="mslbl">' + t('stone.title') + '</span><span class="msval num">' + fmtDur(sec) + '</span><span class="mslbl">' + esc(t('stone.round', { p: Math.round((wr.edges * 0.4 + wr.form * 0.6) * 100) })) + '</span>' +
+        '<div class="mstxt"><span class="mslbl">' + t('stone.title') + '</span><span class="msval num">' + fmtDur(sec) + '</span><span class="mslbl">' + esc(t('stone.round', { p: Math.round(roundness(wr) * 100) })) + '</span>' +
         '<span class="mslbl num">' + esc(kmText(sec / 3600)) + '</span></div></div>';
       h += '<div class="mtags"><button data-act="rank">' + esc(rankName(r.id, r.level)) + '</button>' +
         (isOn(st, 'streak') && streakInfo(all, st).weeks ? '<button data-act="streak">' + esc(tn('streak.weeks', streakInfo(all, st).weeks)) + '</button>' : '') + '</div>';
@@ -251,7 +251,7 @@ export function stoneSheet(app) {
     '<div class="stonefull"><canvas data-stone="full" aria-label="' + esc(t('stone.title')) + '"></canvas></div>' +
     '<div class="seg stseg" role="group" aria-label="' + esc(t('stone.title')) + '"><button data-stv="now" aria-pressed="true">' + t('stone.now') + '</button><button data-stv="then" aria-pressed="false">' + t('stone.then') + '</button></div>' +
     '<div class="tiles num" style="margin-top:14px"><div class="tile"><b data-hours>' + fmtDur(sec) + '</b><span>' + t('stone.hours') + '</span></div><div class="tile"><b>' + pct(wr.edges) + '</b><span>' + t('stone.edges') +
-    '</span></div><div class="tile"><b>' + pct(wr.form) + '</b><span>' + t('stone.form') + '</span></div></div>' +
+    '</span></div><div class="tile"><b>' + pct(roundness(wr)) + '</b><span>' + t('stone.form') + '</span></div></div>' +
     '<div class="stkm"><b class="num">' + esc(kmText(hrs)) + '</b><span>' + t('stone.path') + '</span></div>' +
     '<p class="ftr">' + t('stone.text') + '</p>');
   const root = api.el;
@@ -270,7 +270,7 @@ export function stoneSheet(app) {
     const h = e.detail, w = wear(h), tiles = root.querySelectorAll('.tiles .tile b');
     v.setHours(h);
     if (tiles[1]) tiles[1].textContent = pct(w.edges);
-    if (tiles[2]) tiles[2].textContent = pct(w.form);
+    if (tiles[2]) tiles[2].textContent = pct(roundness(w));
     const km = root.querySelector('.stkm b');
     if (km) km.textContent = kmText(h);
   };
