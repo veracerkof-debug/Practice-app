@@ -59,5 +59,8 @@
   "pedal.off": "Pedal o'chiq",
   "pedal.sus": "Sustain: qo'yib yuborilgan nota uzoq yangraydi",
   "pedal.hold": "Hold: nota qayta bosilguncha ushlab turiladi",
-  "rotHint": "Ekranni burish"
+  "rotHint": "Ekranni burish",
+  "pre.fmep": "FM-pianino",
+  "pre.abass": "Analog bas",
+  "pre.strings": "Torli ansambl"
 }

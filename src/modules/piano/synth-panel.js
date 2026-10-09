@@ -1,6 +1,6 @@
 // Панель звука пианино: пресеты, «ретро-синтезатор» с ручками и осциллограммой, режим звука, мини-клавиатура.
 // Перенесено из legacy/practice.html (synBody, synBind, knobSVG, knobBind, scopeStart, mkbHTML, mkbBind).
-import { PRESETS, PATCH_KEYS, PATCH_RANGE, pianoPatch, applyPreset } from '../../audio/synth.js';
+import { PRESETS, PATCH_KEYS, PATCH_EXTRA, PATCH_RANGE, pianoPatch, applyPreset } from '../../audio/synth.js';
 import { harmAmp } from '../../audio/waves.js';
 import { presetRow, promptName, presetManager } from '../../ui/presets.js';
 
@@ -274,11 +274,11 @@ export function synBind(ctx, root, inline, { rerender, onClose, onChange = () =>
       re();
     } else if ((b = g('[data-upre]'))) {
       const p = ctx.presets('piano').get(b.dataset.upre);
-      if (p) { Object.assign(s, p.data, { preset: p.id, name: p.name }); ctx.store.save(); re(); }
+      if (p) { PATCH_EXTRA.forEach((k) => { if (k !== 'kind') delete s[k]; }); Object.assign(s, p.data, { preset: p.id, name: p.name }); ctx.store.save(); re(); }
     } else if (g('[data-psave]')) {
       promptName(ctx.t('pre.new'), s.name ? s.name + ' 2' : ctx.t('pre.default'), (v) => {
         const data = {};
-        PATCH_KEYS.concat(['kind', 'tine', 'ham']).forEach((k) => { if (s[k] != null) data[k] = s[k]; });
+        PATCH_KEYS.concat(PATCH_EXTRA).forEach((k) => { if (s[k] != null) data[k] = s[k]; });
         const id = ctx.presets('piano').add(v, data);
         s.preset = id;
         s.name = v;

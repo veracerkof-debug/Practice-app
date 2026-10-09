@@ -59,5 +59,8 @@
   "pedal.off": "Pedal off",
   "pedal.sus": "Sustain: a released note rings with a long tail",
   "pedal.hold": "Hold: a note keeps sounding until pressed again",
-  "rotHint": "Rotate the screen"
+  "rotHint": "Rotate the screen",
+  "pre.fmep": "FM piano",
+  "pre.abass": "Analog bass",
+  "pre.strings": "String ensemble"
 }

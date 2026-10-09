@@ -1,4 +1,6 @@
-// Синтезатор: пианино, электропиано, орган, синус, пэд, колокол. Лёгкие голоса, до 22 одновременно.
+// Синтезатор: пианино, электропиано, орган, синус, пэд, колокол и три классических синтезаторных звука —
+// FM-электропиано (частотная модуляция), аналоговый бас (саб-генератор, резонансный фильтр с огибающей),
+// струнный ансамбль (расстроенные пилы и вибрато). Лёгкие голоса, до 22 одновременно.
 // Параметры звука (patch) — как в прототипе (device.piano.syn).
 import { getContext, midiFreq } from './context.js';
 import { synWave, noiseBuf } from './waves.js';
@@ -10,8 +12,22 @@ export const PRESETS = {
   organ: { kind: 'organ', tone: 0.65, bright: 0.75, att: 12, dec: 0.5, sus: 1, rel: 0.1, cho: 0.5, rev: 0.35 },
   sine: { kind: 'soft', tone: 0, bright: 1, att: 8, dec: 0.5, sus: 0.85, rel: 0.25, cho: 0, rev: 0.2 },
   pad: { kind: 'saw', tone: 0.85, bright: 0.32, att: 650, dec: 0.8, sus: 1, rel: 1.8, cho: 0.8, rev: 0.6 },
-  bell: { kind: 'soft', tone: 0.45, bright: 0.85, att: 2, dec: 0.9, sus: 0, rel: 1.2, cho: 0.1, rev: 0.5, tine: 2.76 },
+  // колокол: негармонические обертоны литого колокола (гул на октаву ниже, малая терция, квинта, октава…),
+  // верхние гаснут быстрее; удар — короткий звон
+  bell: { kind: 'soft', tone: 0.1, bright: 0.9, att: 1, dec: 1.4, sus: 0, rel: 1.8, cho: 0.05, rev: 0.55, gain: 1.35,
+    partials: [[0.5, 0.55, 1.5], [1.2, 0.5, 0.75], [1.5, 0.35, 0.6], [2, 0.5, 0.85], [2.5, 0.3, 0.45], [3, 0.28, 0.35], [4.2, 0.2, 0.22], [5.4, 0.12, 0.15]] },
+  // FM-электропиано: синус, модулируемый синусом той же частоты (индекс быстро спадает — мягкий «колокольчик» в атаке),
+  // и короткий звон высокого обертона
+  fmep: { kind: 'soft', tone: 0, bright: 0.8, att: 2, dec: 0.95, sus: 0.12, rel: 0.55, cho: 0.35, rev: 0.32, tine: 14, tineAmp: 0.12,
+    fm: { ratio: 1, index: 2.2, sus: 0.18, dec: 0.22 } },
+  // аналоговый бас: пила и квадрат октавой ниже через резонансный фильтр, который открывается ударом и закрывается
+  abass: { kind: 'saw', tone: 0.6, bright: 0.1, att: 3, dec: 0.4, sus: 0.6, rel: 0.12, cho: 0, rev: 0.04, gain: 1.5, res: 7, fenv: 0.9, sub: 0.55 },
+  // струнный ансамбль: широкий хорус из расстроенных пил, медленная атака, лёгкое вибрато
+  strings: { kind: 'saw', tone: 0.75, bright: 0.36, att: 320, dec: 0.9, sus: 0.9, rel: 1.3, cho: 0.95, rev: 0.55, vib: [5.2, 7] },
 };
+// Поля звука, которые не ручки, но входят в пресет (свои пресеты сохраняют их тоже)
+export const PATCH_EXTRA = ['kind', 'tine', 'ham', 'tineAmp', 'gain', 'partials', 'fm', 'res', 'fenv', 'sub', 'vib'];
+const sigOf = (s) => JSON.stringify([s.kind || 'soft', s.tine || 0, s.partials || 0, s.fm || 0, s.sub || 0, s.vib || 0]);
 // Ручки панели и их диапазоны
 export const PATCH_KEYS = ['tone', 'bright', 'att', 'dec', 'sus', 'rel', 'cho', 'rev'];
 export const PATCH_RANGE = { tone: [0, 1], bright: [0, 1], cho: [0, 1], att: [1, 1500], dec: [0.05, 2], sus: [0, 1], rel: [0.03, 3], rev: [0, 1] };
@@ -28,6 +44,7 @@ export function pianoPatch(piano) {
 }
 
 export function applyPreset(patch, id) {
+  PATCH_EXTRA.forEach((k) => { if (k !== 'kind') delete patch[k]; }); // от прошлого пресета ничего не остаётся
   return Object.assign(patch, PRESETS[id], { preset: id, name: null });
 }
 
@@ -63,16 +80,19 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
 
       const g = c.createGain(), lp = c.createBiquadFilter(), os = [], main = [];
       lp.type = 'lowpass';
-      lp.Q.value = kind === 'saw' ? 1 : 0.3;
+      lp.Q.value = s.res != null ? s.res : kind === 'saw' ? 1 : 0.3;
       lp.connect(g);
       g.connect(bus);
       const cut = Math.max(200, Math.min(16000, f * (1.2 + s.bright * 22)));
       // у пианино низкие ноты звучат дольше
       const pitchK = kind === 'piano' ? Math.max(0.35, Math.min(2.2, (5.2 - (m - 36) * 0.07) / 3.4)) : 1;
-      const dec = Math.max(0.05, s.dec * 3 * pitchK), att = Math.max(0.002, s.att / 1000), peak = kind === 'saw' ? 0.16 : 0.34;
+      const dec = Math.max(0.05, s.dec * 3 * pitchK), att = Math.max(0.002, s.att / 1000), peak = (kind === 'saw' ? 0.16 : 0.34) * (s.gain || 1);
       if (kind === 'piano') {
         lp.frequency.setValueAtTime(cut, t);
         lp.frequency.setTargetAtTime(Math.max(500, f * (1.5 + s.bright * 3)), t + 0.02, dec * 0.3);
+      } else if (s.fenv) { // огибающая фильтра: удар открывает, дальше закрывается к «яркости»
+        lp.frequency.setValueAtTime(Math.min(18000, cut * (1 + s.fenv * 9)), t);
+        lp.frequency.setTargetAtTime(cut, t + att, dec * 0.22);
       } else lp.frequency.value = cut;
       g.gain.setValueAtTime(0.0001, t);
       g.gain.linearRampToValueAtTime(peak, t + att);
@@ -90,12 +110,57 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
         os.push(o); main.push(o);
       };
       if (s.cho > 0.04) { const d = 4 + s.cho * 10; osc(-d, 0.55); osc(d, 0.55); } else osc(0, 1);
+      if (s.fm) { // частотная модуляция: синус-модулятор, индекс спадает от удара к ровному звучанию
+        const mo = c.createOscillator(), mg = c.createGain(), mf = f * s.fm.ratio, dev = mf * s.fm.index;
+        mo.type = 'sine';
+        mo.frequency.value = mf;
+        mg.gain.setValueAtTime(dev, t);
+        mg.gain.setTargetAtTime(dev * s.fm.sus, t + 0.005, Math.max(0.03, s.fm.dec * s.dec * pitchK));
+        mo.connect(mg);
+        main.forEach((o) => mg.connect(o.frequency));
+        mo.start(t);
+        os.push(mo);
+      }
+      if (s.sub) { // саб-генератор: квадрат октавой ниже
+        const so = c.createOscillator(), sg = c.createGain();
+        so.type = 'square';
+        so.frequency.value = f / 2;
+        sg.gain.value = s.sub * 0.5;
+        so.connect(sg).connect(lp);
+        so.start(t);
+        os.push(so);
+      }
+      if (s.vib) { // вибрато: медленный синус по расстройке всех основных генераторов
+        const lo = c.createOscillator(), lg = c.createGain();
+        lo.frequency.value = s.vib[0];
+        lg.gain.setValueAtTime(0, t);
+        lg.gain.linearRampToValueAtTime(s.vib[1], t + 0.35);
+        lo.connect(lg);
+        main.forEach((o) => lg.connect(o.detune));
+        lo.start(t);
+        os.push(lo);
+      }
+      let longest = 1;
+      if (s.partials) { // обертоны колокола: свои частоты и своё затухание у каждого
+        s.partials.forEach(([ratio, amp, dk]) => {
+          const po = c.createOscillator(), pg = c.createGain(), tau = Math.max(0.05, dec * dk);
+          po.type = 'sine';
+          po.frequency.value = f * ratio;
+          pg.gain.setValueAtTime(0.0001, t);
+          pg.gain.linearRampToValueAtTime(amp * 0.9, t + 0.004);
+          pg.gain.setTargetAtTime(0.0001, t + 0.006, tau / 2.2);
+          po.connect(pg).connect(lp);
+          po.start(t);
+          os.push(po);
+          longest = Math.max(longest, dk);
+        });
+      }
       if (s.tine) { // «язычок» электропиано / обертон колокола
         const o = c.createOscillator(), og = c.createGain();
         o.type = 'sine';
         o.frequency.value = f * s.tine;
         og.gain.setValueAtTime(0.0001, t);
-        og.gain.linearRampToValueAtTime(0.35, t + 0.003);
+        og.gain.linearRampToValueAtTime(s.tineAmp != null ? s.tineAmp : 0.35, t + 0.003);
         og.gain.setTargetAtTime(0.0001, t + 0.005, 0.12 + s.dec * 0.3);
         o.connect(og).connect(lp);
         o.start(t); o.stop(t + 2.5);
@@ -114,11 +179,11 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
       }
       // для живой правки звука (refresh): из чего голос собран и каким патчем
       const vo = { g, os, rel: Math.max(0.03, s.rel), key, bus: busName, held: !!opts.hold, lp, main, m, f, kind, peak, own: !!opts.patch,
-        opts, tine: s.tine || 0, sustain: SU >= 0.02 };
+        opts, tine: s.tine || 0, sig: sigOf(s), sustain: SU >= 0.02 };
       voices.set(key, vo);
       order.push(key);
       if (SU < 0.02) { // затухающий звук — освобождаем голос сами
-        const life = att + dec * 2.4 + 0.2;
+        const life = att + dec * 2.4 * longest + 0.2;
         os.forEach((o) => { try { o.stop(t + life); } catch { /* ignore */ } });
         vo.timer = setTimeout(() => { if (voices.get(key) === vo) cleanup(key); }, life * 1000 + 60);
       }
@@ -171,7 +236,7 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
       [...voices.values()].forEach((vo) => {
         if (vo.own) return; // сыграно своим звуком (тренажёр, «Теория») — не пианино
         const chorus = s.cho > 0.04;
-        if (kind !== vo.kind || (s.tine || 0) !== vo.tine || chorus !== (vo.main.length === 2)) {
+        if (kind !== vo.kind || sigOf(s) !== vo.sig || chorus !== (vo.main.length === 2)) {
           if (vo.sustain) syn.on(vo.m, vo.key, vo.opts);
           return;
         }

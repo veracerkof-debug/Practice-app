@@ -109,5 +109,8 @@
   "mel.listen": "Listen to the melody",
   "mel.stop": "Stop",
   "mel.off": "Remove the melody",
-  "mel.done": "Melody played — from the top"
+  "mel.done": "Melody played — from the top",
+  "pre.fmep": "FM piano",
+  "pre.abass": "Analog bass",
+  "pre.strings": "String ensemble"
 }

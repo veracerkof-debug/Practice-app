@@ -214,5 +214,8 @@
   "sum.gPlay": "Play along",
   "sum.gDia": "Diagram",
   "sum.noCam": "No camera picture",
-  "sum.auto": "Camera at once"
+  "sum.auto": "Camera at once",
+  "pre.fmep": "FM piano",
+  "pre.abass": "Analog bass",
+  "pre.strings": "String ensemble"
 }

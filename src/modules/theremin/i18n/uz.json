@@ -214,5 +214,8 @@
   "sum.gPlay": "Jo'r bo'lish",
   "sum.gDia": "Sxema",
   "sum.noCam": "Kamera tasvirisiz",
-  "sum.auto": "Kamera darhol"
+  "sum.auto": "Kamera darhol",
+  "pre.fmep": "FM-pianino",
+  "pre.abass": "Analog bas",
+  "pre.strings": "Torli ansambl"
 }
