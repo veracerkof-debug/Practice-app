@@ -81,7 +81,8 @@ describe('камень «Минимала»', async () => {
     expect(w.round).toBeGreaterThan(0.95);
     // круглый, а не яйцо: радиусы почти одинаковы
     const spread = (h) => { const r = stoneMesh(7, h, 2).V.map((p) => Math.hypot(...p)); return Math.max(...r) / Math.min(...r); };
-    expect(spread(40000)).toBeLessThan(1.05);
+    expect(spread(40000)).toBeLessThan(1.25);
+    expect(spread(40000)).toBeLessThan(spread(3000));
     expect(spread(0)).toBeGreaterThan(1.3);
   });
   it('у каждого свой камень, сетка в единичном размере', () => {
@@ -100,5 +101,14 @@ describe('PDF по содержимому', async () => {
     expect(pdfBytes(enc('\r\n  junk %PDF-1.4'))).toBe(true);
     expect(pdfBytes(enc('\x18FICHIER GUITAR PRO v5.00'))).toBe(false);
     expect(pdfBytes(new Uint8Array(0))).toBe(false);
+  });
+});
+
+describe('камень только стачивается', () => {
+  it('ни одна точка не выходит за прежнюю форму; круглый — внутри исходного', async () => {
+    const { stoneMesh } = await import('../src/ui/stone.js');
+    const hs = [0, 100, 300, 1000, 3000, 10000, 30000, 60000];
+    const ms = hs.map((h) => stoneMesh(7, h, 2).V.map((p) => Math.hypot(...p)));
+    for (let k = 1; k < ms.length; k++) ms[k].forEach((r, i) => expect(r).toBeLessThanOrEqual(ms[k - 1][i] + 1e-9));
   });
 });

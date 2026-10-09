@@ -56,6 +56,17 @@ function sphere(n) {
   return s;
 }
 
+// Соседи вершин сферы (для обточки)
+const NB = new Map();
+function neighbours(SP, F) {
+  if (NB.has(SP)) return NB.get(SP);
+  const sets = SP.V.map(() => new Set());
+  F.forEach(([a, b, c]) => { sets[a].add(b).add(c); sets[b].add(a).add(c); sets[c].add(a).add(b); });
+  const nb = sets.map((x) => [...x]);
+  NB.set(SP, nb);
+  return nb;
+}
+
 // Сетка камня: { V — вершины, F — грани, A — светлота вершин (зерно породы) }
 export function stoneMesh(seed, hours, detail = 3) {
   const r = rng(seed), { edges, form, round } = wear(hours);
@@ -72,25 +83,22 @@ export function stoneMesh(seed, hours, detail = 3) {
   const layer = { n: rv(), f: 7 + r() * 8, ph: r() * 6.3 };
   const hash = (v) => { const x = Math.sin(v[0] * 127.1 + v[1] * 311.7 + v[2] * 74.7 + seed * 0.013) * 43758.5453; return x - Math.floor(x); };
   const k = 0.018 + 0.11 * edges; // мягкость рёбер (новый камень тоже не бритвенно острый)
-  const { V: S, F } = sphere(detail);
-  const V = [], A = [];
+  const SP = sphere(detail), { V: S, F } = SP;
+  const V = [], A = [], R0 = [];
   S.forEach((v) => {
     // расстояние до сколов по направлению v: мягкий минимум (k → 0 — острые рёбра)
     const rs = [];
     planes.forEach((p) => { const c = v[0] * p.n[0] + v[1] * p.n[1] + v[2] * p.n[2]; if (c > 0.02) rs.push(p.d / c); });
     rs.push(1.25);
     const lo = Math.min(...rs);
-    let sum = 0;
-    rs.forEach((x) => { sum += Math.exp(-(x - lo) / k); });
-    const rough = lo - k * Math.log(sum);
-    // скруглённый он сам: те же сколы, но очень мягко — пропорции и характер камня сохраняются
-    let sumS = 0;
-    rs.forEach((x) => { sumS += Math.exp(-(x - lo) / 0.32); });
-    const self = lo - 0.32 * Math.log(sumS);
+    const soft = (kk) => { let sum = 0; rs.forEach((x) => { sum += Math.exp(-(x - lo) / kk); }); return lo - kk * Math.log(sum); };
+    const rough = soft(k);
     let bump = 0;
     bumps.forEach((b) => { bump += b.a * Math.sin(b.f * (v[0] * b.n[0] + v[1] * b.n[1] + v[2] * b.n[2]) + b.ph); });
-    const R = (rough * (1 - form) + self * form) * (1 + bump * (1 - form));
-    V.push([v[0] * R, v[1] * R, v[2] * R]);
+    // обкатка только снимает: точка поверхности уходит внутрь и никогда не выходит за исходный камень
+    const r0 = soft(0.018) * (1 + bump);
+    R0.push(r0);
+    V.push([v[0], v[1], v[2], Math.min(r0, rough * (1 + bump))]); // направление и радиус — дальше обтачивается
     const dot = (n) => v[0] * n[0] + v[1] * n[1] + v[2] * n[2];
     let g = 0, mo = 0, vn = 0;
     grain.forEach((q) => { g += Math.sin(q.f * dot(q.n) + q.ph); });
@@ -100,14 +108,21 @@ export function stoneMesh(seed, hours, detail = 3) {
     const lay = kind.layers ? 0.13 * Math.sin(layer.f * dot(layer.n) + layer.ph) : 0;
     A.push(Math.max(0, Math.min(1.25, 0.5 + g / 22 + mo * kind.mottle + vn + speck + lay + (r() - 0.5) * 0.08)));
   });
-  // круглота: каждая точка тянется к среднему радиусу (выступы стачиваются, впадины догоняют) — к шару
+  // Обточка — только снятием: радиус точки может лишь уменьшаться
+  let rad = V.map((p) => p[3]);
+  const nb = neighbours(SP, F);
+  // сколы и выступы: острое (углы, рёбра — самые дальние точки) срезается до среднего соседей; впадины не растут
+  const smoothDown = (n) => { for (let it = 0; it < n; it++) rad = rad.map((x, i) => Math.min(x, nb[i].reduce((a, j) => a + rad[j], 0) / nb[i].length)); };
+  smoothDown(Math.round(form * 26));
+  // круглота: всё, что выше уровня большей части поверхности, стачивается к нему — камень приходит к шару
   if (round > 0) {
-    const rad = V.map((p) => Math.hypot(p[0], p[1], p[2])), mean = rad.reduce((a, x) => a + x, 0) / rad.length;
-    V.forEach((p, i) => { const f = (rad[i] + (mean - rad[i]) * round) / rad[i]; p[0] *= f; p[1] *= f; p[2] *= f; });
+    const ball = rad.slice().sort((a, b) => a - b)[Math.floor(rad.length * 0.3)];
+    rad = rad.map((x) => (x > ball ? x - (x - ball) * round : x));
+    smoothDown(Math.round(round * 10));
   }
-  // в единичный размер; круглый не раздувается во весь круг — обкатка камень уменьшает, а не увеличивает
-  const rads = V.map((p) => Math.hypot(p[0], p[1], p[2])), mean = rads.reduce((a, x) => a + x, 0) / rads.length;
-  const m = Math.max(Math.max(...rads), mean * 1.2);
+  V.forEach((p, i) => { p[0] *= rad[i]; p[1] *= rad[i]; p[2] *= rad[i]; p.length = 3; });
+  // масштаб — по исходному камню (без единого часа): обточенный рисуется меньше, каким и стал
+  const m = Math.max(...R0);
   V.forEach((p) => { p[0] /= m; p[1] /= m; p[2] /= m; });
   // нормали вершин (среднее граней вокруг): обкатанный камень освещается по ним — без видимых треугольников
   const N = V.map(() => [0, 0, 0]);
