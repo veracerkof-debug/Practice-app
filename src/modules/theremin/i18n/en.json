@@ -124,7 +124,7 @@
   "help.what": "Played with the hands in front of the camera, without touching.",
   "help.1": "Right hand — pitch: higher hand, higher note. The “OK” sign switches solo and chords.",
   "help.2": "Chords: 1–5 fingers are degrees I–V, thumb to pinky is VI, to ring finger is VII; palm — major, back of the hand — minor.",
-  "help.3": "Left hand — effects: a fist is silence, higher — space, wrist turn — tone, tilt — vibrato; a pinch holds the effects.",
+  "help.3": "Left hand — effects: a fist is silence, higher — space, wrist turn — tone, tilt — vibrato; a pinch holds the effects. Palms together — next sound, index tips touching — previous.",
   "help.4": "The camera is processed only on the device and turns off when the window closes.",
   "help.tip": "Even light and whole palms in view make tracking more accurate.",
   "hud": "On-screen guides",
@@ -180,5 +180,13 @@
   "gMicNo": "Microphone unavailable — the chord is recognized by sight only",
   "help.5": "Guitar: the whole guitar in view, from nut to bridge — the chord is named from the fingers, sound confirms it. The mode button cycles Solo → Chords → Guitar.",
   "gNutSet": "Nut marked — frets are counted from it",
-  "gNutHint": "If fret numbers are off, long-press the nut line on the screen."
+  "gNutHint": "If fret numbers are off, long-press the nut line on the screen.",
+  "cam.flip": "Front or back camera",
+  "cam.light": "Light",
+  "cam.front": "Front camera",
+  "cam.back": "Back camera",
+  "cam.noTorch": "This camera has no flashlight",
+  "soundOn": "Sound: {name}",
+  "sgest": "Change sound by touching hands",
+  "sgestHint": "Palms pressed together — next sound, index fingertips touching — previous."
 }

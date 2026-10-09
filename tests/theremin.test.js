@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { palm, openness, assign, heightOf, characterOf, oneEuro, pose, gestureValues, applyGestures, DEFAULT_MAP, NEUTRAL } from '../src/modules/theremin/map.js';
+import { palm, openness, assign, heightOf, characterOf, oneEuro, pose, gestureValues, applyGestures, DEFAULT_MAP, NEUTRAL, twoHandSign } from '../src/modules/theremin/map.js';
 import { stripTelemetry, TELEMETRY_HOST } from '../build/mediapipe.js';
 
 // Рука-заготовка: 21 точка вокруг (cx, cy); open — пальцы вытянуты, иначе сжаты
@@ -100,5 +100,16 @@ describe('MediaPipe без сбора статистики', () => {
   });
   it('незнакомый код — ошибка, а не тихий пропуск', () => {
     expect(() => stripTelemetry('fetch("https://' + TELEMETRY_HOST + '/v2")')).toThrow();
+  });
+});
+
+describe('терменвокс: жесты двумя руками', () => {
+  it('сложенные ладони, касание указательными, руки порознь', () => {
+    expect(twoHandSign(hand(0.5, 0.5).lm, hand(0.52, 0.5).lm, 1)).toBe('palms');
+    expect(twoHandSign(hand(0.2, 0.5).lm, hand(0.8, 0.5).lm, 1)).toBe(null);
+    const a = hand(0.3, 0.5).lm, b = hand(0.7, 0.5).lm;
+    a[8] = { x: 0.5, y: 0.35 }; b[8] = { x: 0.505, y: 0.35 };
+    expect(twoHandSign(a, b, 1)).toBe('tips');
+    expect(twoHandSign(hand(0.5, 0.5, false).lm, hand(0.52, 0.5, false).lm, 1)).toBe(null); // кулаки рядом — не ладони
   });
 });

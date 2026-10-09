@@ -133,3 +133,19 @@ export function oneEuro({ minCutoff = 1.2, beta = 0.6, dCutoff = 1 } = {}) {
     },
   };
 }
+
+/* ---------- жесты двумя руками: смена звука ---------- */
+
+// Касания рук друг друга меняют звук терменвокса (не эффекты):
+// 'palms' — ладони сложены вместе (центры ладоней рядом, обе руки раскрыты) — следующий звук;
+// 'tips' — кончики указательных пальцев касаются друг друга, ладони порознь — предыдущий звук.
+// Расстояния — в размерах самой ладони (от запястья до основания среднего пальца), с учётом пропорций кадра (ar).
+export function twoHandSign(a, b, ar = 4 / 3) {
+  if (!a || !b) return null;
+  const d = (p, q) => Math.hypot((p.x - q.x) * ar, p.y - q.y);
+  const size = (d(a[0], a[9]) + d(b[0], b[9])) / 2 || 1e-6;
+  const pa = palm(a), pb = palm(b), palms = d(pa, pb) / size, tips = d(a[8], b[8]) / size;
+  if (palms < 0.85 && openness(a) > 0.5 && openness(b) > 0.5) return 'palms';
+  if (tips < 0.3 && palms > 1.6) return 'tips';
+  return null;
+}

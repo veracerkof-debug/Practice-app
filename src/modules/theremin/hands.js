@@ -22,14 +22,16 @@ async function landmarker() {
 const reasonOf = (e) => (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError') ? 'denied'
   : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError') ? 'nocam' : 'fail');
 
-// onHands(hands, t) — каждый кадр: hands — [{ lm: 21 точка с зеркальным x, w: объёмные точки, ar }]
-export async function startHands(video, onHands) {
+// onHands(hands, t) — каждый кадр: hands — [{ lm: 21 точка с зеркальным x, w: объёмные точки, ar }].
+// facing: 'user' — передняя камера, 'environment' — задняя. Обе смотрят на играющего, поэтому руки и картинка
+// отражаются одинаково (правая рука — справа), и всё, что считается по рукам, от камеры не зависит
+export async function startHands(video, onHands, { facing = 'user' } = {}) {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { const e = new Error('nocam'); e.reason = 'nocam'; throw e; }
   // сначала камера и картинка (человек сразу видит себя), модель — следом: её запуск занимает поток,
   // и если начать одновременно, первый кадр ждёт модель. Руки начинают ловиться, как только модель готова.
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } } });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: facing }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } } });
   } catch (e) { e.reason = reasonOf(e); throw e; }
   video.srcObject = stream;
   video.muted = true;
@@ -64,11 +66,22 @@ export async function startHands(video, onHands) {
   raf = requestAnimationFrame(loop);
 
   const track = stream.getVideoTracks()[0];
+  const caps = (track && track.getCapabilities) ? track.getCapabilities() : {};
+  let torchOn = false;
+  const torchC = () => (caps.torch ? { advanced: [{ torch: torchOn }] } : {});
   return {
+    // фонарик (вспышка задней камеры в режиме света); у передней его обычно нет
+    hasTorch: !!caps.torch,
+    torch(on) {
+      if (!caps.torch) return Promise.resolve(false);
+      torchOn = !!on;
+      return track.applyConstraints({ advanced: [{ torch: torchOn }] }).then(() => true, () => false);
+    },
     // крупный кадр (режим «Гитара»: гриф целиком — далеко, при 640 точках он слишком тонкий) или обычный
     hd(on) {
       if (!track || !track.applyConstraints) return Promise.resolve();
-      return track.applyConstraints(on ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } : { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }).catch(() => {});
+      // фонарик — тем же вызовом: новые ограничения без него погасили бы свет
+      return track.applyConstraints({ ...(on ? { width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 640 }, height: { ideal: 480 } }), frameRate: { ideal: 30 }, ...torchC() }).catch(() => {});
     },
     stop() {
       stopped = true;

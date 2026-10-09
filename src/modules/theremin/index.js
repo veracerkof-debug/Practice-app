@@ -20,7 +20,7 @@ import { SCALE_TYPES } from '../../music/theory.js';
 import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, clampLo, notesIn } from '../glider/scale.js';
 import { createGlideVoice, createFxBus } from '../glider/voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, PRESETS } from '../glider/fx.js';
-import { assign, palm, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, PINCH_ON, PINCH_OFF } from './map.js';
+import { twoHandSign, assign, palm, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, PINCH_ON, PINCH_OFF } from './map.js';
 import { startHands } from './hands.js';
 import { readSign, chordOf, chordName, voicing, shapeOf, harmOf, harmOffsets, HARM_IDS } from './chords.js';
 import { createPadVoice, PAD_SOUNDS } from '../../audio/padvoice.js';
@@ -33,6 +33,8 @@ const I = {
   right: '<svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>',
   cam: '<svg viewBox="0 0 24 24"><path d="M3 8h3l2-2.5h8L18 8h3v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   camOff: '<svg viewBox="0 0 24 24"><path d="M3 8h3l2-2.5h8L18 8h3v11H3z"/><path d="M4 4l16 16"/></svg>',
+  flip: '<svg viewBox="0 0 24 24"><path d="M3 8h3l2-2.5h8L18 8h3v11H3z"/><path d="M9 12.5a3 3 0 0 1 5.2-2"/><path d="M15 13.5a3 3 0 0 1-5.2 2"/><path d="M14.4 8.6v2h-2M9.6 17.4v-2h2"/></svg>',
+  light: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>',
 };
 const SOUNDS = ['app', ...Object.keys(SYN)];
 const LOST_MS = 180; // рука пропала из кадра на мгновение — звук не обрывается
@@ -58,7 +60,9 @@ const S = { cam: null, state: 'off', live: false, err: '', voice: null, bus: nul
   // аккорды: голоса, текущий аккорд и его расположение, знак-кандидат (ждёт CHORD_MS), «окей»
   cv: null, chord: null, cnotes: null, cand: null, okT: 0, okLatch: false,
   // гитара: распознавание (guitar.js) и аккорд, который сейчас подыгрывается
-  G: null, along: null };
+  G: null, along: null,
+  // смена звука касанием рук: жест-кандидат и защёлка (сработал — ждёт, пока руки разойдутся)
+  tw: null, twLatch: false };
 
 const cfg = () => {
   const s = ctx.store.all();
@@ -69,6 +73,7 @@ const cfg = () => {
   if (!s.fx) s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
   s.gmap = { ...DEFAULT_MAP, ...(s.gmap || {}) };
   s.mode ??= 'solo'; if (!MODES.includes(s.mode)) s.mode = 'solo'; s.gmic ??= true; s.gplay ??= false; s.gdia ??= true; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.csound ??= 'same'; s.ctilt ??= true; s.harm ??= true; s.hstyle ??= 'classic'; if (!HARM_IDS.includes(s.hstyle)) s.hstyle = 'classic'; s.stilt ??= 'vib'; s.hud ??= 'full'; s.camAuto ??= false;
+  s.facing ??= 'user'; s.light ??= false; s.sgest ??= true;
   if (!HUDS.includes(s.hud)) s.hud = 'full';
   normalizeFx(s);
   return s;
@@ -83,8 +88,13 @@ const patch = (s) => (s.sound === 'app' ? ctx.audio.pianoPatch() : SYN[s.sound] 
 function view() {
   const { t, ui } = ctx, s = cfg(), big = size === 'full' || size === 'half', on = S.state === 'on', gtr = s.mode === 'guitar';
   const gear = ui.icb('data-x="tset"', ui.icons.gear, t('settings'), 'sm');
+  // камера: передняя ↔ задняя; свет — фонарик у задней, светлая рамка экрана у передней (как «вспышка» селфи-камер)
+  const flipBtn = ui.icb('data-x="tflip"', I.flip, t('cam.flip'), 'sm');
+  const lightBtn = ui.icb('data-x="tlight" aria-pressed="' + !!s.light + '"', I.light, t('cam.light'), 'sm' + (s.light ? ' on' : ''));
   const camBtn = ui.icb('data-x="tcam"', on || S.state === 'loading' ? I.camOff : I.cam, t(on || S.state === 'loading' ? 'stop' : 'start'), 'sm');
-  const range = big && !gtr ? '<div class="glrange">' + ui.icb('data-x="tlo" data-d="-12"', I.left, t('octDown'), 'sm') + '<span class="num">' + rangeTxt(s) + '</span>' + ui.icb('data-x="tlo" data-d="12"', I.right, t('octUp'), 'sm') + '</div>' : '';
+  // узкое окно с работающей камерой: диапазон уходит в настройки — место кнопкам камеры и света
+  const narrow = on && host && host.clientWidth < 470;
+  const range = big && !gtr && !narrow ? '<div class="glrange">' + ui.icb('data-x="tlo" data-d="-12"', I.left, t('octDown'), 'sm') + '<span class="num">' + rangeTxt(s) + '</span>' + ui.icb('data-x="tlo" data-d="12"', I.right, t('octUp'), 'sm') + '</div>' : '';
   const snap = size === 'full' && s.mode === 'solo' && host && host.clientWidth > 520 ? '<button class="glsnap" data-x="tsnap" aria-label="' + ui.esc(t('snapBtn', { mode: t('snap.' + s.snap) })) + '">' + t('snap.' + s.snap) + '</button>' : '';
   // соло → аккорды → гитара (соло ↔ аккорды — то же жестом «окей» правой рукой)
   const modeBtn = size !== 'strip' ? '<button class="glsnap" data-x="tmode" aria-label="' + ui.esc(t('modeBtn', { mode: t('mode.' + s.mode) })) + '">' + t('mode.' + s.mode) + '</button>' : '';
@@ -95,11 +105,11 @@ function view() {
       (size !== 'strip' && size !== 'quarter' ? '<p class="tmhint">' + t(gtr ? 'hint.guitar' : 'hint.' + s.side) + '</p><p class="tmpriv">' + t(gtr ? 'gPrivacy' : 'privacy') + '</p>' : '') + '</div>';
   } // пока камера включается — сплошной фон и тихая синусоида (её сменяет картинка с камеры)
   // poster — пустой кадр: иначе Android до первого кадра рисует на видео свою серую заставку
-  return '<div class="tm ' + size + ' hud-' + s.hud + (gtr ? ' gtr' : '') + (s.showCam ? '' : ' nocam') + (S.live ? ' live' : '') + '"><video class="tmcam" playsinline muted aria-hidden="true" poster="' + BLANK + '"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
+  return '<div class="tm ' + size + ' hud-' + s.hud + (gtr ? ' gtr' : '') + (on && s.light && (s.facing === 'user' || !S.cam || !S.cam.hasTorch) ? ' ring' : '') + (s.showCam ? '' : ' nocam') + (S.live ? ' live' : '') + '"><video class="tmcam" playsinline muted aria-hidden="true" poster="' + BLANK + '"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
     '<div class="glnote tmnote" aria-live="off"><b class="num" id="tmnote">' + (on ? '—' : '') + '</b><span class="num" id="tmc"></span></div>' +
     '<span class="tmlost" id="tmlost" hidden>' + t('noHands') + '</span>' +
     (gtr && on ? '<div class="tmgs" id="tmgs" aria-live="polite" hidden><b></b><span></span></div>' : '') + mid + (S.state === 'loading' || (on && !S.live) ? '<div class="tmwait">' + ui.loader('wave') + '</div>' : '') +
-    '<div class="glov tmbar">' + (size === 'strip' ? '' : range + modeBtn + snap) + camBtn + gear + '</div></div>';
+    '<div class="glov tmbar">' + (size === 'strip' ? '' : range + modeBtn + snap) + (on && big ? flipBtn + lightBtn : '') + camBtn + gear + '</div></div>';
 }
 
 function render() {
@@ -395,6 +405,33 @@ function playChord(s, h, sign, t, o, dest, lean = 0, tilt = 0) {
   if (c) c.textContent = nm.roman;
 }
 
+// Смена звука касанием рук: сложенные ладони — следующий звук, кончики указательных — предыдущий.
+// Жест держится TOUCH_MS — звук меняется; дальше — защёлка, пока руки не разойдутся. Пока руки сложены — тишина
+const TOUCH_MS = 280;
+function soundGesture(list, t) {
+  const sign = list.length === 2 ? twoHandSign(list[0].lm, list[1].lm, list[0].ar) : null;
+  if (!sign) { S.tw = null; S.twLatch = false; return false; }
+  if (!S.tw || S.tw.k !== sign) S.tw = { k: sign, t };
+  silence();
+  if (!S.twLatch && t - S.tw.t >= TOUCH_MS) {
+    S.twLatch = true;
+    const s = cfg(), i = SOUNDS.indexOf(s.sound), n = SOUNDS[(i + (sign === 'palms' ? 1 : -1) + SOUNDS.length) % SOUNDS.length];
+    s.sound = n; save();
+    ctx.ui.toast(ctx.t('soundOn', { name: ctx.t('pre.' + n) }));
+    if (navigator.vibrate) navigator.vibrate(20);
+  }
+  return true;
+}
+
+// Свет: задняя камера — фонарик (если есть), передняя — светлая рамка по краю экрана
+function applyLight() {
+  if (!S.cam) return;
+  const s = cfg(), torch = s.facing === 'environment' && S.cam.hasTorch;
+  S.cam.torch(torch && s.light);
+  const tm = host && host.querySelector('.tm');
+  if (tm) tm.classList.toggle('ring', !!s.light && !torch);
+}
+
 // Нейтральное положение руки эффектов: от него считаются поворот, разворот, наклон и расстояние
 const neutralOf = (p) => ({ rot: p.rot, turn: p.turn ?? 0, tilt: p.tilt ?? 0, size: p.size });
 function calibrate() {
@@ -436,6 +473,7 @@ function onHands(list, t) {
   if (!host) return;
   const s = cfg();
   if (s.mode === 'guitar') { guitarHands(list, t); return; }
+  if (s.sgest && soundGesture(list, t)) { draw(); return; }
   const a = assign(list, s.side);
   S.hands = a;
   const lost = host.querySelector('#tmlost');
@@ -486,10 +524,11 @@ async function camOn(auto = false) {
     const v = host.querySelector('video.tmcam');
     // первый кадр — картинка плавно проявляется
     v.addEventListener('loadeddata', () => { ctx && ctx.log('камера: первый кадр через ' + (Date.now() - t0) + ' мс, ' + v.videoWidth + '×' + v.videoHeight); S.live = true; const el = host && host.querySelector('.tm'); if (el) el.classList.add('live'); }, { once: true });
-    S.cam = await startHands(v, onHands);
+    S.cam = await startHands(v, onHands, { facing: cfg().facing });
     if (!host) { camOff(); return; }
     ctx.log('камера: руки распознаются через ' + (Date.now() - t0) + ' мс');
     S.state = 'on';
+    applyLight();
     guitarSync();
     // однажды разрешённая и включённая камера дальше включается сама (выключается в настройках)
     const s = cfg();
@@ -523,7 +562,8 @@ function setSheet() {
     const s = cfg(), chrom = s.scale === 'chrom';
     return ui.snav(t('settings')) +
       '<div class="hdr" style="margin-top:4px">' + t('hands') + '</div><div class="group"><div class="cellcol">' + ui.seg('tside', [['right', t('hand.right')], ['left', t('hand.left')]], s.side, t('hands')) +
-      '<div class="segcap">' + t('hint.' + s.side) + '</div></div><div class="cell"><span class="grow">' + t('charX') + '</span>' + ui.sw('tchar', s.charX, t('charX')) + '</div></div><p class="ftr">' + t('charHint') + '</p>' +
+      '<div class="segcap">' + t('hint.' + s.side) + '</div></div><div class="cell"><span class="grow">' + t('charX') + '</span>' + ui.sw('tchar', s.charX, t('charX')) + '</div>' +
+      '<div class="cell"><span class="grow">' + t('sgest') + '</span>' + ui.sw('tsgest', s.sgest, t('sgest')) + '</div></div><p class="ftr">' + t('charHint') + ' ' + t('sgestHint') + '</p>' +
       // аккорды правой рукой
       '<div class="hdr">' + t('chords') + '</div><div class="group"><div class="cellcol">' + ui.seg('tmode2', MODES.map((k) => [k, t('mode.' + k)]), s.mode, t('chords')) +
       '<div class="segcap">' + t(s.mode === 'guitar' ? 'gHint' : 'chordHint') + '</div></div>' +
@@ -609,6 +649,7 @@ function setSheet() {
       else if (sw === 'tgmic') { s.gmic = e.target.checked; if (S.G) S.G.sound(s.gmic, () => ctx.mic.request()).then((err) => { if (err) ctx.ui.toast(ctx.t(err === 'denied' ? 'gMicDenied' : 'gMicNo')); }); }
       else if (sw === 'tgplay') { s.gplay = e.target.checked; playAlong(S.G && S.G.chord); }
       else if (sw === 'tgdia') s.gdia = e.target.checked;
+      else if (sw === 'tsgest') s.sgest = e.target.checked;
       else if (e.target.hasAttribute('data-tsc')) s.scale = e.target.value;
       else if (e.target.dataset.tg) { s.gmap[e.target.dataset.tg] = e.target.value; if (e.target.dataset.tg === 'pinch') S.frozen = null; }
       else return;
@@ -625,6 +666,19 @@ function bind() {
     const s = cfg(), x = b.dataset.x;
     if (x === 'tset') { setSheet(); return; }
     if (x === 'tcam') { if (S.state === 'on' || S.state === 'loading') { camOff(); render(); } else camOn(); return; }
+    if (x === 'tflip') {
+      s.facing = s.facing === 'user' ? 'environment' : 'user'; save();
+      camOff(); render(); camOn();
+      ctx.ui.toast(ctx.t(s.facing === 'user' ? 'cam.front' : 'cam.back'));
+      return;
+    }
+    if (x === 'tlight') {
+      s.light = !s.light; save();
+      applyLight();
+      if (s.light && s.facing === 'environment' && S.cam && !S.cam.hasTorch) ctx.ui.toast(ctx.t('cam.noTorch'));
+      render();
+      return;
+    }
     if (x === 'tmode') { setMode(MODES[(MODES.indexOf(s.mode) + 1) % MODES.length]); return; }
     if (x === 'tlo') s.lo = clampLo(s.lo + +b.dataset.d, s.width);
     else if (x === 'tsnap') s.snap = SNAPS[(SNAPS.indexOf(s.snap) + 1) % SNAPS.length];

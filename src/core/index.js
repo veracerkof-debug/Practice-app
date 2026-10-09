@@ -21,6 +21,8 @@ import { initNoSound } from './nosound.js';
 import { createPulse } from './pulse.js';
 import { initBackground } from './background.js';
 import { initGuard } from './guard.js';
+import { initSandbox } from './sandbox.js';
+import { askNumber } from './screens/ext.js';
 import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
@@ -168,6 +170,7 @@ export function boot(root) {
   // Работа в фоне на Android: пока что-то идёт — служба с уведомлением, приложение не замораживается
   initBackground(app);
   initGuard(app);
+  initSandbox(app, askNumber);
   createMixerDrawer(app);
   // Играет, но не слышно (микшер, громкость устройства) — уведомление внизу
   initNoSound(app);

@@ -1,7 +1,8 @@
 // Дополнительное оформление: вход. Без подписей и подсказок.
 import { t } from '../../i18n/index.js';
 import { leave } from '../../ui/index.js';
-import { extTry } from '../ext.js';
+import { extTry, extKind, extTest } from '../ext.js';
+import { snapshot, hasSnapshot, restore } from '../sandbox.js';
 
 import { buzz } from '../pulse.js';
 
@@ -40,7 +41,17 @@ function dialog(app, open) {
   setTimeout(() => inp.focus(), 50);
   const done = () => leave(d, 160);
   const go = () => {
-    const st = app.store.state.settings, r = extTry(st, inp.value.trim());
+    const st = app.store.state.settings, code = inp.value.trim(), kind = extKind(code);
+    // выход из проверки создателем — кодом создателя или бета-тестера: данные возвращаются из копии
+    if (kind && kind !== 't' && kind !== 'x' && extTest(st) && hasSnapshot()) {
+      done();
+      buzz(35, 160);
+      restore((s) => extTry(s, code));
+      setTimeout(() => location.reload(), 200);
+      return;
+    }
+    if (kind === 'x') snapshot(); // проверка: сначала копия всех данных
+    const r = kind && extTry(st, code);
     if (!r) {
       inp.value = '';
       inp.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(0)' }], { duration: 240 });
@@ -54,4 +65,21 @@ function dialog(app, open) {
   inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, '').slice(0, 4); if (inp.value.length === 4) go(); });
   inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); if (e.key === 'Escape') done(); });
   d.addEventListener('click', (e) => { const k = e.target.closest('[data-k]'); if (!k) return; if (k.dataset.k === 'ok') go(); else done(); });
+}
+
+// Проверка создателем: правка числа на экране (sandbox.js). done(текст) или done(null) — отмена
+export function askNumber(from, done) {
+  const d = document.createElement('div');
+  d.className = 'ask';
+  d.innerHTML = '<div class="alert" role="dialog" aria-label="Μ"><div class="ab"><h3 lang="el" style="font-family:\'GFS Didot\',serif;font-size:24px;font-weight:400">Μ</h3>' +
+    '<input class="inp num" type="text" autocomplete="off" aria-label="Μ" style="width:100%;margin-top:10px;text-align:center;font-size:20px;padding:8px;' +
+    'border:1px solid var(--sep);border-radius:12px;background:var(--fill);color:var(--ink)"></div>' +
+    '<div class="abtns"><button data-k="no">' + t('ui.cancel') + '</button><button data-k="ok">OK</button></div></div>';
+  document.body.appendChild(d);
+  const inp = d.querySelector('input');
+  inp.value = from;
+  setTimeout(() => { inp.focus(); inp.select(); }, 50);
+  const end = (v) => { leave(d, 160); done(v); };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') end(inp.value); if (e.key === 'Escape') end(null); });
+  d.addEventListener('click', (e) => { const k = e.target.closest('[data-k]'); if (!k) return; end(k.dataset.k === 'ok' ? inp.value : null); });
 }

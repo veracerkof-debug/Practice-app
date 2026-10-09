@@ -52,3 +52,7 @@
 .tm.quarter .tmgs{bottom:8px;padding:6px 12px}
 .tm.strip .tmgs{bottom:4px;padding:3px 10px}
 .tm.strip .tmgs b{font-size:12px}
+/* свет для передней камеры: светлая рамка по краю экрана освещает руки (как «вспышка» селфи-камер);
+   середина кадра остаётся видна */
+.tm.ring::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;border:clamp(14px,5vmin,36px) solid #fff8ee;border-radius:inherit;box-shadow:inset 0 0 36px 8px rgba(255,248,238,.7)}
+.tmbar .ic.on svg{stroke:var(--tint)}

@@ -2,9 +2,9 @@
 // на выдуманных кодах (их хеши передаются в extTry вместо настоящих)
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { extOn, extOwner, extWho, extTry, extCheck, codeHash, EXT_TEMP_MS } from '../src/core/ext.js';
+import { extOn, extOwner, extWho, extTry, extCheck, extKind, extTest, codeHash, EXT_TEMP_MS } from '../src/core/ext.js';
 
-const KEYS = { t: codeHash('1111'), p: codeHash('2222'), b: codeHash('3333'), m: codeHash('4444'), r: codeHash('5555') };
+const KEYS = { t: codeHash('1111'), p: codeHash('2222'), b: codeHash('3333'), m: codeHash('4444'), r: codeHash('5555'), x: codeHash('6666') };
 
 describe('дополнительное оформление: доступ', () => {
   it('по умолчанию закрыто, неверный код — ничего', () => {
@@ -65,5 +65,21 @@ describe('дополнительное оформление: доступ', () =
     const ks = [...src.matchAll(/[tpbmr]: '([0-9a-f]+)'/g)].map((m) => m[1]);
     expect(ks.length).toBe(5);
     ks.forEach((k) => expect(k).toHaveLength(24));
+  });
+});
+
+describe('проверка создателем', () => {
+  it('как создатель (то же обращение и доступ) и отметка проверки; вид кода — без изменений', () => {
+    const st = { profile: { createdAt: 5 } };
+    expect(extKind('6666', KEYS)).toBe('x');
+    expect(extKind('2222', KEYS)).toBe('p');
+    expect(extKind('0000', KEYS)).toBe(null);
+    expect(st.vx).toBe(undefined);
+    expect(extTry(st, '6666', Date.now(), KEYS)).toBe('x');
+    expect(extOn(st)).toBe(true);
+    expect(extOwner(st)).toBe(true);
+    expect(extWho(st)).toBe('p');
+    expect(extTest(st)).toBe(true);
+    expect(extTest({ ...st, profile: { createdAt: 6 } })).toBe(false); // в чужой профиль не переносится
   });
 });
