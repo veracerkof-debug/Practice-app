@@ -12,6 +12,7 @@ import {
 } from '../stats.js';
 import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
+import { hasDemo, addDemo, removeDemo } from '../demo.js';
 import { PALETTE_IDS, PALETTES, hueColor, onColor } from '../palettes.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
@@ -240,9 +241,13 @@ function lookHTML(app) {
     [20, 60, 100].map((p) => mBadge(p, st)).join('') + '</div></div><p class="ftr">' + t('look.scaleHint') + '</p>';
 }
 
-function dataHTML() {
+function dataHTML(app) {
+  const demo = hasDemo(app.store.state);
   return '<div class="large">' + t('data.title') + '</div><div class="group"><button class="cell act" data-act="export">' + t('data.export') + '</button><button class="cell act" data-act="import">' + t('data.import') + '</button></div>' +
     '<p class="ftr">' + t('data.hint') + '</p>' +
+    // демо-набор: песни, табулатуры, ноты, записи и события — показать, как всё устроено; убирается одной кнопкой
+    '<div class="hdr">' + t('demo.title') + '</div><div class="group"><button class="cell act' + (demo ? ' danger' : '') + '" data-act="demo">' + t(demo ? 'demo.remove' : 'demo.add') + '</button></div>' +
+    '<p class="ftr">' + t('demo.hint') + '</p>' +
     '<div class="group" style="margin-top:28px"><button class="cell danger center" data-act="reset">' + t('data.reset') + '</button></div>';
 }
 
@@ -388,6 +393,18 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="track"] [data-v]'))) { app.store.state.settings.trackMode = b.dataset.v; changed(); return; }
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); relang(); return; }
+      if (g('[data-act="demo"]')) {
+        if (hasDemo(app.store.state)) {
+          confirm(t('demo.removeTitle'), t('demo.removeText'), t('demo.removeYes')).then((ok) => {
+            if (!ok) return;
+            removeDemo(app).then(() => { render(); onChange(); toast(t('demo.removed')); });
+          });
+        } else {
+          toast(t('demo.adding'));
+          addDemo(app, t).then(() => { render(); onChange(); toast(t('demo.added')); });
+        }
+        return;
+      }
       if (g('[data-act="export"]')) { exportBackup(app); return; }
       if (g('[data-act="import"]')) { input.click(); return; }
       if (g('[data-act="reset"]')) {

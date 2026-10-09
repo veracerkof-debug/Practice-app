@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { demoSessions } from '../src/core/demo.js';
+import { demoSessions } from '../src/core/demostats.js';
 import { splitVerified } from '../src/core/integrity.js';
 
 describe('демо-набор', () => {

@@ -3,7 +3,8 @@ import { t } from '../../i18n/index.js';
 import { leave } from '../../ui/index.js';
 import { extTry, extKind, extTest } from '../ext.js';
 import { snapshot, hasSnapshot, restore } from '../sandbox.js';
-import { loadDemo, removeDemoFiles } from '../demo.js';
+import { removeDemoFiles } from '../demo.js';
+import { loadDemoStats } from '../demostats.js';
 
 import { buzz } from '../pulse.js';
 
@@ -48,7 +49,10 @@ function dialog(app, open) {
       done();
       buzz(35, 160);
       restore((s) => extTry(s, code));
-      removeDemoFiles(app).finally(() => setTimeout(() => location.reload(), 150));
+      // демо-набор был и до проверки — его файлы остаются
+      let kept = false;
+      try { kept = !!JSON.parse(localStorage.getItem('practice.v1')).settings.demo; } catch { /* копии нет — файлы убираются */ }
+      (kept ? Promise.resolve() : removeDemoFiles(app)).finally(() => setTimeout(() => location.reload(), 150));
       return;
     }
     if (kind === 'x') snapshot(); // проверка: сначала копия всех данных
@@ -62,7 +66,7 @@ function dialog(app, open) {
     done();
     buzz(35, 160); setTimeout(() => buzz(35, 160), 120);
     // проверка создателем: демо-набор (история занятий, песни, табулатуры, ноты) — и приложение заново с ним
-    if (r === 'x') { loadDemo(app).finally(() => setTimeout(() => location.reload(), 150)); return; }
+    if (r === 'x') { loadDemoStats(app, t).finally(() => setTimeout(() => location.reload(), 150)); return; }
     open();
   };
   inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, '').slice(0, 4); if (inp.value.length === 4) go(); });

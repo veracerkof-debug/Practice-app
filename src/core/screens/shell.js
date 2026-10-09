@@ -2,8 +2,9 @@
 // Перенесено из legacy/practice.html (view, renderTabs, go, render, глобальные обработчики нажатий).
 import '../../ui/screens.css';
 import { t } from '../../i18n/index.js';
-import { confirm } from '../../ui/index.js';
+import { confirm, toast } from '../../ui/index.js';
 import { deleteSong } from '../library.js';
+import { addDemo } from '../demo.js';
 import { TAB_ICONS, tabIds } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule } from '../modules.js';
@@ -131,6 +132,7 @@ export function createShell(app, root) {
     else if (d.act === 'free') app.startSession('free');
     else if (d.act === 'addSong') songForm(app, null, (id) => go('library', id));
     else if (d.act === 'songImport') songImportMenu(app, () => go('library'));
+    else if (d.act === 'demoAdd') { toast(t('demo.adding')); addDemo(app, t).then(() => { render(); toast(t('demo.added')); }); }
     else if (calAct(app, b, view.tab === 'calendar' ? view.cal : null, render)) { /* календарь и строки событий */ }
     else return false;
     return true;

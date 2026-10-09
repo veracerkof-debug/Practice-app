@@ -1,17 +1,22 @@
-// Демо-набор для проверки создателем (sandbox.js): живая на вид история занятий с января 2025 года, пять песен
-// (народные — общественное достояние; аккорды подобраны примерно), табулатуры и ноты (public/demo/: ноты —
-// Mutopia Project, общественное достояние; табулатуры набраны заново). Всё это — только на время проверки:
-// выход кодом создателя или бета-тестера возвращает прежние данные, файлы демо удаляются.
-// ПЕРЕД ВЫПУСКОМ — удалить вместе с sandbox.js (см. ROADMAP.md).
-import { seal, EARLIEST } from './integrity.js';
-import { uid } from './time.js';
+// Демо-набор: показать, как устроено приложение, пока своего ещё нет. Пять песен (народные и духовные —
+// общественное достояние; аккорды подобраны примерно) с аккордами и словами, табулатуры и ноты (public/demo/: ноты —
+// Mutopia Project, общественное достояние; табулатуры набраны заново), две записи в медиатеке (demoaudio.js)
+// и события календаря. Добавляется и убирается одной кнопкой («Данные и копии»); у всех записей — приставка DEMO_PREFIX.
+// Занятий набор не добавляет: время и статистика — только настоящие (история занятий для проверки — demostats.js).
+import { uid, dayStart, DAY } from './time.js';
+import { deleteSong } from './library.js';
+import { newEvent } from './calendar.js';
+import { demoTracks } from './demoaudio.js';
 
 export const DEMO_PREFIX = 'demo-';
+export const isDemo = (id) => String(id || '').startsWith(DEMO_PREFIX);
+export const hasDemo = (state) => !!(state.songs || []).some((s) => isDemo(s.id) && !s.deleted) || !!(state.events || []).some((e) => isDemo(e.id) && !e.deleted);
 
 /* ---------- песни ---------- */
 
-const SONGS = [
-  { title: 'Amazing Grace', artist: 'John Newton (1779)', genre: 'Госпел', key: 'G', difficulty: 2, masteryPct: 92, targetBpm: 80, currentBpm: 78,
+// since и weight — только для истории занятий при проверке (demostats.js): когда песню начали учить и как часто играют
+export const DEMO_SONGS = [
+  { title: 'Amazing Grace', by: 'newton', genre: 'gospel', key: 'G', difficulty: 2, masteryPct: 92, targetBpm: 80, currentBpm: 78,
     tab: 'amazing-grace.musicxml', since: 0.02, weight: 1.4,
     notes: `[Куплет 1]
 G            G7        C       G
@@ -32,7 +37,7 @@ G             G7        C        G
 How precious did that grace appear
 G           D           G
 The hour I first believed` },
-  { title: 'Greensleeves', artist: 'Народная (Англия, XVI век)', genre: 'Классика', key: 'Am', difficulty: 3, masteryPct: 74, targetBpm: 96, currentBpm: 84,
+  { title: 'Greensleeves', by: 'england16', genre: 'classic', key: 'Am', difficulty: 3, masteryPct: 74, targetBpm: 96, currentBpm: 84,
     tab: 'greensleeves.musicxml', pdf: 'greensleeves.pdf', since: 0.12, weight: 1.2,
     notes: `Am            C          G           Em
 Alas, my love, you do me wrong
@@ -52,7 +57,7 @@ C              G              Em
 Greensleeves was my heart of gold
 Am           E            Am
 And who but my lady Greensleeves` },
-  { title: 'The House of the Rising Sun', artist: 'Народная (США)', genre: 'Блюз', key: 'Am', difficulty: 3, masteryPct: 81, targetBpm: 116, currentBpm: 108,
+  { title: 'The House of the Rising Sun', by: 'usa', genre: 'blues', key: 'Am', difficulty: 3, masteryPct: 81, targetBpm: 116, currentBpm: 108,
     tab: 'rising-sun.musicxml', since: 0.3, weight: 1,
     notes: `Am      C         D           F
 There is a house in New Orleans
@@ -62,7 +67,7 @@ Am        C        D          F
 And it's been the ruin of many a poor boy
 Am        E         Am
 And God, I know I'm one` },
-  { title: 'Scarborough Fair', artist: 'Народная баллада (Англия)', genre: 'Фолк', key: 'Dm', difficulty: 2, masteryPct: 58, targetBpm: 88, currentBpm: 70,
+  { title: 'Scarborough Fair', by: 'ballad', genre: 'folk', key: 'Dm', difficulty: 2, masteryPct: 58, targetBpm: 88, currentBpm: 70,
     tab: 'scarborough-fair.musicxml', since: 0.55, weight: 0.9,
     notes: `Dm          C        Dm
 Are you going to Scarborough Fair?
@@ -72,7 +77,7 @@ Dm              F           C
 Remember me to one who lives there
 Dm         C          Dm
 She once was a true love of mine` },
-  { title: 'Калинка', artist: 'И. Ларионов (1860)', genre: 'Фолк', key: 'Am', difficulty: 4, masteryPct: 33, targetBpm: 160, currentBpm: 118,
+  { title: 'Калинка', by: 'larionov', genre: 'folk', key: 'Am', difficulty: 4, masteryPct: 33, targetBpm: 160, currentBpm: 118,
     since: 0.78, weight: 0.8,
     notes: `[Припев]
 Am         E7
@@ -88,107 +93,84 @@ E7                Am
 
 // Ноты без песни (этюды и пьесы)
 const PIECES = [
-  { file: 'bach-menuet-g-tab.pdf', name: 'И. С. Бах — Менуэт соль мажор (ноты и табулатура).pdf' },
-  { file: 'bach-prelude-bwv999.pdf', name: 'И. С. Бах — Прелюдия ре минор BWV 999.pdf' },
-  { file: 'carcassi-etude-op60-3.pdf', name: 'М. Каркасси — Этюд op. 60 № 3.pdf' },
+  { file: 'bach-menuet-g-tab.pdf', key: 'menuet' },
+  { file: 'bach-prelude-bwv999.pdf', key: 'prelude' },
+  { file: 'carcassi-etude-op60-3.pdf', key: 'carcassi' },
 ];
 
-/* ---------- история занятий ---------- */
+/* ---------- календарь ---------- */
 
-// Повторяемый случайный ряд: одна и та же история при каждой загрузке
-function rng(seed) {
-  let s = seed >>> 0;
-  return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-}
-const DAY = 86400000;
-const TOOLS = [['metro', 5], ['tuner', 3], ['piano', 2], ['theory', 2], ['drone', 1], ['glider', 1]];
-const pick = (r, list) => { const tot = list.reduce((a, x) => a + x[1], 0); let v = r() * tot; for (const x of list) { v -= x[1]; if (v <= 0) return x[0]; } return list[0][0]; };
-
-// Сессии с from по to (мс). songs — [{ id, since (доля пути, когда начали учить), weight, targetBpm, currentBpm }]
-export function demoSessions(songs, from, to, seed = 7) {
-  const r = rng(seed), out = [], span = to - from;
-  // отпуска и болезни: несколько пауз по 5–16 дней
-  // (не в последние три недели: на главной и в неделе должно быть видно живое занятие)
-  const gaps = Array.from({ length: Math.max(2, Math.round(span / DAY / 120)) }, () => { const a = from + r() * Math.max(0, span - 40 * DAY); return [a, a + (5 + r() * 11) * DAY]; });
-  for (let d = new Date(from); d.getTime() < to; d = new Date(d.getTime() + DAY)) {
-    const day = d.getTime(), wd = d.getDay(), month = d.getMonth(), prog = (day - from) / span;
-    if (gaps.some(([a, b]) => day >= a && day < b)) continue;
-    // охотнее в выходные, меньше летом и в декабрьскую суету; со временем — регулярнее
-    let p = [0.72, 0.5, 0.58, 0.52, 0.6, 0.45, 0.75][wd];
-    if (month === 6 || month === 7) p *= 0.7;
-    if (month === 11) p *= 0.8;
-    p *= 0.75 + 0.35 * prog;
-    if (to - day < 16 * DAY) p = Math.max(p, 0.85); // последние две недели — почти каждый день
-    if (r() > p) continue;
-    // одно-три занятия в день: вечер чаще всего, иногда утро и обед
-    const n = r() < 0.18 ? 2 + (r() < 0.25 ? 1 : 0) : 1;
-    let busyTill = 0;
-    for (let k = 0; k < n; k++) {
-      const hour = k === 0 ? pick(r, [[7, 2], [8, 2], [12, 1], [13, 1], [17, 2], [18, 3], [19, 5], [20, 6], [21, 4], [22, 2]]) : 21 + r() * 1.5;
-      let start = day + hour * 3600000 + Math.floor(r() * 50) * 60000;
-      if (start < busyTill) start = busyTill + 20 * 60000;
-      // длина: обычно 20–60 минут, иногда долгие репетиции; растёт с опытом
-      const mins = Math.max(6, Math.min(170, Math.round(Math.exp(Math.log(28 + 22 * prog) + (r() - 0.5) * 1.1) + (wd === 0 || wd === 6 ? r() * 30 : 0))));
-      const dur = mins * 60, end = start + dur * 1000 + Math.floor(r() * 4) * 60000;
-      if (end > to) continue;
-      busyTill = end;
-      const learning = songs.filter((s) => prog >= s.since);
-      const kind = r();
-      let rec;
-      if (learning.length && kind < 0.55) {
-        const s = pick(r, learning.map((x) => [x, x.weight * (prog - x.since < 0.15 ? 1.8 : 1)]));
-        // темп растёт от 70 % целевого к нынешнему
-        const k2 = Math.min(1, (prog - s.since) / Math.max(0.05, 1 - s.since)), bpm = Math.round(s.targetBpm * 0.7 + (s.currentBpm - s.targetBpm * 0.7) * k2 + (r() - 0.5) * 4);
-        rec = { type: 'song', songId: s.id, tool: null, bpm };
-      } else if (kind < 0.8) rec = { type: 'tool', songId: null, tool: pick(r, TOOLS), bpm: null };
-      else rec = { type: 'free', songId: null, tool: null, bpm: null, tag: null };
-      out.push(seal({ id: DEMO_PREFIX + uid(), ...rec, start, end, dur: rec.type === 'tool' ? Math.min(dur, 40 * 60) : dur, mode: r() < 0.15 ? 'strict' : 'normal', updatedAt: end }));
-    }
-  }
-  return out;
+// События вокруг сегодняшнего дня: урок и репетиция каждую неделю, запись, концерт, срок и цель по песням
+function demoEvents(t, songs, now) {
+  const day = (d, h, m = 0) => dayStart(now + d * DAY) + (h * 60 + m) * 60000;
+  const nextWd = (wd) => { const d = new Date(now).getDay(); return ((wd - d + 7) % 7) || 7; };
+  const id = () => DEMO_PREFIX + uid();
+  const ev = (d, h, len, patch) => newEvent(now + d * DAY, now, { id: id(), start: day(d, h), end: day(d, h) + len * 3600000, ...patch });
+  const allDay = (d, patch) => newEvent(now + d * DAY, now, { id: id(), allDay: true, start: day(d, 0), end: day(d, 0) + DAY, ...patch });
+  const S = (i) => songs[i].id;
+  return [
+    ev(nextWd(2) - 7, 18, 1, { kind: 'lesson', title: t('demo.ev.lesson'), place: t('demo.ev.lessonPlace'), repeat: 'weekly', songs: [S(1)] }),
+    ev(nextWd(6) - 7, 12, 2, { kind: 'rehearsal', title: t('demo.ev.rehearsal'), place: t('demo.ev.rehearsalPlace'), repeat: 'weekly', songs: [S(1), S(2), S(3)] }),
+    ev(9, 15, 2, { kind: 'recording', title: t('demo.ev.recording'), songs: [S(0)], note: t('demo.ev.recordingNote') }),
+    ev(18, 19, 2, { kind: 'concert', title: t('demo.ev.concert'), place: t('demo.ev.concertPlace'), songs: [S(0), S(1), S(2)], note: t('demo.ev.concertNote') }),
+    allDay(12, { kind: 'deadline', title: t('demo.ev.deadline', { song: songs[1].title, bpm: songs[1].targetBpm }), songs: [S(1)] }),
+    allDay(30, { kind: 'goal', title: t('demo.ev.goal', { song: songs[4].title }), songs: [S(4)] }),
+  ].map((e) => ({ ...e, updatedAt: now }));
 }
 
-/* ---------- загрузка ---------- */
+/* ---------- добавить и убрать ---------- */
 
-// Добавить демо в данные приложения (store) и файлы (files). base — адрес папки demo/ рядом с приложением
-export async function loadDemo(app, base = new URL('demo/', document.baseURI).href) {
+// Добавить демо-набор. t — переводы ядра (названия жанров, авторов, файлов и событий — на языке человека);
+// base — адрес папки demo/ рядом с приложением. → новые песни (или null, если набор уже есть)
+export async function addDemo(app, t, base = new URL('demo/', document.baseURI).href) {
   const store = app.store, st = store.state, now = Date.now();
-  if (st.songs.some((s) => String(s.id).startsWith(DEMO_PREFIX))) return false; // уже загружено
+  if (hasDemo(st)) return null;
   const L = st.settings.lib || {};
   const tag = (i) => (L.tags && L.tags[i] ? [L.tags[i].id] : []);
-  const songs = SONGS.map((s, i) => ({
-    id: DEMO_PREFIX + uid(), title: s.title, artist: s.artist, genre: s.genre, cat: L.cats && L.cats[i % 3] ? L.cats[i % 3].id : null, tags: tag(i % 5),
+  const songs = DEMO_SONGS.map((s, i) => ({
+    id: DEMO_PREFIX + uid(), title: s.title, artist: t('demo.by.' + s.by), genre: t('demo.genre.' + s.genre), cat: L.cats && L.cats[i % 3] ? L.cats[i % 3].id : null, tags: tag(i % 5),
     difficulty: s.difficulty, masteryPct: s.masteryPct, mastery: Math.max(1, Math.round(s.masteryPct / 20)),
-    targetBpm: s.targetBpm, currentBpm: s.currentBpm, notes: s.notes, key: s.key, createdAt: now, updatedAt: now,
-    _src: s,
+    targetBpm: s.targetBpm, currentBpm: s.currentBpm, notes: s.notes, key: s.key, createdAt: now - (DEMO_SONGS.length - i) * 60000, updatedAt: now,
   }));
-  const from = Math.max(EARLIEST + DAY, new Date(2025, 0, 3).getTime());
-  const sess = demoSessions(songs.map((s) => ({ id: s.id, since: s._src.since, weight: s._src.weight, targetBpm: s.targetBpm, currentBpm: s.currentBpm })), from, now - 3600000);
-  songs.forEach((s) => { s.createdAt = from + s._src.since * (now - from); delete s._src; });
   st.songs.push(...songs);
-  st.sessions.push(...sess);
+  (st.events || (st.events = [])).push(...demoEvents(t, songs, now));
+  st.settings.demo = true;
   store.save();
-  // файлы: табулатуры и ноты к песням, отдельные пьесы
-  const add = async (file, name, songIds) => {
+  if (store.settingsChanged) store.settingsChanged();
+  // файлы: табулатуры и ноты к песням, отдельные пьесы, записи к «Amazing Grace»
+  const add = async (rec) => { try { await app.files.add({ id: DEMO_PREFIX + uid(), created: now, ...rec }); } catch { /* без места — без файла */ } };
+  const fetchAdd = async (file, name, songIds) => {
     try {
       const res = await fetch(base + file);
       if (!res.ok) return;
       const blob = await res.blob(), pdf = file.endsWith('.pdf');
-      await app.files.add({ id: DEMO_PREFIX + uid(), name, size: blob.size, type: pdf ? 'application/pdf' : 'application/vnd.recordare.musicxml+xml', songs: songIds, created: now, blob, kind: 'tab' });
-    } catch { /* без сети к своим же файлам — просто без них */ }
+      await add({ name, size: blob.size, type: pdf ? 'application/pdf' : 'application/vnd.recordare.musicxml+xml', songs: songIds, blob, kind: 'tab' });
+    } catch { /* без своих файлов — просто без них */ }
   };
-  for (let i = 0; i < SONGS.length; i++) {
-    const s = SONGS[i];
-    if (s.tab) await add(s.tab, s.title + ' — табулатура.musicxml', [songs[i].id]);
-    if (s.pdf) await add(s.pdf, s.title + ' — ноты.pdf', [songs[i].id]);
+  for (let i = 0; i < DEMO_SONGS.length; i++) {
+    const s = DEMO_SONGS[i];
+    if (s.tab) await fetchAdd(s.tab, s.title + ' — ' + t('demo.file.tab') + '.musicxml', [songs[i].id]);
+    if (s.pdf) await fetchAdd(s.pdf, s.title + ' — ' + t('demo.file.score') + '.pdf', [songs[i].id]);
   }
-  for (const p of PIECES) await add(p.file, p.name, []);
-  return true;
+  for (const p of PIECES) await fetchAdd(p.file, t('demo.piece.' + p.key) + '.pdf', []);
+  for (const tr of await demoTracks()) await add({ name: 'Amazing Grace — ' + t('demo.track.' + tr.key) + '.wav', size: tr.blob.size, type: 'audio/wav', songs: [songs[0].id], blob: tr.blob, kind: 'audio', dur: tr.dur });
+  return songs;
 }
 
-// Убрать файлы демо (данные возвращает копия, sandbox.js)
+// Убрать файлы демо-набора (записи, табулатуры, ноты)
 export async function removeDemoFiles(app) {
   const ids = [];
-  ['tab', 'audio'].forEach((k) => app.files.list(k).forEach((r) => { if (String(r.id).startsWith(DEMO_PREFIX)) ids.push(r.id); }));
+  ['tab', 'audio'].forEach((k) => app.files.list(k).forEach((r) => { if (isDemo(r.id)) ids.push(r.id); }));
   for (const id of ids) await app.files.remove(id);
+}
+
+// Убрать демо-набор целиком. Песни помечаются удалёнными, как обычные: время занятий с ними остаётся в статистике
+export async function removeDemo(app) {
+  const store = app.store, st = store.state;
+  st.songs.filter((s) => isDemo(s.id) && !s.deleted).forEach((s) => deleteSong(store, s.id));
+  st.events = (st.events || []).filter((e) => !isDemo(e.id));
+  st.settings.demo = false;
+  store.save();
+  if (store.settingsChanged) store.settingsChanged();
+  await removeDemoFiles(app);
 }

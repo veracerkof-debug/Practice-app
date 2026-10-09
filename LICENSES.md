@@ -40,9 +40,12 @@
 | Vite, Vitest, @capacitor/cli | MIT |
 | @coderline/alphatab-vite — подключение воркеров alphaTab при сборке | MPL-2.0 |
 
-## Демо-набор (только до выпуска)
-Папка `public/demo/` — для показа приложения, перед выпуском удаляется. Ноты в PDF — Mutopia Project
+## Демо-набор
+Папка `public/demo/` — демо-набор (добавляется и убирается в «Данных и копиях»). Ноты в PDF — Mutopia Project
 (mutopiaproject.org), общественное достояние: И. С. Бах — Менуэт соль мажор BWV Anh. 114 (с табулатурой),
 Прелюдия ре минор BWV 999; М. Каркасси — Этюд op. 60 № 3; Greensleeves (народная). Табулатуры (MusicXML) и тексты
 с аккордами — народные песни (Amazing Grace, Greensleeves, The House of the Rising Sun, Scarborough Fair,
 «Калинка»), общественное достояние; табулатуры набраны заново.
+Записи в медиатеке синтезируются на устройстве (`src/core/demoaudio.js`). Мелодии глайдера и терменвокса
+(`src/music/melodies.js`) — общественное достояние: «Ода к радости» (Бетховен, Шиллер), «Twinkle, Twinkle, Little Star»,
+«Frère Jacques», «Jingle Bells» (Пирпонт, 1857), «Amazing Grace» (Ньютон, 1779), «Greensleeves».
