@@ -321,3 +321,82 @@
 /* Библия: изучение по логике MyBible работает только здесь (src/modules/bible/study.js): номера Стронга, словари,
    комментарии и сноски, перекрёстные ссылки, подзаголовки; жесты — двойное касание слова, касание меток, долгое касание стиха,
    смахивание по главам, щипок для шрифта. В обычном виде модуль показывает чистый текст и принимает только переводы. */
+
+/* ==========================================================================================================
+   Без линий и рамок (как главная): страницы, настройки, шторки и инструменты — текст на фоне. Остаются только
+   функциональные отметки: выбранное (чёрная плашка), сегодняшний день, шкалы и деления инструментов, поверхность игры.
+   ========================================================================================================== */
+:root[data-style="mono"] .group { background: transparent; border: 0; border-radius: 0; overflow: visible; }
+:root[data-style="mono"] .group + .group { margin-top: 18px; }
+:root[data-style="mono"] .cell + .cell::before { content: none; }
+:root[data-style="mono"] .cell { padding-left: 2px; padding-right: 2px; min-height: 52px; font-size: 18px; font-weight: 400; }
+:root[data-style="mono"] .cellcol { padding-left: 2px; padding-right: 2px; }
+:root[data-style="mono"] .cell .val, :root[data-style="mono"] .cell .l2 { font-size: 15px; }
+:root[data-style="mono"] .cell.act { color: var(--ink); text-transform: uppercase; letter-spacing: .12em; font-size: 13px; font-weight: 600; min-height: 44px; }
+:root[data-style="mono"] .cell.danger { text-transform: uppercase; letter-spacing: .12em; font-size: 13px; font-weight: 600; }
+:root[data-style="mono"] .hdr { margin: 30px 2px 4px; }
+:root[data-style="mono"] .ftr { margin-left: 2px; margin-right: 2px; font-size: 13px; }
+/* списки разделов (профиль, настройки): без значков и стрелок — одно слово крупно, пояснение мелко */
+:root[data-style="mono"] .panel .cell > .ticon, :root[data-style="mono"] .sheet .cell > .ticon { display: none; }
+:root[data-style="mono"] .cell > .chev, :root[data-style="mono"] .cell > svg.chev { display: none; }
+:root[data-style="mono"] .panel .cell[data-pp] { font-size: 22px; font-weight: 300; min-height: 64px; }
+:root[data-style="mono"] .panel .cell[data-pp] .psub { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; margin-top: 4px; }
+
+/* кнопки: главная — чёрная плашка, остальные — только слово */
+:root[data-style="mono"] .btn:not(.fill) { border: 0; background: transparent; text-transform: uppercase; letter-spacing: .12em; font-size: 13px; font-weight: 700; }
+:root[data-style="mono"] .btn.fill { text-transform: uppercase; letter-spacing: .12em; font-size: 14px; border: 0; }
+:root[data-style="mono"] .link { text-transform: none; }
+/* сегменты: без рамки; выбранное — чёрная плашка, остальное — тихий текст */
+:root[data-style="mono"] .seg { border: 0; background: transparent; padding: 0; gap: 4px; }
+:root[data-style="mono"] .seg button { color: var(--l2); }
+:root[data-style="mono"] .seg button[aria-pressed="true"] { color: var(--bg); }
+/* метки и фишки: без обводки — тон фона; выбранная — чёрная */
+:root[data-style="mono"] .lchip:not(.off):not(.add), :root[data-style="mono"] .catp, :root[data-style="mono"] .fchip, :root[data-style="mono"] .cwchip, :root[data-style="mono"] .cchips i,
+:root[data-style="mono"] .chip, :root[data-style="mono"] .pill { border: 0 !important; background: var(--fill) !important; }
+:root[data-style="mono"] .lchip.on:not(.off), :root[data-style="mono"] .catp.on, :root[data-style="mono"] .fchip.on, :root[data-style="mono"] .chip.on, :root[data-style="mono"] .pill[aria-pressed="true"] { background: var(--ink) !important; color: var(--bg) !important; }
+:root[data-style="mono"] .lchip.pick:not(.on) { box-shadow: none !important; }
+/* поиск, плашки, уведомления — тоном, без линий */
+:root[data-style="mono"] .search { border: 0; background: var(--fill); }
+:root[data-style="mono"] .tile, :root[data-style="mono"] .card, :root[data-style="mono"] .shero, :root[data-style="mono"] .hcard { border: 0; background: transparent; padding-left: 2px; }
+:root[data-style="mono"] .tile b { font-size: 26px; font-weight: 250; letter-spacing: -.02em; }
+:root[data-style="mono"] .toast, :root[data-style="mono"] .nosnd { border: 0; background: var(--ink); color: var(--bg); }
+:root[data-style="mono"] .tabbar { border-top: 0; background: var(--bg); }
+:root[data-style="mono"] .avatar { border: 0; background: var(--fill); }
+:root[data-style="mono"] .sheet { background: var(--bg); }
+:root[data-style="mono"] .snav { background: var(--bg); }
+
+/* главная: строки песен, кружки инструментов, метки — без линий */
+.mono-home .mrow { border-bottom: 0; }
+.mono-home .mcirc { border: 0; background: var(--fill); }
+.mono-home .mtags button { border: 0; background: var(--fill); }
+.mono-home .mread { border-top: 0; border-bottom: 0; padding: 6px 2px; }
+
+/* вкладка «Инструменты»: крупное название и строка состояния, значок без круга */
+:root[data-style="mono"] .tcard2 { border: 0; background: transparent; padding-left: 2px; }
+:root[data-style="mono"] .tci2 { border: 0; width: 34px; height: 34px; justify-content: flex-start; }
+:root[data-style="mono"] .tci2 svg { width: 26px; height: 26px; stroke-width: 1.3; }
+:root[data-style="mono"] .tcn2 { font-size: 22px; font-weight: 300; }
+:root[data-style="mono"] .qbtn { border: 0; background: var(--fill) !important; }
+:root[data-style="mono"] .stile3 { border: 0; background: transparent !important; padding-left: 2px; }
+
+/* окно инструмента: поверхность — прямо на фоне, кнопки — значки без кругов, плашки — тоном */
+:root[data-style="mono"] .tview { background: var(--bg); }
+:root[data-style="mono"] .tview:not(.imm) .tvhost, :root[data-style="mono"] .tview .mcard { background: transparent !important; box-shadow: none !important; }
+:root[data-style="mono"] .tvhd .ic, :root[data-style="mono"] .tview .ic:not(.on):not(.act) { background: transparent; }
+:root[data-style="mono"] .tview .ic.act { background: var(--ink); color: var(--bg); }
+:root[data-style="mono"] .tview.imm .tvback, :root[data-style="mono"] .tview.imm .tvhelp, :root[data-style="mono"] .tview.imm .tvrecf { background: color-mix(in srgb, var(--bg) 70%, transparent) !important; }
+:root[data-style="mono"] .tvrec.on { background: var(--ink) !important; color: var(--bg); }
+:root[data-style="mono"] .mtile { background: transparent; text-transform: uppercase; letter-spacing: .1em; }
+:root[data-style="mono"] .mtile:active { background: var(--fill); }
+:root[data-style="mono"] .tview :is(.card, .box, .panelbox) { border: 0 !important; box-shadow: none !important; }
+:root[data-style="mono"] .tview :is(select, .sortsel) { border: 0; background: var(--fill); }
+:root[data-style="mono"] .tview .btn:not(.fill) { background: var(--fill); }
+/* шкала уровня записи и отметка гейта — функциональные, остаются */
+/* подложки страниц, календаря, модулей и шторок — прямо на фоне */
+:root[data-style="mono"] .tview .pane, :root[data-style="mono"] :is(.calgrid, .clist, .cweek, .cdet, .dsb, .tsty, .stycard, .lopt, .pal, .donb, .gemrow, .hread, .obcard, .legal .lic) {
+  background: transparent !important; box-shadow: none !important; border: 0 !important; }
+:root[data-style="mono"] :is(.mlfil button.on, .tswb.on) { background: var(--ink) !important; color: var(--bg) !important; box-shadow: none !important; }
+:root[data-style="mono"] .mono-home .rank, :root[data-style="mono"] .mono-home .mrank { border: 0; }
+:root[data-style="mono"] .tmsi { display: none; }
+:root[data-style="mono"] .tmsec .grow > span:first-child { font-size: 20px; font-weight: 300; }
+:root[data-style="mono"] .tmsub { text-transform: uppercase; letter-spacing: .08em; font-size: 10.5px !important; }
