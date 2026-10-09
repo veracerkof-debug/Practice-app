@@ -1,4 +1,7 @@
-// Пианино: 5–15 белых клавиш, октавы, Hold, два ряда, поворот, панель звука (встроенная или шторкой).
+// Пианино: 5–15 белых клавиш, октавы, педаль (Sustain → Hold → выкл), два ряда, поворот всего экрана,
+// панель звука — всегда сверху над клавишами (в двух рядах и маленьких окнах — шторкой).
+// Поворот: кнопка поворачивает весь экран инструмента вместе с надписями (телефон держат горизонтально);
+// сторону подсказывает наклон телефона — повернули как удобно, и при выключенном автоповороте положение остаётся.
 // Перенесено из legacy/practice.html (pianoHTML, pianoAfter, kbHTML, обработчики клавиш, pianoSheet).
 import './piano.css';
 import ru from './i18n/ru.json';
@@ -20,10 +23,14 @@ const I = {
 };
 
 let host = null, ctx = null, size = 'full', ro = null, unbindSyn = () => {}, unsubShared = () => {};
-const offs = [], ptr = new Map(), hold = { on: false, k: new Map() };
+// педаль: 0 — выкл, 1 — Sustain (отпущенная нота звучит долгим хвостом, как с педалью пианино), 2 — Hold (нота держится)
+const PEDAL = ['off', 'sus', 'hold'];
+const offs = [], ptr = new Map(), hold = { mode: 0, k: new Map() };
+let tiltOff = () => {};
 
 const P = () => ctx.store.all();
-const rotated = () => size === 'full' && P().rot && P().rotMode !== 'screen';
+const rotated = () => false; // поворачивается весь экран (rotate ниже), клавиатура внутри окна — нет
+const panelOn = () => size === 'full' && !P().dual; // панель эффектов — всегда, кроме двух рядов
 
 /* ---------- разметка ---------- */
 
@@ -35,13 +42,13 @@ function view() {
   const bar = '<div class="pbar"><div class="pgrp">' + pk('data-step="poct" data-d="-1"', '‹', t('octDown')) + '<span class="num pval">' + mName(m0) + '–' +
     mName(lastWhite(m0, p.size)) + '</span>' + pk('data-step="poct" data-d="1"', '›', t('octUp')) + '</div><div class="pgrp">' +
     pk('data-step="pkeys" data-d="-1"', I.minus, t('keysLess')) + pk('data-step="pkeys" data-d="1"', I.plus, t('keysMore')) +
-    pk('data-x="psound"', I.wave, t('sound'), !!(full && p.panel && !rot)) +
-    (full ? pk('data-x="phold"', 'Hold', t('hold'), hold.on) + pk('data-x="pdual"', I.dual, t('dual'), !!p.dual) + pk('data-x="prot"', I.rot, t('rotate'), !!p.rot) +
-      pk('data-x="pset"', ui.icons.gear, t('settings')) : '') + '</div></div>';
+    (panelOn() ? '' : pk('data-x="psound"', I.wave, t('sound'))) +
+    (full ? '<button class="pk txt2' + (hold.mode ? ' on' : '') + '" data-x="phold" aria-pressed="' + !!hold.mode + '" aria-label="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '" title="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '">' + (hold.mode === 1 ? 'Sus' : 'Hold') + '</button>' +
+      pk('data-x="pdual"', I.dual, t('dual'), !!p.dual) + pk('data-x="prot"', I.rot, t('rotate'), !!p.rot) : '') + '</div></div>';
   const hlBtn = hl ? '<button class="pk txt on hlp" data-x="hloff" aria-label="' + t('hlOff') + '">' + ui.esc(hl.label) + ' ×</button>' : '';
   const kb = (m) => kbHTML(m, p.size, hl ? hl.pcs : null, hl ? hl.root : null);
-  const syn = full && !rot && p.panel ? '<div class="psyn">' + synBody(ctx, true) + '</div>' : '';
-  const inner = '<div class="pwrap' + (syn ? ' wsyn' : '') + '">' + syn + '<div class="lastnote num" id="lastnote" aria-live="polite"></div>' + hlBtn + bar +
+  const syn = panelOn() ? '<div class="psyn">' + synBody(ctx, true) + '</div>' : '';
+  const inner = '<div class="pwrap' + (syn ? ' wsyn' : '') + '">' + syn + (syn ? '' : '<div class="lastnote num" id="lastnote" aria-live="polite"></div>') + hlBtn + bar +
     '<div class="kbs">' + (dual ? kb(m0 + 12) : '') + kb(m0) + '</div></div>';
   return rot ? '<div class="protbox"><div class="prot' + (p.rotDir === 'l' ? ' l' : '') + '">' + inner + '</div></div>' : inner;
 }
@@ -61,7 +68,8 @@ function layout() {
   const used = (bar ? bar.offsetHeight + 8 : 0) + (hl ? hl.offsetHeight + 6 : 0) + 24, avail = (H - used) / kbs.length - (kbs.length > 1 ? 8 : 0);
   const ps = host.querySelector('.psyn');
   let kh = Math.round(Math.max(96, Math.min((W / n) * 5.2, avail, 340)));
-  if (ps) kh = Math.round(Math.max(110, Math.min(kh, (H - used) * 0.42)));
+  // с панелью эффектов — клавиши ровно в нижней половине, панель занимает всё, что выше
+  if (ps) kh = Math.round(Math.max(96, Math.min((W / n) * 6, (H - used) * 0.5)));
   kbs.forEach((k) => (k.style.height = kh + 'px'));
   markHeld();
 }
@@ -76,7 +84,7 @@ function render() {
   unbindSyn = () => {};
   host.innerHTML = view();
   const ps = host.querySelector('.psyn');
-  if (ps) unbindSyn = synBind(ctx, ps, true, { rerender: () => { ps.innerHTML = synBody(ctx, true); }, onClose: () => { P().panel = false; ctx.store.save(); render(); } });
+  if (ps) unbindSyn = synBind(ctx, ps, true, { rerender: () => { ps.innerHTML = synBody(ctx, true); } });
   requestAnimationFrame(layout);
 }
 
@@ -100,27 +108,25 @@ function noteOff(p) {
   ctx.audio.synth.off(p.key);
 }
 
+// Sustain → Hold → выкл. Из Hold — удержанные ноты отпускаются долгим хвостом
 function holdToggle() {
-  hold.on = !hold.on;
-  if (!hold.on) { hold.k.forEach((key) => ctx.audio.synth.off(key)); hold.k.clear(); }
+  hold.mode = (hold.mode + 1) % PEDAL.length;
+  if (hold.mode !== 2) { hold.k.forEach((key) => ctx.audio.synth.release(key)); hold.k.clear(); }
+  ctx.ui.toast(ctx.t('pedal.' + PEDAL[hold.mode]));
 }
 
-function pianoSheet() {
-  const { t, ui } = ctx, p = P();
-  ui.sheet(() => ui.snav(t('set.title')) +
-    '<div class="hdr" style="margin-top:4px">' + t('set.what') + '</div><div class="group"><div class="cellcol">' +
-    ui.seg('rm', [['keys', t('set.keys')], ['screen', t('set.screen')]], p.rotMode === 'screen' ? 'screen' : 'keys', t('set.what')) + '</div></div>' +
-    '<div class="hdr">' + t('set.dir') + '</div><div class="group"><div class="cellcol">' +
-    ui.seg('rd', [['r', t('set.cw')], ['l', t('set.ccw')]], p.rotDir === 'l' ? 'l' : 'r', t('set.dir')) + '</div></div><p class="ftr">' + t('set.ftr') + '</p>',
-  (el, sh) => el.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-seg] [data-v]');
-    if (!b) return;
-    if (b.closest('[data-seg]').dataset.seg === 'rm') p.rotMode = b.dataset.v;
-    else p.rotDir = b.dataset.v;
-    ctx.store.save();
-    sh.update();
-    render();
-  }));
+// Сторона поворота — по наклону телефона (ось x ускорения с гравитацией: телефон лёг на бок)
+function tiltWatch() {
+  tiltOff();
+  if (!P().rot || typeof DeviceMotionEvent === 'undefined') return;
+  const onMove = (e) => {
+    const g = e.accelerationIncludingGravity;
+    if (!g || g.x == null || Math.abs(g.x) < 6.5 || Math.abs(g.y || 0) > 6) return;
+    const dir = g.x > 0 ? 'r' : 'l', p = P();
+    if (p.rotDir !== dir) { p.rotDir = dir; ctx.store.save(); dispatchEvent(new Event('melete:rot')); }
+  };
+  addEventListener('devicemotion', onMove);
+  tiltOff = () => { removeEventListener('devicemotion', onMove); tiltOff = () => {}; };
 }
 
 function bind() {
@@ -132,7 +138,7 @@ function bind() {
     if (!k) return;
     e.preventDefault();
     if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('noAudio')); return; }
-    if (hold.on) { // Hold: нажатие включает ноту, повторное — выключает
+    if (hold.mode === 2) { // Hold: нажатие включает ноту, повторное — выключает
       const m = +k.dataset.m;
       if (hold.k.has(m)) { syn.off(hold.k.get(m)); hold.k.delete(m); k.classList.remove('held'); }
       else { const key = 'ph' + m + '_' + Date.now(); syn.on(m, key, { hold: true, bus: 'piano' }); hold.k.set(m, key); k.classList.add('held'); showNote(m); }
@@ -147,7 +153,8 @@ function bind() {
     const el = document.elementFromPoint(e.clientX, e.clientY), k = el && el.closest ? el.closest('.kb [data-m]') : null;
     if (k && k !== p.el && host.contains(k)) { noteOff(p); ptr.set(e.pointerId, { el: k, key: noteOn(k, e.pointerId) }); }
   });
-  const up = (e) => { const p = ptr.get(e.pointerId); if (!p) return; noteOff(p); ptr.delete(e.pointerId); };
+  // Sustain: отпущенная клавиша не глушится — звук уходит долгим хвостом
+  const up = (e) => { const p = ptr.get(e.pointerId); if (!p) return; if (hold.mode === 1) { p.el.classList.remove('down'); syn.release(p.key); } else noteOff(p); ptr.delete(e.pointerId); };
   on(window, 'pointerup', up);
   on(window, 'pointercancel', up);
 
@@ -165,13 +172,10 @@ function bind() {
     const x = e.target.closest('[data-x]');
     if (!x) return;
     const a = x.dataset.x;
-    if (a === 'psound') {
-      if (size === 'full' && !rotated()) { p.panel = !p.panel; ctx.store.save(); render(); }
-      else synthSheet(ctx);
-    } else if (a === 'phold') { holdToggle(); render(); }
+    if (a === 'psound') synthSheet(ctx);
+    else if (a === 'phold') { holdToggle(); render(); }
     else if (a === 'pdual') { p.dual = !p.dual; ctx.store.save(); render(); }
-    else if (a === 'prot') { p.rot = !p.rot; if (!p.rotMode) p.rotMode = 'keys'; ctx.store.save(); render(); }
-    else if (a === 'pset') pianoSheet();
+    else if (a === 'prot') { p.rot = !p.rot; ctx.store.save(); tiltWatch(); render(); dispatchEvent(new Event('melete:rot')); }
     else if (a === 'hloff') ctx.shared.set('highlight', null);
   });
 }
@@ -184,8 +188,9 @@ export default {
   icon: ICON,
   color: '#646493',
   sizes: ['full', 'half', 'quarter', 'strip'],
-  // «Поворот — весь экран»: сессия поворачивает весь экран, пока пианино в окне
-  rotate: (c) => { const p = c.store.all(); return p.rot && p.rotMode === 'screen' ? (p.rotDir === 'l' ? 'l' : 'r') : null; },
+  // Поворот: весь экран инструмента (и сессии) поворачивается, пока пианино в окне; если экран уже
+  // горизонтальный (автоповорот телефона), поворачивать нечего
+  rotate: (c) => { const p = c.store.all(); return p.rot && innerHeight > innerWidth ? (p.rotDir === 'l' ? 'l' : 'r') : null; },
   status(c) {
     const p = c.store.all(), s = pianoPatch(p);
     const sound = s.name || c.t('pre.' + (PRESETS[s.preset] ? s.preset : 'piano'));
@@ -195,6 +200,7 @@ export default {
     host = el; ctx = c; size = sz;
     render();
     bind();
+    tiltWatch();
     ro = new ResizeObserver(() => layout());
     ro.observe(host);
     unsubShared = ctx.shared.subscribe((k) => { if (k === 'highlight') render(); });
@@ -205,6 +211,7 @@ export default {
     unsubShared();
     unbindSyn();
     offs.splice(0).forEach((f) => f());
+    tiltOff();
     ptr.forEach((p) => ctx.audio.synth.off(p.key));
     ptr.clear();
     // Hold переживает закрытие окна: удержанные ноты звучат, пока занимаются другим инструментом

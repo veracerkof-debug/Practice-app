@@ -6,7 +6,6 @@ import { presetRow, promptName, presetManager } from '../../ui/presets.js';
 
 const SH = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 const WHITE = [0, 2, 4, 5, 7, 9, 11];
-const CLOSE = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
 // Подпись значения ручки
 function fmt(ctx, k, v) {
@@ -234,15 +233,16 @@ export function synBody(ctx, inline) {
   const kn = (k) => knobSVG(ctx, k, s[k]);
   const builtins = Object.keys(PRESETS).map((k) => [k, t('pre.' + k)]);
   const name = s.name || (PRESETS[s.preset] ? t('pre.' + s.preset) : '');
-  return (inline ? '<div class="psynh"><b>' + t('syn.title') + '</b>' + ui.icb('data-psclose', CLOSE, t('syn.close'), 'sm plain') + '</div>' : ui.snav(t('syn.title'))) +
+  // встроенная панель — всегда над клавишами, без заголовка и закрытия: пресеты, экран и ручки на всю высоту
+  return (inline ? '' : ui.snav(t('syn.title'))) +
     presetRow(ctx.presets('piano'), s.preset, builtins) +
     '<div class="retro' + (inline ? ' inl' : '') + '"><i class="scr tl"></i><i class="scr tr"></i><i class="scr bl"></i><i class="scr br"></i>' +
     '<div class="rhead"><b>PRACTICE · SYN-1</b><span class="led"></span></div><div class="lcd"><canvas class="scopec" aria-hidden="true"></canvas><span class="sclab"></span><span class="lcdn">' +
     ui.esc(name) + '</span></div>' +
-    '<div class="rsec"><span class="rt">OSC</span><div class="krow">' + kn('tone') + kn('cho') + '</div></div>' +
+    '<div class="rsec osc"><span class="rt">OSC</span><div class="krow">' + kn('tone') + kn('cho') + '</div></div>' +
     '<div class="rsec"><span class="rt">FILTER</span><div class="krow">' + kn('bright') + '</div></div>' +
-    '<div class="rsec wide"><span class="rt">ENVELOPE</span><div class="krow">' + kn('att') + kn('dec') + kn('sus') + kn('rel') + '</div></div>' +
-    '<div class="rsec"><span class="rt">SPACE</span><div class="krow">' + kn('rev') + '</div></div></div>' +
+    '<div class="rsec"><span class="rt">SPACE</span><div class="krow">' + kn('rev') + '</div></div>' +
+    '<div class="rsec wide"><span class="rt">ENVELOPE</span><div class="krow">' + kn('att') + kn('dec') + kn('sus') + kn('rel') + '</div></div></div>' +
     (inline ? '' : '<div class="hdr">' + t('mode') + '</div><div class="group"><div class="cellcol">' +
       ui.seg('amode', [['fast', t('mode.fast')], ['bal', t('mode.bal')], ['smooth', t('mode.smooth')]], mode, t('mode')) + '</div></div><p class="ftr">' + t('mix.ftr') +
       '</p><div style="height:120px"></div><div class="mkdock">' + mkbHTML(ctx) + '</div>');

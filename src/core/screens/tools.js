@@ -41,6 +41,18 @@ export function openToolView(app, id, onClose) {
   document.body.appendChild(layer);
   const inst = mountModule(app, mod, layer.querySelector('.tvhost'), 'full');
   const recOff = rec ? bindRec(app, layer, mod, layer.querySelector('.tvhost'), name) : () => {};
+  // Поворот всего окна с надписями (пианино: телефон держат горизонтально); сторону задаёт модуль
+  const rotCheck = () => {
+    const tv = layer.querySelector('.tview');
+    if (!tv) return;
+    const dir = mod.rotate ? mod.rotate(inst.ctx) : null;
+    tv.classList.toggle('rot', !!dir);
+    tv.classList.toggle('rotl', dir === 'l');
+    tv.style.width = dir ? innerHeight + 'px' : '';
+    tv.style.height = dir ? innerWidth + 'px' : '';
+  };
+  const onRot = () => requestAnimationFrame(rotCheck);
+  if (mod.rotate) { addEventListener('melete:rot', onRot); addEventListener('resize', onRot); rotCheck(); }
   // Рабочие инструменты (stats: false, например шумомер) в статистику не пишут
   const track = mod.stats === false ? { stop: () => 0 } : trackToolTime(app, id);
 
@@ -48,6 +60,7 @@ export function openToolView(app, id, onClose) {
     app.openTool = null;
     document.removeEventListener('keydown', onKey);
     recOff(); // идёт запись — сохраняется до того, как модуль отключит камеру и звук
+    removeEventListener('melete:rot', onRot); removeEventListener('resize', onRot);
     inst.unmount();
     ui.leave(layer.firstElementChild || layer, 260);
     setTimeout(() => layer.remove(), 280);

@@ -55,5 +55,9 @@
   "help.2": "Hold — a tap starts a note, another tap stops it; held notes keep sounding with the window closed.",
   "help.3": "Two rows — two keyboards; rotate — for playing sideways.",
   "help.4": "Sound — six presets and custom tone settings.",
-  "help.tip": "Hold works well as a reference chord under singing or playing."
+  "help.tip": "Hold works well as a reference chord under singing or playing.",
+  "pedal.off": "Pedal off",
+  "pedal.sus": "Sustain: a released note rings with a long tail",
+  "pedal.hold": "Hold: a note keeps sounding until pressed again",
+  "rotHint": "Rotate the screen"
 }

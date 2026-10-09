@@ -55,5 +55,9 @@
   "help.2": "Hold — bosish notani yoqadi, qayta bosish oʻchiradi; oyna yopilsa ham notalar yangraydi.",
   "help.3": "Ikki qator — ikki klaviatura; burish — yonboshlab chalish uchun.",
   "help.4": "Tovush — oltita preset va oʻz tembr sozlamalari.",
-  "help.tip": "Hold qoʻshiq yoki chalish ostida tayanch akkord uchun qulay."
+  "help.tip": "Hold qoʻshiq yoki chalish ostida tayanch akkord uchun qulay.",
+  "pedal.off": "Pedal o'chiq",
+  "pedal.sus": "Sustain: qo'yib yuborilgan nota uzoq yangraydi",
+  "pedal.hold": "Hold: nota qayta bosilguncha ushlab turiladi",
+  "rotHint": "Ekranni burish"
 }

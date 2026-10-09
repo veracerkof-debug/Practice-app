@@ -92,3 +92,34 @@
   .retro.inl{grid-template-columns:1fr 1fr}
   .retro.inl .rsec.wide{grid-column:1/-1}
 }
+
+/* Панель эффектов над клавишами — ровно в оставшейся половине окна, без прокрутки: ряд пресетов, экран,
+   ручки. Размер ручек и экрана — от высоты панели (контейнер), чтобы всё помещалось на любом телефоне */
+.pwrap.wsyn .psyn{flex:1 1 0;min-height:0;overflow:hidden;margin:0 0 8px;padding:0;display:flex;flex-direction:column;container-type:size}
+.psyn .prow{flex:none;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;margin:0 0 6px;padding:0 0 2px;scrollbar-width:none}
+.psyn .prow::-webkit-scrollbar{display:none}
+.psyn .prow .pill{min-height:30px;font-size:13.5px;padding:0 12px;flex:none}
+.psyn .retro.inl{flex:1 1 0;min-height:0;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:auto minmax(28px,1fr) auto auto;gap:5px;padding:7px 8px 6px;border-radius:18px}
+.psyn .retro.inl .rhead{grid-column:1/-1;padding:0 6px;min-height:0}
+.psyn .retro.inl .rhead b{font-size:9.5px}
+.psyn .retro.inl .lcd{grid-column:1/-1;min-height:0}
+.psyn .retro.inl .lcd canvas{height:100%!important;min-height:28px}
+.psyn .retro.inl .rsec{grid-column:span 1;padding:3px 2px 2px;border-radius:12px;min-width:0}
+.psyn .retro.inl .rsec.osc{grid-column:span 2}
+.psyn .retro.inl .rsec.wide{grid-column:1/-1}
+.psyn .rt{font-size:8px;margin:0 4px 0}
+.psyn .krow{flex-wrap:nowrap;justify-content:space-evenly}
+.psyn .knob{width:auto;min-width:0;padding:0;flex:1}
+.psyn .knob svg{width:clamp(30px,15cqh,52px);height:clamp(30px,15cqh,52px)}
+.psyn .kl,.psyn .kx{font-size:clamp(8.5px,3.2cqh,10px);white-space:nowrap}
+.retro.inl .scr{display:none}
+.pk.txt2{min-width:52px;font-size:14px;font-weight:700}
+/* панель широкая и низкая (телефон горизонтально) — все ручки в одну строку, без экрана */
+@container (min-aspect-ratio: 2/1) {
+  .psyn .retro.inl{grid-template-columns:2fr 1fr 1fr 4fr;grid-template-rows:minmax(0,1fr);align-items:stretch}
+  .psyn .retro.inl .rhead,.psyn .retro.inl .lcd{display:none}
+  .psyn .retro.inl .rsec.osc,.psyn .retro.inl .rsec.wide{grid-column:auto}
+  .psyn .retro.inl .rsec{display:flex;flex-direction:column;justify-content:center}
+  .psyn .knob svg{width:clamp(28px,30cqh,52px);height:clamp(28px,30cqh,52px)}
+  .psyn .kl,.psyn .kx{font-size:clamp(8.5px,6cqh,10px)}
+}

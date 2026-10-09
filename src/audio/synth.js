@@ -140,6 +140,24 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
       setTimeout(() => { try { vo.g.disconnect(); } catch { /* ignore */ } }, (r * 1.4 + 0.2) * 1000);
     },
 
+    // Отпустить «с педалью» (Sustain): нота не глушится, а затухает долгим хвостом, как струна при нажатой педали.
+    // Затухающие звуки (пианино, колокол) просто доигрывают сами
+    release(key) {
+      const vo = voices.get(key);
+      if (!vo) return;
+      if (!vo.sustain) return;
+      const c = vo.g.context, t = c.currentTime, tau = Math.max(vo.rel, 0.5) * 1.4 + 0.9, end = tau * 6;
+      try {
+        vo.g.gain.cancelScheduledValues(t);
+        vo.g.gain.setValueAtTime(Math.max(vo.g.gain.value, 0.0001), t);
+        vo.g.gain.setTargetAtTime(0.0001, t, tau);
+        vo.os.forEach((o) => { try { o.stop(t + end); } catch { /* ignore */ } });
+      } catch { /* ignore */ }
+      vo.held = false;
+      clearTimeout(vo.timer);
+      vo.timer = setTimeout(() => { if (voices.get(key) === vo) cleanup(key); }, end * 1000 + 100);
+    },
+
     all() { [...voices.keys()].forEach((k) => syn.off(k, true)); },
 
     // Патч изменился (ручка, пресет) — звучащие ноты слышат это сразу: удобно подбирать звук на удержанном (Hold)
