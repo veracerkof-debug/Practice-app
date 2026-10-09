@@ -102,5 +102,12 @@
   "help.2": "Bir vaqtda beshtagacha barmoq.",
   "help.3": "Bogʻlash tugmasi: pardasiz, magnit (notalarga tortadi) yoki faqat notalar.",
   "help.4": "Sozlamalarda — effektlar va toʻplamlar, tovush, lad, diapazon.",
-  "help.tip": "Magnit notalarga tushishga yordam beradi va sirpanishni saqlaydi."
+  "help.tip": "Magnit notalarga tushishga yordam beradi va sirpanishni saqlaydi.",
+  "mel.title": "Kuy",
+  "mel.hint": "Ko'rsatma bo'yicha kuy: kerakli nota yoritilgan, yuqorida — keyingi notalar va so'zlar. Notaga tushilganda u hisoblanadi. «▶» — qanday yangrashini tinglash.",
+  "mel.none": "Kuysiz",
+  "mel.listen": "Kuyni tinglash",
+  "mel.stop": "To'xtatish",
+  "mel.off": "Kuyni olib tashlash",
+  "mel.done": "Kuy chalindi — boshidan"
 }

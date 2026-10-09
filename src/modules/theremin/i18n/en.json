@@ -188,5 +188,12 @@
   "cam.noTorch": "This camera has no flashlight",
   "soundOn": "Sound: {name}",
   "sgest": "Change sound by touching hands",
-  "sgestHint": "Palms pressed together — next sound, index fingertips touching — previous."
+  "sgestHint": "Palms pressed together — next sound, index fingertips touching — previous.",
+  "mel.title": "Melody",
+  "mel.hint": "Melody with hints: the next note is highlighted, upcoming notes and words are shown on top. A note counts once it is hit. «▶» plays it to listen.",
+  "mel.none": "No melody",
+  "mel.listen": "Listen to the melody",
+  "mel.stop": "Stop",
+  "mel.off": "Remove the melody",
+  "mel.done": "Melody played — from the top"
 }

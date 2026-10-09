@@ -26,6 +26,8 @@ import { readSign, chordOf, chordName, voicing, shapeOf, harmOf, harmOffsets, HA
 import { createPadVoice, PAD_SOUNDS } from '../../audio/padvoice.js';
 import { notesOf } from '../../music/guitarchords.js';
 import { createGuitar } from './guitar.js';
+import { melodyById, melodyName, createFollower, fitRange } from '../../music/melodies.js';
+import { melStrip, melSheet } from '../glider/melody.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M7 21V11.5a1.5 1.5 0 0 1 3 0V9a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5z"/><path d="M3 7c1.5-2 3-2 4.5 0S10.5 9 12 7s3-2 4.5 0"/></svg>';
 const I = {
@@ -62,7 +64,9 @@ const S = { cam: null, state: 'off', live: false, err: '', voice: null, bus: nul
   // гитара: распознавание (guitar.js) и аккорд, который сейчас подыгрывается
   G: null, along: null,
   // смена звука касанием рук: жест-кандидат и защёлка (сработал — ждёт, пока руки разойдутся)
-  tw: null, twLatch: false };
+  tw: null, twLatch: false,
+  // мелодия по подсказке (соло): ведущий по нотам
+  mf: null, mid: null };
 
 const cfg = () => {
   const s = ctx.store.all();
@@ -73,7 +77,7 @@ const cfg = () => {
   if (!s.fx) s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
   s.gmap = { ...DEFAULT_MAP, ...(s.gmap || {}) };
   s.mode ??= 'solo'; if (!MODES.includes(s.mode)) s.mode = 'solo'; s.gmic ??= true; s.gplay ??= false; s.gdia ??= true; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.csound ??= 'same'; s.ctilt ??= true; s.harm ??= true; s.hstyle ??= 'classic'; if (!HARM_IDS.includes(s.hstyle)) s.hstyle = 'classic'; s.stilt ??= 'vib'; s.hud ??= 'full'; s.camAuto ??= false;
-  s.facing ??= 'user'; s.light ??= false; s.sgest ??= true;
+  s.facing ??= 'user'; s.light ??= false; s.sgest ??= true; s.mel ??= null;
   if (!HUDS.includes(s.hud)) s.hud = 'full';
   normalizeFx(s);
   return s;
@@ -105,10 +109,10 @@ function view() {
       (size !== 'strip' && size !== 'quarter' ? '<p class="tmhint">' + t(gtr ? 'hint.guitar' : 'hint.' + s.side) + '</p><p class="tmpriv">' + t(gtr ? 'gPrivacy' : 'privacy') + '</p>' : '') + '</div>';
   } // пока камера включается — сплошной фон и тихая синусоида (её сменяет картинка с камеры)
   // poster — пустой кадр: иначе Android до первого кадра рисует на видео свою серую заставку
-  return '<div class="tm ' + size + ' hud-' + s.hud + (gtr ? ' gtr' : '') + (on && s.light && (s.facing === 'user' || !S.cam || !S.cam.hasTorch) ? ' ring' : '') + (s.showCam ? '' : ' nocam') + (S.live ? ' live' : '') + '"><video class="tmcam" playsinline muted aria-hidden="true" poster="' + BLANK + '"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
+  return '<div class="tm ' + size + ' sd-' + s.side + ' hud-' + s.hud + (gtr ? ' gtr' : '') + (on && s.light && (s.facing === 'user' || !S.cam || !S.cam.hasTorch) ? ' ring' : '') + (s.showCam ? '' : ' nocam') + (S.live ? ' live' : '') + '"><video class="tmcam" playsinline muted aria-hidden="true" poster="' + BLANK + '"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
     '<div class="glnote tmnote" aria-live="off"><b class="num" id="tmnote">' + (on ? '—' : '') + '</b><span class="num" id="tmc"></span></div>' +
     '<span class="tmlost" id="tmlost" hidden>' + t('noHands') + '</span>' +
-    (gtr && on ? '<div class="tmgs" id="tmgs" aria-live="polite" hidden><b></b><span></span></div>' : '') + mid + (S.state === 'loading' || (on && !S.live) ? '<div class="tmwait">' + ui.loader('wave') + '</div>' : '') +
+    melOver(s) + (gtr && on ? '<div class="tmgs" id="tmgs" aria-live="polite" hidden><b></b><span></span></div>' : '') + mid + (S.state === 'loading' || (on && !S.live) ? '<div class="tmwait">' + ui.loader('wave') + '</div>' : '') +
     '<div class="glov tmbar">' + (size === 'strip' ? '' : range + modeBtn + snap) + (on && big ? flipBtn + lightBtn : '') + camBtn + gear + '</div></div>';
 }
 
@@ -120,6 +124,42 @@ function render() {
   if (oldV && oldV.srcObject) { const v = host.querySelector('video.tmcam'); v.replaceWith(oldV); }
   if (cfg().mode === 'guitar') guitarLabels();
   draw();
+}
+
+/* ---------- мелодия по подсказке (соло) ---------- */
+
+function melOf(s) {
+  const mel = s.mel && s.mode === 'solo' ? melodyById(s.mel) : null;
+  if (!mel) return null;
+  if (S.mid !== mel.id) { S.mf = createFollower(mel, { hold: 140 }); S.mid = mel.id; }
+  return mel;
+}
+const melOver = (s) => { const mel = size === 'strip' ? null : melOf(s); return mel ? melStrip(ctx, mel, S.mf.index, { listen: false }) : ''; };
+function melShow() {
+  const el = host && host.querySelector('.glmel');
+  if (!el) return;
+  const w = document.createElement('div');
+  w.innerHTML = melOver(cfg());
+  if (w.firstChild) el.replaceWith(w.firstChild);
+}
+function melFeed(m, t) {
+  if (!S.mf || !melOf(cfg())) return;
+  const r = S.mf.feed(m, t);
+  if (r) { melShow(); if (r === 'done') ctx.ui.toast(ctx.t('mel.done')); }
+}
+function melPick(id) {
+  const s = cfg();
+  s.mel = id;
+  if (id) {
+    const mel = melodyById(id), r = fitRange(mel, WIDTHS, { lo: s.lo, width: s.width });
+    s.width = r.width; s.lo = clampLo(r.lo, r.width);
+    const pcs = allowedPcs(s);
+    if (pcs && mel.notes.some(([m]) => !pcs.includes(((m % 12) + 12) % 12))) s.scale = 'chrom';
+    if (s.mode !== 'solo') setMode('solo');
+    S.mid = null;
+  }
+  save();
+  render();
 }
 
 /* ---------- рисунок поверх кадра: линии нот и точки рук ---------- */
@@ -177,6 +217,16 @@ function draw() {
     g.beginPath(); g.moveTo(ex, y); g.lineTo(x2, y); g.stroke();
     g.fillStyle = rgba(tint, a); g.beginPath(); g.arc(ex + dir * 2, y, 3.5, 0, Math.PI * 2); g.fill();
   };
+  // мелодия: нужная нота — пунктир через кадр от шкалы, со слогом песни
+  const mel = melOf(s);
+  if (mel) {
+    const [tm, , tw] = S.mf.note, y = yOf(tm), x2 = right ? W * 0.3 : W * 0.7;
+    g.save(); g.setLineDash([6, 6]); g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(ex, y); g.lineTo(x2, y); g.stroke(); g.restore();
+    g.font = '600 15px system-ui, sans-serif'; g.fillStyle = '#fff'; g.textAlign = right ? 'right' : 'left';
+    g.fillText(mName(tm) + (tw ? ' · ' + tw : ''), ex + dir * 30, y - 12);
+    g.font = '600 10.5px system-ui, sans-serif';
+  }
   if (S.cnotes) S.cnotes.forEach((m) => { if (m >= s.lo && m <= s.lo + s.width) glow(yOf(m), 0.8); });
   else if (S.m != null) glow(yOf(S.m));
   // руки: «Все» — тонкий скелет и светящиеся кончики пальцев, «Тихие» — мягкое свечение ладони
@@ -246,6 +296,7 @@ function silence() {
   releaseChord();
   S.cand = null;
   S.m = null;
+  if (S.mf) S.mf.feed(null, 0);
   S.fPos.reset(); S.fChar.reset(); S.fLean.reset(); S.fTilt.reset();
   showNote(null);
 }
@@ -339,6 +390,7 @@ function playSolo(s, h, sign, t, o, dest) {
   }
   if (S.m == null || Math.round(S.m) !== Math.round(m) || s.snap !== 'note') showNote(m);
   S.m = m;
+  melFeed(m, t);
   harmony(s, m, sign, t, o, dest);
 }
 
@@ -560,8 +612,11 @@ function setSheet() {
   const chip = (attr, on, label) => '<button class="lchip pick glck' + (on ? ' on' : '') + '" ' + attr + ' aria-pressed="' + on + '" style="--c:var(--tint);--t:var(--on-tint)">' + label + '</button>';
   const body = () => {
     const s = cfg(), chrom = s.scale === 'chrom';
+    const mel = s.mel ? melodyById(s.mel) : null;
     return ui.snav(t('settings')) +
-      '<div class="hdr" style="margin-top:4px">' + t('hands') + '</div><div class="group"><div class="cellcol">' + ui.seg('tside', [['right', t('hand.right')], ['left', t('hand.left')]], s.side, t('hands')) +
+      // мелодия по подсказке (соло)
+      '<div class="group" style="margin-top:4px"><button class="cell" data-tmel><span class="grow">' + t('mel.title') + '</span><span class="l2">' + ui.esc(mel ? melodyName(mel, ctx.lang()) : t('mel.none')) + '</span></button></div>' +
+      '<div class="hdr">' + t('hands') + '</div><div class="group"><div class="cellcol">' + ui.seg('tside', [['right', t('hand.right')], ['left', t('hand.left')]], s.side, t('hands')) +
       '<div class="segcap">' + t('hint.' + s.side) + '</div></div><div class="cell"><span class="grow">' + t('charX') + '</span>' + ui.sw('tchar', s.charX, t('charX')) + '</div>' +
       '<div class="cell"><span class="grow">' + t('sgest') + '</span>' + ui.sw('tsgest', s.sgest, t('sgest')) + '</div></div><p class="ftr">' + t('charHint') + ' ' + t('sgestHint') + '</p>' +
       // аккорды правой рукой
@@ -616,6 +671,7 @@ function setSheet() {
     el.addEventListener('click', (e) => {
       const s = cfg(), g = (q) => e.target.closest(q);
       let b;
+      if (g('[data-tmel]')) { sh.close(); melSheet(ctx, s.mel, melPick); return; }
       if ((b = g('[data-tpre]'))) { const keep = s.fx.echo.time; s.fx = applyPreset(b.dataset.tpre); if (!PRESETS[b.dataset.tpre].echo) s.fx.echo.time = keep; ctx.ui.toast(t('presetOn', { name: t('preset.' + b.dataset.tpre) })); }
       else if ((b = g('[data-ts]'))) { s.sound = b.dataset.ts; silence(); }
       else if ((b = g('[data-tcs]'))) { s.csound = b.dataset.tcs; silence(); }
@@ -665,6 +721,8 @@ function bind() {
     if (!b) return;
     const s = cfg(), x = b.dataset.x;
     if (x === 'tset') { setSheet(); return; }
+    if (x === 'tmel') { melSheet(ctx, s.mel, melPick); return; }
+    if (x === 'mloff') { melPick(null); return; }
     if (x === 'tcam') { if (S.state === 'on' || S.state === 'loading') { camOff(); render(); } else camOn(); return; }
     if (x === 'tflip') {
       s.facing = s.facing === 'user' ? 'environment' : 'user'; save();

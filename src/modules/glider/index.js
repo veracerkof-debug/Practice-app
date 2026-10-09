@@ -19,6 +19,8 @@ import { SCALE_TYPES } from '../../music/theory.js';
 import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, clampLo } from './scale.js';
 import { createGlideVoice, createFxBus, FX, CURVES } from './voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, axisFx, PRESETS } from './fx.js';
+import { melodyById, createFollower, fitRange } from '../../music/melodies.js';
+import { melStrip, melSheet, NOTE_ICON } from './melody.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M3 17c3 0 4-10 9-10s6 6 9 6"/><circle cx="12" cy="7" r="1.6" fill="currentColor"/></svg>';
 const I = {
@@ -30,10 +32,13 @@ const BLACK = [1, 3, 6, 8, 10], ECHO_TIMES = [180, 320, 500, 750];
 
 let host = null, ctx = null, size = 'full', ro = null, probed = false, bus = null;
 const offs = [], touches = new Map(); // pointerId → { voice, el, m, y }
+// мелодия по подсказке: ведущий по нотам, последнее касание (его высота засчитывается), «послушать» — проигрывание
+const M = { fol: null, id: null, last: null, raf: 0, play: null };
 
 const cfg = () => {
   const s = ctx.store.all();
   s.sound ??= 'app'; s.hold ??= true; s.snap ??= 'magnet'; s.port ??= 60; s.scale ??= 'chrom'; s.root ??= 0; s.labels ??= true; s.keys ??= true;
+  s.mel ??= null;
   s.width ??= 12; s.lo ??= 60; // октава C4–C5: на телефоне по ширине в самый раз
   if (!WIDTHS.includes(s.width)) s.width = 12;
   s.lo = clampLo(s.lo, s.width);
@@ -59,7 +64,7 @@ function padHTML(s, over) {
   }
   const ax = axisTxt(s);
   return '<div class="glpad' + (s.keys ? '' : ' plain') + '" id="glpad" role="application" aria-roledescription="' + ctx.t('padRole') + '" aria-label="' + ctx.t('padAria', { range: rangeTxt(s), fx: ax.replace('↑ ', '') || ctx.t('fxNone') }) + '">' +
-    cols + lines + (ax ? '<span class="glaxis" aria-hidden="true">' + ax + '</span>' : '') + '<div id="gltouch"></div>' + over + '</div>';
+    cols + lines + melOver(s) + (ax ? '<span class="glaxis" aria-hidden="true">' + ax + '</span>' : '') + '<div id="gltouch"></div>' + over + '</div>';
 }
 
 // Всё окно — доска (политика приложения: пространство работает на функцию). Поверх неё — только то,
@@ -68,16 +73,18 @@ function padHTML(s, over) {
 function view() {
   const { t, ui } = ctx, s = cfg(), big = size === 'full' || size === 'half';
   const gear = ui.icb('data-x="gset"', ui.icons.gear, t('settings'), 'sm');
+  const melBtn = ui.icb('data-x="gmel" aria-pressed="' + !!s.mel + '"', NOTE_ICON, t('mel.title'), 'sm' + (s.mel ? ' on' : ''));
   if (size === 'strip') return '<div class="gl strip">' + padHTML(s, '<div class="glov">' + gear + '</div>') + '</div>';
   const note = '<div class="glnote" aria-live="off"><b class="num" id="glnote">' + (big ? mName(s.lo) + '–' + mName(s.lo + s.width) : '—') + '</b><span class="num" id="glc"></span></div>';
   const range = big ? '<div class="glrange">' + ui.icb('data-x="glo" data-d="-12"', I.left, t('octDown'), 'sm') + '<span class="num">' + rangeTxt(s) + '</span>' + ui.icb('data-x="glo" data-d="12"', I.right, t('octUp'), 'sm') + '</div>' : '';
   // привязка — одной кнопкой: нажатие переключает «без ладов → магнит → ноты»
   const snap = big ? '<button class="glsnap" data-x="gsnap" aria-label="' + ui.esc(t('snapBtn', { mode: t('snap.' + s.snap) })) + '">' + t('snap.' + s.snap) + '</button>' : '';
-  return '<div class="gl ' + size + '">' + padHTML(s, note + '<div class="glov">' + range + snap + gear + '</div>') + '</div>';
+  return '<div class="gl ' + size + '">' + padHTML(s, note + '<div class="glov">' + range + snap + melBtn + gear + '</div>') + '</div>';
 }
 
 function render() {
   if (!host) return;
+  stopListen();
   releaseAll();
   host.innerHTML = view();
   dense();
@@ -89,6 +96,115 @@ function dense() {
   if (!p) return;
   const per = p.clientWidth / (s.width + 1), gap = pcs ? Math.min(...pcs.map((x) => pcs.map((y) => (y - x + 12) % 12).filter(Boolean)).flat()) : 1;
   p.classList.toggle('dense', per * gap < 28);
+}
+
+/* ---------- мелодия по подсказке ---------- */
+
+function melOf(s) {
+  const mel = s.mel ? melodyById(s.mel) : null;
+  if (!mel) { M.fol = null; M.id = null; return null; }
+  if (M.id !== mel.id) { M.fol = createFollower(mel); M.id = mel.id; }
+  return mel;
+}
+// Нужная нота — светлая полоса на доске, ноты и слоги — полосой сверху (в «полоске» окна — только полоса на доске)
+function melOver(s) {
+  const mel = melOf(s);
+  if (!mel) return '';
+  const m = M.fol.note[0], x = midiToPos(m, s.lo, s.width);
+  return '<i class="gltg" id="gltg" style="left:' + x * 100 + '%;width:' + 100 / (s.width + 1) + '%"></i>' +
+    (size === 'strip' ? '' : melStrip(ctx, mel, M.fol.index, { playing: !!M.play }));
+}
+function melShow(hit) {
+  const pad = host && host.querySelector('#glpad');
+  if (!pad) return;
+  const s = cfg();
+  pad.querySelectorAll('.glmel, #gltg').forEach((e) => e.remove());
+  const wrap = document.createElement('div');
+  wrap.innerHTML = melOver(s);
+  [...wrap.children].forEach((e) => pad.insertBefore(e, pad.querySelector('#gltouch')));
+  if (hit) { const n = pad.querySelector('#gltg'); if (n) { n.classList.add('hit'); setTimeout(() => n.classList.remove('hit'), 220); } }
+}
+// Высота последнего касания проверяется и пока палец стоит на месте (нота засчитывается через долю секунды)
+function melTick() {
+  M.raf = 0;
+  if (!M.fol || M.play) return;
+  const tc = M.last && touches.get(M.last);
+  const r = M.fol.feed(tc ? tc.m : null, performance.now());
+  if (r) {
+    melShow(true);
+    if (r === 'done') ctx.ui.toast(ctx.t('mel.done'));
+  }
+  if (touches.size) M.raf = requestAnimationFrame(melTick);
+}
+function melOnset(id) {
+  if (!M.fol || M.play) return;
+  M.last = id;
+  const tc = touches.get(id);
+  M.fol.feed(tc.m, performance.now(), true);
+  if (!M.raf) M.raf = requestAnimationFrame(melTick);
+}
+function melPick(id) {
+  const s = cfg();
+  s.mel = id;
+  stopListen();
+  if (id) {
+    const mel = melodyById(id), r = fitRange(mel, WIDTHS, { lo: s.lo, width: s.width });
+    s.width = r.width; s.lo = clampLo(r.lo, r.width);
+    // в ладу нет нужных нот — на время мелодии хроматика
+    const pcs = allowedPcs(s);
+    if (pcs && mel.notes.some(([m]) => !pcs.includes(((m % 12) + 12) % 12))) s.scale = 'chrom';
+    M.id = null;
+  }
+  save();
+  render();
+}
+// «Послушать»: мелодия играет сама, точка касания идёт по доске, полоса показывает слоги
+function listen() {
+  const s = cfg(), mel = melOf(s);
+  if (!mel) return;
+  if (M.play) { stopListen(); return; }
+  if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('noAudio')); return; }
+  const dest = ctx.audio.bus('glider');
+  if (!dest) return;
+  const p = patch(s);
+  ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
+  if (!bus || bus.ctx !== dest.context) { bus = createFxBus(dest.context, dest); bus.ctx = dest.context; }
+  const beat = 60000 / mel.bpm, el = document.createElement('i');
+  el.className = 'gltc demo';
+  host.querySelector('#gltouch').appendChild(el);
+  const P = { voice: null, el, k: 0, timer: 0 };
+  M.play = P;
+  M.fol.reset();
+  const step = () => {
+    if (M.play !== P) return;
+    if (P.k >= mel.notes.length) { stopListen(); return; }
+    const [m, d] = mel.notes[P.k], y = 0.35;
+    if (P.voice) P.voice.release();
+    P.voice = createGlideVoice(dest.context, bus.input, p, { hold: false, a4: ctx.audio.mf(69) });
+    P.voice.start(m, voiceFx(s.fx, y));
+    const c = cfg();
+    el.style.left = midiToPos(m, c.lo, c.width) * 100 + '%'; el.style.top = (1 - y) * 100 + '%';
+    show(m);
+    M.fol.reset(P.k);
+    melShow(false);
+    P.k++;
+    // нота звучит чуть короче своей доли — слышно, где начинается следующая
+    P.timer = setTimeout(() => { if (P.voice) { P.voice.release(); P.voice = null; } P.timer = setTimeout(step, beat * d * 0.12); }, beat * d * 0.88);
+  };
+  melShow(false);
+  step();
+}
+function stopListen() {
+  const P = M.play;
+  if (!P) return;
+  M.play = null;
+  clearTimeout(P.timer);
+  if (P.voice) P.voice.release();
+  P.el.remove();
+  if (M.fol) M.fol.reset();
+  const n = host && host.querySelector('.glnote');
+  if (n) n.classList.remove('on');
+  melShow(false);
 }
 
 /* ---------- игра ---------- */
@@ -120,7 +236,8 @@ const updateBus = () => { if (bus) bus.set(busFx(cfg().fx, [...touches.values()]
 function down(e) {
   const pad = e.target.closest('#glpad');
   // кнопки поверх поверхности — не ноты
-  if (!pad || e.target.closest('.glov, button') || touches.size >= MAX_TOUCH) return;
+  if (!pad || e.target.closest('.glov, .glmel, button') || touches.size >= MAX_TOUCH) return;
+  if (M.play) stopListen();
   e.preventDefault();
   if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('noAudio')); return; }
   try { pad.setPointerCapture(e.pointerId); } catch { /* ignore */ }
@@ -138,6 +255,7 @@ function down(e) {
   place(tc, a.x, a.y);
   show(a.m);
   updateBus();
+  melOnset(e.pointerId);
 }
 
 function move(e) {
@@ -256,13 +374,16 @@ function bind() {
   on(window, 'pointerup', up);
   on(window, 'pointercancel', up);
   // браузер не должен прокручивать и масштабировать, пока идёт игра
-  on(host, 'touchmove', (e) => { if (e.target.closest('#glpad') && !e.target.closest('.glov')) e.preventDefault(); }, { passive: false });
+  on(host, 'touchmove', (e) => { if (e.target.closest('#glpad') && !e.target.closest('.glov, .glmel')) e.preventDefault(); }, { passive: false });
   on(host, 'contextmenu', (e) => { if (e.target.closest('#glpad')) e.preventDefault(); });
   on(host, 'click', (e) => {
     const b = e.target.closest('[data-x]');
     if (!b) return;
     const s = cfg();
     if (b.dataset.x === 'gset') { setSheet(); return; }
+    if (b.dataset.x === 'gmel') { melSheet(ctx, s.mel, melPick); return; }
+    if (b.dataset.x === 'mlisten') { listen(); return; }
+    if (b.dataset.x === 'mloff') { melPick(null); return; }
     if (b.dataset.x === 'glo') s.lo = clampLo(s.lo + +b.dataset.d, s.width);
     else if (b.dataset.x === 'gsnap') s.snap = SNAPS[(SNAPS.indexOf(s.snap) + 1) % SNAPS.length];
     save();
@@ -296,6 +417,9 @@ export default {
   unmount() {
     ro && ro.disconnect();
     offs.splice(0).forEach((f) => f());
+    stopListen();
+    if (M.raf) cancelAnimationFrame(M.raf);
+    M.raf = 0;
     releaseAll();
     host = null;
   },

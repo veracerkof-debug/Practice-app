@@ -188,5 +188,12 @@
   "cam.noTorch": "Bu kamerada chiroq yo‘q",
   "soundOn": "Tovush: {name}",
   "sgest": "Qo‘llar tegishi bilan tovushni almashtirish",
-  "sgestHint": "Kaftlar birlashtirilgan — keyingi tovush, ko‘rsatkich barmoqlar uchi tegsa — oldingisi."
+  "sgestHint": "Kaftlar birlashtirilgan — keyingi tovush, ko‘rsatkich barmoqlar uchi tegsa — oldingisi.",
+  "mel.title": "Kuy",
+  "mel.hint": "Ko'rsatma bo'yicha kuy: kerakli nota yoritilgan, yuqorida — keyingi notalar va so'zlar. Notaga tushilganda u hisoblanadi. «▶» — qanday yangrashini tinglash.",
+  "mel.none": "Kuysiz",
+  "mel.listen": "Kuyni tinglash",
+  "mel.stop": "To'xtatish",
+  "mel.off": "Kuyni olib tashlash",
+  "mel.done": "Kuy chalindi — boshidan"
 }
