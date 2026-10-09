@@ -140,7 +140,7 @@ export function homeHTML(app) {
   const q = quickList(st);
   h += '<div class="hhdr"><span>' + t('home.quick') + '</span><button class="link" data-act="quickedit">' + t('home.edit') + '</button></div>';
   h += '<div class="qgrid">' + (q.length
-    ? q.map((id) => { const m = moduleById(id); return '<button class="qbtn" data-open-tool="' + id + '" style="--c:' + m.color + '"><span class="qic">' + m.icon + '</span><span class="qn">' + esc(moduleName(m)) + '</span></button>'; }).join('')
+    ? q.map((id) => { const m = moduleById(id); return '<button class="qbtn" data-open-tool="' + id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="qic">' + m.icon + '</span><span class="qn">' + esc(moduleName(m)) + '</span></button>'; }).join('')
     : '<button class="qbtn add" data-act="quickedit"><span class="qic">' + IC.plus + '</span><span class="qn">' + t('home.add') + '</span></button>') + '</div>';
   h += '</div><div>';
   h += nextEventsHTML(app);
@@ -162,7 +162,7 @@ export function quickEdit(app, rerender) {
   const st = app.store.state.settings, sel = () => (st.quick || QUICK_DEF).slice();
   const row = (id, on, i) => {
     const m = moduleById(id);
-    return '<div class="cell"><span class="ticon" style="background:' + m.color + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
+    return '<div class="cell"><span class="ticon" style="background:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
       (on ? (i > 0 ? '<button class="ic sm plain" data-qu="' + id + '" aria-label="' + t('quick.up') + '">' + IC.up + '</button>' : '') +
         '<button class="ic sm plain" data-qr="' + id + '" aria-label="' + t('quick.remove') + '" style="color:var(--red)">' + IC.minus + '</button>'
         : '<button class="ic sm plain" data-qa="' + id + '" aria-label="' + t('quick.add') + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';

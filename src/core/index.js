@@ -7,6 +7,7 @@ import { loadDevice, saveDevice } from './device.js';
 import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
 import { applyTheme, tabsMigrate, calmMigrate } from './settings.js';
+import { registerTools } from './palettes.js';
 import { extCheck } from './ext.js';
 import { createShell } from './screens/shell.js';
 import { initBack } from './back.js';
@@ -50,6 +51,7 @@ export function boot(root) {
   if (calmMigrate(store.state)) store.settingsChanged(); // прежние яркие цвета меток и событий — спокойнее
   initI18n(st0.uiStyle === 'mono' && st0.monoLang !== false ? 'el' : st0.lang);
   ensureLib(store.state, t);
+  registerTools(modules); // цвет инструментов — от палитры
   applyTheme(store.state.settings);
   recoverToolView(store);
   let active = loadActive();

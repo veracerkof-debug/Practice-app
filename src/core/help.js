@@ -49,7 +49,7 @@ function next() {
   const d = document.createElement('div');
   d.className = 'ask helpask';
   d.innerHTML = '<div class="alert helpcard" role="alertdialog" aria-label="' + esc(name) + '"><div class="ab">' +
-    '<div class="hchead"><span class="hcic" style="background:' + (mod.color || '#8E8E93') + '">' + (mod.icon || '') + '</span><h3>' + esc(name) + '</h3></div>' +
+    '<div class="hchead"><span class="hcic" style="background:' + (mod.color || '#8E8E93') + ';color:' + (mod.on || '#fff') + '">' + (mod.icon || '') + '</span><h3>' + esc(name) + '</h3></div>' +
     '<p class="hcwhat">' + esc(h.what) + '</p><ul class="hclist">' + h.items.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' +
     (h.tip ? '<p class="hctip"><b>' + t('help.tip') + '</b> ' + esc(h.tip) + '</p>' : '') + '</div>' +
     '<div class="abtns"><button data-k="ok"' + (first ? ' disabled' : '') + '>' + t('help.ok') + '</button></div></div>';

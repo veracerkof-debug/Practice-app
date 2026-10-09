@@ -60,7 +60,7 @@ export function onboarding(app, done = () => {}) {
     if (s === 'tools') {
       return '<h1 class="obh">' + t('ob.toolsTitle') + '</h1><p class="obp">' + t('ob.toolsText.' + (p.level === 'beginner' ? 'beginner' : 'other')) + '</p><div class="oblist">' +
         modules.filter((m) => !m.tab).map((m) => '<button type="button" class="obcard obtool' + (f.tools.includes(m.id) ? ' on' : '') + '" data-obtool="' + m.id + '" aria-pressed="' + f.tools.includes(m.id) + '">' +
-          '<span class="obtic" style="background:' + (m.color || '#8E8E93') + '">' + m.icon + '</span><span><b>' + esc(moduleName(m)) + '</b><small>' + esc(aboutOf(m)) + '</small></span></button>').join('') +
+          '<span class="obtic" style="background:' + (m.color || '#8E8E93') + ';color:' + (m.on || '#fff') + '">' + m.icon + '</span><span><b>' + esc(moduleName(m)) + '</b><small>' + esc(aboutOf(m)) + '</small></span></button>').join('') +
         '</div><p class="ftr">' + t('ob.toolsHint') + '</p>';
     }
     if (s === 'exp') {

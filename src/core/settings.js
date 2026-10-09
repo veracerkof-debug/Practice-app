@@ -1,5 +1,6 @@
 // Настройки ядра: цель недели, дни практики, тема, функции (вкл/выкл).
 import { watchMarks } from '../ui/marks.js';
+import { accentVars, paintTools, hueColor, ACCENT_HUE } from './palettes.js';
 
 // Функции ядра, которые можно выключить (модули выключаются так же — по id); данные при этом сохраняются
 export const CORE_FEATURES = ['streak', 'mastery'];
@@ -107,13 +108,15 @@ export function applyTheme(settings, de = document.documentElement) {
   else de.removeAttribute('data-style');
   if (typeof document !== 'undefined' && document.body) watchMarks(isMono(settings));
   applyScale(settings);
-  const a = !isMono(settings) && settings.accent && settings.accent !== 'orange' ? ACCENTS.find((x) => x[0] === settings.accent) : null;
-  if (a) {
-    de.style.setProperty('--tint', a[1]);
-    de.style.setProperty('--tint-text', 'color-mix(in srgb,' + a[1] + ' 78%,var(--ink))');
-    de.style.setProperty('--on-tint', '#fff');
-  } else ['--tint', '--tint-text', '--on-tint'].forEach((k) => de.style.removeProperty(k));
+  // палитра: инструменты и акцент (в «Минимал» — без цвета)
+  paintTools(settings);
+  const vars = isMono(settings) ? null : accentVars(settings), keys = ['--tint', '--tint-text', '--on-tint', '--red'];
+  keys.forEach((k) => { if (!vars || !(k in vars)) de.style.removeProperty(k); });
+  if (vars) Object.entries(vars).forEach(([k, v]) => de.style.setProperty(k, v));
 }
+
+// Цвет кружка акцента в выбранной палитре
+export const accentColor = (settings, k) => hueColor(settings, ACCENT_HUE[k] || 'orange');
 
 export function setTheme(store, theme) {
   store.state.settings.theme = theme;

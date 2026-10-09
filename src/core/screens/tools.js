@@ -14,7 +14,7 @@ export function renderTools(app, root) {
   root.innerHTML = topbar() + '<div class="large">' + t('tools.title') + '</div><div class="tgrid">' + list.map((m) => {
     let st = '';
     try { st = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ }
-    return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + '"><span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +
+    return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +
       esc(moduleName(m)) + '</span><span class="tcs2">' + esc(st) + '</span></span></button>';
   }).join('') + '</div>';
   root.onclick = (e) => {

@@ -10,8 +10,9 @@ import { dayKey, weekday, weekStart } from '../time.js';
 import {
   weekData, goalProgress, goalPerDay, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag, strictTime,
 } from '../stats.js';
-import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
+import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
+import { PALETTE_IDS, PALETTES, hueColor, onColor } from '../palettes.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { AVATAR, CHEV, BACK, IC, tabIds, TAB_ICONS, weekdays, mBadge } from './common.js';
@@ -29,15 +30,17 @@ import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
 
+// Значки страниц — оттенки палитры (settings.palette)
+const iconBg = (st, hue) => { const c = hueColor(st, hue); return 'background:' + c + ';--on:' + onColor(c); };
 const PAGES = {
-  me: ['#9C7242', '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M5 19.5c1.4-3.2 4-4.6 7-4.6s5.6 1.4 7 4.6"/></svg>'],
-  feat: ['#5F8568', '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="15" cy="12" r="3.5"/></svg>'],
-  tabs: ['#8E8E93', '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 15.5h17M9.2 15.5v4M14.8 15.5v4"/></svg>'],
-  stats: ['#567198', '<svg viewBox="0 0 24 24"><path d="M5 20v-6M10 20V9M15 20v-8M20 20V5"/></svg>'],
-  week: ['#9C7242', '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg>'],
-  notif: ['#A75750', '<svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>'],
-  look: ['#646493', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="#fff"/></svg>'],
-  data: ['#5F8568', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
+  me: ['orange', '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M5 19.5c1.4-3.2 4-4.6 7-4.6s5.6 1.4 7 4.6"/></svg>'],
+  feat: ['green', '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="15" cy="12" r="3.5"/></svg>'],
+  tabs: ['graphite', '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 15.5h17M9.2 15.5v4M14.8 15.5v4"/></svg>'],
+  stats: ['blue', '<svg viewBox="0 0 24 24"><path d="M5 20v-6M10 20V9M15 20v-8M20 20V5"/></svg>'],
+  week: ['orange', '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg>'],
+  notif: ['red', '<svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>'],
+  look: ['indigo', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" style="fill:var(--on,#fff)"/></svg>'],
+  data: ['green', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
 // Страницы, которых нет в режиме «Только инструменты»
 const PLAIN_HIDE = ['stats', 'week', 'notif'];
@@ -205,6 +208,16 @@ function mountSizePreview(app, root) {
   });
 }
 
+// Палитры: полоска оттенков (как будут выглядеть инструменты) и название
+const PAL_SHOW = ['orange', 'red', 'yellow', 'green', 'mint', 'cyan', 'blue', 'indigo', 'purple', 'pink'];
+function paletteHTML(st) {
+  const cur = PALETTES[st.palette] ? st.palette : 'calm';
+  return '<div class="hdr">' + t('pal.title') + '</div><div class="pals" role="group" aria-label="' + esc(t('pal.title')) + '">' + PALETTE_IDS.map((k) =>
+    '<button class="pal' + (cur === k ? ' on' : '') + '" data-pal="' + k + '" aria-pressed="' + (cur === k) + '"><span class="palrow">' +
+    PAL_SHOW.map((h) => '<i style="background:' + PALETTES[k][h] + '"></i>').join('') + '</span><span class="paln">' + t('pal.' + k) + '</span></button>').join('') +
+    '</div><p class="ftr">' + t('pal.hint') + '</p>';
+}
+
 function lookHTML(app) {
   const st = app.store.state.settings;
   const monoLang = st.uiStyle === 'mono' && st.monoLang !== false;
@@ -220,9 +233,9 @@ function lookHTML(app) {
     '<div class="group" style="margin-top:16px"><button class="cell act" data-verses>' + t('verses.title') + '</button></div><p class="ftr">' + t('verses.hint') + '</p>' +
     (st.uiStyle === 'mono' ? '' : '<div class="hdr">' + t('look.style') + '</div><div class="skins">' + [['paper', t('look.paper'), '#F4EFE6', '#2B2620'], ['oled', 'OLED', '#000', '#fff']].map(([k, n, bg, fg]) =>
       '<button class="skin' + (st.theme === k ? ' on' : '') + '" data-skin="' + k + '" aria-pressed="' + (st.theme === k) + '" style="background:' + bg + ';color:' + fg + '">' + n + '</button>').join('') + '</div>') +
-    (st.uiStyle === 'mono' ? '' :
-    '<div class="hdr">' + t('look.accent') + '</div><div class="group"><div class="cellcol"><div class="swgrid">' + ACCENTS.map(([k, c]) =>
-      '<button class="swc' + ((st.accent || 'orange') === k ? ' on' : '') + '" data-acc="' + k + '" aria-pressed="' + ((st.accent || 'orange') === k) + '" style="background:' + c + '" aria-label="' + esc(t('look.accentAria', { c: t('accent.' + k) })) + '"></button>').join('') + '</div></div></div>') +
+    (st.uiStyle === 'mono' ? '' : paletteHTML(st) +
+    '<div class="hdr">' + t('look.accent') + '</div><div class="group"><div class="cellcol"><div class="swgrid">' + ACCENTS.map(([k]) =>
+      '<button class="swc' + ((st.accent || 'orange') === k ? ' on' : '') + '" data-acc="' + k + '" aria-pressed="' + ((st.accent || 'orange') === k) + '" style="background:' + accentColor(st, k) + '" aria-label="' + esc(t('look.accentAria', { c: t('accent.' + k) })) + '"></button>').join('') + '</div></div></div>') +
     '<div class="hdr">' + t('look.scale') + '</div><div class="group"><div class="cellcol">' + seg('scale', [['5', '1–5'], ['10', '1–10'], ['100', '%']], String(scaleOf(st)), t('look.scale')) + '</div><div class="cell center" style="gap:12px">' +
     [20, 60, 100].map((p) => mBadge(p, st)).join('') + '</div></div><p class="ftr">' + t('look.scaleHint') + '</p>';
 }
@@ -237,7 +250,7 @@ function dataHTML() {
 const theoryFind = (st) => { const d = st.theory || {}; return st.uiStyle === 'mono' ? d.find !== false : d.find === true; };
 function featHTML(app) {
   const st = app.store.state.settings, lang = getLang();
-  const row = (id, icon, color, name, about, extra = '', help = false) => '<div class="cell"><span class="ticon" style="background:' + color + '">' + icon + '</span><span class="grow"><span>' + esc(name) + extra +
+  const row = (id, icon, color, name, about, extra = '', help = false) => '<div class="cell"><span class="ticon" style="background:' + color + ';--on:' + onColor(color) + '">' + icon + '</span><span class="grow"><span>' + esc(name) + extra +
     '</span>' + (about ? '<span class="st l2" style="display:block;font-size:13px">' + esc(about) + '</span>' : '') + '</span>' +
     (help ? '<button class="ic sm" data-help="' + id + '" aria-label="' + esc(t('help.open') + ': ' + name) + '">' + icons.help + '</button>' : '') +
     '<label class="sw"><input type="checkbox" data-feat="' + id + '"' + (isOn(st, id) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
@@ -270,7 +283,7 @@ function featHTML(app) {
 // Вкладки внизу: порядок и состав
 function tabsHTML(app) {
   const st = app.store.state.settings, vis = visibleTabs(st, tabIds(st)), hid = hiddenTabs(st, tabIds(st));
-  const row = (k, on, i) => '<div class="cell"><span class="ticon" style="background:var(--tint)">' + TAB_ICONS[k] + '</span><span class="grow">' + t('nav.' + k) + '</span>' +
+  const row = (k, on, i) => '<div class="cell"><span class="ticon" style="background:var(--tint);--on:var(--on-tint)">' + TAB_ICONS[k] + '</span><span class="grow">' + t('nav.' + k) + '</span>' +
     (on ? (i > 0 ? '<button class="ic sm plain" data-tabmv="up" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.up', { name: t('nav.' + k) })) + '">' + IC.up + '</button>' : '') +
       (vis.length > 1 ? '<button class="ic sm plain" data-tabmv="off" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.off', { name: t('nav.' + k) })) + '" style="color:var(--red)">' + IC.minus + '</button>' : '')
       : '<button class="ic sm plain" data-tabmv="on" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.on', { name: t('nav.' + k) })) + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
@@ -293,9 +306,9 @@ function rootHTML(app) {
     (sub ? '<div class="l2" style="text-align:center;font-size:15px">' + esc(sub) + (pr.level ? ' · ' + t('level.' + pr.level) : '') + '</div>' : '') + '</div>' +
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(lifetimeSec(all, app.store.state.settings)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
-    '<div class="group" style="margin-top:20px">' + Object.entries(PAGES).filter(([k]) => !plain || !PLAIN_HIDE.includes(k)).map(([k, [c, ic]]) => '<button class="cell" data-pp="' + k + '"><span class="ticon" style="background:' + c + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t('page.' + k + '.sub') + '</span></span>' + CHEV + '</button>').join('') + '</div>' +
-    '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="background:#A95E72">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button>' +
-      '<button class="cell" data-act="report"><span class="ticon" style="background:#8E8E93">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button></div>' +
+    '<div class="group" style="margin-top:20px">' + Object.entries(PAGES).filter(([k]) => !plain || !PLAIN_HIDE.includes(k)).map(([k, [c, ic]]) => '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t('page.' + k + '.sub') + '</span></span>' + CHEV + '</button>').join('') + '</div>' +
+    '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="' + iconBg(app.store.state.settings, 'pink') + '">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button>' +
+      '<button class="cell" data-act="report"><span class="ticon" style="' + iconBg(app.store.state.settings, 'graphite') + '">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button></div>' +
     '<div class="group" style="margin-top:12px">' + ['tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
 }
@@ -364,6 +377,7 @@ export function createPanel(app, onChange) {
       }
       if ((b = g('[data-seg="szdev"] [data-v]'))) { prevDev = b.dataset.v; render(); return; }
       if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
+      if ((b = g('[data-pal]'))) { app.store.state.settings.palette = b.dataset.pal; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-acc]'))) { app.store.state.settings.accent = b.dataset.acc; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-meinst]'))) {
         const p = { ...newProfile(), ...(app.store.state.settings.profile || {}) }, k = b.dataset.meinst;
