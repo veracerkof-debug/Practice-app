@@ -102,12 +102,12 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     refTone,
     analyser,
     openMic: () => openMic(device.mix.mode),
-    // Для записи: поток всего, что звучит (после компрессора); off() — отключить отвод. null — звука нет
+    // Для записи: контекст и отвод всего, что звучит (после компрессора и прямой выход метронома), в узел:
+    // into(node) → off(). null — звука нет
     tap() {
       const c = getContext(device.mix.mode);
       if (!c || !c.createMediaStreamDestination) return null;
-      const dest = c.createMediaStreamDestination(), off = addTap(dest);
-      return { ctx: c, dest, stream: dest.stream, off };
+      return { ctx: c, into: (node) => addTap(node) };
     },
     // Остановить всё (выход из сессии)
     stopAll() {

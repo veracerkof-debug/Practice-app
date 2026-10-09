@@ -54,6 +54,18 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 @keyframes recblink{50%{opacity:.25}}
 .recgo{width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px}
 .recgo svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}
+.recstop{width:100%;margin:4px 0 6px;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--red)!important;color:#fff!important}
+.recstop svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}
+.recstop b{font-weight:700;opacity:.9}
+.recsl{display:flex;align-items:center;gap:10px;font-size:14px;min-height:40px}
+.recsl span{min-width:6.5em;color:var(--l2)}
+.recsl input{flex:1;min-width:0;accent-color:var(--tint)}
+.recsl b{min-width:4.2em;text-align:right;font-weight:600}
+/* уровень микрофона: полоса растёт с громкостью, отметка — порог гейта; гейт открыт — полоса цвета акцента */
+.recmeter{position:relative;height:8px;margin:6px 0 4px;border-radius:4px;background:var(--fill);overflow:hidden}
+.recmeter i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--l3);transition:width 60ms linear}
+.recmeter i.open{background:var(--tint)}
+.recmeter s{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;background:var(--ink);opacity:.6}
 /* инструкция к инструменту (src/core/help.js) */
 .ask .alert.helpcard{width:min(440px,100%);max-width:none;max-height:calc(100vh - 48px);display:flex;flex-direction:column}
 .helpcard .ab{overflow:auto}
