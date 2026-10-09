@@ -98,7 +98,7 @@ describe('хранение', () => {
     expect(cal.kinds[0].name).toBe('CAL.KIND.REHEARSAL');
     cal.kinds[0].name = 'Своя';
     expect(ensureCal(s).kinds[0].name).toBe('Своя');
-    expect(colorOf(cal, { kind: 'concert' })).toBe('#FF3B30');
+    expect(colorOf(cal, { kind: 'concert' })).toBe('#C24A3F');
     expect(colorOf(cal, { kind: 'concert', color: '#000000' })).toBe('#000000');
   });
 });

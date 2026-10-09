@@ -6,7 +6,7 @@ import { esc } from '../../ui/index.js';
 import { MIX_MAX } from '../../audio/mixer.js';
 import { moduleById } from '../../modules/index.js';
 
-const SRC = [['metro', '#FF9500', 'metro'], ['piano', '#5856D6', 'piano'], ['glider', '#AF52DE', 'glider'], ['drone', '#30B0C7', 'drone'], ['media', '#FF2D55', 'audio'], ['theory', '#34C759', 'theory']];
+const SRC = [['metro', '#B8792F', 'metro'], ['piano', '#5E5EA4', 'piano'], ['glider', '#8C66AD', 'glider'], ['drone', '#4893A6', 'drone'], ['media', '#BE5470', 'audio'], ['theory', '#5A9468', 'theory']];
 
 export function createMixerDrawer(app) {
   const mixer = app.audio.mixer;

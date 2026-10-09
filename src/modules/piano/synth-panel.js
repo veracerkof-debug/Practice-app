@@ -118,7 +118,7 @@ function scopeStart(ctx, cv, getS) {
   cv.width = (cv.clientWidth || 300) * dpr;
   cv.height = (cv.clientHeight || 110) * dpr;
   const td = new Float32Array(4096), css = getComputedStyle(document.documentElement);
-  const tint = css.getPropertyValue('--tint').trim() || '#FF9500', l3 = css.getPropertyValue('--l3').trim() || '#ccc';
+  const tint = css.getPropertyValue('--tint').trim() || '#B8792F', l3 = css.getPropertyValue('--l3').trim() || '#ccc';
   let raf = 0;
   const draw = () => {
     if (!document.contains(cv)) return;
@@ -254,10 +254,13 @@ export function synBind(ctx, root, inline, { rerender, onClose, onChange = () =>
   let stopScope = () => {};
   const startScope = () => { stopScope(); stopScope = scopeStart(ctx, root.querySelector('.scopec'), () => pianoPatch(ctx.store.all())); };
   setTimeout(startScope, 40);
-  const re = () => { rerender(); startScope(); onChange(); };
+  // звучащие (и удержанные Hold) ноты слышат правку сразу
+  const live = () => { if (ctx.audio.synth && ctx.audio.synth.refresh) ctx.audio.synth.refresh(); };
+  const re = () => { rerender(); startScope(); onChange(); live(); };
   knobBind(ctx, root, (k) => s[k], (k, v, reset) => {
     if (reset) { s[k] = (PRESETS[s.preset] || PRESETS.piano)[k]; re(); ctx.store.save(); return; }
     s[k] = v;
+    live();
   }, offs);
   if (!inline) mkbBind(ctx, root, () => { const d = root.querySelector('.mkdock'); if (d) d.innerHTML = mkbHTML(ctx); }, offs);
   const onClick = (e) => {

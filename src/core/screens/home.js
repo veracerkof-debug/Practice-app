@@ -165,7 +165,7 @@ export function quickEdit(app, rerender) {
     return '<div class="cell"><span class="ticon" style="background:' + m.color + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
       (on ? (i > 0 ? '<button class="ic sm plain" data-qu="' + id + '" aria-label="' + t('quick.up') + '">' + IC.up + '</button>' : '') +
         '<button class="ic sm plain" data-qr="' + id + '" aria-label="' + t('quick.remove') + '" style="color:var(--red)">' + IC.minus + '</button>'
-        : '<button class="ic sm plain" data-qa="' + id + '" aria-label="' + t('quick.add') + '" style="color:#34C759">' + IC.plus + '</button>') + '</div>';
+        : '<button class="ic sm plain" data-qa="' + id + '" aria-label="' + t('quick.add') + '" style="color:#5A9468">' + IC.plus + '</button>') + '</div>';
   };
   const body = () => {
     const q = sel().filter((id) => isOn(st, id) && moduleById(id) && !moduleById(id).tab), rest = modules.filter((m) => !m.tab).map((m) => m.id).filter((id) => isOn(st, id) && !q.includes(id));

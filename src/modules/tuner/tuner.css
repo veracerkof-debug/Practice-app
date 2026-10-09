@@ -21,7 +21,7 @@
 .gauge{width:min(100%,520px);height:auto;max-height:100%;display:block}
 .gtrack{fill:none;stroke:var(--fill);stroke-width:12;stroke-linecap:round}
 .gsoft{fill:none;stroke:url(#tgz);stroke-width:12}
-.gzone{fill:none;stroke:#34C759;stroke-width:12;stroke-linecap:round;opacity:.55;transition:opacity .25s,filter .25s}
+.gzone{fill:none;stroke:#5A9468;stroke-width:12;stroke-linecap:round;opacity:.55;transition:opacity .25s,filter .25s}
 .gzone.ok{opacity:1;filter:drop-shadow(0 0 6px rgba(52,199,89,.7))}
 .gtick{stroke:var(--l3);stroke-width:1.5;stroke-linecap:round}
 .gtick.big{stroke:var(--l2);stroke-width:2.2}
@@ -32,7 +32,7 @@
 .needle path{fill:var(--ink);transition:fill .25s}
 .needle circle{fill:var(--ink);transition:fill .25s}
 .needle .hub{fill:var(--cell)}
-.needle.ok path,.needle.ok circle:not(.hub){fill:#34C759}
+.needle.ok path,.needle.ok circle:not(.hub){fill:#5A9468}
 
 /* полоса */
 .tbarw{width:100%;display:flex;align-items:center;padding:0 4px}
@@ -43,11 +43,11 @@
 .tbsoft,.tbzone{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);border-radius:19px}
 .tbsoft{background:linear-gradient(90deg,transparent,rgba(52,199,89,.22),transparent)}
 .tbzone{background:rgba(52,199,89,.5);transition:background .25s,box-shadow .25s}
-.tbar.ok .tbzone{background:#34C759;box-shadow:0 0 14px rgba(52,199,89,.6)}
+.tbar.ok .tbzone{background:#5A9468;box-shadow:0 0 14px rgba(52,199,89,.6)}
 .tbtick{position:absolute;top:30%;bottom:30%;width:1.5px;margin-left:-.75px;background:var(--l3)}
 .tbmid{position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--ink)}
 .tbm{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--tint);box-shadow:0 2px 8px rgba(0,0,0,.2);transition:background .25s}
-.tbar.ok .tbm{background:#34C759}
+.tbar.ok .tbm{background:#5A9468}
 .tbar.sm .tbtrack{height:12px;border-radius:6px}
 .tbar.sm .tbsoft,.tbar.sm .tbzone{border-radius:6px}
 .tbar.sm .tbm{width:16px;height:16px;margin:-8px 0 0 -8px}
@@ -59,13 +59,13 @@
 .tring{width:100%;height:100%;display:block}
 .trtrack{fill:none;stroke:var(--fill);stroke-width:10}
 .trsoft{fill:none;stroke:rgba(52,199,89,.2);stroke-width:10}
-.trzone{fill:none;stroke:#34C759;stroke-width:10;stroke-linecap:round;opacity:.55;transition:opacity .25s}
+.trzone{fill:none;stroke:#5A9468;stroke-width:10;stroke-linecap:round;opacity:.55;transition:opacity .25s}
 .tringw.ok .trzone{opacity:1}
 .trdev{fill:none;stroke:var(--tint);stroke-width:4;stroke-linecap:round;opacity:.7}
 .trzero{stroke:var(--ink);stroke-width:2;stroke-linecap:round}
 .trdot circle{fill:var(--tint);stroke:var(--cell);stroke-width:3;transition:fill .25s}
-.trdot.ok circle{fill:#34C759}
-.tringw.ok .trtrack{stroke:color-mix(in srgb,#34C759 22%,var(--fill))}
+.trdot.ok circle{fill:#5A9468}
+.tringw.ok .trtrack{stroke:color-mix(in srgb,#5A9468 22%,var(--fill))}
 .tringin{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 .tringin .tnoteW{font-size:clamp(40px,15cqmin,104px)}
 
@@ -74,7 +74,7 @@
 .tpano canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 
 /* режим новичка */
-.twarn{display:flex;align-items:flex-start;gap:8px;width:100%;box-sizing:border-box;padding:8px 44px 8px 10px;border-radius:12px;background:color-mix(in srgb,#FF9500 12%,var(--cell));
+.twarn{display:flex;align-items:flex-start;gap:8px;width:100%;box-sizing:border-box;padding:8px 44px 8px 10px;border-radius:12px;background:color-mix(in srgb,#B8792F 12%,var(--cell));
   color:var(--ink);font-size:13px;line-height:1.35;text-align:left}
 .twarn svg{flex:none;width:18px;height:18px;fill:none;stroke:#C27C00;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
 .tstrs{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;width:100%}
@@ -83,7 +83,7 @@
 .tsb b{font-size:18px;font-weight:600;line-height:1}
 .tsb b sub{font-size:10px;font-weight:500;color:var(--l2);vertical-align:baseline;margin-left:1px}
 .tsb small{font-size:10px;color:var(--l2);margin-top:2px}
-.tsb .tsok{position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#34C759;color:#fff;font-size:11px;font-style:normal;line-height:18px;display:none}
+.tsb .tsok{position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#5A9468;color:#fff;font-size:11px;font-style:normal;line-height:18px;display:none}
 .tsb.done .tsok{display:block}
 .tsb.near{background:color-mix(in srgb,var(--tint) 18%,var(--cell));box-shadow:inset 0 0 0 2px var(--tint);transform:translateY(-2px)}
 .tsb.lock{box-shadow:inset 0 0 0 2px var(--ink)}

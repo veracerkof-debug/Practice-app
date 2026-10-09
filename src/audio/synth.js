@@ -61,7 +61,7 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
       // голосов не хватает — замолкает самый старый, но удержанные (Hold) не трогаем, пока есть другие
       while (order.length >= MAX_VOICES) syn.off(order.find((k) => !voices.get(k)?.held) ?? order[0], true);
 
-      const g = c.createGain(), lp = c.createBiquadFilter(), os = [];
+      const g = c.createGain(), lp = c.createBiquadFilter(), os = [], main = [];
       lp.type = 'lowpass';
       lp.Q.value = kind === 'saw' ? 1 : 0.3;
       lp.connect(g);
@@ -87,7 +87,7 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
         if (amp !== 1) { const og = c.createGain(); og.gain.value = amp; o.connect(og); node = og; }
         node.connect(lp);
         o.start(t);
-        os.push(o);
+        os.push(o); main.push(o);
       };
       if (s.cho > 0.04) { const d = 4 + s.cho * 10; osc(-d, 0.55); osc(d, 0.55); } else osc(0, 1);
       if (s.tine) { // «язычок» электропиано / обертон колокола
@@ -112,7 +112,9 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
         n.connect(bp).connect(ng).connect(g);
         n.start(t); n.stop(t + 0.04);
       }
-      const vo = { g, os, rel: Math.max(0.03, s.rel), key, bus: busName, held: !!opts.hold };
+      // для живой правки звука (refresh): из чего голос собран и каким патчем
+      const vo = { g, os, rel: Math.max(0.03, s.rel), key, bus: busName, held: !!opts.hold, lp, main, m, f, kind, peak, own: !!opts.patch,
+        opts, tine: s.tine || 0, sustain: SU >= 0.02 };
       voices.set(key, vo);
       order.push(key);
       if (SU < 0.02) { // затухающий звук — освобождаем голос сами
@@ -139,6 +141,35 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
     },
 
     all() { [...voices.keys()].forEach((k) => syn.off(k, true)); },
+
+    // Патч изменился (ручка, пресет) — звучащие ноты слышат это сразу: удобно подбирать звук на удержанном (Hold)
+    // аккорде. Тембр, яркость, хорус, сустейн, релиз и пространство меняются плавно на ходу; другой вид звука
+    // (пресет «орган» вместо «пианино» и т. п.) — ноты переигрываются новым звуком.
+    refresh() {
+      const s = getPatch(), c = getContext(mixer.state.mode);
+      if (!c) return;
+      mixer.setReverb('piano', s.rev * 0.9);
+      const t = c.currentTime, kind = s.kind || 'soft';
+      [...voices.values()].forEach((vo) => {
+        if (vo.own) return; // сыграно своим звуком (тренажёр, «Теория») — не пианино
+        const chorus = s.cho > 0.04;
+        if (kind !== vo.kind || (s.tine || 0) !== vo.tine || chorus !== (vo.main.length === 2)) {
+          if (vo.sustain) syn.on(vo.m, vo.key, vo.opts);
+          return;
+        }
+        vo.main.forEach((o) => o.setPeriodicWave(synWave(c, kind, s.tone)));
+        if (chorus) { const d = 4 + s.cho * 10; vo.main[0].detune.setTargetAtTime(-d, t, 0.03); vo.main[1].detune.setTargetAtTime(d, t, 0.03); }
+        const cut = kind === 'piano' ? Math.max(500, vo.f * (1.5 + s.bright * 3)) : Math.max(200, Math.min(16000, vo.f * (1.2 + s.bright * 22)));
+        vo.lp.frequency.setTargetAtTime(cut, t, 0.03);
+        vo.rel = Math.max(0.03, s.rel);
+        if (vo.sustain) {
+          const SU = vo.held ? Math.max(s.sus, 0.45) : s.sus;
+          vo.g.gain.cancelScheduledValues(t);
+          vo.g.gain.setValueAtTime(Math.max(vo.g.gain.value, 0.0001), t);
+          vo.g.gain.setTargetAtTime(Math.max(0.0001, vo.peak * SU), t, 0.05);
+        }
+      });
+    },
 
     // Звучит ли шина: нота нажата или отзвучала меньше 3,5 с назад
     active(bus) {

@@ -3,7 +3,7 @@
 import { t } from '../i18n/index.js';
 import { ROMAN } from '../core/rank.js';
 
-export const RANK_COLORS = { student: '#8E8E93', amateur: '#34C759', musician: '#007AFF', master: '#AF52DE', virtuoso: '#FF9500' };
+export const RANK_COLORS = { student: '#8E8E93', amateur: '#5A9468', musician: '#4A72AE', master: '#8C66AD', virtuoso: '#B8792F' };
 
 const NOTE = 'M44 28v28.5a8 8 0 1 0 4 6.9V36c6 1 10 5 11 11 3-10-5-17-15-19z';
 const BEAM = 'M38 34l26-7v27.5a7 7 0 1 0 4 6.3V23L34 32v26.5a7 7 0 1 0 4 6.3z';

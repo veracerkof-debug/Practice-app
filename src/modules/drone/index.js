@@ -134,7 +134,7 @@ export default {
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,
-  color: '#30B0C7',
+  color: '#4893A6',
   sizes: ['full', 'half', 'quarter', 'strip'],
   status: (c) => { const d = c.store.all(); return c.t('status', { note: SH[d.pc], sound: c.t('snd.' + (SOUNDS[d.sound] != null ? d.sound : 'soft') + '.s') }); },
   mount(el, c, sz = 'full') {

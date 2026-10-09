@@ -6,8 +6,8 @@ import { uid, dayStart, dayKey, pad2, DAY } from './time.js';
 // Типы по умолчанию; названия — ключи i18n (cal.kind.<key>), создаются один раз на языке пользователя.
 // task — событие-задача: его можно отметить выполненным (дедлайн, цель)
 export const KINDDEF = [
-  ['rehearsal', '#007AFF'], ['lesson', '#AF52DE'], ['concert', '#FF3B30'],
-  ['recording', '#00C7BE'], ['deadline', '#FF9500', true], ['goal', '#34C759', true],
+  ['rehearsal', '#4A72AE'], ['lesson', '#8C66AD'], ['concert', '#C24A3F'],
+  ['recording', '#3F9A93'], ['deadline', '#B8792F', true], ['goal', '#5A9468', true],
 ];
 
 export const REPEATS = ['none', 'daily', 'weekly', 'monthly', 'yearly'];

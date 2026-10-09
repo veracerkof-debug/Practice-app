@@ -238,7 +238,7 @@ export function libManager(app, rerender) {
 export function itemEditor(app, kind, id, back) {
   const L = ensureLib(app.store.state, t), ex = id ? L[kind].find((x) => x.id === id) : null, it = ex ? { ...ex } : newLibItem(L, kind);
   const swatches = (attr, cur, list) => '<div class="swgrid">' + list.map((c) => '<button type="button" class="swc' + (cur === c ? ' on' : '') + '" ' + attr + '="' + c + '" style="background:' + c + ';--c:' + c + '" aria-label="' + esc(t('libm.colorAria', { c })) + '" aria-pressed="' + (cur === c) + '"></button>').join('') +
-    '<label class="swc custom" aria-label="' + t('libm.customColor') + '"><input type="color" ' + attr + '-in value="' + (cur && cur[0] === '#' ? cur : '#ff9500') + '"></label></div>';
+    '<label class="swc custom" aria-label="' + t('libm.customColor') + '"><input type="color" ' + attr + '-in value="' + (cur && cur[0] === '#' ? cur : '#B8792F') + '"></label></div>';
   const preview = () => '<div class="lprevw">' + chipHTML({ ...it, name: it.name || t('libm.name') }, 'big') +
     (kind === 'genres' ? '<div class="stile3 demo" style="--g:' + it.color + '"><div class="grow"><div class="ttl">' + t('libm.demoTitle') + '</div><div class="st">' + t('libm.demoSub') + '</div></div></div>' : '') + '</div>';
   const body = () => snav(t(ex ? 'libm.one.' + kind : 'libm.new.' + kind), { left: '<button class="link l" data-k="back">' + t('ui.back') + '</button>', right: '<button class="link b r" data-k="save">' + t('libm.save') + '</button>' }) +
@@ -246,7 +246,7 @@ export function itemEditor(app, kind, id, back) {
     '<div class="hdr">' + t('libm.color') + '</div><div class="group"><div class="cellcol">' + swatches('data-col', it.color, PALETTE) + '</div></div>' +
     '<div class="hdr">' + t('libm.textColor') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" style="margin-bottom:10px">' +
     [['', t('libm.auto')], ['#ffffff', t('libm.white')], ['#1c1c1e', t('libm.black')]].map(([v, n]) => '<button type="button" data-tx="' + v + '" aria-pressed="' + (it.text === v) + '">' + n + '</button>').join('') + '</div>' +
-    swatches('data-txc', it.text, ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#5856D6', '#AF52DE', '#FF2D55']) + '</div></div>' +
+    swatches('data-txc', it.text, ['#C24A3F', '#B8792F', '#C9A23C', '#5A9468', '#4A72AE', '#5E5EA4', '#8C66AD', '#BE5470']) + '</div></div>' +
     (ex ? '<div class="group" style="margin-top:20px"><button class="cell danger center" data-k="del">' + t('libm.delete') + '</button></div>' : '');
   sheet(body, (el, sh) => {
     const name = () => el.querySelector('#iname').value;

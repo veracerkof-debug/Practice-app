@@ -59,7 +59,7 @@
 .large{margin-top:8px}
 .panel{position:fixed;inset:0;z-index:35;background:var(--bg);overflow-y:auto;padding-top:env(safe-area-inset-top,0px);animation:up .28s cubic-bezier(.2,.8,.2,1)}
 .phero{display:flex;flex-direction:column;align-items:center;margin:8px 0 18px}
-.pav{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--tint),#FF2D55);color:#fff;display:flex;align-items:center;justify-content:center}
+.pav{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--tint),#BE5470);color:#fff;display:flex;align-items:center;justify-content:center}
 .prank{display:block;border-radius:50%;min-width:44px;min-height:44px}
 .prname{color:var(--rk);font-weight:600;font-size:16px;min-height:40px;padding:0 12px}
 .pav svg{width:46px;height:46px;fill:none;stroke:#fff;stroke-width:1.6;stroke-linecap:round}
@@ -130,7 +130,7 @@
 .lprevw{display:flex;flex-direction:column;align-items:center;gap:10px;margin:4px 0 14px}
 .stile3.demo{max-width:320px}
 .prohero{display:flex;flex-direction:column;align-items:center;margin:6px 0 16px}
-.probadge{font:800 9px var(--font);color:#fff;background:linear-gradient(135deg,var(--tint),#ff2d55);border-radius:4px;padding:2px 4px;margin-left:6px;vertical-align:middle}
+.probadge{font:800 9px var(--font);color:#fff;background:linear-gradient(135deg,var(--tint),#BE5470);border-radius:4px;padding:2px 4px;margin-left:6px;vertical-align:middle}
 .tgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;grid-auto-rows:minmax(112px,1fr);min-height:calc(100dvh - 260px)}
 @media (min-width:900px){
   .tgrid{grid-template-columns:repeat(4,1fr);min-height:0;grid-auto-rows:170px}
@@ -254,7 +254,7 @@
 .hrbtns{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:14px}
 .hrbtns .btn{min-height:46px}
 .hrbox{margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--red) 10%,var(--cell));display:flex;flex-direction:column;gap:6px}
-.hrbox.ok{background:color-mix(in srgb,#34C759 14%,var(--cell))}
+.hrbox.ok{background:color-mix(in srgb,#5A9468 14%,var(--cell))}
 .hrdet{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--l2);word-break:break-all}
 .hrtip{font-size:13.5px;line-height:1.4;color:var(--ink)}
 /* личное обращение после кода (обычный вид): строка приветствия и тихая строчка под ней */

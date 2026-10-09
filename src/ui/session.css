@@ -63,7 +63,7 @@
 .shd{display:grid;grid-template-columns:auto auto auto minmax(0,1fr) auto;align-items:center;gap:6px;padding-top:2px}
 .stime{display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:600;padding:0 4px;min-height:36px;color:var(--ink)}
 .stime.paused{color:var(--l2)}
-.sdot{width:7px;height:7px;border-radius:50%;background:#34C759;animation:blink 2s ease-in-out infinite;flex:none}
+.sdot{width:7px;height:7px;border-radius:50%;background:#5A9468;animation:blink 2s ease-in-out infinite;flex:none}
 .stime.paused .sdot{background:var(--l3);animation:none;width:9px;height:9px;border-radius:2px}
 .pchip{display:inline-flex;align-items:center;gap:5px;min-height:36px;padding:0 6px;border-radius:999px;color:var(--l2);font-size:13px;font-weight:600}
 .pchip .pcico{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
@@ -111,7 +111,7 @@
 #mixd.open{transform:translateX(0)}
 .mxh{width:16px;height:84px;border-radius:10px 0 0 10px;background:#1C1C1E;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;touch-action:none;box-shadow:-2px 2px 10px rgba(0,0,0,.25)}
 .mxh i{width:3px;height:10px;border-radius:2px;background:#8D8D93}
-#mixd.live .mxh i{background:#34C759;animation:mxb .9s ease-in-out infinite}
+#mixd.live .mxh i{background:#5A9468;animation:mxb .9s ease-in-out infinite}
 #mixd.live .mxh i:nth-child(2){animation-delay:-.3s}
 #mixd.live .mxh i:nth-child(3){animation-delay:-.6s}
 .mxp{display:flex;gap:6px;background:#1C1C1E;padding:12px 10px;border-radius:18px 0 0 18px;box-shadow:-6px 6px 24px rgba(0,0,0,.3)}
@@ -127,7 +127,7 @@
 .mxi svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .mxf.act .mxi{background:var(--c);box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 35%,transparent)}
 .mxf.mu .mxi{background:#3A3A3C;color:#8D8D93;position:relative}
-.mxf.mu .mxi::after{content:"";position:absolute;width:26px;height:2px;background:#FF453A;transform:rotate(-45deg);border-radius:1px}
+.mxf.mu .mxi::after{content:"";position:absolute;width:26px;height:2px;background:#D0675A;transform:rotate(-45deg);border-radius:1px}
 .mxf.mu .mxt b{background:#636366}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
 @keyframes blink{50%{opacity:.35}}

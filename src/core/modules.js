@@ -12,6 +12,7 @@ import { gemSec } from './profile.js';
 import { gemOf } from './mastery.js';
 import { stoneSeed } from '../ui/stone.js';
 import { firstHelp } from './help.js';
+import { guardOpen, guardClose } from './guard.js';
 
 export const SIZES = ['full', 'half', 'quarter', 'strip'];
 
@@ -152,6 +153,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
   frame.dataset.size = size;
   frame.style.setProperty('--mod', mod.color);
   mod.mount(host, ctx, size);
+  guardOpen(); // пока инструмент открыт — системный снимок экрана тремя пальцами не срабатывает
   firstHelp(app, mod); // при первом открытии — инструкция
   return {
     ctx,
@@ -166,6 +168,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
       log('mod', 'закрыт ' + mod.id);
       try { mod.unmount(host); } catch (e) { logErr('mod', e); } // host — какое из мест закрывается (модуль может быть открыт в двух)
       host.replaceChildren();
+      guardClose();
     },
   };
 }

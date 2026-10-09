@@ -879,5 +879,8 @@
   "help.tip": "Tip.",
   "help.open": "How to use",
   "help.again": "Show tool tips again",
-  "help.againDone": "Tips will show again when tools are opened"
+  "help.againDone": "Tips will show again when tools are opened",
+  "guard.hdr": "Playing instruments",
+  "guard.on": "No screenshots while playing",
+  "guard.hint": "On many phones a three-finger touch takes a screenshot, turning a chord on the piano or pads into a screenshot. While an instrument is open, screenshots are blocked; close it to take them again. The gesture itself can also be turned off in the phone settings (Gestures → Three-finger screenshot)."
 }

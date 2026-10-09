@@ -357,7 +357,7 @@ export function createSessionScreen(app) {
     if (!po.active()) return IC.pomo;
     const tot = po.total(), rem = po.rem(), C = 2 * Math.PI * 8;
     return '<svg viewBox="0 0 20 20" class="pcring"><circle cx="10" cy="10" r="8" fill="none" stroke="var(--fill2)" stroke-width="3"/><circle cx="10" cy="10" r="8" fill="none" stroke="' +
-      (po.phase === 'work' ? 'var(--tint)' : '#34C759') + '" stroke-width="3" stroke-dasharray="' + C * (1 - rem / tot) + ' ' + C + '" transform="rotate(-90 10 10)"/></svg><span class="num">' + fmtClock(rem) + '</span>';
+      (po.phase === 'work' ? 'var(--tint)' : '#5A9468') + '" stroke-width="3" stroke-dasharray="' + C * (1 - rem / tot) + ' ' + C + '" transform="rotate(-90 10 10)"/></svg><span class="num">' + fmtClock(rem) + '</span>';
   }
 
   function pomoSheet() {

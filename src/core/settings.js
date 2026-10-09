@@ -38,8 +38,30 @@ export function toggleDay(store, i) {
 
 export const THEMES = ['system', 'light', 'dark', 'paper', 'oled'];
 
-export const ACCENTS = [['orange', '#FF9500'], ['red', '#FF3B30'], ['pink', '#FF2D55'], ['purple', '#AF52DE'],
-  ['indigo', '#5856D6'], ['blue', '#007AFF'], ['teal', '#00C7BE'], ['green', '#34C759'], ['graphite', '#8E8E93']];
+// Палитра стала спокойнее: прежние яркие системные цвета → приглушённые (метки, категории, события календаря,
+// сохранённые раньше). Один раз: все строки-цвета в данных, совпадающие с прежними, заменяются
+export const CALM = {
+  '#FF3B30': '#C24A3F', '#FF9500': '#B8792F', '#FFCC00': '#C9A23C', '#34C759': '#5A9468', '#00C7BE': '#3F9A93',
+  '#30B0C7': '#4893A6', '#007AFF': '#4A72AE', '#5856D6': '#5E5EA4', '#AF52DE': '#8C66AD', '#FF2D55': '#BE5470',
+  '#32ADE6': '#4F90BC', '#FF9F0A': '#D49A55', '#FF453A': '#D0675A',
+};
+export function calmMigrate(state) {
+  if (state.settings.calmColors) return false;
+  const walk = (o) => {
+    if (!o || typeof o !== 'object') return;
+    for (const k of Object.keys(o)) {
+      const v = o[k];
+      if (typeof v === 'string' && v.length === 7 && v[0] === '#') { const c = CALM[v.toUpperCase()]; if (c) o[k] = c; }
+      else if (v && typeof v === 'object') walk(v);
+    }
+  };
+  walk(state);
+  state.settings.calmColors = true;
+  return true;
+}
+
+export const ACCENTS = [['orange', '#B8792F'], ['red', '#C24A3F'], ['pink', '#BE5470'], ['purple', '#8C66AD'],
+  ['indigo', '#5E5EA4'], ['blue', '#4A72AE'], ['teal', '#3F9A93'], ['green', '#5A9468'], ['graphite', '#8E8E93']];
 
 // Тема и акцент на <html>. Приложение бесплатное: все темы и акценты доступны всем
 // Стиль интерфейса «Минимал» (эксперимент): только чёрный, белый и оттенки серого; темы — светлая и тёмная,

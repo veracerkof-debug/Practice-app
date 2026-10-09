@@ -3,16 +3,16 @@ import { uid } from './time.js';
 import { songStats } from './stats.js';
 import { parseKey } from './songinfo.js';
 
-export const PALETTE = ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#00C7BE', '#30B0C7', '#007AFF',
-  '#5856D6', '#AF52DE', '#FF2D55', '#A2845E', '#8E8E93', '#3A3A3C', '#F2F2F7'];
+export const PALETTE = ['#C24A3F', '#B8792F', '#C9A23C', '#5A9468', '#3F9A93', '#4893A6', '#4A72AE',
+  '#5E5EA4', '#8C66AD', '#BE5470', '#A2845E', '#8E8E93', '#3A3A3C', '#F2F2F7'];
 
 // Метки по умолчанию; названия — ключи i18n (lib.<kind>.<key>), создаются один раз на языке пользователя
 export const LIBDEF = {
-  cats: [['work', '#007AFF'], ['church', '#AF52DE'], ['growth', '#34C759'], ['memes', '#FF9500']],
-  genres: [['rock', '#FF3B30'], ['pop', '#FF2D55'], ['classical', '#A2845E'], ['jazz', '#5856D6'],
-    ['blues', '#007AFF'], ['metal', '#3A3A3C'], ['folk', '#34C759'], ['hiphop', '#FF9500'],
-    ['electronic', '#00C7BE'], ['country', '#FFCC00'], ['worship', '#AF52DE'], ['indie', '#30B0C7']],
-  tags: [['stage', '#FF3B30'], ['warmup', '#FF9500'], ['exercise', '#34C759'], ['learning', '#007AFF'], ['repeat', '#8E8E93']],
+  cats: [['work', '#4A72AE'], ['church', '#8C66AD'], ['growth', '#5A9468'], ['memes', '#B8792F']],
+  genres: [['rock', '#C24A3F'], ['pop', '#BE5470'], ['classical', '#A2845E'], ['jazz', '#5E5EA4'],
+    ['blues', '#4A72AE'], ['metal', '#3A3A3C'], ['folk', '#5A9468'], ['hiphop', '#B8792F'],
+    ['electronic', '#3F9A93'], ['country', '#C9A23C'], ['worship', '#8C66AD'], ['indie', '#4893A6']],
+  tags: [['stage', '#C24A3F'], ['warmup', '#B8792F'], ['exercise', '#5A9468'], ['learning', '#4A72AE'], ['repeat', '#8E8E93']],
 };
 export const LIB_KINDS = Object.keys(LIBDEF);
 

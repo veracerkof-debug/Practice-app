@@ -29,7 +29,7 @@ button.cell:active{background:var(--fill)}
 .sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
 .sw i{position:absolute;inset:0;border-radius:999px;background:var(--fill2);transition:background .2s}
 .sw i::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);transition:transform .2s}
-.sw input:checked+i{background:#34C759}
+.sw input:checked+i{background:#5A9468}
 .sw input:checked+i::after{transform:translateX(20px)}
 .sw input:focus-visible+i{outline:2px solid var(--tint);outline-offset:2px}
 .stepper{display:inline-flex;background:var(--fill);border-radius:9px;overflow:hidden;flex:none}

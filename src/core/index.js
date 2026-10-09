@@ -6,7 +6,7 @@ import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.j
 import { loadDevice, saveDevice } from './device.js';
 import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
-import { applyTheme, tabsMigrate } from './settings.js';
+import { applyTheme, tabsMigrate, calmMigrate } from './settings.js';
 import { extCheck } from './ext.js';
 import { createShell } from './screens/shell.js';
 import { initBack } from './back.js';
@@ -20,6 +20,7 @@ import { createActivity } from './activity.js';
 import { initNoSound } from './nosound.js';
 import { createPulse } from './pulse.js';
 import { initBackground } from './background.js';
+import { initGuard } from './guard.js';
 import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
@@ -44,6 +45,7 @@ export function boot(root) {
   // (строки и стили меняются на месте, без перезапуска — см. app.relang)
   setInterval(() => { if (extCheck(store.state.settings).changed) { store.settingsChanged(); app.relang(); } }, 15000);
   if (tabsMigrate(st0)) store.settingsChanged();
+  if (calmMigrate(store.state)) store.settingsChanged(); // прежние яркие цвета меток и событий — спокойнее
   initI18n(st0.uiStyle === 'mono' && st0.monoLang !== false ? 'el' : st0.lang);
   ensureLib(store.state, t);
   applyTheme(store.state.settings);
@@ -165,6 +167,7 @@ export function boot(root) {
   createShell(app, root);
   // Работа в фоне на Android: пока что-то идёт — служба с уведомлением, приложение не замораживается
   initBackground(app);
+  initGuard(app);
   createMixerDrawer(app);
   // Играет, но не слышно (микшер, громкость устройства) — уведомление внизу
   initNoSound(app);

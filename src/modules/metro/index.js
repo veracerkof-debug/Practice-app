@@ -53,8 +53,8 @@ let rot = 0, wheelMovedAt = 0, taps = [];
 const offs = [];
 
 // Сигналы без звука (src/core/pulse.js): настройки на устройстве — ctx.store 'sig'
-const SIG_DEF = { flash: false, strong: '#FF3B30', other: '#FFFFFF', torch: false, vibe: false };
-const FLASH_COLORS = ['#FFFFFF', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#AF52DE'];
+const SIG_DEF = { flash: false, strong: '#C24A3F', other: '#FFFFFF', torch: false, vibe: false };
+const FLASH_COLORS = ['#FFFFFF', '#C24A3F', '#B8792F', '#C9A23C', '#5A9468', '#4A72AE', '#8C66AD'];
 const sig = () => ({ ...SIG_DEF, ...(ctx.store.get('sig', {}) || {}) });
 const SIG_IC = {
   flash: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M12 7v2M12 15v2M7.5 12h2M14.5 12h2"/></svg>',
@@ -442,7 +442,7 @@ export default {
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,
-  color: '#FF9500',
+  color: '#B8792F',
   sizes: ['full', 'half', 'quarter', 'strip'],
   status: (c) => c.t('status', { bpm: c.audio.metro.cfg.bpm, meter: c.audio.metro.cfg.num + '/' + c.audio.metro.cfg.den }),
   mount(el, c, sz = 'full') {

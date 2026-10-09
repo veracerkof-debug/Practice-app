@@ -14,7 +14,7 @@
 .splv{font-size:clamp(44px,22cqmin,120px);font-weight:300;letter-spacing:-.03em;line-height:1}
 .splv.mid{color:#C27C00}.splv.hi{color:var(--red)}
 .splmeter{position:relative;flex:none;height:12px;border-radius:6px;background:var(--fill);overflow:hidden}
-.splmeter i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:linear-gradient(90deg,#34C759 0 45%,#FFCC00 55% 62%,#FF3B30 72%);background-size:calc(100cqw - 20px) 100%;transition:width .12s}
+.splmeter i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:linear-gradient(90deg,#5A9468 0 45%,#C9A23C 55% 62%,#C24A3F 72%);background-size:calc(100cqw - 20px) 100%;transition:width .12s}
 .splmeter em{position:absolute;top:0;bottom:0;width:1.5px;background:var(--bg);opacity:.8}
 .splmeter.sm{width:30%;min-width:60px;height:8px}
 .splscale{position:relative;flex:none;height:14px;font-size:11px;margin-top:-6px}

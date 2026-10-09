@@ -870,5 +870,8 @@
   "help.tip": "Maslahat.",
   "help.open": "Qanday foydalanish",
   "help.again": "Asboblar boʻyicha maslahatlarni qayta koʻrsatish",
-  "help.againDone": "Asboblar ochilganda maslahatlar yana koʻrsatiladi"
+  "help.againDone": "Asboblar ochilganda maslahatlar yana koʻrsatiladi",
+  "guard.hdr": "Cholg‘ularda chalish",
+  "guard.on": "Chalayotganda ekran surati olinmasin",
+  "guard.hint": "Ko‘p telefonlarda uch barmoq bilan tegish — ekran surati, va pianino yoki paddagi akkord skrinshotga aylanadi. Cholg‘u ochiq turganda ekran surati olinmaydi; cholg‘u yopilsa — yana mumkin. Imo-ishoraning o‘zi telefon sozlamalarida ham o‘chiriladi (Imo-ishoralar → Uch barmoq bilan ekran surati)."
 }
