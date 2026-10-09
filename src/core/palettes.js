@@ -1,14 +1,14 @@
 // Цветовые палитры: каждый инструмент закреплён за своим оттенком (TOOL_HUE), а палитра задаёт, как эти оттенки
-// выглядят — спокойно, по-детски мягко, ярко или «вырвиглазно». Человек выбирает палитру целиком; акцент
+// выглядят — сдержанно (классическая, по умолчанию), по-детски мягко, ярко или «вырвиглазно». Человек выбирает палитру целиком; акцент
 // (settings.accent) — оттенок той же палитры. Свои цвета меток, категорий и событий человек выбирает сам — палитра их не трогает.
 
 export const HUES = ['orange', 'red', 'yellow', 'green', 'mint', 'teal', 'cyan', 'blue', 'indigo', 'purple', 'pink', 'brown', 'graphite'];
 
 // soft — светлые цвета: текст акцентом и «опасные» кнопки темнее самого цвета (иначе на белом не читается)
 export const PALETTES = {
-  calm: { orange: '#9C7242', red: '#A75750', yellow: '#AE934D', green: '#5F8568', mint: '#4A8681', teal: '#548591', cyan: '#5988A7',
+  classic: { orange: '#9C7242', red: '#A75750', yellow: '#AE934D', green: '#5F8568', mint: '#4A8681', teal: '#548591', cyan: '#5988A7',
     blue: '#567198', indigo: '#646493', purple: '#866B9D', pink: '#A95E72', brown: '#A2845E', graphite: '#8E8E93' },
-  classic: { orange: '#FF9500', red: '#FF3B30', yellow: '#FFCC00', green: '#34C759', mint: '#00C7BE', teal: '#30B0C7', cyan: '#32ADE6',
+  bright: { orange: '#FF9500', red: '#FF3B30', yellow: '#FFCC00', green: '#34C759', mint: '#00C7BE', teal: '#30B0C7', cyan: '#32ADE6',
     blue: '#007AFF', indigo: '#5856D6', purple: '#AF52DE', pink: '#FF2D55', brown: '#A2845E', graphite: '#8E8E93' },
   pastel: { soft: true, orange: '#FFB37A', red: '#FF8E8E', yellow: '#FFD86B', green: '#8FD69A', mint: '#79DCC8', teal: '#7CC7D8', cyan: '#8CC7F2',
     blue: '#93A9F6', indigo: '#AA9DF0', purple: '#D0A2EA', pink: '#F6A5C8', brown: '#D6B48E', graphite: '#B4B4BC' },
@@ -18,7 +18,7 @@ export const PALETTES = {
     blue: '#1F3F9F', indigo: '#43329E', purple: '#7B2D9E', pink: '#AD1457', brown: '#7A4A2B', graphite: '#5E5E66' },
 };
 export const PALETTE_IDS = Object.keys(PALETTES);
-export const paletteOf = (settings) => (PALETTES[settings && settings.palette] ? settings.palette : 'calm');
+export const paletteOf = (settings) => (PALETTES[settings && settings.palette] ? settings.palette : 'classic');
 
 // Инструмент → оттенок: у каждого свой (неизвестные и личные модули — со своим цветом)
 export const TOOL_HUE = {
@@ -52,16 +52,16 @@ export function paintTools(settings) {
   });
 }
 
-// Переменные акцента для <html>: null — оставить цвета темы как есть (спокойная палитра, охра)
+// Переменные акцента для <html>: null — оставить цвета темы как есть (классическая палитра, охра)
 export function accentVars(settings) {
   const p = paletteOf(settings), accent = settings.accent || 'orange';
-  if (p === 'calm' && accent === 'orange') return null;
+  if (p === 'classic' && accent === 'orange') return null;
   const c = hueColor(settings, ACCENT_HUE[accent] || 'orange'), P = PALETTES[p];
   const deep = (x, k) => 'color-mix(in srgb,' + x + ' ' + k + '%,var(--ink))';
   return {
     '--tint': P.soft ? deep(c, 80) : c, // пастель на светлом фоне: акцент чуть глубже, иначе вкладки и ссылки не читаются
     '--tint-text': deep(c, P.soft || accent === 'graphite' ? 62 : p === 'neon' ? 72 : 78),
     '--on-tint': onColor(c),
-    ...(p === 'calm' ? {} : { '--red': P.soft ? deep(P.red, 70) : P.red }),
+    ...(p === 'classic' ? {} : { '--red': P.soft ? deep(P.red, 70) : P.red }),
   };
 }

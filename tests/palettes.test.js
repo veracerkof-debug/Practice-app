@@ -15,10 +15,10 @@ describe('палитры', () => {
     paintTools({ palette: 'neon' });
     expect(list[0].color).toBe(PALETTES.neon.orange);
     expect(list[1].color).toBe('#222222');
-    paintTools({ palette: 'calm' });
-    expect(list[0].color).toBe(PALETTES.calm.orange);
+    paintTools({ palette: 'classic' });
+    expect(list[0].color).toBe(PALETTES.classic.orange);
   });
-  it('спокойная палитра с охрой — цвета темы как есть', () => {
+  it('классическая палитра с охрой — цвета темы как есть', () => {
     expect(accentVars({})).toBe(null);
     expect(accentVars({ palette: 'neon' })['--tint']).toBe(PALETTES.neon.orange);
     expect(accentVars({ palette: 'pastel', accent: 'blue' })['--on-tint']).toBe('#1c1c1e');

@@ -211,7 +211,7 @@ function mountSizePreview(app, root) {
 // Палитры: полоска оттенков (как будут выглядеть инструменты) и название
 const PAL_SHOW = ['orange', 'red', 'yellow', 'green', 'mint', 'cyan', 'blue', 'indigo', 'purple', 'pink'];
 function paletteHTML(st) {
-  const cur = PALETTES[st.palette] ? st.palette : 'calm';
+  const cur = PALETTES[st.palette] ? st.palette : 'classic';
   return '<div class="hdr">' + t('pal.title') + '</div><div class="pals" role="group" aria-label="' + esc(t('pal.title')) + '">' + PALETTE_IDS.map((k) =>
     '<button class="pal' + (cur === k ? ' on' : '') + '" data-pal="' + k + '" aria-pressed="' + (cur === k) + '"><span class="palrow">' +
     PAL_SHOW.map((h) => '<i style="background:' + PALETTES[k][h] + '"></i>').join('') + '</span><span class="paln">' + t('pal.' + k) + '</span></button>').join('') +
