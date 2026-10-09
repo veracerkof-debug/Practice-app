@@ -79,7 +79,7 @@
 .tab svg{width:30px;height:30px}
 .stitle2{font-size:19px;font-weight:700;letter-spacing:-.02em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
 .tview{position:fixed;inset:0;z-index:33;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);animation:up .28s cubic-bezier(.2,.8,.2,1)}
-.tvhd{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px;padding:6px 12px 0;max-width:900px;width:100%;margin:0 auto}
+.tvhd{display:grid;grid-template-columns:auto 1fr auto;grid-auto-flow:column;grid-auto-columns:auto;align-items:center;gap:6px;padding:6px 12px 0;max-width:900px;width:100%;margin:0 auto}
 .tvbody{flex:1;display:flex;min-height:0;padding:8px 6px 8px;max-width:900px;width:100%;margin:0 auto}
 .tvhost{flex:1;margin:0!important;padding:12px 10px 10px!important;min-width:0;min-height:0}
 .wkhead{display:flex;align-items:center;gap:16px;margin-top:8px}

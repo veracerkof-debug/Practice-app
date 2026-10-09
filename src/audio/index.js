@@ -1,6 +1,6 @@
 // Звуковой движок: единый AudioContext, шины и микшер, синтезатор, пэды, метроном, микрофон.
 // Создаётся один раз ядром; модулям отдаётся через ctx.audio (см. MODULE_SPEC.md).
-import { getContext, peekContext, now, midiFreq, masterNode } from './context.js';
+import { getContext, peekContext, now, midiFreq, masterNode, addTap } from './context.js';
 import { createMixer } from './mixer.js';
 import { createSynth, pianoPatch, playChord, playSeq, PRESETS } from './synth.js';
 import { createDrone } from './drone.js';
@@ -102,6 +102,13 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     refTone,
     analyser,
     openMic: () => openMic(device.mix.mode),
+    // Для записи: поток всего, что звучит (после компрессора); off() — отключить отвод. null — звука нет
+    tap() {
+      const c = getContext(device.mix.mode);
+      if (!c || !c.createMediaStreamDestination) return null;
+      const dest = c.createMediaStreamDestination(), off = addTap(dest);
+      return { ctx: c, dest, stream: dest.stream, off };
+    },
     // Остановить всё (выход из сессии)
     stopAll() {
       if (metro.running) metro.stop();

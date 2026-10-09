@@ -8,6 +8,8 @@ import { mountModule, makeCtx, moduleName, trackToolTime, fmtDur } from '../modu
 import { modules, moduleById } from '../../modules/index.js';
 import { topbar } from './common.js';
 import { showHelp } from '../help.js';
+import { recButtonHTML, bindRec } from './rec.js';
+import { canRecord } from '../recorder.js';
 
 export function renderTools(app, root) {
   const list = modules.filter((m) => !m.tab && isOn(app.store.state.settings, m.id)); // Библия — своя вкладка
@@ -26,22 +28,26 @@ export function renderTools(app, root) {
 export function openToolView(app, id, onClose) {
   const mod = moduleById(id), name = moduleName(mod);
   const layer = document.createElement('div');
+  // запись — во всех инструментах (звук приложения, по желанию микрофон; у терменвокса — и видео)
+  const rec = canRecord() && mod.record !== false;
   // immersive — модуль на весь экран без шапки: кнопка «назад» плавает поверх (глайдер)
   layer.innerHTML = mod.immersive
     ? '<div class="tview imm" role="dialog" aria-modal="true" aria-label="' + esc(name) + '">' + ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm tvback') +
-      ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm tvhelp') +
+      ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm tvhelp') + (rec ? recButtonHTML('tvrecf') : '') +
       '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>'
     : '<div class="tview" role="dialog" aria-modal="true" aria-label="' + esc(name) + '"><div class="tvhd">' +
-      ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(name) + '</div>' + ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm') + '</div>' +
+      ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(name) + '</div>' + (rec ? recButtonHTML() : '') + ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm') + '</div>' +
       '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>';
   document.body.appendChild(layer);
   const inst = mountModule(app, mod, layer.querySelector('.tvhost'), 'full');
+  const recOff = rec ? bindRec(app, layer, mod, layer.querySelector('.tvhost'), name) : () => {};
   // Рабочие инструменты (stats: false, например шумомер) в статистику не пишут
   const track = mod.stats === false ? { stop: () => 0 } : trackToolTime(app, id);
 
   const close = (next) => {
     app.openTool = null;
     document.removeEventListener('keydown', onKey);
+    recOff(); // идёт запись — сохраняется до того, как модуль отключит камеру и звук
     inst.unmount();
     ui.leave(layer.firstElementChild || layer, 260);
     setTimeout(() => layer.remove(), 280);

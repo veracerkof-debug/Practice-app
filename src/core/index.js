@@ -34,6 +34,7 @@ import { APP_VERSION } from './report.js';
 import { crashOffer } from './screens/report.js';
 import { bindVerses } from './screens/verses.js';
 import { createFiles } from './files.js';
+import { createRecorder } from './recorder.js';
 
 export function boot(root) {
   // журнал — первым: ошибки запуска тоже попадут в него
@@ -138,10 +139,12 @@ export function boot(root) {
   const app = {
     store, device, audio, modules, pomodoro, stopwatch, sounding: soundingAudio, soundingAudio, files, confirmUpload,
     shared: createShared(),
+    rec: null, // запись в инструментах (recorder.js) — ниже, когда app уже есть
     saveDevice: () => saveDevice(device),
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },
   };
+  app.rec = createRecorder(app);
   // Церковный режим: чтение Библии — план, отметки, место (src/core/reading.js)
   app.bible = createBible(store);
   // Вспышка, фонарик и вибрация в такт метронома

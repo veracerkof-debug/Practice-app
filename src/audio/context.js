@@ -39,6 +39,23 @@ export function getContext(mode = 'bal') {
 export const peekContext = () => ctx;
 export const masterNode = () => master;   // общая шина → компрессор → выход
 export const reverbNode = () => reverb;   // вход реверберации (может быть null)
+// Запись (recorder.js): отводы от всего, что звучит, — общего выхода после компрессора и прямых выходов мимо него
+// (метроном идёт напрямую, чтобы щелчок не сжимался)
+const direct = new Set(), taps = new Set();
+export function directOut(node) {
+  node.connect(ctx.destination);
+  direct.add(node);
+  taps.forEach((d) => node.connect(d));
+}
+export function addTap(dest) {
+  comp.connect(dest);
+  direct.forEach((n) => n.connect(dest));
+  taps.add(dest);
+  return () => {
+    taps.delete(dest);
+    [comp, ...direct].forEach((n) => { try { n.disconnect(dest); } catch { /* уже отключено */ } });
+  };
+}
 export const now = () => (ctx ? ctx.currentTime : 0);
 
 // Мягко отправить узел в реверберацию с заданным уровнем; возвращает узел посыла

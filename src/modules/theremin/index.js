@@ -808,6 +808,33 @@ export default {
   },
   resize(sz) { size = sz; render(); },
   // Окно закрыто — камера выключается всегда (и в сессии): снимать без открытого окна незачем
+  // Запись с видео (ядро, recorder.js): кадр камеры как на экране (зеркально, приглушённо) и рисунок поверх —
+  // в один холст; звук ядро добавляет само. null — камера выключена
+  recordVideo(el) {
+    const v0 = el.querySelector('video.tmcam');
+    if (S.state !== 'on' || !v0 || !v0.videoWidth || !HTMLCanvasElement.prototype.captureStream) return null;
+    const W = el.clientWidth || 360, H = el.clientHeight || 640, sc = Math.min(window.devicePixelRatio || 1, 1280 / Math.max(W, H));
+    const c = document.createElement('canvas');
+    c.width = Math.round(W * sc / 2) * 2; c.height = Math.round(H * sc / 2) * 2;
+    const g = c.getContext('2d');
+    let raf = 0;
+    const frame = () => {
+      raf = requestAnimationFrame(frame);
+      const v = el.querySelector('video.tmcam'), ov = el.querySelector('canvas.tmcv'), s = cfg();
+      g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+      if (v && v.videoWidth && s.showCam) {
+        const k = Math.max(c.width / v.videoWidth, c.height / v.videoHeight), dw = v.videoWidth * k, dh = v.videoHeight * k;
+        g.save(); g.translate(c.width, 0); g.scale(-1, 1);
+        if ('filter' in g) g.filter = 'saturate(.7) brightness(.78) contrast(1.06)';
+        g.drawImage(v, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
+        g.restore();
+      }
+      if (ov && ov.width) g.drawImage(ov, 0, 0, c.width, c.height);
+    };
+    frame();
+    const stream = c.captureStream(30);
+    return { stream, stop() { cancelAnimationFrame(raf); stream.getTracks().forEach((tr) => tr.stop()); } };
+  },
   unmount() {
     ro && ro.disconnect();
     offs.splice(0).forEach((f) => f());

@@ -45,6 +45,15 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 
 /* «?» в окне инструмента во весь экран — рядом с «назад» */
 .tview.imm .tvhelp{position:absolute;z-index:5;top:calc(60px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--cell) 80%,transparent)!important}
+/* запись (src/core/screens/rec.js): в окне во весь экран — под «?»; во время записи — красная, со временем */
+.tview.imm .tvrecf{position:absolute;z-index:5;top:calc(112px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--cell) 80%,transparent)!important}
+.tvrec svg{fill:none;stroke:currentColor;stroke-width:1.8}
+.tvrec.on{background:var(--red)!important;color:#fff;width:auto!important;padding:0 12px 0 8px;gap:6px;border-radius:999px}
+.tvrec.on svg circle:last-child{animation:recblink 1.2s ease-in-out infinite}
+.tvrec .rectm{font-size:13px;font-weight:700}
+@keyframes recblink{50%{opacity:.25}}
+.recgo{width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.recgo svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}
 /* инструкция к инструменту (src/core/help.js) */
 .ask .alert.helpcard{width:min(440px,100%);max-width:none;max-height:calc(100vh - 48px);display:flex;flex-direction:column}
 .helpcard .ab{overflow:auto}

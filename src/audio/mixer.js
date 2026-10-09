@@ -1,6 +1,6 @@
 // Микшер: шина на каждый источник, громкость 0…1.5, выключение звука.
 // Состояние — объект device.mix (как в прототипе: { metro, piano, drone, audio, theory, mode, mute }).
-import { getContext, masterNode, reverbNode } from './context.js';
+import { getContext, masterNode, reverbNode, directOut } from './context.js';
 
 // Шины по контракту модуля. 'media' хранится в mix под ключом 'audio' (совместимость с прототипом)
 export const BUSES = ['metro', 'piano', 'glider', 'drone', 'media', 'theory'];
@@ -44,7 +44,7 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
       if (!c) return null;
       const g = c.createGain();
       g.gain.value = value(name);
-      g.connect(name === 'metro' ? c.destination : masterNode());
+      if (name === 'metro') directOut(g); else g.connect(masterNode());
       if (name === 'theory' || name === 'piano' || name === 'glider') {
         const rv = reverbNode();
         if (rv) {
