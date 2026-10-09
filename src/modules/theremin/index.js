@@ -607,64 +607,92 @@ function camOff() {
 
 /* ---------- настройки ---------- */
 
-function setSheet() {
+// Настройки — по разделам: сверху режим и мелодия, ниже разделы (значок, название, что выбрано сейчас);
+// раздел открывается своей страницей с «‹ Настройки». Каждая регулировка — в одном понятном месте
+const SEC_IC = {
+  hands: '<path d="M8 20v-8.5a1.5 1.5 0 0 1 3 0V10a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v4a5 5 0 0 1-5 5z"/>',
+  sound: '<path d="M4 10v4h4l5 4V6L8 10z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
+  fx: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  notes: '<path d="M4 18h16M4 14h16M4 10h16M4 6h16"/><circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="8" r="1.6" fill="currentColor"/>',
+  solo: '<path d="M3 15c3 0 4-7 9-7s6 4 9 4"/>',
+  chords: '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M5 9h14M5 14h14M10 4v16M14 4v16"/>',
+  guitar: '<path d="M14 10l6-6M18 4l2 2"/><path d="M13.5 10.5a4 4 0 0 0-5.5.5l-3 3a3.5 3.5 0 0 0 5 5l3-3a4 4 0 0 0 .5-5.5z"/><circle cx="9.5" cy="14.5" r="1.2"/>',
+  look: '<rect x="3" y="6" width="18" height="13" rx="3"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/>',
+};
+const SECS = ['hands', 'sound', 'fx', 'notes', 'solo', 'chords', 'guitar', 'look'];
+const CHEVR = '<svg class="chev" viewBox="0 0 8 13"><path d="M1.5 1.5 6.5 6.5 1.5 11.5"/></svg>';
+
+function setSheet(start = 'root') {
   const { t, ui } = ctx;
+  let page = start;
   const chip = (attr, on, label) => '<button class="lchip pick glck' + (on ? ' on' : '') + '" ' + attr + ' aria-pressed="' + on + '" style="--c:var(--tint);--t:var(--on-tint)">' + label + '</button>';
-  const body = () => {
-    const s = cfg(), chrom = s.scale === 'chrom';
-    const mel = s.mel ? melodyById(s.mel) : null;
-    return ui.snav(t('settings')) +
-      // мелодия по подсказке (соло)
-      '<div class="group" style="margin-top:4px"><button class="cell" data-tmel><span class="grow">' + t('mel.title') + '</span><span class="l2">' + ui.esc(mel ? melodyName(mel, ctx.lang()) : t('mel.none')) + '</span></button></div>' +
-      '<div class="hdr">' + t('hands') + '</div><div class="group"><div class="cellcol">' + ui.seg('tside', [['right', t('hand.right')], ['left', t('hand.left')]], s.side, t('hands')) +
-      '<div class="segcap">' + t('hint.' + s.side) + '</div></div><div class="cell"><span class="grow">' + t('charX') + '</span>' + ui.sw('tchar', s.charX, t('charX')) + '</div>' +
-      '<div class="cell"><span class="grow">' + t('sgest') + '</span>' + ui.sw('tsgest', s.sgest, t('sgest')) + '</div></div><p class="ftr">' + t('charHint') + ' ' + t('sgestHint') + '</p>' +
-      // аккорды правой рукой
-      '<div class="hdr">' + t('chords') + '</div><div class="group"><div class="cellcol">' + ui.seg('tmode2', MODES.map((k) => [k, t('mode.' + k)]), s.mode, t('chords')) +
-      '<div class="segcap">' + t(s.mode === 'guitar' ? 'gHint' : 'chordHint') + '</div></div>' +
-      '<div class="cellcol"><div class="glsub">' + t('ckey') + '</div><div class="glroots">' + SH.map((n, i) => chip('data-tck="' + i + '"', s.ckey === i, n)).join('') + '</div>' +
+  const sw = (k, on, label) => '<div class="cell"><span class="grow">' + label + '</span>' + ui.sw(k, on, label) + '</div>';
+  // что выбрано сейчас — строкой под названием раздела
+  const summary = (k, s) => {
+    const chrom = s.scale === 'chrom';
+    if (k === 'hands') return t('sum.hands', { pitch: t('hand.' + s.side), fx: t('hand.' + (s.side === 'right' ? 'left' : 'right')) });
+    if (k === 'sound') return t('pre.' + s.sound);
+    if (k === 'fx') { const on = [...new Set(GESTURES.map((g) => s.gmap[g]).filter((v) => v && v !== 'off'))]; return on.length ? on.slice(0, 3).map((v) => t('tg.' + v)).join(' · ') + (on.length > 3 ? '…' : '') : t('sum.none'); }
+    if (k === 'notes') return rangeTxt(s) + ' · ' + (chrom ? t('sum.chrom') : SH[s.root] + ' ' + t('scale.' + s.scale)) + ' · ' + t('snap.' + s.snap);
+    if (k === 'solo') return (s.harm ? t('hst.' + s.hstyle) : t('sum.noHarm')) + ' · ' + t('stilt.' + s.stilt);
+    if (k === 'chords') return SH[s.ckey] + ' ' + t('cmode.' + s.cmode) + ' · ' + t('cs.' + s.csound);
+    if (k === 'guitar') { const on = [['gmic', 'gMic'], ['gplay', 'gPlay'], ['gdia', 'gDia']].filter(([f]) => s[f]).map(([, l]) => t('sum.' + l)); return on.length ? on.join(' · ') : t('sum.none'); }
+    if (k === 'look') return t('hud') + ': ' + t('hud.' + s.hud).toLowerCase() + (s.showCam ? '' : ' · ' + t('sum.noCam')) + (s.camAuto ? ' · ' + t('sum.auto') : '');
+    return '';
+  };
+  const pages = {
+    hands: (s) => '<div class="group"><div class="cellcol"><div class="glsub" style="margin-top:0">' + t('hands') + '</div>' + ui.seg('tside', [['right', t('hand.right')], ['left', t('hand.left')]], s.side, t('hands')) +
+      '<div class="segcap">' + t('hint.' + s.side) + '</div></div>' + sw('tchar', s.charX, t('charX')) + sw('tsgest', s.sgest, t('sgest')) + '</div><p class="ftr">' + t('charHint') + ' ' + t('sgestHint') + '</p>',
+    sound: (s) => '<div class="group"><div class="cellcol"><div class="glchips">' + SOUNDS.map((k) => chip('data-ts="' + k + '"', s.sound === k, t('pre.' + k))).join('') + '</div></div></div>' +
+      '<div class="hdr">' + t('presetsBase') + '</div><div class="glpre" role="group" aria-label="' + t('presets') + '">' +
+      Object.keys(PRESETS).map((k) => chip('data-tpre="' + k + '"', false, t('preset.' + k))).join('') + '</div><p class="ftr" style="margin-top:0">' + t('fxHint') + '</p>',
+    fx: (s) => '<div class="hdr" style="margin-top:4px">' + t('fxHand.' + (s.side === 'right' ? 'left' : 'right')) + '</div><div class="group">' +
+      GESTURES.map((k) => '<label class="cell"><span class="grow">' + t('g.' + k) + '</span><select class="sortsel" data-tg="' + k + '" aria-label="' + ui.esc(t('g.' + k)) + '">' +
+        TARGETS.map((tg) => '<option value="' + tg + '"' + (s.gmap[k] === tg ? ' selected' : '') + '>' + t('tg.' + tg) + '</option>').join('') + '</select></label>').join('') +
+      '<label class="cell"><span class="grow">' + t('g.pinch') + '</span><select class="sortsel" data-tg="pinch" aria-label="' + ui.esc(t('g.pinch')) + '">' +
+        ['off', 'freeze'].map((tg) => '<option value="' + tg + '"' + (s.gmap.pinch === tg ? ' selected' : '') + '>' + t('tg.' + tg) + '</option>').join('') + '</select></label></div>' +
+      '<div class="group" style="margin-top:12px"><button class="cell act" data-tcal>' + t('cal') + '</button><button class="cell act" data-tgdef>' + t('gDefault') + '</button></div>' +
+      '<p class="ftr">' + t('calHint') + '</p>',
+    notes: (s) => {
+      const chrom = s.scale === 'chrom';
+      return '<div class="hdr" style="margin-top:4px">' + t('range') + '</div><div class="group"><div class="cell"><span class="grow">' + t('from') + '</span>' + ui.icb('data-tlo2="-1"', I.left, t('lower'), 'sm') + '<b class="num glv">' + mName(s.lo) + '</b>' + ui.icb('data-tlo2="1"', I.right, t('higher'), 'sm') + '</div>' +
+        '<div class="cellcol"><div class="glsub">' + t('width') + ' · ' + rangeTxt(s) + '</div>' + ui.seg('tw', WIDTHS.map((w) => [w, t('w.' + w)]), s.width, t('width')) + '</div></div>' +
+        '<div class="hdr">' + t('notes') + '</div><div class="group"><div class="cellcol"><select class="sortsel glsel" data-tsc aria-label="' + t('notes') + '"><option value="chrom"' + (chrom ? ' selected' : '') + '>' + t('chrom') + '</option>' +
+        SCALE_TYPES.map((k) => '<option value="' + k + '"' + (s.scale === k ? ' selected' : '') + '>' + t('scale.' + k) + '</option>').join('') + '</select>' +
+        (chrom ? '' : '<div class="glsub" style="margin-top:10px">' + t('root') + '</div><div class="glroots">' + SH.map((n, i) => chip('data-tr="' + i + '"', s.root === i, n)).join('') + '</div>') + '</div></div>' +
+        '<div class="hdr">' + t('snap') + '</div><div class="group"><div class="cellcol">' + ui.seg('tsnap', SNAPS.map((k) => [k, t('snap.' + k)]), s.snap, t('snap')) +
+        '<div class="segcap">' + t('snapHint.' + s.snap) + '</div></div></div>';
+    },
+    solo: (s) => '<div class="group">' + sw('tharm', s.harm, t('harm')) +
+      (s.harm ? '<div class="cellcol"><div class="glsub">' + t('hstyle') + '</div><div class="glchips">' + HARM_IDS.map((k) => chip('data-ths="' + k + '"', s.hstyle === k, t('hst.' + k))).join('') +
+        '</div><div class="segcap">' + t('hstHint.' + s.hstyle) + '</div></div>' : '') +
+      '<div class="cellcol"><div class="glsub">' + t('stilt') + '</div>' + ui.seg('tstilt', ['off', 'vib', 'bright', 'trem'].map((k) => [k, t('stilt.' + k)]), s.stilt, t('stilt')) + '</div></div>' +
+      '<p class="ftr">' + t('harmHint') + '</p>',
+    chords: (s) => '<div class="group"><div class="cellcol"><div class="glsub" style="margin-top:0">' + t('ckey') + '</div><div class="glroots">' + SH.map((n, i) => chip('data-tck="' + i + '"', s.ckey === i, n)).join('') + '</div>' +
       '<div style="margin-top:10px">' + ui.seg('tcmode', [['maj', t('cmode.maj')], ['min', t('cmode.min')]], s.cmode, t('ckey')) + '</div></div>' +
       '<div class="cellcol"><div class="glsub">' + t('cq') + '</div>' + ui.seg('tcq', [['hand', t('cq.hand')], ['key', t('cq.key')]], s.cq, t('cq')) +
       '<div class="segcap">' + t('cqHint.' + s.cq) + '</div></div>' +
       '<div class="cellcol"><div class="glsub">' + t('csound') + '</div><div class="glchips">' + ['same', ...PAD_SOUNDS].map((k) => chip('data-tcs="' + k + '"', s.csound === k, t('cs.' + k))).join('') +
-      '</div><div class="segcap">' + t('csHint') + '</div></div>' +
-      '<div class="cell"><span class="grow">' + t('ctilt') + '</span>' + ui.sw('tctilt', s.ctilt, t('ctilt')) + '</div></div><p class="ftr">' + t('ctiltHint') + '</p>' +
-      // гитара: проверка звуком, подыгрывание, схема на экране
-      '<div class="hdr">' + t('mode.guitar') + '</div><div class="group">' +
-      '<div class="cell"><span class="grow">' + t('gMic') + '</span>' + ui.sw('tgmic', s.gmic, t('gMic')) + '</div>' +
-      '<div class="cell"><span class="grow">' + t('gPlay') + '</span>' + ui.sw('tgplay', s.gplay, t('gPlay')) + '</div>' +
-      '<div class="cell"><span class="grow">' + t('gDia') + '</span>' + ui.sw('tgdia', s.gdia, t('gDia')) + '</div></div>' +
-      '<p class="ftr">' + t('gSetHint') + '</p>' +
-      // соло: гармония пальцами и наклон руки
-      '<div class="hdr">' + t('solo') + '</div><div class="group"><div class="cell"><span class="grow">' + t('harm') + '</span>' + ui.sw('tharm', s.harm, t('harm')) + '</div>' +
-      '<div class="cellcol"><div class="glsub">' + t('hstyle') + '</div><div class="glchips">' + HARM_IDS.map((k) => chip('data-ths="' + k + '"', s.hstyle === k, t('hst.' + k))).join('') +
-      '</div><div class="segcap">' + t('hstHint.' + s.hstyle) + '</div></div>' +
-      '<div class="cellcol"><div class="glsub">' + t('stilt') + '</div>' + ui.seg('tstilt', ['off', 'vib', 'bright', 'trem'].map((k) => [k, t('stilt.' + k)]), s.stilt, t('stilt')) + '</div></div>' +
-      '<p class="ftr">' + t('harmHint') + '</p>' +
-      // рука эффектов: какое движение что делает
-      '<div class="hdr">' + t('fxHand.' + (s.side === 'right' ? 'left' : 'right')) + '</div><div class="group">' +
-      GESTURES.map((k) => '<label class="cell"><span class="grow">' + t('g.' + k) + '</span><select class="sortsel" data-tg="' + k + '" aria-label="' + ui.esc(t('g.' + k)) + '">' +
-        TARGETS.map((tg) => '<option value="' + tg + '"' + (s.gmap[k] === tg ? ' selected' : '') + '>' + t('tg.' + tg) + '</option>').join('') + '</select></label>').join('') +
-      '<label class="cell"><span class="grow">' + t('g.pinch') + '</span><select class="sortsel" data-tg="pinch" aria-label="' + ui.esc(t('g.pinch')) + '">' +
-        ['off', 'freeze'].map((tg) => '<option value="' + tg + '"' + (s.gmap.pinch === tg ? ' selected' : '') + '>' + t('tg.' + tg) + '</option>').join('') + '</select></label>' +
-      '<button class="cell act" data-tcal>' + t('cal') + '</button><button class="cell act" data-tgdef>' + t('gDefault') + '</button></div>' +
-      '<p class="ftr">' + t('calHint') + '</p>' +
-      '<div class="hdr">' + t('presetsBase') + '</div><div class="glpre" role="group" aria-label="' + t('presets') + '">' +
-      Object.keys(PRESETS).map((k) => chip('data-tpre="' + k + '"', false, t('preset.' + k))).join('') + '</div><p class="ftr" style="margin-top:0">' + t('fxHint') + '</p>' +
-      '<div class="hdr">' + t('sound') + '</div><div class="group"><div class="cellcol"><div class="glchips">' +
-      SOUNDS.map((k) => chip('data-ts="' + k + '"', s.sound === k, t('pre.' + k))).join('') + '</div></div></div>' +
-      '<div class="hdr">' + t('snap') + '</div><div class="group"><div class="cellcol">' + ui.seg('tsnap', SNAPS.map((k) => [k, t('snap.' + k)]), s.snap, t('snap')) +
-      '<div class="segcap">' + t('snapHint.' + s.snap) + '</div></div></div>' +
-      '<div class="hdr">' + t('notes') + '</div><div class="group"><div class="cellcol"><select class="sortsel glsel" data-tsc aria-label="' + t('notes') + '"><option value="chrom"' + (chrom ? ' selected' : '') + '>' + t('chrom') + '</option>' +
-      SCALE_TYPES.map((k) => '<option value="' + k + '"' + (s.scale === k ? ' selected' : '') + '>' + t('scale.' + k) + '</option>').join('') + '</select>' +
-      (chrom ? '' : '<div class="glsub" style="margin-top:10px">' + t('root') + '</div><div class="glroots">' + SH.map((n, i) => chip('data-tr="' + i + '"', s.root === i, n)).join('') + '</div>') + '</div></div>' +
-      '<div class="hdr">' + t('range') + '</div><div class="group"><div class="cell"><span class="grow">' + t('from') + '</span>' + ui.icb('data-tlo2="-1"', I.left, t('lower'), 'sm') + '<b class="num glv">' + mName(s.lo) + '</b>' + ui.icb('data-tlo2="1"', I.right, t('higher'), 'sm') + '</div>' +
-      '<div class="cellcol"><div class="glsub">' + t('width') + ' · ' + rangeTxt(s) + '</div>' + ui.seg('tw', WIDTHS.map((w) => [w, t('w.' + w)]), s.width, t('width')) + '</div></div>' +
-      '<div class="hdr">' + t('look') + '</div><div class="group"><div class="cellcol"><div class="glsub" style="margin-top:0">' + t('hud') + '</div>' +
+      '</div><div class="segcap">' + t('csHint') + '</div></div>' + sw('tctilt', s.ctilt, t('ctilt')) + '</div><p class="ftr">' + t('ctiltHint') + '</p>',
+    guitar: (s) => '<div class="group">' + sw('tgmic', s.gmic, t('gMic')) + sw('tgplay', s.gplay, t('gPlay')) + sw('tgdia', s.gdia, t('gDia')) + '</div><p class="ftr">' + t('gSetHint') + '</p>',
+    look: (s) => '<div class="group"><div class="cellcol"><div class="glsub" style="margin-top:0">' + t('hud') + '</div>' +
       ui.seg('thud', HUDS.map((k) => [k, t('hud.' + k)]), s.hud, t('hud')) + '<div class="segcap">' + t('hudHint') + '</div></div>' +
-      '<div class="cell"><span class="grow">' + t('camShow') + '</span>' + ui.sw('tshow', s.showCam, t('camShow')) + '</div>' +
-      '<div class="cell"><span class="grow">' + t('camAuto') + '</span>' + ui.sw('tauto', !!s.camAuto, t('camAuto')) + '</div></div>' +
-      '<p class="ftr">' + t('camHint') + ' ' + t('privacy') + '</p>';
+      sw('tshow', s.showCam, t('camShow')) + sw('tauto', !!s.camAuto, t('camAuto')) + '</div><p class="ftr">' + t('camHint') + ' ' + t('privacy') + '</p>',
+  };
+  const body = () => {
+    const s = cfg();
+    if (page !== 'root') {
+      const back = '<button class="tmback" data-tback aria-label="' + ui.esc(t('settings')) + '"><svg viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button>';
+      return ui.snav(t('sec.' + page), { left: back }) + pages[page](s);
+    }
+    const mel = s.mel ? melodyById(s.mel) : null;
+    // режим — сразу сверху: им пользуются чаще всего; мелодия — рядом
+    return ui.snav(t('settings')) +
+      '<div class="group" style="margin-top:4px"><div class="cellcol">' + ui.seg('tmode2', MODES.map((k) => [k, t('mode.' + k)]), s.mode, t('mode')) +
+      '<div class="segcap">' + t(s.mode === 'guitar' ? 'gHint' : s.mode === 'chord' ? 'chordHint' : 'soloHint') + '</div></div>' +
+      '<button class="cell" data-tmel><span class="grow">' + t('mel.title') + '</span><span class="l2">' + ui.esc(mel ? melodyName(mel, ctx.lang()) : t('mel.none')) + '</span>' + CHEVR + '</button></div>' +
+      '<div class="group tmsecs" style="margin-top:16px">' + SECS.map((k) => '<button class="cell tmsec" data-tpg="' + k + '"><span class="tmsi"><svg viewBox="0 0 24 24">' + SEC_IC[k] + '</svg></span>' +
+        '<span class="grow"><span>' + t('sec.' + k) + '</span><span class="tmsub">' + ui.esc(summary(k, s)) + '</span></span>' + CHEVR + '</button>').join('') + '</div>';
   };
   ui.sheet(body, (el, sh) => {
     const done = () => { save(); sh.update(); render(); };
@@ -672,6 +700,8 @@ function setSheet() {
       const s = cfg(), g = (q) => e.target.closest(q);
       let b;
       if (g('[data-tmel]')) { sh.close(); melSheet(ctx, s.mel, melPick); return; }
+      if ((b = g('[data-tpg]'))) { page = b.dataset.tpg; sh.update(); el.scrollTop = 0; return; }
+      if (g('[data-tback]')) { page = 'root'; sh.update(); return; }
       if ((b = g('[data-tpre]'))) { const keep = s.fx.echo.time; s.fx = applyPreset(b.dataset.tpre); if (!PRESETS[b.dataset.tpre].echo) s.fx.echo.time = keep; ctx.ui.toast(t('presetOn', { name: t('preset.' + b.dataset.tpre) })); }
       else if ((b = g('[data-ts]'))) { s.sound = b.dataset.ts; silence(); }
       else if ((b = g('[data-tcs]'))) { s.csound = b.dataset.tcs; silence(); }
