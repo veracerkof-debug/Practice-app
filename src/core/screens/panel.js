@@ -13,7 +13,7 @@ import {
 import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { hasDemo, addDemo, removeDemo } from '../demo.js';
-import { PALETTE_IDS, PALETTES, hueColor, onColor } from '../palettes.js';
+import { PALETTE_IDS, PALETTES, hueColor, onColor, TEXT_MODES } from '../palettes.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { AVATAR, CHEV, BACK, IC, tabIds, TAB_ICONS, weekdays, mBadge } from './common.js';
@@ -216,7 +216,11 @@ function paletteHTML(st) {
   return '<div class="hdr">' + t('pal.title') + '</div><div class="pals" role="group" aria-label="' + esc(t('pal.title')) + '">' + PALETTE_IDS.map((k) =>
     '<button class="pal' + (cur === k ? ' on' : '') + '" data-pal="' + k + '" aria-pressed="' + (cur === k) + '"><span class="palrow">' +
     PAL_SHOW.map((h) => '<i style="background:' + PALETTES[k][h] + '"></i>').join('') + '</span><span class="paln">' + t('pal.' + k) + '</span></button>').join('') +
-    '</div><p class="ftr">' + t('pal.hint') + '</p>';
+    '</div><p class="ftr">' + t('pal.hint') + '</p>' +
+    // цвет текста и значков на цветных кнопках, метках, событиях
+    '<div class="hdr">' + t('ontext.title') + '</div><div class="group"><div class="cellcol">' +
+    seg('ontext', TEXT_MODES.map((k) => [k, t('ontext.' + k)]), TEXT_MODES.includes(st.onText) ? st.onText : 'auto', t('ontext.title')) +
+    '<div class="segcap">' + t('ontext.hint') + '</div></div></div>';
 }
 
 function lookHTML(app) {
@@ -382,6 +386,7 @@ export function createPanel(app, onChange) {
       }
       if ((b = g('[data-seg="szdev"] [data-v]'))) { prevDev = b.dataset.v; render(); return; }
       if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
+      if ((b = g('[data-seg="ontext"] [data-v]'))) { app.store.state.settings.onText = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-pal]'))) { app.store.state.settings.palette = b.dataset.pal; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-acc]'))) { app.store.state.settings.accent = b.dataset.acc; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-meinst]'))) {

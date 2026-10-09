@@ -1,4 +1,5 @@
 // Библиотека: песни, категории, жанры, теги; шкала выученности; сортировка и фильтры.
+import { forcedText } from './palettes.js';
 import { uid } from './time.js';
 import { songStats } from './stats.js';
 import { parseKey } from './songinfo.js';
@@ -42,12 +43,15 @@ export function ensureLib(state, t = (k) => k) {
 
 // Цвет надписи на плашке: тёмный на светлом, белый на тёмном
 export function autoText(hex) {
+  const f = forcedText();
+  if (f) return f;
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
   if (!m) return '#fff';
   const [r, g, b] = [1, 2, 3].map((i) => parseInt(m[i], 16) / 255);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.62 ? '#1c1c1e' : '#ffffff';
 }
-export const textColor = (it) => it.text || autoText(it.color);
+// выбранный в «Оформлении» цвет текста на цветном — главнее своего у метки
+export const textColor = (it) => forcedText() || it.text || autoText(it.color);
 
 // Жанр песни хранится названием, категория и теги — по id
 export const genreOf = (L, name) => (name ? L.genres.find((g) => g.name.toLowerCase() === String(name).toLowerCase()) : null);

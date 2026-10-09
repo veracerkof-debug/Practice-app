@@ -30,8 +30,16 @@ export const ACCENT_HUE = { orange: 'orange', red: 'red', pink: 'pink', purple: 
 
 export const hueColor = (settings, hue) => PALETTES[paletteOf(settings)][hue];
 
-// Цвет значка поверх цвета: тёмный на светлом, белый на тёмном
+// Цвет текста и значков на цветном (settings.onText): 'auto' — по светлоте цвета, 'white' или 'black' — всегда такой
+const FORCED = { white: '#ffffff', black: '#000000' };
+let forced = null;
+export const TEXT_MODES = ['auto', 'white', 'black'];
+export const setTextMode = (mode) => { forced = FORCED[mode] || null; };
+export const forcedText = () => forced;
+
+// Цвет значка поверх цвета: тёмный на светлом, белый на тёмном (или выбранный человеком)
 export function onColor(hex) {
+  if (forced) return forced;
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
   if (!m) return '#fff';
   const [r, g, b] = [1, 2, 3].map((i) => parseInt(m[i], 16) / 255);
@@ -45,6 +53,7 @@ export function registerTools(list) {
   tools.forEach((m) => { if (m.ownColor == null) m.ownColor = m.color; });
 }
 export function paintTools(settings) {
+  setTextMode(settings.onText);
   tools.forEach((m) => {
     const hue = TOOL_HUE[m.id];
     m.color = hue && !m.local ? hueColor(settings, hue) : m.ownColor;
@@ -55,7 +64,7 @@ export function paintTools(settings) {
 // Переменные акцента для <html>: null — оставить цвета темы как есть (классическая палитра, охра)
 export function accentVars(settings) {
   const p = paletteOf(settings), accent = settings.accent || 'orange';
-  if (p === 'classic' && accent === 'orange') return null;
+  if (p === 'classic' && accent === 'orange') return forced ? { '--on-tint': forced } : null; // цвета темы как есть
   const c = hueColor(settings, ACCENT_HUE[accent] || 'orange'), P = PALETTES[p];
   const deep = (x, k) => 'color-mix(in srgb,' + x + ' ' + k + '%,var(--ink))';
   return {

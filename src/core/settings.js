@@ -1,6 +1,6 @@
 // Настройки ядра: цель недели, дни практики, тема, функции (вкл/выкл).
 import { watchMarks } from '../ui/marks.js';
-import { accentVars, paintTools, hueColor, ACCENT_HUE } from './palettes.js';
+import { accentVars, paintTools, hueColor, ACCENT_HUE, forcedText } from './palettes.js';
 
 // Функции ядра, которые можно выключить (модули выключаются так же — по id); данные при этом сохраняются
 export const CORE_FEATURES = ['streak', 'mastery'];
@@ -113,6 +113,9 @@ export function applyTheme(settings, de = document.documentElement) {
   const vars = isMono(settings) ? null : accentVars(settings), keys = ['--tint', '--tint-text', '--on-tint', '--red'];
   keys.forEach((k) => { if (!vars || !(k in vars)) de.style.removeProperty(k); });
   if (vars) Object.entries(vars).forEach(([k, v]) => de.style.setProperty(k, v));
+  // выбранный цвет текста на цветном — и для элементов со своим белым текстом (календарь, значки)
+  const f = forcedText();
+  if (f && !isMono(settings)) de.style.setProperty('--on-fixed', f); else de.style.removeProperty('--on-fixed');
 }
 
 // Цвет кружка акцента в выбранной палитре
