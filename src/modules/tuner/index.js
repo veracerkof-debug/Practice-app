@@ -47,8 +47,8 @@ function arcD(cx, cy, r, a0, a1) {
 // Стрелка: ±50 центов на ±60°. Зелёная зона — ровно допуск точности, по краям мягкий переход
 function gaugeSVG() {
   const k = 1.2, T = tol(), P = (r, deg) => { const a = ((deg - 90) * Math.PI) / 180; return [150 + r * Math.cos(a), 160 + r * Math.sin(a)]; };
-  let s = '<svg viewBox="0 0 300 176" class="gauge" aria-hidden="true"><defs><linearGradient id="tgz" x1="0" x2="1"><stop offset="0" stop-color="#5A9468" stop-opacity="0"/>' +
-    '<stop offset=".5" stop-color="#5A9468" stop-opacity=".35"/><stop offset="1" stop-color="#5A9468" stop-opacity="0"/></linearGradient></defs>';
+  let s = '<svg viewBox="0 0 300 176" class="gauge" aria-hidden="true"><defs><linearGradient id="tgz" x1="0" x2="1"><stop offset="0" stop-color="#5F8568" stop-opacity="0"/>' +
+    '<stop offset=".5" stop-color="#5F8568" stop-opacity=".35"/><stop offset="1" stop-color="#5F8568" stop-opacity="0"/></linearGradient></defs>';
   s += '<path d="' + arcD(150, 160, 126, -90 - 60, -90 + 60) + '" class="gtrack"/>';
   s += '<path d="' + arcD(150, 160, 126, -90 - (T + 10) * k, -90 + (T + 10) * k) + '" class="gsoft"/>';
   s += '<path d="' + arcD(150, 160, 126, -90 - T * k, -90 + T * k) + '" class="gzone" id="gzone"/>';
@@ -254,7 +254,7 @@ function drawPano(dt, ok, on) {
   const from = Math.floor(m0 - mid / px) - 1, to = Math.ceil(m0 + mid / px) + 1;
   for (let m = from; m <= to; m++) {
     const x = mid + (m - m0) * px, cur = on && R && Math.round(R.m) === m;
-    g.fillStyle = cur ? (ok ? '#5A9468' : colors.ink) : colors.l2;
+    g.fillStyle = cur ? (ok ? '#5F8568' : colors.ink) : colors.l2;
     g.font = (cur ? '700 ' : '500 ') + Math.round((cur ? 26 : 18) * dpr) + 'px system-ui, sans-serif';
     g.fillText(mName(m), x, tapeH * 0.5);
     g.strokeStyle = colors.l3;
@@ -270,13 +270,13 @@ function drawPano(dt, ok, on) {
   D.ph2 = (D.ph2 + v * 2.8 * dpr * dt) % (96 * dpr);
   const sy = tapeH + 8 * dpr, sh = (H - sy) / 2 - 3 * dpr;
   [[D.ph1, 24 * dpr, sy], [D.ph2, 48 * dpr, sy + sh + 6 * dpr]].forEach(([ph, p, y]) => {
-    g.fillStyle = ok ? '#5A9468' : colors.ink;
+    g.fillStyle = ok ? '#5F8568' : colors.ink;
     g.globalAlpha = (0.15 + 0.6 * D.a) * (y === sy ? 1 : 0.6);
     for (let x = -2 * p + (((ph % (2 * p)) + 2 * p) % (2 * p)); x < W; x += 2 * p) g.fillRect(x, y, p, sh);
   });
   // неподвижная метка по центру
   g.globalAlpha = 1;
-  g.fillStyle = ok ? '#5A9468' : colors.tint;
+  g.fillStyle = ok ? '#5F8568' : colors.tint;
   g.fillRect(mid - 1.5 * dpr, 0, 3 * dpr, H);
   g.beginPath(); g.moveTo(mid - 7 * dpr, 0); g.lineTo(mid + 7 * dpr, 0); g.lineTo(mid, 9 * dpr); g.closePath(); g.fill();
 }
@@ -461,7 +461,7 @@ export default {
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,
-  color: '#8C66AD',
+  color: '#866B9D',
   sizes: ['full', 'half', 'quarter', 'strip'],
   status(c) {
     const s = normalizeTuner(c.store.all()), beg = s.beginner ?? !!s.useTuning, tn = beg ? curTuning({ ...s, useTuning: true }) : null;

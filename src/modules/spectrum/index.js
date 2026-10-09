@@ -74,7 +74,7 @@ function drawSpectrum() {
   const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
   if (!W || !H) return;
   if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
-  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#B8792F', l3 = cs.getPropertyValue('--l3').trim(), l2 = cs.getPropertyValue('--l2').trim();
+  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#9C7242', l3 = cs.getPropertyValue('--l3').trim(), l2 = cs.getPropertyValue('--l2').trim();
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, W, H);
   const sr = mic.sampleRate, n = freq.length, fMax = Math.min(20000, sr / 2), lx = (f) => (Math.log10(f / F_MIN) / Math.log10(fMax / F_MIN)) * W;
@@ -235,7 +235,7 @@ export default {
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,
-  color: '#4F90BC',
+  color: '#5988A7',
   sizes: ['full', 'half', 'quarter', 'strip'],
   stats: false, // рабочий инструмент: время в нём не идёт в статистику
   status: (c) => c.t(c.store.get('view', 'spec') === 'spl' ? 'view.spl' : 'view.spec'),

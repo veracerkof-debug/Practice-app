@@ -7,8 +7,8 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 const Pulse = Capacitor.isNativePlatform() ? registerPlugin('Pulse') : null;
 
 // Основные цвета вспышки
-export const FLASH_COLORS = ['#FFFFFF', '#C24A3F', '#B8792F', '#C9A23C', '#5A9468', '#4A72AE', '#8C66AD'];
-export const SIG_DEF = { flash: false, strong: '#C24A3F', other: '#FFFFFF', torch: false, vibe: false };
+export const FLASH_COLORS = ['#FFFFFF', '#A75750', '#9C7242', '#AE934D', '#5F8568', '#567198', '#866B9D'];
+export const SIG_DEF = { flash: false, strong: '#A75750', other: '#FFFFFF', torch: false, vibe: false };
 
 export const sigOf = (device) => ({ ...SIG_DEF, ...((device.metro ??= {}).sig || {}) });
 

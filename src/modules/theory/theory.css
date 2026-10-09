@@ -9,9 +9,9 @@
 .ctrl4{display:grid;align-items:center;justify-items:center;margin-top:16px}
 .ctrl4{grid-template-columns:repeat(4,1fr);margin-top:14px}
 .fnb{font-size:12px;font-weight:700;width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex:none}
-.fT{background:color-mix(in srgb,#5A9468 20%,transparent);color:#1f9d45}
-.fS{background:color-mix(in srgb,#4A72AE 18%,transparent);color:#0a66d6}
-.fD{background:color-mix(in srgb,#C24A3F 18%,transparent);color:#d92b21}
+.fT{background:color-mix(in srgb,#5F8568 20%,transparent);color:#1f9d45}
+.fS{background:color-mix(in srgb,#567198 18%,transparent);color:#0a66d6}
+.fD{background:color-mix(in srgb,#A75750 18%,transparent);color:#d92b21}
 .scnotes{gap:4px}
 .scnotes div{padding:6px 2px}
 .pane .ctrl4{margin-top:4px}

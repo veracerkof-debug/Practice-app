@@ -30,14 +30,14 @@ import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
 
 const PAGES = {
-  me: ['#B8792F', '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M5 19.5c1.4-3.2 4-4.6 7-4.6s5.6 1.4 7 4.6"/></svg>'],
-  feat: ['#5A9468', '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="15" cy="12" r="3.5"/></svg>'],
+  me: ['#9C7242', '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M5 19.5c1.4-3.2 4-4.6 7-4.6s5.6 1.4 7 4.6"/></svg>'],
+  feat: ['#5F8568', '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="15" cy="12" r="3.5"/></svg>'],
   tabs: ['#8E8E93', '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 15.5h17M9.2 15.5v4M14.8 15.5v4"/></svg>'],
-  stats: ['#4A72AE', '<svg viewBox="0 0 24 24"><path d="M5 20v-6M10 20V9M15 20v-8M20 20V5"/></svg>'],
-  week: ['#B8792F', '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg>'],
-  notif: ['#C24A3F', '<svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>'],
-  look: ['#5E5EA4', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="#fff"/></svg>'],
-  data: ['#5A9468', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
+  stats: ['#567198', '<svg viewBox="0 0 24 24"><path d="M5 20v-6M10 20V9M15 20v-8M20 20V5"/></svg>'],
+  week: ['#9C7242', '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg>'],
+  notif: ['#A75750', '<svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>'],
+  look: ['#646493', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="#fff"/></svg>'],
+  data: ['#5F8568', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
 // Страницы, которых нет в режиме «Только инструменты»
 const PLAIN_HIDE = ['stats', 'week', 'notif'];
@@ -94,9 +94,9 @@ function statsHTML(app) {
   const wk = weeklyTotals(all, now);
   h += card(t('stats.byWeek'), t('stats.avg', { d: fmtDur(wk.avg) }), barsSVG(wk.weeks.map((x) => x.v), wk.weeks.map((x) => ddmm(x.a)), goal, 7, t('stats.byWeekAria')));
   const pc = (v) => (m.total ? (v / m.total) * 100 : 0);
-  h += card(t('stats.thisMonth'), fmtDur(m.total), '<div class="split"><i style="width:' + pc(m.free) + '%;background:var(--ink)"></i><i style="width:' + pc(m.songs) + '%;background:var(--tint)"></i><i style="flex:1;background:#5E5EA4"></i></div>' +
+  h += card(t('stats.thisMonth'), fmtDur(m.total), '<div class="split"><i style="width:' + pc(m.free) + '%;background:var(--ink)"></i><i style="width:' + pc(m.songs) + '%;background:var(--tint)"></i><i style="flex:1;background:#646493"></i></div>' +
     '<div class="legend"><span><i style="background:var(--ink)"></i>' + t('stats.free', { d: fmtDur(m.free) }) + '</span><span><i style="background:var(--tint)"></i>' + t('stats.songs', { d: fmtDur(m.songs) }) +
-    '</span><span><i style="background:#5E5EA4"></i>' + t('stats.tools', { d: fmtDur(m.tool) }) + '</span></div>');
+    '</span><span><i style="background:#646493"></i>' + t('stats.tools', { d: fmtDur(m.tool) }) + '</span></div>');
   // Модуль могли выключить или убрать — тогда название из строк ядра (tool.<id>), иначе id
   const toolName = (id) => (moduleById(id) ? moduleName(moduleById(id)) : t('tool.' + id) !== 'tool.' + id ? t('tool.' + id) : id);
   const tools = byTool(all).map((x) => ({ n: toolName(x.n), v: x.v }));
@@ -262,7 +262,7 @@ function featHTML(app) {
     (guardAvailable() ? '<div class="hdr">' + t('guard.hdr') + '</div><div class="group"><div class="cell"><span class="grow">' + t('guard.on') + '</span><label class="sw"><input type="checkbox" data-psw="guardShots"' + (st.guardShots !== false ? ' checked' : '') + ' aria-label="' + esc(t('guard.on')) + '"><i></i></label></div></div><p class="ftr">' + t('guard.hint') + '</p>' : '') +
     '<div class="group" style="margin-top:12px"><button class="cell act" data-helpreset>' + t('help.again') + '</button></div>' +
     // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
-    (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : FLAME, k === 'mastery' ? '#5E5EA4' : '#B8792F', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
+    (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : FLAME, k === 'mastery' ? '#646493' : '#9C7242', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
     '<p class="ftr">' + t('feat.own') + '</p>' +
     (skippedModules.length ? '<p class="ftr" style="color:var(--red)">' + esc(t('feat.skipped', { list: skippedModules.map((x) => x.path.split('/').slice(-2, -1)[0] + ' (' + x.err + ')').join(', ') })) + '</p>' : '');
 }
@@ -273,7 +273,7 @@ function tabsHTML(app) {
   const row = (k, on, i) => '<div class="cell"><span class="ticon" style="background:var(--tint)">' + TAB_ICONS[k] + '</span><span class="grow">' + t('nav.' + k) + '</span>' +
     (on ? (i > 0 ? '<button class="ic sm plain" data-tabmv="up" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.up', { name: t('nav.' + k) })) + '">' + IC.up + '</button>' : '') +
       (vis.length > 1 ? '<button class="ic sm plain" data-tabmv="off" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.off', { name: t('nav.' + k) })) + '" style="color:var(--red)">' + IC.minus + '</button>' : '')
-      : '<button class="ic sm plain" data-tabmv="on" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.on', { name: t('nav.' + k) })) + '" style="color:#5A9468">' + IC.plus + '</button>') + '</div>';
+      : '<button class="ic sm plain" data-tabmv="on" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.on', { name: t('nav.' + k) })) + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
   return '<div class="large">' + t('tabs.title') + '</div>' +
     '<div class="hdr">' + t('tabs.shown') + '</div><div class="group">' + vis.map((k, i) => row(k, true, i)).join('') + '</div>' +
     (hid.length ? '<div class="hdr">' + t('tabs.hidden') + '</div><div class="group">' + hid.map((k) => row(k, false)).join('') + '</div>' : '') +
@@ -294,7 +294,7 @@ function rootHTML(app) {
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(lifetimeSec(all, app.store.state.settings)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
     '<div class="group" style="margin-top:20px">' + Object.entries(PAGES).filter(([k]) => !plain || !PLAIN_HIDE.includes(k)).map(([k, [c, ic]]) => '<button class="cell" data-pp="' + k + '"><span class="ticon" style="background:' + c + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t('page.' + k + '.sub') + '</span></span>' + CHEV + '</button>').join('') + '</div>' +
-    '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="background:#BE5470">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button>' +
+    '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="background:#A95E72">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button>' +
       '<button class="cell" data-act="report"><span class="ticon" style="background:#8E8E93">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button></div>' +
     '<div class="group" style="margin-top:12px">' + ['tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
@@ -463,7 +463,7 @@ function importBackup(app, input, done) {
 /* ---------- поддержать, правовые тексты, соглашение ---------- */
 
 export function donateSheet() {
-  sheet(() => snav(t('donate.title')) + '<div class="prohero"><div class="pav" style="color:#BE5470">' + HEART.replace('<svg', '<svg style="width:40px;height:40px;fill:currentColor"') + '</div><p class="l2" style="text-align:center;margin:10px 16px 0">' + t('donate.text') + '</p></div>' +
+  sheet(() => snav(t('donate.title')) + '<div class="prohero"><div class="pav" style="color:#A95E72">' + HEART.replace('<svg', '<svg style="width:40px;height:40px;fill:currentColor"') + '</div><p class="l2" style="text-align:center;margin:10px 16px 0">' + t('donate.text') + '</p></div>' +
     '<div class="dongrid">' + [['1 $', 'coffee'], ['3 $', 'strings'], ['5 $', 'pick']].map(([a, k]) => '<button class="donb" data-don="' + a + '"><b>' + a + '</b><span>' + t('donate.' + k) + '</span></button>').join('') +
     '</div><p class="ftr" style="text-align:center">' + t('donate.later') + '</p>',
   (el) => el.addEventListener('click', (e) => { if (e.target.closest('[data-don]')) toast(t('donate.thanks')); }));

@@ -87,7 +87,7 @@ function flipHTML() {
 function ringHTML() {
   const { t, ui } = ctx, v = view(), { play, rs, sk } = buttons();
   const ring = '<div class="pring"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="' + R + '" fill="none" stroke="var(--fill)" stroke-width="12"/>' +
-    '<circle id="parc" cx="110" cy="110" r="' + R + '" fill="none" stroke="' + (v.brk ? '#5A9468' : 'var(--tint)') + '" stroke-width="12" stroke-linecap="round" stroke-dasharray="' +
+    '<circle id="parc" cx="110" cy="110" r="' + R + '" fill="none" stroke="' + (v.brk ? '#5F8568' : 'var(--tint)') + '" stroke-width="12" stroke-linecap="round" stroke-dasharray="' +
     C * v.frac + ' ' + C + '" transform="rotate(-90 110 110)"/></svg><div id="ptime" class="num ptime" role="timer">' + fmtClock(v.shown) + '</div></div>';
   const phase = '<div class="bpmlbl ph" id="pphase">' + v.label + '</div>';
   if (size === 'quarter') return '<div class="vq">' + phase + ring + '<div class="vrow">' + rs + play + sk + '</div></div>';
@@ -232,7 +232,7 @@ export default {
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,
-  color: '#C24A3F',
+  color: '#A75750',
   sizes: ['full', 'half', 'quarter', 'strip'],
   session: false, // в сессии помодоро — значок в заголовке и шторка
   status(c) {

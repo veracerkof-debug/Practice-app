@@ -872,7 +872,7 @@ export default {
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,
-  color: '#BE5470',
+  color: '#A95E72',
   sizes: ['full', 'half', 'quarter', 'strip'],
   status(c) {
     const list = c.files.list('audio'), td = list.reduce((s, x) => s + (x.dur || 0), 0);

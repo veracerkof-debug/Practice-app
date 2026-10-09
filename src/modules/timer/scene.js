@@ -18,7 +18,7 @@ export function createScene(el, c, view) {
   const cv = el.querySelector('canvas'), g = cv.getContext('2d');
   const S = c.stone(), mono = c.mono, still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const css = getComputedStyle(el), col = (k, d) => (css.getPropertyValue(k) || d).trim();
-  const INK = col('--ink', '#111'), L2 = col('--l2', '#666'), L3 = col('--l3', '#999'), SEP = col('--sep', '#ddd'), TINT = col('--tint', '#B8792F');
+  const INK = col('--ink', '#111'), L2 = col('--l2', '#666'), L3 = col('--l3', '#999'), SEP = col('--sep', '#ddd'), TINT = col('--tint', '#9C7242');
   const R = rng(S.seed);
   let raf = 0, last = 0, W = 0, H = 0, alive = true;
   const parts = []; // брызги, пыль, искры, сколы: { x, y, vx, vy, life, max, kind, r }

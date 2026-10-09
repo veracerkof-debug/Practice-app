@@ -503,7 +503,7 @@ export default {
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,
-  color: '#4A72AE',
+  color: '#567198',
   sizes: ['full', 'half', 'quarter', 'strip'],
   status(c) {
     const th = c.store.all(), k = keyInfo(th.pc || 0, !!th.minor);

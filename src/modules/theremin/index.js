@@ -141,7 +141,7 @@ function draw() {
   const s = cfg(), hud = s.hud;
   if (S.state !== 'on' || hud === 'off') return;
   const full = hud === 'full', pcs = allowedPcs(s), map = frameMap(W, H), right = s.side === 'right';
-  const tint = getComputedStyle(host.querySelector('.tm') || host).getPropertyValue('--tint').trim() || '#B8792F';
+  const tint = getComputedStyle(host.querySelector('.tm') || host).getPropertyValue('--tint').trim() || '#9C7242';
   // гитара: гриф, струны, пальцы и схема аккорда поверх кадра (guitar.js)
   if (s.mode === 'guitar') { if (S.G) S.G.draw(g, W, H, map, { tint, hud, size, dia: s.gdia }); return; }
   const yOf = (m) => map.y(EDGE + (1 - midiToPos(m, s.lo, s.width)) * (1 - 2 * EDGE));
@@ -677,7 +677,7 @@ export default {
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,
-  color: '#8C66AD',
+  color: '#866B9D',
   sizes: ['full', 'half', 'quarter', 'strip'],
   immersive: true, // в отдельном окне — на весь экран, без шапки
   status(c) {

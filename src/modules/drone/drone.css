@@ -22,7 +22,7 @@
 .dstop{width:46px;height:46px;flex:none}
 .dstop,.lay,.dtile{transition:transform .12s ease,background .15s,color .15s}
 .dstop:active,.lay:active{transform:scale(.9)}
-.dtile.on{background:linear-gradient(135deg,var(--tint),color-mix(in srgb,var(--tint) 65%,#BE5470));background-size:220% 220%;animation:dshift 5s ease-in-out infinite}
+.dtile.on{background:linear-gradient(135deg,var(--tint),color-mix(in srgb,var(--tint) 65%,#A95E72));background-size:220% 220%;animation:dshift 5s ease-in-out infinite}
 .pane .dwrap{flex:1;min-height:0}
 .pane .dgrid{flex:1;height:auto;margin:0;min-height:0;border-radius:12px;overflow:hidden}
 .pane .dtile{font-size:clamp(18px,10cqmin,60px)}
@@ -50,5 +50,5 @@
 .dsb{background:var(--cell);border-radius:14px;padding:10px 8px;text-align:left;display:flex;flex-direction:column;gap:2px;min-height:62px}
 .dsb b{font-size:15px}
 .dsb span{font-size:11px;color:var(--l2);line-height:1.25}
-.dsb.on{box-shadow:0 0 0 2px #4893A6;background:color-mix(in srgb,#4893A6 10%,var(--cell))}
+.dsb.on{box-shadow:0 0 0 2px #548591;background:color-mix(in srgb,#548591 10%,var(--cell))}
 @keyframes dshift{50%{background-position:100% 100%}}

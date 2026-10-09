@@ -118,7 +118,7 @@ function scopeStart(ctx, cv, getS) {
   cv.width = (cv.clientWidth || 300) * dpr;
   cv.height = (cv.clientHeight || 110) * dpr;
   const td = new Float32Array(4096), css = getComputedStyle(document.documentElement);
-  const tint = css.getPropertyValue('--tint').trim() || '#B8792F', l3 = css.getPropertyValue('--l3').trim() || '#ccc';
+  const tint = css.getPropertyValue('--tint').trim() || '#9C7242', l3 = css.getPropertyValue('--l3').trim() || '#ccc';
   let raf = 0;
   const draw = () => {
     if (!document.contains(cv)) return;

@@ -34,7 +34,7 @@
 .fclock.brk .fcolon i{background:#2E7D46}
 .fprog{width:min(100%,420px);height:6px;border-radius:3px;background:var(--fill);overflow:hidden}
 .fprog b{display:block;height:100%;background:var(--tint);transition:width .4s}
-.fclock.brk~.fprog b{background:#5A9468}
+.fclock.brk~.fprog b{background:#5F8568}
 .fwrap.half .fd{width:clamp(34px,13cqmin,80px)}
 .fwrap.half .fd b{font-size:clamp(24px,10cqmin,60px)}
 .fq .fd{width:clamp(26px,18cqw,48px)}

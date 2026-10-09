@@ -5,7 +5,7 @@
 :root {
   --bg: #F3F2EE; --cell: #FFFFFF; --ink: #161514; --l2: #87847E; --l3: #C6C3BC;
   --sep: rgba(60,55,45,.15); --fill: rgba(120,115,105,.12); --fill2: rgba(120,115,105,.2);
-  --tint: #B8792F; --tint-text: #8C5A1E; --on-tint: #FFFFFF; --red: #C24A3F; --bar: rgba(248,247,243,.84);
+  --tint: #9C7242; --tint-text: #765A38; --on-tint: #FFFFFF; --red: #A75750; --bar: rgba(248,247,243,.84);
   --gold: #A87A00; --gold-bg: rgba(212,160,23,.14); /* строгие часы */
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   color-scheme: light;
@@ -15,7 +15,7 @@
   :root:not([data-theme="light"]) {
     --bg: #000000; --cell: #1C1C1E; --ink: #FFFFFF; --l2: #8D8D93; --l3: #48484A;
     --sep: rgba(84,84,88,.55); --fill: rgba(118,118,128,.24); --fill2: rgba(118,118,128,.36);
-    --tint: #D49A55; --tint-text: #D49A55; --on-tint: #1A0E00; --red: #D0675A; --bar: rgba(22,22,24,.8);
+    --tint: #BC9361; --tint-text: #BC9361; --on-tint: #1A0E00; --red: #B96E65; --bar: rgba(22,22,24,.8);
     --gold: #FFD43B; --gold-bg: rgba(255,212,59,.16);
     color-scheme: dark;
   }
@@ -24,7 +24,7 @@
 :root[data-theme="dark"] {
   --bg: #000000; --cell: #1C1C1E; --ink: #FFFFFF; --l2: #8D8D93; --l3: #48484A;
   --sep: rgba(84,84,88,.55); --fill: rgba(118,118,128,.24); --fill2: rgba(118,118,128,.36);
-  --tint: #D49A55; --tint-text: #D49A55; --on-tint: #1A0E00; --red: #D0675A; --bar: rgba(22,22,24,.8);
+  --tint: #BC9361; --tint-text: #BC9361; --on-tint: #1A0E00; --red: #B96E65; --bar: rgba(22,22,24,.8);
     --gold: #FFD43B; --gold-bg: rgba(255,212,59,.16);
   color-scheme: dark;
 }
@@ -38,7 +38,7 @@
 :root[data-theme="oled"] {
   --bg: #000; --cell: #0E0E10; --ink: #fff; --l2: #8D8D93; --l3: #3A3A3C;
   --sep: rgba(84,84,88,.45); --fill: rgba(118,118,128,.18); --fill2: rgba(118,118,128,.28);
-  --tint: #D49A55; --tint-text: #D49A55; --on-tint: #1A0E00; --red: #D0675A; --bar: rgba(0,0,0,.85);
+  --tint: #BC9361; --tint-text: #BC9361; --on-tint: #1A0E00; --red: #B96E65; --bar: rgba(0,0,0,.85);
   --gold: #FFD43B; --gold-bg: rgba(255,212,59,.16);
   color-scheme: dark;
 }

@@ -20,7 +20,7 @@
 .tile{padding:10px 12px}
 .gring .rover{fill:none;stroke-width:12;stroke-linecap:round;filter:drop-shadow(0 0 2px rgba(0,0,0,.35))}
 .gring .rpct{font:700 17px var(--font);fill:var(--ink)}
-.gring .rover2{font:700 11px var(--font);fill:color-mix(in srgb,var(--tint) 62%,#BE5470)}
+.gring .rover2{font:700 11px var(--font);fill:color-mix(in srgb,var(--tint) 62%,#A95E72)}
 .gring.big{width:110px;height:110px;flex:none}
 .spill{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:4px 10px 4px 6px;border-radius:999px;background:color-mix(in srgb,var(--tint) 14%,transparent);color:var(--tint-text);font-size:13px;font-weight:600}
 .spill b{font-size:15px}

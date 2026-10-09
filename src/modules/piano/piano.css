@@ -21,7 +21,7 @@
 .prot.l{transform:translate(-50%,-50%) rotate(-90deg)}
 .prot .pwrap{height:100%}
 .sclab{position:absolute;left:10px;top:6px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--l2)}
-.sclab.on{color:#5A9468}
+.sclab.on{color:#5F8568}
 .mkdock{position:sticky;bottom:0;margin:0 -16px -16px;padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:.5px solid var(--sep);z-index:3}
 .mkbar{display:flex;align-items:stretch;gap:6px;height:92px}
 .mko{width:28px;border-radius:10px;background:var(--fill);font-size:18px;font-weight:600}
@@ -40,8 +40,8 @@
 .scr.bl{left:8px;bottom:8px}
 .scr.br{right:8px;bottom:8px}
 .rhead{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:0 10px}
-.rhead b{font:800 11px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;color:#D49A55}
-.led{width:8px;height:8px;border-radius:50%;background:#D49A55;box-shadow:0 0 8px #D49A55}
+.rhead b{font:800 11px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;color:#BC9361}
+.led{width:8px;height:8px;border-radius:50%;background:#BC9361;box-shadow:0 0 8px #BC9361}
 .lcd{grid-column:1/-1;position:relative;background:radial-gradient(120% 140% at 50% 0%,#2a1a05,#120b02);border-radius:12px;box-shadow:inset 0 0 0 1px rgba(255,159,10,.25),inset 0 4px 14px rgba(0,0,0,.6);overflow:hidden}
 .lcd canvas{display:block;width:100%;height:96px}
 .lcd .sclab{color:rgba(255,179,64,.6)}

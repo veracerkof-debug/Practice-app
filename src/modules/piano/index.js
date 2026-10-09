@@ -182,7 +182,7 @@ export default {
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,
-  color: '#5E5EA4',
+  color: '#646493',
   sizes: ['full', 'half', 'quarter', 'strip'],
   // «Поворот — весь экран»: сессия поворачивает весь экран, пока пианино в окне
   rotate: (c) => { const p = c.store.all(); return p.rot && p.rotMode === 'screen' ? (p.rotDir === 'l' ? 'l' : 'r') : null; },

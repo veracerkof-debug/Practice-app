@@ -31,7 +31,7 @@
 .pane.strip .aname{font-size:13px}
 .pane.strip .ratev{font-size:15px;min-width:3.4ch}
 .aempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:12px}
-.aeico{width:64px;height:64px;border-radius:20px;background:color-mix(in srgb,#BE5470 14%,var(--cell));color:#BE5470;display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+.aeico{width:64px;height:64px;border-radius:20px;background:color-mix(in srgb,#A95E72 14%,var(--cell));color:#A95E72;display:flex;align-items:center;justify-content:center;margin-bottom:6px}
 .aeico svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .aeico.sm{width:34px;height:34px;border-radius:10px;margin:0}
 .aeico.sm svg{width:18px;height:18px}
