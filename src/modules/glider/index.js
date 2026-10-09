@@ -398,6 +398,7 @@ export default {
   i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#866B9D',
+  multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами
   sizes: ['full', 'half', 'quarter', 'strip'],
   immersive: true, // в отдельном окне — на весь экран, без шапки
   status(c) {

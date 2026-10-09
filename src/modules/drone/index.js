@@ -135,6 +135,7 @@ export default {
   i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#548591',
+  multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами
   sizes: ['full', 'half', 'quarter', 'strip'],
   status: (c) => { const d = c.store.all(); return c.t('status', { note: SH[d.pc], sound: c.t('snd.' + (SOUNDS[d.sound] != null ? d.sound : 'soft') + '.s') }); },
   mount(el, c, sz = 'full') {

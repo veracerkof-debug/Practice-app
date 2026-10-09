@@ -954,5 +954,5 @@
   "help.againDone": "Asboblar ochilganda maslahatlar yana koʻrsatiladi",
   "guard.hdr": "Cholg‘ularda chalish",
   "guard.on": "Chalayotganda ekran surati olinmasin",
-  "guard.hint": "Ko‘p telefonlarda uch barmoq bilan tegish — ekran surati, va pianino yoki paddagi akkord skrinshotga aylanadi. Cholg‘u ochiq turganda ekran surati olinmaydi; cholg‘u yopilsa — yana mumkin. Imo-ishoraning o‘zi telefon sozlamalarida ham o‘chiriladi (Imo-ishoralar → Uch barmoq bilan ekran surati)."
+  "guard.hint": "Ko'p telefonlarda uch barmoq bilan tegish — ekran surati, va pianino yoki paddagi akkord skrinshotga aylanadi. Pianino, glayder yoki pedlar ochiq turganda ekran surati olinmaydi — bu vaqtda ekran yozuvi ham ishlamaydi (Android shunday ishlaydi). Boshqa cholg'ularda va ilovaning barcha ekranlarida suratlar va ekran yozuvi ishlaydi. Pianinodagi o'yinni yozish uchun bu himoyani shu yerda o'chirish mumkin. Imo-ishoraning o'zi telefon sozlamalarida ham o'chiriladi (Imo-ishoralar → Uch barmoq bilan ekran surati)."
 }

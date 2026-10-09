@@ -153,7 +153,10 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
   frame.dataset.size = size;
   frame.style.setProperty('--mod', mod.color);
   mod.mount(host, ctx, size);
-  guardOpen(); // пока инструмент открыт — системный снимок экрана тремя пальцами не срабатывает
+  // инструмент, где играют несколькими пальцами: пока открыт — системный снимок экрана тремя пальцами не срабатывает
+  // (у остальных — медиатека, ноты, тюнер… — защиты нет: она выключала бы и запись экрана)
+  const guarded = !!mod.multitouch;
+  if (guarded) guardOpen();
   firstHelp(app, mod); // при первом открытии — инструкция
   return {
     ctx,
@@ -168,7 +171,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
       log('mod', 'закрыт ' + mod.id);
       try { mod.unmount(host); } catch (e) { logErr('mod', e); } // host — какое из мест закрывается (модуль может быть открыт в двух)
       host.replaceChildren();
-      guardClose();
+      if (guarded) guardClose();
     },
   };
 }

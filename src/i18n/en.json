@@ -963,5 +963,5 @@
   "help.againDone": "Tips will show again when tools are opened",
   "guard.hdr": "Playing instruments",
   "guard.on": "No screenshots while playing",
-  "guard.hint": "On many phones a three-finger touch takes a screenshot, turning a chord on the piano or pads into a screenshot. While an instrument is open, screenshots are blocked; close it to take them again. The gesture itself can also be turned off in the phone settings (Gestures → Three-finger screenshot)."
+  "guard.hint": "On many phones a three-finger touch takes a screenshot, turning a chord on the piano or pads into a screenshot. While the piano, glider or pads are open, screenshots are blocked — and screen recording pauses too (this is how Android works). In other instruments and on all app screens screenshots and screen recording work. To record playing the piano, turn this protection off here. The gesture itself can also be turned off in the phone settings (Gestures → Three-finger screenshot)."
 }
