@@ -20,3 +20,13 @@ describe('демо-набор', () => {
     expect(demoSessions(songs, from, to).map((r) => r.start)).toEqual(s.map((r) => r.start));
   });
 });
+
+describe('проверка создателем: часы камня', async () => {
+  const { parseHours } = await import('../src/core/sandbox.js');
+  it('часы из надписи', () => {
+    expect(parseHours('20 000 ч')).toBe(20000);
+    expect(parseHours('297 ч 30 мин')).toBe(297.5);
+    expect(parseHours('12 soat')).toBe(12);
+    expect(parseHours('нет')).toBe(null);
+  });
+});

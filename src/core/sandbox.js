@@ -4,7 +4,20 @@
 // Записи и файлы в IndexedDB (аудио, табы) в копию не входят — их проверка не меняет.
 import { extTest } from './ext.js';
 
-const SNAP = 'practice.sandbox', EDITS = 'practice.sandbox.edits';
+const SNAP = 'practice.sandbox', EDITS = 'practice.sandbox.edits', HOURS = 'practice.sandbox.hours';
+
+// «20 000 ч 15 мин», «297 h», «12 soat» → часы (первое число — часы, второе — минуты); null — не похоже на время
+export function parseHours(txt) {
+  const ns = String(txt).replace(/(\d)[\s\u00a0\u202f](?=\d{3}\b)/g, '$1').match(/\d+(?:[.,]\d+)?/g);
+  if (!ns) return null;
+  const v = ns.map((x) => +x.replace(',', '.'));
+  return v.length > 1 ? v[0] + v[1] / 60 : v[0];
+}
+// Часы для камня, заданные правкой во время проверки (или null — настоящие)
+export function sandboxHours(settings) {
+  if (!extTest(settings)) return null;
+  try { const v = localStorage.getItem(HOURS); return v == null ? null : +v; } catch { return null; }
+}
 const keys = () => Object.keys(localStorage).filter((k) => k.startsWith('practice.') && k !== SNAP && k !== EDITS);
 
 // Перед входом: копия всех данных (если копии ещё нет — повторный вход её не затирает)
@@ -78,6 +91,9 @@ export function initSandbox(app, ask) {
         edits.push({ at, from: prev ? prev.from : txt, to });
         save();
         el.textContent = to;
+        // правка часов (элементы с data-hours: часы камня, всего в профиле) — камень показывается для этих часов
+        const hEl = el.closest('[data-hours]');
+        if (hEl) { const h = parseHours(to); if (h != null) { try { localStorage.setItem(HOURS, String(h)); } catch { /* ignore */ } dispatchEvent(new CustomEvent('sandbox:hours', { detail: h })); } }
       });
     }, 650);
   }, { capture: true, passive: true });

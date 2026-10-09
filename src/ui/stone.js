@@ -95,7 +95,22 @@ export function stoneMesh(seed, hours, detail = 3) {
   // в единичный размер
   const m = Math.max(...V.map((p) => Math.hypot(p[0], p[1], p[2])));
   V.forEach((p) => { p[0] /= m; p[1] /= m; p[2] /= m; });
-  return { V, F, A, kind };
+  // нормали вершин (среднее граней вокруг): обкатанный камень освещается по ним — без видимых треугольников
+  const N = V.map(() => [0, 0, 0]);
+  F.forEach(([a, b, c]) => {
+    const pa = V[a], pb = V[b], pc = V[c], u = [pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]], w = [pc[0] - pa[0], pc[1] - pa[1], pc[2] - pa[2]];
+    const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+    [a, b, c].forEach((i) => { N[i][0] += n[0]; N[i][1] += n[1]; N[i][2] += n[2]; });
+  });
+  // гладкость освещения: сколы нового камня видны гранями, обкатанный — гладкий
+  const smooth = Math.min(1, 0.25 + 0.35 * edges + 0.5 * form);
+  // и узор у гладкого мягче: мелкая рябь по вершинам сглаживается соседями
+  if (form > 0.05) {
+    const sum = A.map(() => 0), cnt = A.map(() => 0);
+    F.forEach((f) => f.forEach((i) => f.forEach((j) => { sum[i] += A[j]; cnt[i]++; })));
+    for (let i = 0; i < A.length; i++) A[i] = A[i] * (1 - 0.6 * form) + (sum[i] / cnt[i]) * 0.6 * form;
+  }
+  return { V, F, A, N: N.map(norm), kind, smooth };
 }
 
 // Порода по зерну профиля: светлота основы, лёгкий тёплый или холодный оттенок (почти серый), жилы, крап, слои
@@ -127,14 +142,17 @@ const L = norm([-0.55, -0.75, 0.6]);
 export const dark = () => matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.dataset.theme !== 'light' || document.documentElement.dataset.theme === 'dark' || document.documentElement.dataset.theme === 'oled';
 export function paintStone(ctx, mesh, q, cx, cy, s, { dark: dk = false, polish = 0, shadow = true } = {}) {
   const M = qmat(q);
-  const P = mesh.V.map((v) => [M[0] * v[0] + M[1] * v[1] + M[2] * v[2], M[3] * v[0] + M[4] * v[1] + M[5] * v[2], M[6] * v[0] + M[7] * v[1] + M[8] * v[2]]);
+  const rot = (v) => [M[0] * v[0] + M[1] * v[1] + M[2] * v[2], M[3] * v[0] + M[4] * v[1] + M[5] * v[2], M[6] * v[0] + M[7] * v[1] + M[8] * v[2]];
+  const P = mesh.V.map(rot), NV = mesh.N ? mesh.N.map(rot) : null, sm = mesh.smooth ?? 0;
   const list = [];
   mesh.F.forEach((f) => {
     const a = P[f[0]], b = P[f[1]], c = P[f[2]];
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], wx = c[0] - a[0], wy = c[1] - a[1], wz = c[2] - a[2];
     const n = norm([uy * wz - uz * wy, uz * wx - ux * wz, ux * wy - uy * wx]);
     if (n[2] <= 0) return; // обратная сторона
-    list.push([a[2] + b[2] + c[2], f, n]);
+    // освещение — между нормалью грани (сколы) и средней нормалью вершин (обкатанная поверхность)
+    const sn = NV && sm > 0 ? norm([0, 1, 2].map((k) => n[k] * (1 - sm) + (NV[f[0]][k] + NV[f[1]][k] + NV[f[2]][k]) / 3 * sm)) : n;
+    list.push([a[2] + b[2] + c[2], f, sn]);
   });
   list.sort((x, y) => x[0] - y[0]);
   if (shadow) {
@@ -142,21 +160,68 @@ export function paintStone(ctx, mesh, q, cx, cy, s, { dark: dk = false, polish =
     ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.98, s * 0.7, s * 0.09, 0, 0, Math.PI * 2); ctx.fill();
   }
   const K = mesh.kind, tn = K.tint;
-  list.forEach(([, f, n]) => {
+  // цвет точки поверхности по нормали n и светлоте породы alb
+  const shade = (n, alb) => {
     const lam = Math.max(0, n[0] * L[0] + n[1] * L[1] + n[2] * L[2]);
-    const alb = (mesh.A[f[0]] + mesh.A[f[1]] + mesh.A[f[2]]) / 3 + K.base;
     // блик: у полированной гальки — острее и ярче; переливы — блик чуть гуляет по узору породы
     const hv = Math.max(0, n[2] * 0.6 + lam * 0.4), spec = Math.pow(hv, 18 + 30 * polish) * (0.08 + 0.16 * polish) * (0.7 + 0.6 * alb);
     const rim = Math.pow(1 - Math.max(0, n[2]), 3) * (6 + 10 * polish); // край светлее — объём
     let v = (dk ? 28 : 34) + (dk ? 150 : 185) * (0.16 + 0.84 * lam) * (0.6 + 0.72 * alb) + spec * 255 + rim;
-    v = Math.max(8, Math.min(245, Math.round(v)));
-    const sh = (k) => Math.max(0, Math.min(255, v + Math.round(k * (0.6 + 0.4 * lam))));
-    const col = 'rgb(' + sh(tn[0]) + ',' + sh(tn[1]) + ',' + sh(tn[2]) + ')';
+    v = Math.max(8, Math.min(245, v));
+    const sh = (k) => Math.max(0, Math.min(255, v + k * (0.6 + 0.4 * lam)));
+    return [sh(tn[0]), sh(tn[1]), sh(tn[2])];
+  };
+  // обкатанный камень — плавно, по точкам (цвет вершин переходит внутри треугольника): ни граней, ни ступенек
+  if (NV && sm >= 0.5 && ctx.getTransform && typeof document !== 'undefined') { smoothPaint(ctx, list, P, NV, mesh, shade, cx, cy, s); return; }
+  list.forEach(([, f, n]) => {
+    const alb = (mesh.A[f[0]] + mesh.A[f[1]] + mesh.A[f[2]]) / 3 + K.base, c = shade(n, alb);
+    const col = 'rgb(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ')';
     ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 0.6;
     ctx.beginPath();
     ctx.moveTo(cx + P[f[0]][0] * s, cy + P[f[0]][1] * s); ctx.lineTo(cx + P[f[1]][0] * s, cy + P[f[1]][1] * s); ctx.lineTo(cx + P[f[2]][0] * s, cy + P[f[2]][1] * s);
     ctx.closePath(); ctx.fill(); ctx.stroke();
   });
+}
+
+// Плавная закраска (Гуро) в пикселях экрана: треугольники от дальних к ближним, цвет — смесь цветов вершин.
+// Холст-черновик один на все камни; край сглаживается полупрозрачной обводкой силуэта
+let OFF = null;
+function smoothPaint(ctx, list, P, NV, mesh, shade, cx, cy, s) {
+  // поверхность гладкая — считается в разрешении не выше 1,25 точки на пиксель и растягивается (быстрее в 3–4 раза)
+  const tf = ctx.getTransform(), K0 = tf.a, k = Math.min(K0, 1.25), up = K0 / k;
+  const bx = Math.floor(tf.e + K0 * (cx - s * 1.02)), by = Math.floor(tf.f + K0 * (cy - s * 1.02)), W = Math.ceil(k * s * 2.04) + 2, H = W;
+  if (!OFF) OFF = document.createElement('canvas');
+  if (OFF.width < W || OFF.height < H) { OFF.width = Math.max(W, OFF.width); OFF.height = Math.max(H, OFF.height); }
+  const o = OFF.getContext('2d'), img = o.createImageData(W, H), D = img.data;
+  const X = (p) => (tf.e + K0 * (cx + p[0] * s) - bx) / up, Y = (p) => (tf.f + K0 * (cy + p[1] * s) - by) / up;
+  const C = new Map(), base = mesh.kind.base;
+  const col = (i) => { let c = C.get(i); if (!c) { c = shade(NV[i], mesh.A[i] + base); C.set(i, c); } return c; };
+  list.forEach(([, f]) => {
+    const x0 = X(P[f[0]]), y0 = Y(P[f[0]]), x1 = X(P[f[1]]), y1 = Y(P[f[1]]), x2 = X(P[f[2]]), y2 = Y(P[f[2]]);
+    const den = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2);
+    if (Math.abs(den) < 1e-9) return;
+    const c0 = col(f[0]), c1 = col(f[1]), c2 = col(f[2]);
+    const minX = Math.max(0, Math.floor(Math.min(x0, x1, x2))), maxX = Math.min(W - 1, Math.ceil(Math.max(x0, x1, x2)));
+    const minY = Math.max(0, Math.floor(Math.min(y0, y1, y2))), maxY = Math.min(H - 1, Math.ceil(Math.max(y0, y1, y2)));
+    const ia = (y1 - y2) / den, ib = (y2 - y0) / den; // шаг весов по x
+    for (let py = minY; py <= maxY; py++) {
+      const yc = py + 0.5, xs = minX + 0.5;
+      let a = ((y1 - y2) * (xs - x2) + (x2 - x1) * (yc - y2)) / den, b = ((y2 - y0) * (xs - x2) + (x0 - x2) * (yc - y2)) / den;
+      for (let px = minX; px <= maxX; px++, a += ia, b += ib) {
+        const g = 1 - a - b;
+        if (a < -0.02 || b < -0.02 || g < -0.02) continue;
+        const q = (py * W + px) * 4;
+        D[q] = a * c0[0] + b * c1[0] + g * c2[0]; D[q + 1] = a * c0[1] + b * c1[1] + g * c2[1]; D[q + 2] = a * c0[2] + b * c1[2] + g * c2[2]; D[q + 3] = 255;
+      }
+    }
+  });
+  o.clearRect(0, 0, W, H);
+  o.putImageData(img, 0, 0);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(OFF, 0, 0, W, H, bx, by, W * up, H * up);
+  ctx.restore();
 }
 
 // Положение камня: в памяти (между перерисовками экрана) и на устройстве (между запусками)

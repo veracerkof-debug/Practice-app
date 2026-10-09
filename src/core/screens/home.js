@@ -1,5 +1,6 @@
 // «Сегодня»: цель недели, дни, кнопка практики, быстрый доступ к инструментам, недавние песни; ударный режим.
 // Перенесено из legacy/practice.html (homeHTML, quickList, quickEdit, streakPill, streakSheet).
+import { sandboxHours } from '../sandbox.js';
 import { t, tn, getLang } from '../../i18n/index.js';
 import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
@@ -229,22 +230,27 @@ export function kmText(hours) {
 
 
 // Оживить камни на экране после отрисовки (холсты с data-stone)
+// Часы камня: занятия в приложении; во время проверки создателем — заданные правкой числа (sandbox.js)
+const stoneHours = (app) => sandboxHours(app.store.state.settings) ?? gemSec(app.store.sessions()) / 3600;
+
 export function mountStones(app, root) {
-  const st = app.store.state.settings, h = gemSec(app.store.sessions()) / 3600;
+  const st = app.store.state.settings, h = stoneHours(app);
   root.querySelectorAll('canvas[data-stone="home"]').forEach((c) => {
-    stoneView(c, { seed: stoneSeed(st), hours: h, detail: 3, key: 'home', onTap: () => stoneSheet(app) });
+    const v = stoneView(c, { seed: stoneSeed(st), hours: h, detail: 3, key: 'home', onTap: () => stoneSheet(app) });
+    const onH = (e) => { if (!c.isConnected) { removeEventListener('sandbox:hours', onH); return; } v.setHours(e.detail); };
+    addEventListener('sandbox:hours', onH);
     c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); stoneSheet(app); } });
   });
 }
 
 // Камень во весь экран: крутить, рассматривать; «Каким был» — тот же камень без единого часа
 export function stoneSheet(app) {
-  const st = app.store.state.settings, sec = gemSec(app.store.sessions()), hrs = sec / 3600, wr = wear(hrs);
+  const st = app.store.state.settings, hrs = stoneHours(app), sec = hrs * 3600, wr = wear(hrs);
   const pct = (x) => Math.round(x * 100) + '%';
   const api = sheet(() => snav(t('stone.title')) +
     '<div class="stonefull"><canvas data-stone="full" aria-label="' + esc(t('stone.title')) + '"></canvas></div>' +
     '<div class="seg stseg" role="group" aria-label="' + esc(t('stone.title')) + '"><button data-stv="now" aria-pressed="true">' + t('stone.now') + '</button><button data-stv="then" aria-pressed="false">' + t('stone.then') + '</button></div>' +
-    '<div class="tiles num" style="margin-top:14px"><div class="tile"><b>' + fmtDur(sec) + '</b><span>' + t('stone.hours') + '</span></div><div class="tile"><b>' + pct(wr.edges) + '</b><span>' + t('stone.edges') +
+    '<div class="tiles num" style="margin-top:14px"><div class="tile"><b data-hours>' + fmtDur(sec) + '</b><span>' + t('stone.hours') + '</span></div><div class="tile"><b>' + pct(wr.edges) + '</b><span>' + t('stone.edges') +
     '</span></div><div class="tile"><b>' + pct(wr.form) + '</b><span>' + t('stone.form') + '</span></div></div>' +
     '<div class="stkm"><b class="num">' + esc(kmText(hrs)) + '</b><span>' + t('stone.path') + '</span></div>' +
     '<p class="ftr">' + t('stone.text') + '</p>');
@@ -258,6 +264,17 @@ export function stoneSheet(app) {
     root.querySelectorAll('[data-stv]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     v.setHours(b.dataset.stv === 'then' ? 0 : hrs);
   });
+  // проверка создателем: часы поправили прямо здесь — камень, рёбра, форма и путь пересчитываются
+  const onH = (e) => {
+    if (!cv.isConnected) { removeEventListener('sandbox:hours', onH); return; }
+    const h = e.detail, w = wear(h), tiles = root.querySelectorAll('.tiles .tile b');
+    v.setHours(h);
+    if (tiles[1]) tiles[1].textContent = pct(w.edges);
+    if (tiles[2]) tiles[2].textContent = pct(w.form);
+    const km = root.querySelector('.stkm b');
+    if (km) km.textContent = kmText(h);
+  };
+  addEventListener('sandbox:hours', onH);
 }
 
 export function gemSheet(app) {
