@@ -120,6 +120,29 @@ export function chroma(x, sr = SR) {
   return out;
 }
 
+// Хрома живого звука по одному кадру анализатора (спектр в дБ, как getFloatFrequencyData). Берутся только вершины
+// спектра, которые выше местного фона хотя бы на 6 дБ, и только близкие к нотам (не дальше 40 центов): так в хрому
+// попадают звуки струн, а шум и гул — нет. { chroma — 12 сил (до = 0, сильнейшая — 1), level — громкость звуков 0…1 }
+export function chromaOfSpectrum(db, sampleRate, { fmin = 70, fmax = 2200 } = {}) {
+  const hz = sampleRate / (db.length * 2), c = new Float64Array(12);
+  const k0 = Math.max(13, Math.floor(fmin / hz)), k1 = Math.min(db.length - 14, Math.ceil(fmax / hz));
+  let top = -Infinity;
+  for (let k = k0; k <= k1; k++) {
+    const v = db[k];
+    if (!(v > db[k - 1] && v >= db[k + 1])) continue;
+    let bg = 0, n = 0;
+    for (let j = k - 12; j <= k + 12; j += 2) if (Math.abs(j - k) > 2) { bg += db[j]; n++; }
+    if (v - bg / n < 6) continue;
+    const a = db[k - 1], b = db[k + 1], den = a - 2 * v + b, f = (k + (den < 0 ? (0.5 * (a - b)) / den : 0)) * hz;
+    const midi = 69 + 12 * Math.log2(f / 440), near = Math.round(midi), dev = Math.abs(midi - near);
+    if (dev > 0.4) continue;
+    c[((near % 12) + 12) % 12] += Math.pow(10, v / 20) * (1 - dev / 0.5);
+    if (v > top) top = v;
+  }
+  const m = Math.max(...c);
+  return { chroma: Array.from(c, (x) => (m > 0 ? x / m : 0)), level: m > 0 ? Math.max(0, Math.min(1, (top + 80) / 60)) : 0 };
+}
+
 const pearson = (a, b) => {
   const n = a.length, ma = a.reduce((s, v) => s + v, 0) / n, mb = b.reduce((s, v) => s + v, 0) / n;
   let num = 0, da = 0, db = 0;

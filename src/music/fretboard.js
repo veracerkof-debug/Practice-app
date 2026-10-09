@@ -324,11 +324,13 @@ function fitFrets(peaks, len, wpx, sigma) {
 
 /* ---------- маркеры и номер лада ---------- */
 
-// Порожек — там, где ряд ладов начинается: со стороны грифа на предсказанных законом местах лады есть, а за порожком
-// (головка) — нет. Сила лада n — вершина профиля рядом с предсказанным местом. Возвращает { n — условный номер порожка,
-// contrast } для лучшей «ступеньки» со стороны меньших номеров или null.
-function nutOf(R, sigma, fit, inside, R2, sigma2) {
-  const S = (n) => Math.max(S1(R, sigma, n), S1(R2, sigma2, n));
+// Порожек — начало ряда ладов: на местах закона к корпусу от него лады есть, а к головке — нет (головка). Играющая
+// рука почти всегда закрывает первые лады; лады под рукой (hidden) — «не видно», а не «нет лада». Кандидат n:
+// сильная линия, за ней (промежуток к головке) — в кадре; среди видимых из пяти следующих — не меньше 60 % сильных (и хотя бы
+// два); за ним не два лада подряд (тогда это просто лад). Лад за ним — ещё и сплошная линия (solid): лад идёт через
+// всю ширину грифа, а колки и узоры на головке — отдельными пятнами и порожек не отменяют. [{ n, j, run }] — от головки к корпусу; run —
+// видимый ряд начинается сразу (без пропусков).
+function nutOf(R, sigma, fit, inside, R2, sigma2, hidden = () => false, solid = () => true) {
   const S1 = (R, sigma, n) => {
     const a = posOf(fit.m, n), b = posOf(fit.m, n + 1);
     if (!(a === a) || !(b === b) || a < 2 || a > R.length - 3) return NaN;
@@ -337,18 +339,43 @@ function nutOf(R, sigma, fit, inside, R2, sigma2) {
     for (let x = a - win; x <= a + win; x += 0.5) { const y = lerpAt(R, x); if (y > mx) mx = y; }
     return Math.min(mx / sigma, 8);
   };
-  // кандидаты: сильный лад, за которым (в кадре) — головка; первый — начало сплошного ряда (из пяти подряд сильных
-  // не меньше четырёх: один может быть под пальцем), остальные — на случай выбросов (колки, надписи на головке)
-  const strong = (n) => S(n) >= 3, out = [];
-  for (let n = fit.lo - 3; n <= fit.lo + 6; n++) {
+  const S = (n) => Math.max(S1(R, sigma, n), S1(R2, sigma2, n)), strong = (n) => !hidden(n) && S(n) >= 3, fret = (n) => strong(n) && solid(n);
+  const out = [];
+  for (let n = fit.lo - 4; n <= fit.lo + 8; n++) {
     if (!strong(n) || !inside(posOf(fit.m, n - 1))) continue;
-    let cnt = 0;
-    for (let i = 0; i < 5; i++) if (strong(n + i)) cnt++;
-    if (cnt < 3) continue;
-    out.push({ n, run: cnt >= 4 && !(strong(n - 1) && strong(n - 2)) });
+    let seen = 0, hit = 0, first = true, run = true;
+    for (let i = 1; i <= 5; i++) {
+      if (hidden(n + i)) continue;
+      seen++;
+      if (strong(n + i)) hit++; else if (first) run = false;
+      first = false;
+    }
+    if (hit < 2 || hit < seen * 0.6) continue;
+    if (fret(n - 1) && fret(n - 2)) continue;
+    out.push({ n, j: posOf(fit.m, n), run });
   }
-  const best = out;
-  return best;
+  return out;
+}
+
+// Выпуклая оболочка точек (монотонная цепь), раздувание от центра и попадание точки внутрь
+function hull(pts) {
+  const P = pts.slice().sort((a, b) => a.x - b.x || a.y - b.y), cr = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lo = [], hi = [];
+  P.forEach((p) => { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); });
+  P.slice().reverse().forEach((p) => { while (hi.length >= 2 && cr(hi[hi.length - 2], hi[hi.length - 1], p) <= 0) hi.pop(); hi.push(p); });
+  return lo.slice(0, -1).concat(hi.slice(0, -1));
+}
+function grow(poly, k) {
+  const cx = poly.reduce((a, p) => a + p.x, 0) / (poly.length || 1), cy = poly.reduce((a, p) => a + p.y, 0) / (poly.length || 1);
+  return poly.map((p) => ({ x: cx + (p.x - cx) * k, y: cy + (p.y - cy) * k }));
+}
+function inPoly(poly, x, y) {
+  let ins = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i], b = poly[j];
+    if ((a.y > y) !== (b.y > y) && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) ins = !ins;
+  }
+  return ins;
 }
 
 /* ---------- полоса-кандидат ---------- */
@@ -490,8 +517,8 @@ function stringsPart(Gf, A, B, u, a0, a1) {
 
 /* ---------- бридж ---------- */
 
-// Бридж — там, где закон ладов ставит конец струны (z = 1). Ищется седло: светлая поперечная полоса через все струны
-// (кость или пластик на тёмной подставке, металлические сёдла у электрогитары) — в окне ±10 % мензуры вокруг
+// Бридж — там, где закон ладов ставит конец струны (z = 1). Ищется седло: поперечная полоса через все струны
+// (светлая кость или пластик, металлические сёдла у электрогитары, тёмная подставка классической) — в окне ±10 % мензуры вокруг
 // предсказанного места. Если окно уходит за кадр — бриджа в кадре нет. { j — столбец полосы St } или null.
 function bridgeOf(Gf, A, B, u, St, jNut, jBr, sk, w, inside, trace) {
   const L = jBr - jNut, j0 = Math.min(jBr - 0.1 * L, jBr + 0.1 * L), j1 = Math.max(jBr - 0.1 * L, jBr + 0.1 * L);
@@ -500,19 +527,20 @@ function bridgeOf(Gf, A, B, u, St, jNut, jBr, sk, w, inside, trace) {
   const X = stripOf(Gf, A, B, u, St.s0 + j0 * St.step, St.s0 + j1 * St.step, St.step, 31);
   const skB = [sk[0] + sk[1] * (jBr / St.n - 0.5), 0]; // скос у бриджа — продолжение скоса ладов
   // сила поперечной линии в каждом столбце — лучшая по толщине и небольшому скосу седла
+  // светлое седло (кость, пластик, металл) или тёмная подставка (у классических гитар — тёмное дерево на светлой деке)
   const Z = new Float32Array(X.n);
-  for (const ww of [w, Math.round(w * 1.8)]) {
-    const rr = ridgeRows(X, ww, 1);
+  for (const [ww, sg] of [[w, 1], [Math.round(w * 1.8), 1], [Math.round(w * 1.8), -1]]) {
+    const rr = ridgeRows(X, ww, sg);
     for (let dd = -0.15; dd <= 0.151; dd += 0.05) {
       const R = skewProfile(rr, X.n, [skB[0] + dd, 0], X.wc, false), sigma = Math.max(0.5, 1.4826 * median(Array.from(R).map(Math.abs)));
       for (let j = 0; j < X.n; j++) Z[j] = Math.max(Z[j], R[j] / sigma);
     }
   }
-  // кандидаты: вершины не слабее 4 шумов (седло, ряд штифтов, край подставки — какая из них конец струны,
+  // кандидаты: вершины не слабее 3 шумов (седло, ряд штифтов, край подставки — какая из них конец струны,
   // решает закон ладов), не у самого края окна
   const sep = Math.max(3, Math.round(X.n * 0.02)), out = [];
   for (let j = 3; j < X.n - 3; j++) {
-    if (Z[j] < 4) continue;
+    if (Z[j] < 3) continue;
     let top = true;
     for (let d = 1; d <= sep && top; d++) if ((j - d >= 0 && Z[j - d] > Z[j]) || (j + d < X.n && Z[j + d] >= Z[j])) top = false;
     if (top) out.push({ z: Z[j], j: j0 + j });
@@ -521,13 +549,38 @@ function bridgeOf(Gf, A, B, u, St, jNut, jBr, sk, w, inside, trace) {
   return out.sort((a, b) => b.z - a.z).slice(0, 6);
 }
 
-/* ---------- главное ---------- */
+/* ---------- поиск и слежение ---------- */
 
-// Найти гриф. Возвращает { ok: false, reason } или { ok: true, frets: [{ n, a, b, seen }] (0 — порожек), strings: [{ i, a, b }]
-// (i — от края A, от порожка до бриджа), nut, bridge: { a, b }, edges, alts: [{ shift, prior }] — запасные номера ладов,
-// geo — для locate и pointAt }. Точки — в пикселях кадра; a — край A, b — край B. opts.trace — массив для отладки.
-export function detectFretboard(img, opts = {}) {
-  const Gh = grayOf(img, HOUGH_SIDE), E = edgesOf(Gh);
+// Доводка кандидата: где лады кончаются поперёк (края грифа) и как они наклонены — по прослеженным ладам; лады заново
+// по уточнённой полосе; струны. Лады обрываются на краях грифа, а кирпичи, решётки, полосы ткани продолжаются за ними —
+// такие кандидаты теряют в оценке. { ...полоса, score, ex, str, strEv } или null
+function refine(Gf, c0) {
+  const ex = extentOf(Gf, c0);
+  if (!ex) return null;
+  const { A, B, St, pr } = c0, sE = St.s0 + St.n * St.step, edge = (v) => {
+    const P0 = onLine(A, pr.u, St.s0), Q0 = onLine(B, pr.u, St.s0), P1 = onLine(A, pr.u, sE), Q1 = onLine(B, pr.u, sE);
+    return lineThrough({ x: P0.x + (Q0.x - P0.x) * v, y: P0.y + (Q0.y - P0.y) * v }, { x: P1.x + (Q1.x - P1.x) * v, y: P1.y + (Q1.y - P1.y) * v });
+  };
+  const wide = ex.v1 - ex.v0 > 0.3, A2 = wide ? edge(ex.v0) : A, B2 = wide ? edge(ex.v1) : B;
+  let c = evalBand(Gf, A2, B2, pr.u, St.s0, sE, c0.wpx * (wide ? ex.v1 - ex.v0 : 1), false, ex.sk);
+  if (c) c = { ...c, A: A2, B: B2 };
+  // края могли уйти не туда (рука закрыла пол-грифа) — тогда прежняя полоса с новым скосом
+  if (!c || c.fit.inl.length < c0.fit.inl.length * 0.7) {
+    const c3 = evalBand(Gf, A, B, pr.u, St.s0, sE, c0.wpx, false, ex.sk);
+    if (c3 && (!c || c3.fit.inl.length > c.fit.inl.length)) c = { ...c3, A, B };
+  }
+  if (!c) return null;
+  c.pr = pr;
+  // струны — на участке найденных ладов
+  const pA = c.St.s0 + posOf(c.fit.m, c.fit.lo) * c.St.step, pB = c.St.s0 + posOf(c.fit.m, c.fit.hi) * c.St.step;
+  const str = stringsOf(Gf, c.A, c.B, pr.u, Math.min(pA, pB), Math.max(pA, pB));
+  const strEv = str ? str.ev : 0, pen = ex.open === 2 ? 0.15 : ex.open === 1 ? 0.55 : 1;
+  return { ...c, score: c.score * pen * Math.min(1.5, Math.max(0.1, strEv / 2.5)), ex, str, strEv };
+}
+
+// Полный поиск: линии (Хаф), кандидаты-полосы, грубая оценка всех, доводка лучших
+function searchBand(img, Gf, opts, tm) {
+  const Gh = grayOf(img, HOUGH_SIDE), E = edgesOf(Gh), q = Gf.W / Gh.W;
   const segs = houghPeaks(Gh, E).map((L) => segmentOf(Gh, E, L.phi, L.rho, Math.max(6, Gh.W * 0.02))).filter(Boolean);
   // кандидаты: пары почти параллельных линий и одиночные длинные линии (второй край грифа часто не виден —
   // тёмная доска на тёмном корпусе): от линии в обе стороны пробуется полоса, ширина потом уточняется по ладам
@@ -540,8 +593,7 @@ export function detectFretboard(img, opts = {}) {
     }
   });
   if (opts.trace) opts.trace.push({ segs: segs.length, bands: bands.length, lines: segs.map((L) => ({ x0: (L.px + L.t0 * L.dx) / Gh.k, y0: (L.py + L.t0 * L.dy) / Gh.k, x1: (L.px + L.t1 * L.dx) / Gh.k, y1: (L.py + L.t1 * L.dy) / Gh.k, n: L.n })) });
-  if (!bands.length) return { ok: false, reason: 'none' };
-  const Gf = grayOf(img, FINE_SIDE), q = Gf.W / Gh.W;
+  tm('линии');
   // полоса — по всей длине прямых в кадре: лады ищутся и там, где края грифа закрыты рукой
   const span = (u) => {
     const pts = [[0, 0], [Gf.W - 1, 0], [0, Gf.H - 1], [Gf.W - 1, Gf.H - 1]].map(([x, y]) => x * u.x + y * u.y);
@@ -553,40 +605,51 @@ export function detectFretboard(img, opts = {}) {
     const A = scaleLine(pr.A, q), B = scaleLine(pr.B, q), len = (pr.hi - pr.lo) * q, [m0, m1] = span(pr.u);
     const s0 = Math.max(m0, pr.lo * q - len * 0.5), s1 = Math.min(m1, pr.hi * q + len * 0.5);
     const c = evalBand(Gf, A, B, pr.u, s0, s1, pr.w * q, true);
-    if (c) rough.push({ score: c.score, pr, A, B, s0, s1, wpx: pr.w * q });
+    if (c) rough.push({ ...c, pr, A, B });
   }
   rough.sort((x, y) => y.score - x.score);
-  if (opts.trace) opts.trace.push({ rough: rough.length });
-  // 2) точно — лучшие: лады, где они кончаются поперёк (края), уточнение по краям, струны
+  tm('грубо ' + bands.length);
+  // 2) точно — лучшие
   let best = null;
   for (const r of rough.slice(0, 8)) {
-    let c = evalBand(Gf, r.A, r.B, r.pr.u, r.s0, r.s1, r.wpx);
+    const c = refine(Gf, r);
     if (!c) continue;
-    c = { ...c, pr: r.pr, A: r.A, B: r.B };
-    // Лады обрываются на краях грифа, а кирпичи, решётки, полосы ткани продолжаются за ними
-    const ex = extentOf(Gf, c);
-    if (!ex) continue;
-    {
-      // края — где лады кончаются, скос — по прослеженным ладам; лады — заново по уточнённой полосе
-      const { A, B, St, pr } = c, sE = St.s0 + St.n * St.step, edge = (v) => {
-        const P0 = onLine(A, pr.u, St.s0), Q0 = onLine(B, pr.u, St.s0), P1 = onLine(A, pr.u, sE), Q1 = onLine(B, pr.u, sE);
-        return lineThrough({ x: P0.x + (Q0.x - P0.x) * v, y: P0.y + (Q0.y - P0.y) * v }, { x: P1.x + (Q1.x - P1.x) * v, y: P1.y + (Q1.y - P1.y) * v });
-      };
-      const wide = ex.v1 - ex.v0 > 0.3, A2 = wide ? edge(ex.v0) : A, B2 = wide ? edge(ex.v1) : B;
-      const c2 = evalBand(Gf, A2, B2, pr.u, St.s0, sE, c.wpx * (wide ? ex.v1 - ex.v0 : 1), false, ex.sk);
-      if (c2 && c2.fit.inl.length >= c.fit.inl.length * 0.7) c = { ...c2, pr, A: A2, B: B2 };
-    }
-    // струны — на участке найденных ладов
-    const pA = c.St.s0 + posOf(c.fit.m, c.fit.lo) * c.St.step, pB = c.St.s0 + posOf(c.fit.m, c.fit.hi) * c.St.step;
-    const str = stringsOf(Gf, c.A, c.B, c.pr.u, Math.min(pA, pB), Math.max(pA, pB));
-    const strEv = str ? str.ev : 0, pen = ex.open === 2 ? 0.15 : ex.open === 1 ? 0.55 : 1;
-    const score = c.score * pen * Math.min(1.5, Math.max(0.1, strEv / 2.5));
-    if (opts.trace) opts.trace.push({ A: scaleLine(c.A, 1 / Gf.k), B: scaleLine(c.B, 1 / Gf.k), u: c.pr.u, s0: c.St.s0 / Gf.k, s1: (c.St.s0 + c.St.n * c.St.step) / Gf.k, score, raw: c.score, pen, ex, strEv, hits: c.fit.inl.length, miss: c.fit.miss, sk: c.sk });
-    if (!best || score > best.score) best = { ...c, score, ex, str, strEv };
+    if (opts.trace) opts.trace.push({ A: scaleLine(c.A, 1 / Gf.k), B: scaleLine(c.B, 1 / Gf.k), u: c.pr.u, s0: c.St.s0 / Gf.k, s1: (c.St.s0 + c.St.n * c.St.step) / Gf.k, score: c.score, ex: c.ex, strEv: c.strEv, hits: c.fit.inl.length, miss: c.fit.miss, sk: c.sk });
+    if (!best || c.score > best.score) best = c;
   }
-  // гриф должен быть виден по-настоящему — лады и струны, — и целиком: порожек и бридж в кадре. Иначе — причина:
-  // none — грифа нет, nut — не виден порожек, bridge — не виден бридж
-  if (!best || best.fit.inl.length < 5 || best.strEv < (opts.minStrings ?? 1.5)) return { ok: false, reason: 'none' };
+  return best;
+}
+
+// Слежение: полоса прошлого кадра (с тем же участком и скосом) — лады находятся заново
+function trackBand(Gf, prev) {
+  const g = prev.geo, k = Gf.k, A = scaleLine(g.A, k), B = scaleLine(g.B, k), u = g.u;
+  const c = evalBand(Gf, A, B, u, g.s0 * k, (g.s0 + g.n * g.step) * k, g.wpx * k, false, g.sk);
+  return c && { ...c, pr: { u }, A, B };
+}
+
+/* ---------- главное ---------- */
+
+// Найти гриф. Возвращает { ok: false, reason } или { ok: true, frets: [{ n, a, b, seen }] (0 — порожек), strings: [{ i, a, b }]
+// (i — от края A, от порожка до бриджа), nut, bridge: { a, b }, edges, alts: [{ shift, prior }] — запасные номера ладов,
+// geo — для locate и pointAt }. Точки — в пикселях кадра; a — край A, b — край B. opts.trace — массив для отладки.
+export function detectFretboard(img, opts = {}) {
+  const T0 = performance.now(), tm = (label) => { if (opts.trace) opts.trace.push({ time: label, ms: Math.round(performance.now() - T0) }); };
+  const Gf = grayOf(img, FINE_SIDE), minStrings = opts.minStrings ?? 1.5;
+  const good = (c) => c && c.fit.inl.length >= 5 && c.strEv >= minStrings;
+  // слежение: гриф с прошлого кадра — та же полоса, только уточняется; номера ладов переносятся лад в лад.
+  // Полный поиск — если гриф сдвинулся, пропал или на нём не нашлись порожек и бридж
+  if (opts.prev && opts.prev.ok) {
+    const c = trackBand(Gf, opts.prev), r = c && refine(Gf, c), res = good(r) ? finish(Gf, r, opts, tm, opts.prev) : null;
+    tm('слежение');
+    if (res && res.ok) return res;
+  }
+  const best = searchBand(img, Gf, opts, tm);
+  tm('точно');
+  return good(best) ? finish(Gf, best, opts, tm, null) : { ok: false, reason: 'none' };
+}
+
+// Порожек, бридж, закон ладов в настоящих номерах и всё, что видно на грифе. prev — прошлый кадр (при слежении)
+function finish(Gf, best, opts, tm, prev) {
   const { A, B, St, pr, sk } = best, u = pr.u, fit0 = best.fit;
   const inside = (j) => [0.15, 0.5, 0.85].every((v) => {
     const s = St.s0 + j * St.step, P = onLine(A, u, s), Q = onLine(B, u, s), x = P.x + (Q.x - P.x) * v, y = P.y + (Q.y - P.y) * v;
@@ -595,14 +658,58 @@ export function detectFretboard(img, opts = {}) {
   // порожек толще лада: второй профиль — с окном под его толщину (в узкое окно толстая планка не видна)
   const R2 = skewProfile(ridgeRows(St, Math.round(best.w * 2.5), best.sign), St.n, sk, St.wc, false);
   const sigma2 = Math.max(0.6, 1.4826 * median(Array.from(R2).map(Math.abs)));
-  const nuts = nutOf(best.R, best.sigma, fit0, inside, R2, sigma2);
+  // при слежении порожек — тот лад, что ближе всего к порожку прошлого кадра (меньше половины промежутка): номера не
+  // скачут от кадра к кадру. Иначе — кандидаты по виду
+  const fretMid = (n) => {
+    const c = posOf(fit0.m, n);
+    if (!(c === c)) return null;
+    const s = St.s0 + c * St.step, P = onLine(A, u, s), Q = onLine(B, u, s), sp = Math.abs(posOf(fit0.m, n + 1) - c) * St.step;
+    return { x: (P.x + Q.x) / 2 / Gf.k, y: (P.y + Q.y) / 2 / Gf.k, sp: sp / Gf.k };
+  };
+  // лады под рукой (opts.hands — точки рук в пикселях кадра): выпуклая оболочка каждой руки, чуть раздутая
+  const hulls = (opts.hands || []).map((pts) => grow(hull(pts), 1.15));
+  const hidden = (n) => {
+    if (!hulls.length) return false;
+    const c = posOf(fit0.m, n);
+    if (!(c === c)) return false;
+    return [0.2, 0.5, 0.8].some((v) => {
+      const sx = St.s0 + (c + shiftOf(sk, c, St.n, v, St.wc)) * St.step, P = onLine(A, u, sx), Q = onLine(B, u, sx);
+      const x = (P.x + (Q.x - P.x) * v) / Gf.k, y = (P.y + (Q.y - P.y) * v) / Gf.k;
+      return hulls.some((h) => inPoly(h, x, y));
+    });
+  };
+  // сплошность линии n: доля строк поперёк полосы, где гребень на своём месте не слабее трети медианного
+  const rows = ridgeRows(St, best.w, best.sign, true).filter((r) => r.v >= 0.1 && r.v <= 0.9);
+  const solid = (n) => {
+    const c = posOf(fit0.m, n);
+    if (!(c === c)) return false;
+    const xs = rows.map(({ v, r }) => { let mx = -Infinity; for (let d = -1.5; d <= 1.5; d += 0.5) { const y = lerpAt(r, c + shiftOf(sk, c, St.n, v, St.wc) + d); if (y > mx) mx = y; } return mx; }).filter((x) => x === x);
+    if (xs.length < 5) return false;
+    const ref = median(xs.filter((x) => x > 0)) || 1;
+    return xs.filter((x) => x > ref * 0.33).length / xs.length >= 0.6;
+  };
+  const nutCands = () => {
+    const out = nutOf(best.R, best.sigma, fit0, inside, R2, sigma2, hidden, solid);
+    // при прочих равных — самый дальний к головке из тех, с кого видимый ряд начинается сразу
+    const lead = out.find((c) => c.run) || out[0];
+    out.forEach((c) => { c.far = c === lead; });
+    return out;
+  };
+  let nuts = [], kept = false;
+  if (prev && prev.nut) {
+    const pn = { x: (prev.nut.a.x + prev.nut.b.x) / 2, y: (prev.nut.a.y + prev.nut.b.y) / 2 };
+    let bn = null, bd = Infinity;
+    for (let n = fit0.lo - 10; n <= fit0.hi; n++) { const f = fretMid(n); if (f && f.sp > 0) { const d = Math.hypot(f.x - pn.x, f.y - pn.y) / f.sp; if (d < bd) { bd = d; bn = n; } } }
+    if (bd < 0.5) { nuts = [{ n: bn, j: posOf(fit0.m, bn), far: true, run: true }]; kept = true; }
+  }
+  if (!nuts.length) nuts = nutCands();
   if (!nuts.length) return { ok: false, reason: 'nut' };
   // порожек и бридж — та пара, при которой найденные лады лучше всего ложатся на закон (z = 0 у порожка, 1 у бриджа):
   // при неверном порожке или не той поперечной линии у бриджа лады между ними не сходятся
   let pick = null, anyBridge = false;
   const byNut = new Map(); // лучший результат для каждого кандидата в порожек — для запасных вариантов номера
   for (const nut of nuts) {
-    const jNut = posOf(fit0.m, nut.n), jBr = (fit0.m[0] + fit0.m[1]) / (fit0.m[2] + 1); // z = 1 — конец струны
+    const jNut = nut.j, jBr = (fit0.m[0] + fit0.m[1]) / (fit0.m[2] + 1); // z = 1 — конец струны
     const brs = bridgeOf(Gf, A, B, u, St, jNut, jBr, sk, best.w, inside, opts.trace);
     if (!brs || !brs.length) continue;
     anyBridge = true;
@@ -614,18 +721,20 @@ export function detectFretboard(img, opts = {}) {
       const m = fitModel(pts);
       if (!m || !(m[2] + 1 > 0.2)) continue;
       const err = median(hits.map((x) => Math.abs(posOf(m, x.n) - x.p) / (Math.abs(posOf(m, x.n + 1) - posOf(m, x.n)) || 1)));
-      const sc = err - (nut.run ? 0.03 : 0); // начало сплошного ряда — при прочих равных
-      if (opts.trace) opts.trace.push({ nut: nut.n, run: nut.run, br: Math.round(br.j), z: +br.z.toFixed(1), err: +err.toFixed(3) });
+      if (br.z < 4 && err >= 0.06) continue; // слабая линия у бриджа — только если лады на закон ложатся точно
+      const sc = err - (nut.far ? 0.05 : 0);
+      if (opts.trace) opts.trace.push({ nut: nut.n, far: nut.far, br: Math.round(br.j), z: +br.z.toFixed(1), err: +err.toFixed(3) });
       if (!pick || sc < pick.sc) pick = { sc, err, m, hits, nut, br };
       if (!byNut.has(nut.n) || err < byNut.get(nut.n).err) byNut.set(nut.n, { err, nut });
     }
   }
   if (!pick) return { ok: false, reason: anyBridge ? 'nut' : 'bridge' };
-  if (!(pick.err < 0.15)) return { ok: false, reason: 'bridge' };
+  if (!(pick.err < 0.1)) return { ok: false, reason: 'bridge' }; // у настоящих грифов — до 0,09; солома, решётки — больше
+  tm('порожек и бридж');
   const { m, hits, err } = pick;
   // Запасные номера: каждый другой кандидат в порожек (с тем же законом) сдвигает все номера на целое число ладов.
   // Какой верный — решают схема аккорда (у открытых аккордов звучат открытые струны) и звук; prior — исходное доверие
-  const alts = [...byNut.values()].filter((x) => x.err < 0.15).map(({ nut }) => ({ shift: pick.nut.n - nut.n, prior: nut === pick.nut ? 1 : nut.run ? 0.5 : 0.3 }))
+  const alts = [...byNut.values()].filter((x) => x.err < 0.1).map(({ nut }) => ({ shift: pick.nut.n - nut.n, prior: nut === pick.nut ? 1 : 0.4 }))
     .filter((a) => Math.abs(a.shift) <= 4).sort((a, b) => b.prior - a.prior);
   const last = Math.min(MAX_FRET, Math.max(...hits.map((x) => x.n)));
   // точка лада n на доле ширины v (с учётом скоса), в пикселях кадра
@@ -647,7 +756,8 @@ export function detectFretboard(img, opts = {}) {
     edges: [[pt(sN, 0), pt(sBr, 0)], [pt(sN, 1), pt(sBr, 1)]],
     score: best.score, strings_ev: best.strEv, err,
     // для locate: всё в пикселях исходного кадра
-    geo: { A: gA, B: gB, u, s0: St.s0 / Gf.k, step: St.step / Gf.k, m, k: 0, sk, n: St.n, wc: St.wc, parts },
+    tracked: !!prev, kept, // найден слежением за прошлым кадром; kept — номера ладов перенесены с него (не изменились)
+    geo: { A: gA, B: gB, u, s0: St.s0 / Gf.k, step: St.step / Gf.k, m, k: 0, sk, n: St.n, wc: St.wc, parts, wpx: best.wpx / Gf.k },
   };
 }
 
@@ -690,16 +800,27 @@ export function boardFromPoints(nut, bridge, { nutEdge = 0.085, bridgeEdge = 0.1
   return {
     ok: true, frets, strings, nut: frets[0], bridge: { a: pt(sN + L, 0), b: pt(sN + L, 1) }, alts: [{ shift: 0, prior: 1 }],
     edges: [[pt(sN, 0), pt(sN + L, 0)], [pt(sN, 1), pt(sN + L, 1)]], err: 0,
-    geo: { A, B, u, s0: sN, step: 1, m: [L, 0, 0], k: 0, sk: [0, 0], n, wc: new Float32Array(n).fill(1), parts },
+    geo: { A, B, u, s0: sN, step: 1, m: [L, 0, 0], k: 0, sk: [0, 0], n, wc: new Float32Array(n).fill(1), parts, wpx: Math.hypot(nut.a.x - nut.b.x, nut.a.y - nut.b.y) },
   };
 }
 
-// Точка кадра на струне i (от края A) там, где палец зажимает лад n: чуть позади лада, в 35 % промежутка от него
-export function pointAt(fb, i, n) {
+// Точка кадра на струне i (от края A) у лада n: back — насколько позади лада, в долях промежутка (палец зажимает лад
+// чуть позади него — 0,35; 0 — на самом ладу). Номера дробные и отрицательные тоже (за порожком)
+export function pointAt(fb, i, n, back = 0.35) {
   if (!fb || !fb.ok) return null;
-  const { A, B, u, s0, step, m, sk, wc, parts } = fb.geo, c = posOf(m, n - 0.35);
+  const { A, B, u, s0, step, m, sk, wc, parts } = fb.geo, c = posOf(m, n - back);
+  if (!(c === c)) return null;
   let v = 0.5, s = 0;
   for (let it = 0; it < 3; it++) { s = s0 + (c + shiftOf(sk, c, fb.geo.n, v, wc)) * step; v = stringV(parts, i, s); }
   const P = onLine(A, u, s), Q = onLine(B, u, s);
   return { x: P.x + (Q.x - P.x) * v, y: P.y + (Q.y - P.y) * v };
+}
+
+// Линия лада n поперёк грифа (порожек — 0; дробные и отрицательные номера тоже): { a — у края A, b — у края B }
+export function fretLine(fb, n) {
+  if (!fb || !fb.ok) return null;
+  const { A, B, u, s0, step, m, sk, wc } = fb.geo, c = posOf(m, n);
+  if (!(c === c)) return null;
+  const at = (v) => { const s = s0 + (c + shiftOf(sk, c, fb.geo.n, v, wc)) * step, P = onLine(A, u, s), Q = onLine(B, u, s); return { x: P.x + (Q.x - P.x) * v, y: P.y + (Q.y - P.y) * v }; };
+  return { a: at(0), b: at(1) };
 }

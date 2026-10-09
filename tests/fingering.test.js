@@ -99,3 +99,50 @@ describe('звук проверяет', () => {
     expect(r.heard).toBe('mismatch');
   });
 });
+
+describe('живой звук и устойчивость во времени', () => {
+  it('хрома по спектру анализатора: аккорд C (с обертонами) даёт до, ми и соль', async () => {
+    const { chromaOfSpectrum } = await import('../src/music/analyze.js');
+    const sr = 48000, N = 8192, hz = sr / (N * 2), db = new Float32Array(N).fill(-100);
+    [48, 52, 55, 60, 64].forEach((m) => { // C3 E3 G3 C4 E4 — как в x32010
+      const f0 = 440 * 2 ** ((m - 69) / 12);
+      for (let h = 1; h <= 6; h++) {
+        const k = Math.round((f0 * h) / hz), amp = -20 - 20 * Math.log10(h);
+        db[k] = Math.max(db[k], amp); db[k - 1] = Math.max(db[k - 1], amp - 9); db[k + 1] = Math.max(db[k + 1], amp - 10);
+      }
+    });
+    const { chroma, level } = chromaOfSpectrum(db, sr);
+    const top = chroma.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]).slice(0, 3).map((x) => x[1]).sort((a, b) => a - b);
+    expect(top).toEqual([0, 4, 7]);
+    expect(level).toBeGreaterThan(0.5);
+    expect(chromaFit(shape('x32010'), chroma)).toBeGreaterThan(0.85);
+    expect(chromaOfSpectrum(new Float32Array(N).fill(-100), sr).level).toBe(0); // тишина
+  });
+  it('новый аккорд — после удержания; сдвиг номера закрепляется голосами', async () => {
+    const { createChordTracker } = await import('../src/music/fingering.js');
+    const tr = createChordTracker({ hold: 200, lose: 500 }), fb = { ok: true, kept: true, tracked: true };
+    const rec = (name, shift, visual = 0.9, audio = null) => ({ best: { name, frets: [null, 3, 2, 0, 1, 0], shift, visual, audio }, heard: audio != null && audio >= 0.75 ? 'match' : null });
+    expect(tr.push(rec('C', 2), fb, 0)).toBe(null);
+    expect(tr.push(rec('C', 2), fb, 100)).toBe(null);
+    expect(tr.push(rec('C', 2, 0.9, 0.9), fb, 250).name).toBe('C');
+    expect(tr.push(rec('Am', 2), fb, 300).name).toBe('C'); // мелькнул другой — пока прежний
+    for (let t = 350; t < 900; t += 50) tr.push(rec('C', 2, 0.9, 0.9), fb, t);
+    const a = tr.alts([{ shift: 0, prior: 1 }]);
+    expect(a.find((x) => x.shift === 2).prior).toBeGreaterThan(a.find((x) => x.shift === 0).prior);
+    expect(tr.push(null, fb, 1000).name).toBe('C'); // пропал ненадолго — держится
+    expect(tr.push(null, fb, 1600)).toBe(null);
+  });
+});
+
+describe('трекер и новый гриф', () => {
+  it('голоса за сдвиг сбрасываются только с новым грифом без перенесённых номеров', async () => {
+    const { createChordTracker } = await import('../src/music/fingering.js');
+    const tr = createChordTracker(), fb1 = { ok: true, kept: false }, rec = { best: { name: 'C', frets: [null, 3, 2, 0, 1, 0], shift: 3, visual: 0.95, audio: null }, heard: null };
+    for (let t = 0; t < 1000; t += 50) tr.push(rec, fb1, t); // тот же гриф кадр за кадром — голоса копятся
+    expect(tr.alts([{ shift: 0, prior: 1 }]).find((a) => a.shift === 3).prior).toBeGreaterThan(1);
+    tr.push(rec, { ok: true, kept: true }, 1050); // слежение с перенесёнными номерами — голоса остаются
+    expect(tr.alts([{ shift: 0, prior: 1 }]).find((a) => a.shift === 3).prior).toBeGreaterThan(1);
+    tr.push(null, { ok: true, kept: false }, 1100); // найден заново — сброс
+    expect(tr.alts([{ shift: 0, prior: 1 }]).find((a) => a.shift === 0).prior).toBe(1);
+  });
+});

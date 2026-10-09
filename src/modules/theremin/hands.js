@@ -63,7 +63,13 @@ export async function startHands(video, onHands) {
   };
   raf = requestAnimationFrame(loop);
 
+  const track = stream.getVideoTracks()[0];
   return {
+    // крупный кадр (режим «Гитара»: гриф целиком — далеко, при 640 точках он слишком тонкий) или обычный
+    hd(on) {
+      if (!track || !track.applyConstraints) return Promise.resolve();
+      return track.applyConstraints(on ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } : { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }).catch(() => {});
+    },
     stop() {
       stopped = true;
       cancelAnimationFrame(raf);

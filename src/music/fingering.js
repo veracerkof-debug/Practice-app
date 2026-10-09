@@ -104,15 +104,17 @@ export function matchChords({ list, barre }, { alts = [{ shift: 0, prior: 1 }], 
   return [...best.values()].sort((a, b) => b.visual - a.visual);
 }
 
-// Всё вместе: гриф, руки (массивы из 21 точки в пикселях кадра), необязательная хрома звука.
+// Всё вместе: гриф, руки (массивы из 21 точки в пикселях кадра), необязательная хрома звука, варианты номера
+// ладов (по умолчанию — от определителя грифа и любые сдвиги до 5 ладов с малым доверием); side — где басы, если по
+// ладони не понять (прошлый уверенный ответ; по умолчанию — у края A).
 // { hand, bassA, placements, best: { name, frets, shift, visual, audio, score }, cands, heard: 'match' | 'mismatch' | null }
-export function recognize(fb, hands, { chroma = null } = {}) {
+export function recognize(fb, hands, { chroma = null, alts: given = null, side: fallback = true } = {}) {
   if (!fb || !fb.ok) return null;
   const lm = frettingHand(fb, hands);
   if (!lm) return null;
-  const side = bassAtA(fb, lm), bassA = side == null ? true : side, pl = placements(fb, lm, bassA);
+  const side = bassAtA(fb, lm), bassA = side == null ? fallback : side, pl = placements(fb, lm, bassA);
   // варианты номера: от определителя грифа и, с малым доверием, любые сдвиги до 5 ладов в обе стороны
-  const alts = [...(fb.alts || [{ shift: 0, prior: 1 }])];
+  const alts = [...(given || fb.alts || [{ shift: 0, prior: 1 }])];
   for (let s = -5; s <= 5; s++) if (!alts.some((a) => a.shift === s)) alts.push({ shift: s, prior: 0.2 });
   const cands = matchChords(pl, { alts }).slice(0, 12);
   cands.forEach((c) => {
@@ -123,4 +125,41 @@ export function recognize(fb, hands, { chroma = null } = {}) {
   const best = cands[0] && cands[0].visual > 0.3 ? cands[0] : null;
   const heard = best && chroma ? (best.audio >= 0.75 ? 'match' : best.audio < 0.5 ? 'mismatch' : null) : null;
   return { hand: lm, bassA, sideSure: side != null, placements: pl, best, cands: cands.slice(0, 5), heard };
+}
+
+// Аккорд во времени (живая камера): новый аккорд показывается, когда он лучший HOLD мс подряд; пропал — через LOSE мс.
+// Сдвиг номера ладов накапливается: каждый уверенный аккорд голосует за свой сдвиг (подтверждённый звуком — втрое),
+// и набравший большинство становится главным вариантом, пока гриф ведётся без перескоков (fb.kept).
+export function createChordTracker({ hold = 260, lose = 700 } = {}) {
+  let cur = null, cand = null, lastSeen = 0, votes = new Map(), audio = null, lastFb = null;
+  const reset = () => { cur = null; cand = null; votes = new Map(); audio = null; lastFb = null; };
+  return {
+    reset,
+    // варианты номера для recognize: доверие определителя грифа смешивается с накопленными голосами
+    alts(fbAlts) {
+      const base = [...(fbAlts || [{ shift: 0, prior: 1 }])];
+      for (let s = -5; s <= 5; s++) if (!base.some((a) => a.shift === s)) base.push({ shift: s, prior: 0.2 });
+      const total = [...votes.values()].reduce((a, b) => a + b, 0), w = Math.min(1, total / 5);
+      return base.map((a) => ({ shift: a.shift, prior: (1 - w) * a.prior + w * 2 * ((votes.get(a.shift) || 0) / (total || 1)) }));
+    },
+    // кадр: результат recognize (или null), гриф, время в мс. Возвращает устойчивое { name, frets, shift, heard } или null
+    push(rec, fb, t) {
+      // пришёл новый гриф, и номера ладов не перенесены с прошлого (найден заново) — прежние голоса не годятся
+      if (fb && fb !== lastFb) { if (!fb.kept) votes = new Map(); lastFb = fb; }
+      const best = rec && rec.best;
+      votes.forEach((v, k) => votes.set(k, v * 0.985));
+      if (best && best.visual >= 0.7) votes.set(best.shift, (votes.get(best.shift) || 0) + best.visual * (rec.heard === 'match' ? 3 : 1));
+      if (best) {
+        lastSeen = t;
+        const key = best.name + ':' + best.frets.join(',');
+        if (!cand || cand.key !== key) cand = { key, t, best };
+        else cand.best = best;
+        if ((!cur || cur.key !== key) && t - cand.t >= hold) { cur = { key, ...best }; audio = null; }
+      } else if (cur && t - lastSeen > lose) { cur = null; cand = null; audio = null; }
+      // звук по текущему аккорду — сглаженно: «совпало» и «не похоже» не мигают от кадра к кадру
+      if (cur && cand && cand.key === cur.key && cand.best.audio != null) audio = audio == null ? cand.best.audio : audio * 0.8 + cand.best.audio * 0.2;
+      if (!cur) return null;
+      return { name: cur.name, frets: cur.frets, shift: cur.shift, audio, heard: audio == null ? null : audio >= 0.75 ? 'match' : audio < 0.5 ? 'mismatch' : null };
+    },
+  };
 }

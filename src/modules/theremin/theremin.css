@@ -38,3 +38,17 @@
 .tm.strip .glnote{display:none}
 .tm.strip .tmbar{top:50%;transform:translateY(-50%);right:4px}
 .tm.strip .tmstart{align-items:flex-start}
+/* «Гитара»: аккорд — крупно вверху (гриф обычно посередине кадра), подтверждённый звуком — подпись цветом;
+   почему гриф не виден — плашка внизу, касаний не перехватывает */
+.tm.gtr .glnote{top:5%}
+.tm.gtr .glnote.on{opacity:.85}
+.tm.gtr .glnote.heard span{color:var(--tint)}
+.tmgs{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:max-content;max-width:min(92%,460px);display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 18px;border-radius:18px;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;text-align:center;pointer-events:none}
+.tmgs b{font-size:14.5px;font-weight:600}
+.tmgs span{font-size:12.5px;line-height:1.35;opacity:.75}
+.tmgs span:empty,.tmgs[hidden]{display:none}
+.tm:not(.live) .tmgs{visibility:hidden}
+.tm.quarter .tmgs span,.tm.strip .tmgs span{display:none}
+.tm.quarter .tmgs{bottom:8px;padding:6px 12px}
+.tm.strip .tmgs{bottom:4px;padding:3px 10px}
+.tm.strip .tmgs b{font-size:12px}
