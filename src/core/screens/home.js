@@ -93,7 +93,7 @@ function moodNow(app) {
 function quoteHTML(app, mono) {
   const st = app.store.state.settings;
   if (!isOn(st, 'quote')) return '';
-  const q = quoteAt(dayIndex(), getLang(), setsOf(st));
+  const q = quoteAt(dayIndex(), getLang(), setsOf(st), st.quoteBooks || []);
   return '<div class="' + (mono ? 'mvo' : 'hvoice') + '"><button class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' +
     (q.text ? '<p class="' + (mono ? 'mquote' : 'hquote') + '">' + esc(q.text) + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p>' : '') + '</div>';
 }

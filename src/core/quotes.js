@@ -185,14 +185,18 @@ export const CALLS = {
 // Наборы цитат (выбор человека в «Функциях»): рок и джаз, классика, Библия, христианские авторы, цитатник
 export const QSETS = ['rock', 'classic', 'bible', 'faith', 'meme'];
 // По умолчанию: классика и рок; в церковном режиме — ещё Библия и христианские авторы
+// Свои сборники (settings.quoteBooks, из файла .melete / от нейросети) — наборы 'own:<id>'
+const ownIds = (settings) => (settings.quoteBooks || []).map((b) => 'own:' + b.id);
 export const setsOf = (settings = {}) => {
-  const v = Array.isArray(settings.qsets) ? settings.qsets.filter((k) => QSETS.includes(k)) : null;
+  const ok = [...QSETS, ...ownIds(settings)];
+  const v = Array.isArray(settings.qsets) ? settings.qsets.filter((k) => ok.includes(k)) : null;
   return v && v.length ? v : settings.church ? ['bible', 'faith', 'classic', 'rock'] : ['classic', 'rock'];
 };
 
 // Цитаты выбранных наборов по кругу — вперемешку, чтобы подряд не шли из одного набора
-function pool(sets) {
+function pool(sets, books) {
   const lists = sets.map((k) =>
+    k.startsWith('own:') ? ((books.find((b) => 'own:' + b.id === k) || {}).items || []).map((o) => ({ o })) :
     k === 'bible' ? SCRIPTURE.map((s) => ({ s })) :
     k === 'meme' ? MEME.map((x) => ({ x })) :
     [...MUSICIANS.filter((m) => m.set === k).map((m) => ({ m })), ...SAYINGS.filter((w) => w.set === k).map((w) => ({ w }))]);
@@ -202,14 +206,16 @@ function pool(sets) {
 }
 const POOLS = {};
 
-// i-я цитата на языке lang из наборов sets (массив; true/false — как раньше: церковный режим или нет) → { text, ref? }
-export function quoteAt(i, lang = 'ru', sets = true) {
+// i-я цитата на языке lang из наборов sets (массив; true/false — как раньше: церковный режим или нет) → { text, ref? }.
+// books — свои сборники (settings.quoteBooks)
+export function quoteAt(i, lang = 'ru', sets = true, books = []) {
   if (!Array.isArray(sets)) sets = setsOf({ church: !!sets });
-  const key = sets.join(','), all = POOLS[key] || (POOLS[key] = pool(sets));
+  const key = sets.join(',') + '|' + books.map((b) => b.id + ':' + b.items.length).join(','), all = POOLS[key] || (POOLS[key] = pool(sets, books));
   if (!all.length) return { text: '' };
   const q = all[((i % all.length) + all.length) % all.length];
   if (q.s) return lang === 'en' ? { text: q.s.en, ref: q.s.refEn } : { text: q.s.ru, ref: q.s.ref };
   if (q.w) return lang === 'en' ? { text: q.w.en, ref: q.w.whoEn } : { text: q.w.ru, ref: q.w.who };
+  if (q.o) return { text: q.o.text, ref: q.o.by };
   if (q.x) return { text: lang === 'en' ? q.x[1] : q.x[0], ref: lang === 'en' ? 'Melete’s book of wisdom' : 'Цитатник Мелеты' };
   return { text: lang === 'en' ? q.m.en : q.m.ru };
 }
@@ -218,7 +224,7 @@ export function quoteAt(i, lang = 'ru', sets = true) {
 export const dayIndex = (ts = Date.now()) => Math.floor((ts - new Date(ts).getTimezoneOffset() * 60000) / 86400000);
 
 // Текст уведомления: заголовок — зов маскота, текст — цитата
-export function notifyText(i, at, lang = 'ru', sets = true) {
-  const calls = CALLS[lang] || CALLS.ru, d = dayIndex(at), q = quoteAt(d * 3 + i, lang, sets);
+export function notifyText(i, at, lang = 'ru', sets = true, books = []) {
+  const calls = CALLS[lang] || CALLS.ru, d = dayIndex(at), q = quoteAt(d * 3 + i, lang, sets, books);
   return { title: calls[(d + i) % calls.length], body: q.text + (q.ref ? ' — ' + q.ref : '') };
 }

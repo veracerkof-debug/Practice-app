@@ -86,3 +86,51 @@ describe('файл .melete', () => {
     expect(shareName('Репетиция: воскресенье', new Date(2026, 9, 14).getTime())).toBe('melete-Репетиция-воскресенье-20261014.melete');
   });
 });
+
+import { normKey, cleanProfile } from '../src/core/share.js';
+import { aiDoc } from '../src/core/aidoc.js';
+import { quoteAt, setsOf } from '../src/core/quotes.js';
+import { readFileSync } from 'node:fs';
+
+const enc = (o) => new TextEncoder().encode(typeof o === 'string' ? o : JSON.stringify(o));
+const fullStore = (songs = []) => {
+  const st = { songs, events: [], settings: { days: [1, 1, 1, 1, 1, 0, 0], goalMin: 300, profile: { name: 'A', instruments: ['piano'], level: 'amateur', priorHours: 0 } } };
+  return { state: st, now: () => 1000, save() {}, settingsChanged() {} };
+};
+
+describe('файл от нейросети (простой JSON)', () => {
+  it('пример из инструкции принимается целиком', async () => {
+    const ex = /## Пример полного файла\n\n```json\n([\s\S]*?)\n```/.exec(aiDoc())[1];
+    const un = unpack(enc(ex)), m = un.manifest;
+    expect(m.songs[0].key).toBe('G');
+    expect(m.quotes[0].items[0].by).toBe('П. И. Чайковский');
+    const store = fullStore();
+    const r = await applyImport({ store, files: null, unpacked: un, plan: planImport([], m) });
+    expect(r.added).toBe(1); expect(r.books).toBe(1); expect(r.profile).toBe(true);
+    const S = store.state.settings, id = 'own:' + S.quoteBooks[0].id;
+    expect(setsOf(S)).toContain(id);
+    expect(quoteAt(0, 'ru', [id], S.quoteBooks).ref).toBe('П. И. Чайковский');
+    expect(S.profile.instruments).toEqual(['guitar']);
+  });
+  it('часы, занятия и опыт файлом не меняются', async () => {
+    const store = fullStore();
+    store.state.settings.profile.priorHours = 0;
+    const un = unpack(enc({ format: 'melete', v: 1, profile: { level: 'pro', priorHours: 99999, hours: 500 }, sessions: [{ start: 1, dur: 99999 }], stats: { total: 1e9 } }));
+    expect(un.manifest.profile).toEqual({ level: 'pro' });
+    await applyImport({ store, files: null, unpacked: un, plan: [] });
+    expect(store.state.settings.profile.priorHours).toBe(0);
+    expect(store.state.sessions).toBeUndefined();
+    expect(cleanProfile({ goalMin: 5, days: [1, 1] })).toBe(null);
+  });
+  it('тональности и мусор', () => {
+    expect(normKey('C#m')).toBe('C♯m'); expect(normKey('Bb')).toBe('B♭'); expect(normKey('A minor')).toBe('Am'); expect(normKey('H')).toBe(null);
+    expect(() => unpack(enc({ format: 'melete', v: 1 }))).toThrow('empty');
+    expect(() => unpack(enc('{ not json'))).toThrow('notMelete');
+    const m = unpack(enc({ format: 'melete', v: 1, songs: [{ title: '' }, { title: 'X', targetBpm: 9999, key: 'Q' }], quotes: { title: 'Q', items: ['a', { text: '' }] } })).manifest;
+    expect(m.songs).toEqual([{ ref: 'ai1-X', title: 'X' }]);
+    expect(m.quotes[0].items).toEqual([{ text: 'a' }]);
+  });
+  it('docs/ai-format.md совпадает с инструкцией в приложении', () => {
+    expect(readFileSync('docs/ai-format.md', 'utf8')).toBe(aiDoc());
+  });
+});

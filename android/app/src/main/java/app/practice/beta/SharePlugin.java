@@ -88,6 +88,7 @@ public class SharePlugin extends Plugin {
         String data = call.getString("data", "");
         String title = call.getString("title", "Melete");
         String text = call.getString("text", "");
+        String mime = call.getString("mime", "application/octet-stream");
         try {
             File dir = new File(getContext().getCacheDir(), "share");
             if (!dir.exists()) dir.mkdirs();
@@ -99,7 +100,7 @@ public class SharePlugin extends Plugin {
             }
             Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", f);
             Intent send = new Intent(Intent.ACTION_SEND);
-            send.setType("application/octet-stream");
+            send.setType(mime);
             send.putExtra(Intent.EXTRA_STREAM, uri);
             if (!text.isEmpty()) send.putExtra(Intent.EXTRA_TEXT, text);
             send.putExtra(Intent.EXTRA_SUBJECT, title);

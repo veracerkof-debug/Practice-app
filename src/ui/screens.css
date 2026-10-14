@@ -296,3 +296,5 @@
 .mascot.mpoke .mfork{animation:mfork .07s linear 12;transform-box:fill-box;transform-origin:50% 100%}
 @keyframes mpoke{0%{transform:scale(.86)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
 @keyframes mfork{0%,100%{transform:translateX(0)}25%{transform:translateX(-1.2px)}75%{transform:translateX(1.2px)}}
+/* инструкция для нейросети — текст как есть, с переносами */
+.aidoc{white-space:pre-wrap;word-break:break-word;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;background:var(--cell);border-radius:12px;padding:12px 14px;margin:12px 0 24px;user-select:text;-webkit-user-select:text}

@@ -154,7 +154,10 @@ function meHTML(app) {
     '<div class="hdr">' + t('ob.levelTitle') + '</div><div class="group"><div class="cellcol">' + seg('melevel', LEVELS.map((k) => [k, t('level.' + k)]), p.level, t('ob.levelTitle')).replace('class="seg"', 'class="seg g2"') +
     '<div class="segcap">' + t('level.' + p.level + '.text') + '</div></div></div>' +
     '<div class="hdr">' + t('ob.expTitle') + '</div><div class="group"><label class="cell"><span class="grow">' + t('ob.hours') + '</span><input class="inp num" data-me="priorHours" type="number" inputmode="numeric" min="0" max="' + PRIOR_MAX + '" placeholder="0" aria-label="' + t('ob.hours') + '" value="' + (p.priorHours || '') + '"></label></div>' +
-    '<p class="ftr">' + t('me.hint') + ' ' + t('me.lockHint') + '</p>';
+    '<p class="ftr">' + t('me.hint') + ' ' + t('me.lockHint') + '</p>' +
+    // свои песни, сборники цитат, профиль — файлом (его может собрать нейросеть по инструкции)
+    '<div class="hdr">' + t('me.own') + '</div><div class="group"><button class="cell act" data-aidoc>' + t('ai.title') + '</button>' +
+    '<button class="cell act" data-loadfile>' + t('ai.load') + '</button></div><p class="ftr">' + t('me.ownHint') + '</p>';
 }
 
 function weekHTML(app) {
@@ -300,7 +303,12 @@ function featHTML(app) {
     (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : k === 'quote' ? QUOTE_IC : FLAME, k === 'mastery' ? '#646493' : k === 'quote' ? '#5E7E6A' : '#9C7242', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
     // наборы слов Мелеты (слово дня и напоминания)
     (!st.toolsOnly && isOn(st, 'quote') ? '<div class="hdr">' + t('qset.title') + '</div><div class="group">' + QSETS.map((k) => '<label class="cell"><span class="grow">' + t('qset.' + k) + '</span>' +
-      '<input type="checkbox" data-qset="' + k + '"' + (setsOf(st).includes(k) ? ' checked' : '') + ' style="width:22px;height:22px"></label>').join('') + '</div><p class="ftr">' + t('qset.hint') + '</p>' : '') +
+      '<input type="checkbox" data-qset="' + k + '"' + (setsOf(st).includes(k) ? ' checked' : '') + ' style="width:22px;height:22px"></label>').join('') +
+      // свои сборники (из файла): включить, удалить
+      (st.quoteBooks || []).map((b) => '<div class="cell"><span class="grow"><span>' + esc(b.title) + '</span><span class="st l2" style="display:block;font-size:13px">' + tn('share.nq', b.items.length) + '</span></span>' +
+        '<button class="ic sm" data-qdel="' + esc(b.id) + '" aria-label="' + esc(t('qset.del') + ': ' + b.title) + '">' + IC.minus + '</button>' +
+        '<input type="checkbox" data-qset="own:' + esc(b.id) + '"' + (setsOf(st).includes('own:' + b.id) ? ' checked' : '') + ' style="width:22px;height:22px;margin-left:10px" aria-label="' + esc(b.title) + '"></div>').join('') +
+      '<button class="cell act" data-aidoc>' + t('qset.make') + '</button></div><p class="ftr">' + t('qset.hint') + '</p>' : '') +
     '<p class="ftr">' + t('feat.own') + '</p>' +
     (skippedModules.length ? '<p class="ftr" style="color:var(--red)">' + esc(t('feat.skipped', { list: skippedModules.map((x) => x.path.split('/').slice(-2, -1)[0] + ' (' + x.err + ')').join(', ') })) + '</p>' : '');
 }
@@ -415,7 +423,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); relang(); return; }
       if ((b = g('[data-seg="remstyle"] [data-v]'))) { const st = app.store.state.settings; (st.remind = remindOf(st)).style = b.dataset.v; changed(); return; }
-      if (g('[data-remtest]')) { remindTest((i, at) => notifyText(i, at, getLang(), setsOf(app.store.state.settings)), remindOf(app.store.state.settings).style).then((ok) => toast(t(ok ? 'rem.testSent' : 'rem.denied'))); return; }
+      if (g('[data-remtest]')) { remindTest((i, at) => notifyText(i, at, getLang(), setsOf(app.store.state.settings), app.store.state.settings.quoteBooks || []), remindOf(app.store.state.settings).style).then((ok) => toast(t(ok ? 'rem.testSent' : 'rem.denied'))); return; }
       if (g('[data-act="demo"]')) {
         if (hasDemo(app.store.state)) {
           confirm(t('demo.removeTitle'), t('demo.removeText'), t('demo.removeYes')).then((ok) => {
@@ -442,6 +450,19 @@ export function createPanel(app, onChange) {
         return;
       }
       if ((b = g('[data-go]'))) { panel.close(); app.go(b.dataset.go); return; }
+      if (g('[data-aidoc]')) { import('./share.js').then((m) => m.aiDocSheet(app)); return; }
+      if (g('[data-loadfile]')) { import('./share.js').then((m) => m.pickFile(app)); return; }
+      if ((b = g('[data-qdel]'))) {
+        const st = app.store.state.settings, id = b.dataset.qdel, bk = (st.quoteBooks || []).find((x) => x.id === id);
+        if (!bk) return;
+        confirm(t('qset.delTitle', { title: bk.title }), t('qset.delText'), t('qset.del')).then((ok) => {
+          if (!ok) return;
+          st.quoteBooks = st.quoteBooks.filter((x) => x.id !== id);
+          if (Array.isArray(st.qsets)) st.qsets = st.qsets.filter((k) => k !== 'own:' + id);
+          app.store.settingsChanged(); onChange(); render();
+        });
+        return;
+      }
       app.shellAct(e); // общие действия: ударный режим, поддержать, правовые тексты
     });
     layer.addEventListener('change', (e) => {

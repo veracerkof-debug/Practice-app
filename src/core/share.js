@@ -3,8 +3,13 @@
 // «Поделиться» (Telegram, WhatsApp, почта), принимается кнопкой «Принять файл» или открытием файла в Melete.
 // Личное не отправляется: выученность, сложность, текущий темп, метки, время занятий.
 // Формат — zip: melete.json (описание, версия v) + files/… (см. docs/share-format.md). Без DOM.
+// Тот же melete.json можно принять и без zip — простым файлом JSON (его собирает нейросеть по инструкции
+// src/core/aidoc.js): песни, сборники цитат (quotes) и профиль (profile). Часы и занятия формат не принимает никогда.
 import { zipSync, unzipSync, strToU8, strFromU8 } from 'fflate';
 import { uid } from './time.js';
+import { INSTRUMENTS, LEVELS, saveProfile, priorHours } from './profile.js';
+import { GOAL_MIN, GOAL_MAX } from './settings.js';
+import { setsOf } from './quotes.js';
 
 export const SHARE_FORMAT = 'melete', SHARE_V = 1, SHARE_EXT = '.melete', SHARE_MIME = 'application/octet-stream';
 
@@ -51,14 +56,70 @@ export async function pack({ songs, files = [], set = null, title = '', now = Da
 
 // Распаковать и проверить. → { manifest, data(path) → Uint8Array|null } или бросает Error('notMelete' | 'newer')
 export function unpack(u8) {
-  let z;
-  try { z = unzipSync(u8); } catch { throw new Error('notMelete'); }
-  let m;
-  try { m = JSON.parse(strFromU8(z['melete.json'])); } catch { throw new Error('notMelete'); }
-  if (!m || m.format !== SHARE_FORMAT || !Array.isArray(m.songs)) throw new Error('notMelete');
+  let z = {}, m;
+  // простой JSON (без zip): первый значимый символ — «{»
+  const head = strFromU8(u8.subarray(0, 64)).replace(/^\uFEFF/, '').trimStart();
+  if (head[0] === '{') {
+    try { m = JSON.parse(strFromU8(u8).replace(/^\uFEFF/, '')); } catch { throw new Error('notMelete'); }
+  } else {
+    try { z = unzipSync(u8); } catch { throw new Error('notMelete'); }
+    try { m = JSON.parse(strFromU8(z['melete.json'])); } catch { throw new Error('notMelete'); }
+  }
+  if (!m || typeof m !== 'object' || m.format !== SHARE_FORMAT) throw new Error('notMelete');
   if (m.v > SHARE_V) throw new Error('newer');
+  m.songs = (Array.isArray(m.songs) ? m.songs : []).map(cleanSong).filter(Boolean);
   m.files = (m.files || []).filter((f) => f && f.path && z[f.path]);
+  m.quotes = (Array.isArray(m.quotes) ? m.quotes : m.quotes ? [m.quotes] : []).map(cleanBook).filter(Boolean);
+  m.profile = cleanProfile(m.profile);
+  if (!m.songs.length && !m.quotes.length && !m.profile) throw new Error('empty');
   return { manifest: m, data: (p) => z[p] || null };
+}
+
+/* ---------- проверка присланного (особенно — собранного нейросетью) ---------- */
+
+const str = (v, n) => (typeof v === 'string' || typeof v === 'number' ? String(v).trim().slice(0, n) : '');
+// Тональность: «C#m», «Bb», «C♯m» → как в приложении (♯/♭); неизвестная — без тональности
+const KEY_RE = /^([A-G])([#♯b♭]?)(m?)$/;
+export function normKey(k) {
+  const m = KEY_RE.exec(String(k || '').trim().replace(/\s*(minor|min)$/i, 'm').replace(/\s*(major|maj)$/i, ''));
+  return m ? m[1] + (m[2] === '#' ? '♯' : m[2] === 'b' ? '♭' : m[2]) + m[3] : null;
+}
+function cleanSong(x, i) {
+  if (!x || typeof x !== 'object') return null;
+  const title = str(x.title, 120);
+  if (!title) return null;
+  const bpm = Math.round(+x.targetBpm || +x.bpm || 0);
+  const s = { ref: str(x.ref, 60) || 'ai' + i + '-' + title, title, artist: str(x.artist, 120), genre: str(x.genre, 40), notes: str(x.notes, 20000) };
+  const key = normKey(x.key);
+  if (key) s.key = key;
+  if (bpm >= 20 && bpm <= 400) s.targetBpm = bpm;
+  if (x.metro && typeof x.metro === 'object') {
+    const num = Math.round(+x.metro.num || 0), den = Math.round(+x.metro.den || 0), mb = Math.round(+x.metro.bpm || 0);
+    if (num >= 1 && num <= 16 && [2, 4, 8, 16].includes(den)) s.metro = { ...(mb >= 20 && mb <= 400 ? { bpm: mb } : bpm ? { bpm } : {}), num, den };
+  }
+  Object.keys(s).forEach((k) => { if (s[k] === '') delete s[k]; });
+  return s;
+}
+// Сборник цитат: { title, items: [{ text, by?, src? }] } — до 1000 цитат
+export function cleanBook(b) {
+  if (!b || typeof b !== 'object') return null;
+  const items = (Array.isArray(b.items) ? b.items : []).slice(0, 1000).map((q) => (typeof q === 'string' ? { text: q } : q || {}))
+    .map((q) => ({ text: str(q.text, 500), by: str(q.by || q.author, 100), src: str(q.src || q.source, 200) }))
+    .filter((q) => q.text).map((q) => { if (!q.by) delete q.by; if (!q.src) delete q.src; return q; });
+  if (!items.length) return null;
+  return { title: str(b.title, 60) || 'Melete', items };
+}
+// Профиль: имя, инструменты, уровень, дни практики, цель недели. Часов и опыта до приложения здесь нет и быть не может
+export function cleanProfile(p) {
+  if (!p || typeof p !== 'object') return null;
+  const out = {};
+  if (str(p.name, 40)) out.name = str(p.name, 40);
+  if (Array.isArray(p.instruments)) { const v = INSTRUMENTS.filter((k) => p.instruments.includes(k)); if (v.length) out.instruments = v; }
+  if (LEVELS.includes(p.level)) out.level = p.level;
+  if (Array.isArray(p.days) && p.days.length === 7) out.days = p.days.map((d) => (d ? 1 : 0));
+  const g = Math.round(+p.goalMin || 0);
+  if (g >= GOAL_MIN && g <= GOAL_MAX) out.goalMin = g;
+  return Object.keys(out).length ? out : null;
 }
 
 const norm = (s) => String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
@@ -82,9 +143,9 @@ export function differs(s, x) {
 // Применить. store — хранилище ядра; files — app.files (или null); plan — из planImport (действия выбраны);
 // opts.set — добавить сет-лист в календарь; base — поля новой песни по умолчанию (emptySong).
 // → { added, updated, files, event }
-export async function applyImport({ store, files, unpacked, plan, set = true, base = {} }) {
+export async function applyImport({ store, files, unpacked, plan, set = true, base = {}, quotes = true, profile = true }) {
   const { manifest, data } = unpacked, now = store.now ? store.now() : Date.now();
-  const st = store.state, local = new Map(), out = { added: 0, updated: 0, files: 0, event: null };
+  const st = store.state, local = new Map(), out = { added: 0, updated: 0, files: 0, event: null, books: 0, profile: false };
   for (const p of plan) {
     if (p.action === 'skip') { if (p.match) local.set(p.x.ref, p.match.id); continue; }
     const f = { ...pick(p.x, SONG_FIELDS), ...(p.x.metro ? { metro: p.x.metro } : {}) };
@@ -135,7 +196,28 @@ export async function applyImport({ store, files, unpacked, plan, set = true, ba
       out.event = e;
     }
   }
+  // сборники цитат → свои наборы Мелеты (тот же сборник по названию — заменяется), сразу включены
+  if (quotes && manifest.quotes && manifest.quotes.length) {
+    const S = st.settings, books = S.quoteBooks || (S.quoteBooks = []);
+    for (const b of manifest.quotes) {
+      const old = books.find((x) => x.title === b.title);
+      if (old) old.items = b.items; else books.push({ id: 'q' + uid(), ...b });
+      const id = 'own:' + (old || books.at(-1)).id;
+      S.qsets = [...new Set([...setsOf(S), id])];
+      out.books++;
+    }
+  }
+  // профиль: только имя, инструменты, уровень, дни и цель. Опыт до приложения (часы) остаётся как был
+  if (profile && manifest.profile) {
+    const p = manifest.profile, S = st.settings, old = S.profile || {};
+    if (p.name || p.instruments || p.level) saveProfile(store, { ...old, ...(p.name ? { name: p.name } : {}), ...(p.instruments ? { instruments: p.instruments } : {}), ...(p.level ? { level: p.level } : {}), priorHours: priorHours(S) });
+    if (p.days) S.days = p.days;
+    if (p.goalMin) S.goalMin = p.goalMin;
+    if (p.days || p.goalMin) S.configured = true;
+    out.profile = true;
+  }
   store.save();
+  if ((out.books || out.profile) && store.settingsChanged) store.settingsChanged();
   return out;
 }
 
