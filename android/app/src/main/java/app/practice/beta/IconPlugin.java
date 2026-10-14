@@ -8,8 +8,8 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-// Иконка приложения на выбор (src/ui/appicons.js): у каждой — свой activity-alias в AndroidManifest.xml,
-// включён ровно один. Лаунчер обновляет значок сам, обычно через несколько секунд.
+// Иконка приложения на выбор (src/ui/appicons.js): у каждой — своя activity-ярлык в AndroidManifest.xml
+// (IconActivities.java), включена ровно одна. Лаунчер обновляет значок сам, обычно через несколько секунд.
 @CapacitorPlugin(name = "Icon")
 public class IconPlugin extends Plugin {
     private static final String[] IDS = {"melete", "meletiy", "note", "clef", "fork", "keys", "classic"};
