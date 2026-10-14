@@ -131,3 +131,32 @@ describe('гармония соло пальцами', () => {
     expect(harmOffsets(null, 60, C)).toEqual([]);
   });
 });
+
+import { keySign, keyName } from '../src/modules/theremin/chords.js';
+describe('профи: тональность левой рукой', () => {
+  const num = (n, palm = true) => ({ kind: 'num', n, palm });
+  it('число — буква, поворот — знак', () => {
+    expect(keyName(keySign(num(1), { rot: 0 }))).toBe('C');
+    expect(keyName(keySign(num(5), { rot: 0 }))).toBe('G');
+    expect(keyName(keySign(num(7), { rot: 0 }))).toBe('B');
+    expect(keySign(num(1), { rot: 40 }).root).toBe(1);
+    expect(keyName(keySign(num(1), { rot: 40 }))).toBe('C♯');
+    expect(keyName(keySign(num(7), { rot: -40 }))).toBe('B♭');
+    expect(keySign(num(7), { rot: -40 }).root).toBe(10);
+    expect(keyName(keySign(num(3), { rot: 10 }))).toBe('E'); // небольшой поворот — без знака
+  });
+  it('настройки: сторона, жест, минор', () => {
+    expect(keyName(keySign(num(4), { rot: 40 }, { flip: true }))).toBe('F♭');
+    expect(keyName(keySign(num(4), { turn: 60, rot: 0 }, { acc: 'turn' }))).toBe('F♯');
+    expect(keyName(keySign(num(6, false), { rot: 0 }))).toBe('Am');
+    expect(keyName(keySign(num(6, false), { rot: 0 }, { minor: 'off' }))).toBe('A');
+    expect(keyName(keySign(num(6, false), { turn: 0 }, { acc: 'turn' }))).toBe('A'); // ладонь поворачивается для знака — не минор
+    expect(keySign({ kind: 'fist' }, { rot: 0 })).toBe(null);
+  });
+  it('аккорды пишутся знаками показанной тональности', () => {
+    const k = keySign(num(1), { rot: 40 }), c = chordOf(5, true, k);
+    expect(chordName(c, k).name).toBe('G♯');
+    const kf = keySign(num(2), { rot: -40 });
+    expect(chordName(chordOf(1, true, kf), kf).name).toBe('D♭');
+  });
+});

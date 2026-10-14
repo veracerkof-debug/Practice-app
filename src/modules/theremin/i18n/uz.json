@@ -225,5 +225,17 @@
   "pre.wkeys": "Iliq klavishlar",
   "sndPads": "Pedlar",
   "sndPadsHint": "«Pedlar» modulidagi kabi yumshoq tovushlar: qo'l notani boshqaradi, kaft — balandlikni. «Shimmer» — sajda uchun: sekin kirish va yuqorida jilvalanish.",
-  "sndSynth": "Sintezator"
+  "sndSynth": "Sintezator",
+  "pro": "Pro",
+  "pro.on": "Tonallik chap qoʻl bilan",
+  "pro.acc": "♯/♭ belgisi — nima bilan",
+  "pro.acc.rot": "Burish",
+  "pro.acc.turn": "Qirra",
+  "pro.acc.tilt": "Egish",
+  "pro.accHint.rot": "Kaftni dastak kabi burish: ichkariga, kadr oʻrtasiga — ♯, tashqariga — ♭, toʻgʻri — belgisiz.",
+  "pro.accHint.turn": "Kaftni qirrasi bilan kameraga burish: bir tomonga — ♯, boshqasiga — ♭. Lad bu holda faqat sozlamalarda beriladi.",
+  "pro.accHint.tilt": "Barmoqlarni kameraga egish — ♯, kameradan — ♭, toʻgʻri — belgisiz.",
+  "pro.flip": "♯ va ♭ tomonlarini almashtirish",
+  "pro.minor": "Kaft orqasi bilan — minor tonallik",
+  "pro.hint": "Chap qoʻl tonallikni koʻrsatadi: 1 — C, 2 — D, 3 — E, 4 — F, 5 — G, 6 — A, 7 — B (6 va 7 — bosh barmoq jimjiloqqa va nomsiz barmoqqa), burish — ♯ yoki ♭. Oʻng qoʻl — Neshvill tizimi boʻyicha pogʻonalar: shu tonallikda 1–7. Chap qoʻl musht — tonallik oʻzgarmaydi. Bu rejimda chap qoʻlda effektlar yoʻq."
 }

@@ -225,5 +225,17 @@
   "pre.wkeys": "Warm keys",
   "sndPads": "Pads",
   "sndPadsHint": "Soft sounds like in the Pads module: the hand leads the note, the palm sets the volume. Shimmer is for worship: a slow entry and a shimmer on top.",
-  "sndSynth": "Synthesizer"
+  "sndSynth": "Synthesizer",
+  "pro": "Pro",
+  "pro.on": "Key with the left hand",
+  "pro.acc": "♯/♭ sign — by",
+  "pro.acc.rot": "Turn",
+  "pro.acc.turn": "Edge-on",
+  "pro.acc.tilt": "Tilt",
+  "pro.accHint.rot": "Turn the hand like a knob: inward, toward the middle of the frame — ♯, outward — ♭, upright — natural.",
+  "pro.accHint.turn": "Turn the palm edge-on to the camera: one way — ♯, the other — ♭. Major or minor then comes only from settings.",
+  "pro.accHint.tilt": "Fingers toward the camera — ♯, away — ♭, upright — natural.",
+  "pro.flip": "Swap ♯ and ♭ sides",
+  "pro.minor": "Back of the hand — minor key",
+  "pro.hint": "The left hand shows the key: 1 — C, 2 — D, 3 — E, 4 — F, 5 — G, 6 — A, 7 — B (6 and 7 — thumb to pinky and to ring finger), a turn adds ♯ or ♭. The right hand plays degrees in the Nashville number system: 1–7 in that key. A left fist keeps the key. The left hand has no effects in this mode."
 }

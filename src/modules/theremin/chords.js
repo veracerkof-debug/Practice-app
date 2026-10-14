@@ -87,7 +87,8 @@ export function chordOf(n, palm, key = { root: 0, mode: 'maj' }, how = 'hand') {
 
 // Название: C, Am, B° — бемоли в бемольных тональностях; ступень римской цифрой (минор — строчными)
 export function chordName(c, key = { root: 0, mode: 'maj' }) {
-  const flat = [5, 10, 3, 8, 1, 6].includes(((key.mode === 'min' ? key.root + 3 : key.root) % 12 + 12) % 12);
+  // знак тональности, показанный рукой (профи), решает сам: C♯ — диезы, D♭ — бемоли
+  const flat = key.acc ? key.acc < 0 : [5, 10, 3, 8, 1, 6].includes(((key.mode === 'min' ? key.root + 3 : key.root) % 12 + 12) % 12);
   const nm = (flat ? FL : SH)[c.root] + (SUFFIX[c.q] ?? '');
   const r = ROMAN[c.n - 1], sx = c.q === 'M' || c.q === 'm' ? '' : SUFFIX[c.q];
   return { name: nm, roman: (MINORISH.includes(c.q) ? r.toLowerCase() : r) + (c.q === 'm' ? '' : c.q === 'd' ? '°' : sx) };
@@ -146,4 +147,31 @@ export function harmOffsets(kind, m, key = { root: 0, mode: 'maj' }) {
   st.forEach((x, i) => { if (x <= pc) j = i; });
   const step = (k) => { const q = j + k; return st[((q % 7) + 7) % 7] + 12 * Math.floor(q / 7) - st[j]; };
   return spec.map((x) => (typeof x === 'number' ? x : step(+x.slice(1))));
+}
+
+/* ---------- профи: тональность левой рукой ---------- */
+
+// Профи-режим аккордов (решение автора): левая рука (рука эффектов) показывает тональность, правая — ступени
+// по нэшвиллской системе. Число на левой руке — буква: 1 — C, 2 — D, 3 — E, 4 — F, 5 — G, 6 — A, 7 — B (6 и 7 — как
+// у правой: большой к мизинцу, к безымянному). Поворот ладони — знак: в одну сторону ♯, в другую ♭, прямо — без знака.
+// Чем поворачивать — настраивается (acc): 'rot' — кисть в плоскости кадра, как ручку (по умолчанию), 'turn' — разворот
+// ладони ребром, 'tilt' — наклон пальцев к камере и от неё; flip — поменять стороны ♯ и ♭.
+// Лад: minor 'back' — тыльной стороной к камере — минорная тональность (кроме acc 'turn': там ладонь и так поворачивается).
+// Кулак или рука не видна — тональность прежняя.
+export const KEY_LETTERS = [0, 2, 4, 5, 7, 9, 11];
+export const ACC_GESTURES = ['rot', 'turn', 'tilt'];
+export const ACC_ON = { rot: 28, turn: 40, tilt: 35 }; // столько градусов от прямого — уже знак
+export function keySign(sign, p, o = {}) {
+  if (!sign || sign.kind !== 'num' || !(sign.n >= 1 && sign.n <= 7)) return null;
+  const acc = ACC_GESTURES.includes(o.acc) ? o.acc : 'rot', v = (p && p[acc]) ?? 0;
+  let a = v > ACC_ON[acc] ? 1 : v < -ACC_ON[acc] ? -1 : 0;
+  if (o.flip) a = -a;
+  const letter = sign.n - 1, root = ((KEY_LETTERS[letter] + a) % 12 + 12) % 12;
+  const minor = o.minor !== 'off' && acc !== 'turn' && sign.palm === false;
+  return { root, mode: minor ? 'min' : 'maj', letter, acc: a };
+}
+// Название тональности так, как её показали: C♯ или D♭ (одна и та же нота), строчная «m» — минор
+export function keyName(k) {
+  if (!k) return '';
+  return 'CDEFGAB'[k.letter] + (k.acc > 0 ? '♯' : k.acc < 0 ? '♭' : '') + (k.mode === 'min' ? 'm' : '');
 }

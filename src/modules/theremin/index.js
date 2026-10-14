@@ -22,7 +22,7 @@ import { createGlideVoice, createFxBus } from '../glider/voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, PRESETS } from '../glider/fx.js';
 import { twoHandSign, assign, palm, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, RICH_MAP, PINCH_ON, PINCH_OFF } from './map.js';
 import { startHands } from './hands.js';
-import { readSign, chordOf, chordName, voicing, shapeOf, harmOf, harmOffsets, HARM_IDS } from './chords.js';
+import { readSign, chordOf, chordName, voicing, shapeOf, harmOf, harmOffsets, HARM_IDS, keySign, keyName, ACC_GESTURES } from './chords.js';
 import { createPadVoice, PAD_SOUNDS } from '../../audio/padvoice.js';
 import { notesOf } from '../../music/guitarchords.js';
 import { createGuitar } from './guitar.js';
@@ -48,6 +48,7 @@ const PINCH_MS = 150; // щепоть держится столько — пер
 const VOICE_FX = ['bright', 'vib', 'trem', 'drive', 'fuzz'];
 const CHORD_MS = 180; // знак держится столько — аккорд меняется (пока пальцы разгибаются, рука «показывает» лишнее)
 const OK_MS = 300; // «окей» держится столько — переключает «соло ↔ аккорды»
+const KEY_MS = 350; // профи: тональность на левой руке держится столько — меняется (пока пальцы разгибаются, рука «показывает» лишнее)
 const HUDS = ['full', 'quiet', 'off']; // подсказки на экране; двойное касание по кадру переключает
 const HARM_GAIN = 0.55; // голос гармонии — тише мелодии
 const CHORD_GAIN = 0.42; // четыре голоса аккорда вместе — не громче одного голоса соло
@@ -64,6 +65,8 @@ const S = { cam: null, state: 'off', live: false, err: '', voice: null, bus: nul
   gv: null, pose: null, frozen: null, pinchT: 0, pinched: false, calT: 0,
   // аккорды: голоса, текущий аккорд и его расположение, знак-кандидат (ждёт CHORD_MS), «окей»
   cv: null, chord: null, cnotes: null, cand: null, okT: 0, okLatch: false,
+  // профи: тональность, показанная левой рукой, и кандидат (ждёт KEY_MS)
+  pkey: null, pcand: null,
   // гитара: распознавание (guitar.js) и аккорд, который сейчас подыгрывается
   G: null, along: null,
   // смена звука касанием рук: жест-кандидат и защёлка (сработал — ждёт, пока руки разойдутся)
@@ -88,7 +91,7 @@ const cfg = () => {
   s.lo = clampLo(s.lo, s.width);
   if (!s.fx) s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
   s.gmap = { ...DEFAULT_MAP, ...(s.gmap || {}) };
-  s.mode ??= 'solo'; if (!MODES.includes(s.mode)) s.mode = 'solo'; s.gmic ??= true; s.gplay ??= false; s.gdia ??= true; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.csound ??= 'same'; s.ctilt ??= true; s.harm ??= true; s.hstyle ??= 'classic'; if (!HARM_IDS.includes(s.hstyle)) s.hstyle = 'classic'; s.stilt ??= 'vib'; s.hud ??= 'full'; s.camAuto ??= false;
+  s.mode ??= 'solo'; if (!MODES.includes(s.mode)) s.mode = 'solo'; s.gmic ??= true; s.gplay ??= false; s.gdia ??= true; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.csound ??= 'same'; s.ctilt ??= true; s.cpro ??= false; s.pacc ??= 'rot'; if (!ACC_GESTURES.includes(s.pacc)) s.pacc = 'rot'; s.pflip ??= false; s.pminor ??= 'back'; s.harm ??= true; s.hstyle ??= 'classic'; if (!HARM_IDS.includes(s.hstyle)) s.hstyle = 'classic'; s.stilt ??= 'vib'; s.hud ??= 'full'; s.camAuto ??= false;
   s.facing ??= 'user'; s.light ??= false; s.sgest ??= true; s.mel ??= null;
   if (!HUDS.includes(s.hud)) s.hud = 'full';
   normalizeFx(s);
@@ -430,7 +433,7 @@ function harmony(s, m, sign, t, o, dest) {
 function playChord(s, h, sign, t, o, dest, lean = 0, tilt = 0) {
   if (S.voice) { S.voice.release(); S.voice = null; S.m = null; }
   releaseHarm();
-  const key = { root: s.ckey, mode: s.cmode };
+  const key = keyOf(s);
   const center = posToMidi(S.fPos.next(heightOf(h.c.y), t), s.lo, s.width);
   // кандидат меняет аккорд, только когда продержался CHORD_MS
   const cand = sign.kind === 'fist' ? { id: 'fist' } : sign.kind === 'num' ? { id: 'c', c: chordOf(sign.n, sign.palm, key, s.cq) } : null;
@@ -473,7 +476,25 @@ function playChord(s, h, sign, t, o, dest, lean = 0, tilt = 0) {
   if (notes !== S.cnotes) { notes.id = S.chord.id; S.cnotes = notes; }
   const nm = chordName(S.chord, key), n = host && host.querySelector('#tmnote'), c = host && host.querySelector('#tmc');
   if (n) { n.textContent = nm.name; n.parentNode.classList.add('on'); }
-  if (c) c.textContent = nm.roman;
+  if (c) c.textContent = nm.roman + (s.cpro ? ' · ' + keyName(key) : '');
+}
+
+// Тональность аккордов: в профи — показанная левой рукой (пока не показали — из настроек), иначе — из настроек
+const keyOf = (s) => (s.cpro && S.pkey ? S.pkey : { root: s.ckey, mode: s.cmode });
+
+// Профи: левая рука (рука эффектов) показывает тональность — число пальцев — буква, поворот ладони — ♯/♭ (chords.js: keySign).
+// Новая держится KEY_MS — меняется, аккорд перестраивается в ней; кулак или рука не видна — прежняя
+function proKey(s, h, t) {
+  if (!h) { S.pcand = null; return; }
+  const p = pose(h), k = keySign(readSign(h, s.side !== 'right'), { rot: (s.side === 'right' ? 1 : -1) * p.rot, turn: p.turn ?? 0, tilt: p.tilt ?? 0 }, { acc: s.pacc, flip: s.pflip, minor: s.pminor });
+  if (!k) { S.pcand = null; return; }
+  const id = k.root + k.mode + k.acc;
+  if (!S.pcand || S.pcand.id !== id) S.pcand = { id, t, k };
+  else if (t - S.pcand.t >= KEY_MS && (!S.pkey || S.pkey.id !== id)) {
+    S.pkey = { ...k, id };
+    S.cand = null;
+    if (navigator.vibrate) navigator.vibrate(12);
+  }
 }
 
 // Смена звука касанием рук: сложенные ладони — следующий звук, кончики указательных — предыдущий.
@@ -549,7 +570,10 @@ function onHands(list, t) {
   S.hands = a;
   const lost = host.querySelector('#tmlost');
   if (lost) lost.hidden = list.length > 0;
-  const g = fxHand(s, a.fx, t);
+  // профи (аккорды): левая рука — тональность, эффектов у неё нет
+  const pro = s.mode === 'chord' && s.cpro;
+  if (pro) proKey(s, a.fx, t);
+  const g = fxHand(s, pro ? null : a.fx, t);
   if (a.pitch) S.seen = t;
   else if (t - S.seen > LOST_MS) silence();
   if (a.pitch) {
@@ -654,7 +678,7 @@ function setSheet(start = 'root') {
     if (k === 'fx') { const on = [...new Set(GESTURES.map((g) => s.gmap[g]).filter((v) => v && v !== 'off'))]; return on.length ? on.slice(0, 3).map((v) => t('tg.' + v)).join(' · ') + (on.length > 3 ? '…' : '') : t('sum.none'); }
     if (k === 'notes') return rangeTxt(s) + ' · ' + (chrom ? t('sum.chrom') : SH[s.root] + ' ' + t('scale.' + s.scale)) + ' · ' + t('snap.' + s.snap);
     if (k === 'solo') return (s.harm ? t('hst.' + s.hstyle) : t('sum.noHarm')) + ' · ' + t('stilt.' + s.stilt);
-    if (k === 'chords') return SH[s.ckey] + ' ' + t('cmode.' + s.cmode) + ' · ' + t('cs.' + s.csound);
+    if (k === 'chords') return (s.cpro ? t('pro') : SH[s.ckey] + ' ' + t('cmode.' + s.cmode)) + ' · ' + t('cs.' + s.csound);
     if (k === 'guitar') { const on = [['gmic', 'gMic'], ['gplay', 'gPlay'], ['gdia', 'gDia']].filter(([f]) => s[f]).map(([, l]) => t('sum.' + l)); return on.length ? on.join(' · ') : t('sum.none'); }
     if (k === 'look') return t('hud') + ': ' + t('hud.' + s.hud).toLowerCase() + (s.showCam ? '' : ' · ' + t('sum.noCam')) + (s.camAuto ? ' · ' + t('sum.auto') : '');
     return '';
@@ -696,7 +720,12 @@ function setSheet(start = 'root') {
       '<div class="cellcol"><div class="glsub">' + t('cq') + '</div>' + ui.seg('tcq', [['hand', t('cq.hand')], ['key', t('cq.key')]], s.cq, t('cq')) +
       '<div class="segcap">' + t('cqHint.' + s.cq) + '</div></div>' +
       '<div class="cellcol"><div class="glsub">' + t('csound') + '</div><div class="glchips">' + ['same', ...PAD_SOUNDS].map((k) => chip('data-tcs="' + k + '"', s.csound === k, t('cs.' + k))).join('') +
-      '</div><div class="segcap">' + t('csHint') + '</div></div>' + sw('tctilt', s.ctilt, t('ctilt')) + '</div><p class="ftr">' + t('ctiltHint') + '</p>',
+      '</div><div class="segcap">' + t('csHint') + '</div></div>' + sw('tctilt', s.ctilt, t('ctilt')) + '</div><p class="ftr">' + t('ctiltHint') + '</p>' +
+      // профи: тональность левой рукой (число — буква, поворот ладони — ♯/♭), правая — ступени
+      '<div class="hdr">' + t('pro') + '</div><div class="group">' + sw('tcpro', s.cpro, t('pro.on')) +
+      (s.cpro ? '<div class="cellcol"><div class="glsub">' + t('pro.acc') + '</div>' + ui.seg('tpacc', ACC_GESTURES.map((k) => [k, t('pro.acc.' + k)]), s.pacc, t('pro.acc')) +
+        '<div class="segcap">' + t('pro.accHint.' + s.pacc) + '</div></div>' + sw('tpflip', s.pflip, t('pro.flip')) + (s.pacc === 'turn' ? '' : sw('tpminor', s.pminor !== 'off', t('pro.minor'))) : '') +
+      '</div><p class="ftr">' + t('pro.hint') + '</p>',
     guitar: (s) => '<div class="group">' + sw('tgmic', s.gmic, t('gMic')) + sw('tgplay', s.gplay, t('gPlay')) + sw('tgdia', s.gdia, t('gDia')) + '</div><p class="ftr">' + t('gSetHint') + '</p>',
     look: (s) => '<div class="group"><div class="cellcol"><div class="glsub" style="margin-top:0">' + t('hud') + '</div>' +
       ui.seg('thud', HUDS.map((k) => [k, t('hud.' + k)]), s.hud, t('hud')) + '<div class="segcap">' + t('hudHint') + '</div></div>' +
@@ -743,6 +772,7 @@ function setSheet(start = 'root') {
         else if (k === 'tstilt') s.stilt = v;
         else if (k === 'tcmode') { s.cmode = v; S.chord = null; }
         else if (k === 'tcq') { s.cq = v; S.chord = null; }
+        else if (k === 'tpacc') { s.pacc = v; S.pkey = null; }
         else if (k === 'tsnap') s.snap = v;
         else if (k === 'tw') { s.width = +v; s.lo = clampLo(s.lo, s.width); }
         else return;
@@ -754,6 +784,9 @@ function setSheet(start = 'root') {
       if (sw === 'tchar') s.charX = e.target.checked;
       else if (sw === 'tshow') s.showCam = e.target.checked;
       else if (sw === 'tctilt') { s.ctilt = e.target.checked; S.chord = null; }
+      else if (sw === 'tcpro') { s.cpro = e.target.checked; S.pkey = null; S.chord = null; fxHand(s, null, 0); if (s.cpro && s.mode !== 'chord') { s.mode = 'chord'; silence(); guitarSync(); } } // профи — это режим аккордов
+      else if (sw === 'tpflip') { s.pflip = e.target.checked; S.pkey = null; }
+      else if (sw === 'tpminor') { s.pminor = e.target.checked ? 'back' : 'off'; S.pkey = null; }
       else if (sw === 'tharm') { s.harm = e.target.checked; releaseHarm(); }
       else if (sw === 'tauto') { s.camAuto = e.target.checked; s.camAutoOff = !e.target.checked; }
       else if (sw === 'tgmic') { s.gmic = e.target.checked; if (S.G) S.G.sound(s.gmic, () => ctx.mic.request()).then((err) => { if (err) ctx.ui.toast(ctx.t(err === 'denied' ? 'gMicDenied' : 'gMicNo')); }); }
