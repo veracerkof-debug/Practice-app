@@ -9,6 +9,9 @@ const T = {
   ru: {
     lead: (m) => (m === 60 ? 'Сегодня практика — через час' : 'Сегодня практика — через ' + m / 60 + ' часа'),
     five: ['Пора доставать инструмент', 'Разминка, дела в сторону — через 5 минут занятие'],
+    soon: (m) => 'Через ' + m + ' минут — практика',
+    after: ['Время занятий прошло', 'Ещё не поздно: даже пятнадцать минут засчитаются'],
+    call: 'Время для практики',
     pushy: {
       morning: ['Доброе утро! Сегодня ведь будет практика? 🥺', 'Мелета проснулась раньше всех и уже ждёт у инструмента'],
       lunch: ['Обед — отличное время подумать о гаммах', 'Мелета просто напоминает. Ещё раз. На всякий случай 👉👈'],
@@ -23,6 +26,9 @@ const T = {
   uz: {
     lead: (m) => 'Bugun mashg‘ulot — ' + m / 60 + ' soatdan keyin',
     five: ['Cholg‘uni olish vaqti', 'Qizish, ishlar chetga — 5 daqiqadan keyin mashg‘ulot'],
+    soon: (m) => m + ' daqiqadan keyin — mashg‘ulot',
+    after: ['Mashg‘ulot vaqti o‘tdi', 'Hali kech emas: o‘n besh daqiqa ham hisobga olinadi'],
+    call: 'Mashq vaqti',
     pushy: {
       morning: ['Xayrli tong! Bugun mashg‘ulot bo‘ladi-ku? 🥺', 'Melete hammadan oldin uyg‘ondi va cholg‘u yonida kutyapti'],
       lunch: ['Tushlik — gammalar haqida o‘ylash uchun ajoyib vaqt', 'Melete shunchaki eslatyapti. Yana bir bor. Har ehtimolga qarshi 👉👈'],
@@ -37,6 +43,9 @@ const T = {
   en: {
     lead: (m) => (m === 60 ? 'Practice today — in an hour' : 'Practice today — in ' + m / 60 + ' hours'),
     five: ['Time to get the instrument out', 'Warm-up, everything else aside — practice in 5 minutes'],
+    soon: (m) => 'Practice in ' + m + ' minutes',
+    after: ['Practice time has passed', 'It’s not too late: even fifteen minutes count'],
+    call: 'Time to practise',
     pushy: {
       morning: ['Good morning! There will be practice today, right? 🥺', 'Melete woke up before everyone and is already waiting by the instrument'],
       lunch: ['Lunch is a great time to think about scales', 'Melete is just reminding. Again. Just in case 👉👈'],
@@ -52,11 +61,28 @@ const T = {
 const lowerFirst = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 
 // Текст напоминания: { i, ts, n, slot, mode } + язык, наборы слов, свои сборники, имя (если обращение по имени)
-export function remindText({ i = 0, ts = Date.now(), slot = 'lead:60', mode = 'classic' }, { lang = 'ru', sets = true, books = [], name = '' } = {}) {
+export function remindText({ i = 0, ts = Date.now(), slot = 'lead:60', mode = 'classic', tone }, { lang = 'ru', sets = true, books = [], name = '' } = {}) {
   const L = T[lang] || T.ru, d = dayIndex(ts);
   let title, body;
-  if (mode === 'pushy') [title, body] = L.pushy[slot] || L.pushy.afternoon;
+  // «Своё»: пункт списка → повод из классики или навязчивой
+  if (mode === 'custom') {
+    mode = tone === 'pushy' ? 'pushy' : 'classic';
+    const h = new Date(ts).getHours();
+    if (slot === 'abs') slot = mode === 'pushy' ? (h < 12 ? 'morning' : h < 15 ? 'lunch' : h < 18 ? 'afternoon' : h < 20 ? 'dinner' : 'late') : 'call';
+    else {
+      const m = +slot.split(':')[1];
+      if (m > 0) slot = 'after';
+      else if (mode === 'pushy') slot = m <= -45 ? 'lead:60' : 'lead:5';
+      else slot = m === 0 ? 'call' : m >= -5 ? 'lead:5' : m > -60 ? 'soon:' + -m : 'lead:' + Math.round(-m / 60) * 60;
+    }
+  }
+  if (mode === 'pushy') [title, body] = L.pushy[slot.startsWith('lead:') && slot !== 'lead:5' ? 'lead:60' : slot] || L.pushy.afternoon;
   else if (slot === 'lead:5') [title, body] = L.five;
+  else if (slot === 'after') [title, body] = L.after;
+  else if (slot === 'call' || slot.startsWith('soon:')) {
+    const q = quoteAt(d * 3 + i, lang, sets, books);
+    title = slot === 'call' ? L.call : L.soon(+slot.split(':')[1]); body = q.text + (q.ref ? ' — ' + q.ref : '');
+  }
   else {
     const m = +String(slot).split(':')[1] || 60, q = quoteAt(d * 3 + i, lang, sets, books);
     title = L.lead(m); body = q.text + (q.ref ? ' — ' + q.ref : '');

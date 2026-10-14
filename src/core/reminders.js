@@ -6,14 +6,28 @@
 //   какие именно — выбор человека (за 5 мин, 1, 2, 3 ч);
 // - «Навязчивая»: весь день — утром, перед обедом, днём, перед ужином, за час и за 5 минут до занятия, после него
 //   и поздно вечером (6–8 раз), тексты в стиле «пикми»; громкий канал с вибрацией;
+// - «Своё»: человек сам собирает список — до занятия, после или в точное время, каждое в своём стиле (до 10 в день);
 // - «Без уведомлений»: напоминаний нет совсем, Мелета спокойна.
 // Тихие часы — без напоминаний. Тексты — src/core/remindtexts.js.
 import { Capacitor } from '@capacitor/core';
 import { dayKey, weekday } from './time.js';
 
-export const STYLES = ['classic', 'pushy', 'quiet'];
+export const STYLES = ['classic', 'pushy', 'custom', 'quiet'];
 export const LEADS = [5, 60, 120, 180]; // минуты до времени занятий
-export const DEFAULT_REMIND = { mode: 'classic', time: '19:00', leads: [60, 5], byName: false, quietFrom: 22, quietTo: 8 };
+// «Своё»: смещения от времени занятий (минуты; минус — до, плюс — после) и тон текста
+export const OFFSETS = [-180, -120, -60, -30, -15, -5, 0, 30, 60, 120];
+export const TONES = ['classic', 'pushy'];
+export const CUSTOM_MAX = 10;
+export const DEFAULT_REMIND = { mode: 'classic', time: '19:00', leads: [60, 5], byName: false, quietFrom: 22, quietTo: 8,
+  custom: [{ min: -60, tone: 'classic' }, { min: -5, tone: 'classic' }] };
+// Пункт своего списка: { min, tone } — относительно занятия, или { at: 'ЧЧ:ММ', tone } — точное время
+export function cleanItem(x) {
+  if (!x || typeof x !== 'object') return null;
+  const tone = TONES.includes(x.tone) ? x.tone : 'classic';
+  if (typeof x.at === 'string' && /^\d\d:\d\d$/.test(x.at)) return { at: x.at, tone };
+  const m = Math.round(+x.min);
+  return Number.isFinite(m) && m >= -720 && m <= 720 ? { min: m, tone } : null;
+}
 const CHANNELS = { classic: 'remind', pushy: 'remind-loud' };
 const ID0 = 7000, ID_N = 60, ID_TEST = 7099; // свои номера уведомлений: 7000…7059, проверка — 7099
 const DAY = 86400000, MIN = 60000, PUSHY_MAX = 8;
@@ -30,24 +44,31 @@ export function remindOf(settings) {
   r.leads = (Array.isArray(r.leads) ? r.leads : DEFAULT_REMIND.leads).filter((m) => LEADS.includes(m));
   if (!r.leads.length) r.leads = DEFAULT_REMIND.leads.slice();
   if (!/^\d\d:\d\d$/.test(r.time)) r.time = DEFAULT_REMIND.time;
+  r.custom = (Array.isArray(r.custom) ? r.custom : DEFAULT_REMIND.custom).map(cleanItem).filter(Boolean).slice(0, CUSTOM_MAX);
   return r;
 }
 // Сохранить выбор (settings.remind): только поля нового вида
 export function setRemind(settings, patch) {
   const r = { ...remindOf(settings), ...patch };
-  settings.remind = { mode: r.mode, time: r.time, leads: r.leads, byName: !!r.byName, quietFrom: r.quietFrom, quietTo: r.quietTo };
+  settings.remind = { mode: r.mode, time: r.time, leads: r.leads, custom: (r.custom || []).map(cleanItem).filter(Boolean).slice(0, CUSTOM_MAX), byName: !!r.byName, quietFrom: r.quietFrom, quietTo: r.quietTo };
   return remindOf(settings);
 }
 
 const at = (d, hhmm) => { const [h, m] = String(hhmm || '19:00').split(':').map((x) => +x || 0); return d + (h * 60 + m) * MIN; };
 
-// Напоминания дня d (полночь) → [{ ts, slot }] по возрастанию. slot: 'lead:<мин>' — до занятия, 'after' — после,
-// 'morning' | 'lunch' | 'afternoon' | 'dinner' | 'late' — точки дня навязчивой Мелеты
+// Напоминания дня d (полночь) → [{ ts, slot, tone? }] по возрастанию. slot: 'lead:<мин>' — до занятия, 'after' — после,
+// 'morning' | 'lunch' | 'afternoon' | 'dinner' | 'late' — точки дня навязчивой Мелеты; у «Своего» —
+// 'rel:<мин>' (относительно занятия) или 'abs' (точное время) и tone — стиль текста
 export function remindTimes(r, d) {
   r = r.leads && r.mode ? r : remindOf({ remind: r });
   if (r.mode === 'quiet') return [];
   const quiet = (ts) => { const hr = new Date(ts).getHours(); return r.quietFrom > r.quietTo ? hr >= r.quietFrom || hr < r.quietTo : hr >= r.quietFrom && hr < r.quietTo; };
   const t0 = at(d, r.time);
+  if (r.mode === 'custom') {
+    const seen = new Set();
+    return r.custom.map((x) => (x.at ? { ts: at(d, x.at), slot: 'abs', tone: x.tone } : { ts: t0 + x.min * MIN, slot: 'rel:' + x.min, tone: x.tone }))
+      .filter((x) => x.ts >= d && x.ts < d + DAY && !quiet(x.ts) && !seen.has(x.ts) && seen.add(x.ts)).sort((a, b) => a.ts - b.ts);
+  }
   let list = (r.mode === 'pushy' ? [60, 5] : r.leads).map((m) => ({ ts: t0 - m * MIN, slot: 'lead:' + m }));
   if (r.mode === 'pushy') {
     list.push({ ts: t0 + 60 * MIN, slot: 'after' });
@@ -116,19 +137,19 @@ export async function reschedule(state, texts, now = Date.now()) {
     await channels(P);
     const mode = remindOf(st).mode;
     await P.schedule({
-      notifications: list.map((x, i) => ({ id: ID0 + i, ...texts({ i, ts: x.ts, n: x.n, slot: x.slot, mode }), schedule: { at: new Date(x.ts), allowWhileIdle: true }, channelId: CHANNELS[mode], autoCancel: true })),
+      notifications: list.map((x, i) => ({ id: ID0 + i, ...texts({ i, ts: x.ts, n: x.n, slot: x.slot, mode, tone: x.tone }), schedule: { at: new Date(x.ts), allowWhileIdle: true }, channelId: CHANNELS[x.tone || mode] || CHANNELS.classic, autoCancel: true })),
     });
     return list.length;
   } catch { return 0; }
 }
 
 // Проверка: напоминание через 5 секунд (slot — какое именно показать)
-export async function remindTest(texts, mode = 'classic', slot = 'lead:60') {
+export async function remindTest(texts, mode = 'classic', slot = 'lead:60', tone) {
   const P = await plugin();
   if (!P || mode === 'quiet' || !(await remindPermission())) return false;
   await channels(P);
   try {
-    await P.schedule({ notifications: [{ id: ID_TEST, ...texts({ i: 0, ts: Date.now(), n: 0, slot, mode }), schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true }, channelId: CHANNELS[mode], autoCancel: true }] });
+    await P.schedule({ notifications: [{ id: ID_TEST, ...texts({ i: 0, ts: Date.now(), n: 0, slot, mode, tone }), schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true }, channelId: CHANNELS[tone || mode] || CHANNELS.classic, autoCancel: true }] });
     return true;
   } catch { return false; }
 }

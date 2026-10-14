@@ -133,3 +133,23 @@ describe('характеры Мелеты', () => {
     Object.values(PUSHY_TEXTS.ru.pushy).flat().concat(PUSHY_TEXTS.ru.five).forEach((x) => expect(x).not.toMatch(/(^|\s)(ты|вы|тебя|вас|тебе|вам)(\s|[,.!?…]|$)/i));
   });
 });
+
+describe('своё расписание', () => {
+  const day = new Date(2026, 9, 12).getTime();
+  it('до, после и точное время, у каждого свой стиль', () => {
+    const r = remindOf(st({ mode: 'custom', time: '19:00', custom: [{ min: -120, tone: 'classic' }, { min: -15, tone: 'pushy' }, { min: 60, tone: 'classic' }, { at: '09:00', tone: 'pushy' }, { at: '23:30', tone: 'classic' }, { bad: 1 }] }));
+    const list = remindTimes(r, day);
+    expect(list.map((x) => new Date(x.ts).getHours() + new Date(x.ts).getMinutes() / 60)).toEqual([9, 17, 18.75, 20]); // 23:30 — тихие часы
+    expect(list.map((x) => x.tone)).toEqual(['pushy', 'classic', 'pushy', 'classic']);
+    const tx = (x) => remindText({ ...x, mode: 'custom' }, { lang: 'ru' }).title;
+    expect(tx(list[0])).toBe(PUSHY_TEXTS.ru.pushy.morning[0]);
+    expect(tx(list[1])).toBe('Сегодня практика — через 2 часа');
+    expect(tx({ slot: 'rel:-15', tone: 'classic' })).toBe('Через 15 минут — практика');
+    expect(tx({ slot: 'rel:0', tone: 'classic' })).toBe('Время для практики');
+    expect(tx(list[3])).toBe('Время занятий прошло');
+  });
+  it('не больше 10 и без мусора', () => {
+    const r = remindOf(st({ mode: 'custom', custom: Array.from({ length: 15 }, (_, i) => ({ min: -i })) }));
+    expect(r.custom.length).toBe(10);
+  });
+});
