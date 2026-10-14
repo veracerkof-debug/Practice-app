@@ -23,8 +23,9 @@ const reasonOf = (e) => (e && (e.name === 'NotAllowedError' || e.name === 'Secur
   : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError') ? 'nocam' : 'fail');
 
 // onHands(hands, t) — каждый кадр: hands — [{ lm: 21 точка с зеркальным x, w: объёмные точки, ar }].
-// facing: 'user' — передняя камера, 'environment' — задняя. Обе смотрят на играющего, поэтому руки и картинка
-// отражаются одинаково (правая рука — справа), и всё, что считается по рукам, от камеры не зависит
+// facing: 'user' — передняя камера (картинка зеркальная, как в зеркале: правая рука — справа),
+// 'environment' — задняя (без зеркала: что справа в кадре, то и справа). Раньше зеркалились обе — и после смены
+// камеры руки менялись местами
 export async function startHands(video, onHands, { facing = 'user' } = {}) {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { const e = new Error('nocam'); e.reason = 'nocam'; throw e; }
   // сначала камера и картинка (человек сразу видит себя), модель — следом: её запуск занимает поток,
@@ -54,9 +55,10 @@ export async function startHands(video, onHands, { facing = 'user' } = {}) {
       // lm — точки в кадре (доли, x зеркальный), w — объёмные точки в метрах (тоже зеркально), ar — пропорции кадра
       const ar = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 4 / 3;
       const world = (r && r.worldLandmarks) || [];
+      const mir = facing !== 'environment';
       const hands = (r && r.landmarks ? r.landmarks : []).map((pts, i) => ({
-        lm: pts.map((p) => ({ x: 1 - p.x, y: p.y })),
-        w: world[i] ? world[i].map((p) => ({ x: -p.x, y: p.y, z: p.z })) : null,
+        lm: pts.map((p) => ({ x: mir ? 1 - p.x : p.x, y: p.y })),
+        w: world[i] ? world[i].map((p) => ({ x: mir ? -p.x : p.x, y: p.y, z: p.z })) : null,
         ar,
       }));
       onHands(hands, t);

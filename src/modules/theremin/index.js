@@ -109,7 +109,7 @@ function view() {
       (size !== 'strip' && size !== 'quarter' ? '<p class="tmhint">' + t(gtr ? 'hint.guitar' : 'hint.' + s.side) + '</p><p class="tmpriv">' + t(gtr ? 'gPrivacy' : 'privacy') + '</p>' : '') + '</div>';
   } // пока камера включается — сплошной фон и тихая синусоида (её сменяет картинка с камеры)
   // poster — пустой кадр: иначе Android до первого кадра рисует на видео свою серую заставку
-  return '<div class="tm ' + size + ' sd-' + s.side + ' hud-' + s.hud + (gtr ? ' gtr' : '') + (on && s.light && (s.facing === 'user' || !S.cam || !S.cam.hasTorch) ? ' ring' : '') + (s.showCam ? '' : ' nocam') + (S.live ? ' live' : '') + '"><video class="tmcam" playsinline muted aria-hidden="true" poster="' + BLANK + '"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
+  return '<div class="tm ' + size + (s.facing === 'environment' ? ' back' : '') + ' sd-' + s.side + ' hud-' + s.hud + (gtr ? ' gtr' : '') + (on && s.light && (s.facing === 'user' || !S.cam || !S.cam.hasTorch) ? ' ring' : '') + (s.showCam ? '' : ' nocam') + (S.live ? ' live' : '') + '"><video class="tmcam" playsinline muted aria-hidden="true" poster="' + BLANK + '"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
     '<div class="glnote tmnote" aria-live="off"><b class="num" id="tmnote">' + (on ? '—' : '') + '</b><span class="num" id="tmc"></span></div>' +
     '<span class="tmlost" id="tmlost" hidden>' + t('noHands') + '</span>' +
     melOver(s) + (gtr && on ? '<div class="tmgs" id="tmgs" aria-live="polite" hidden><b></b><span></span></div>' : '') + mid + (S.state === 'loading' || (on && !S.live) ? '<div class="tmwait">' + ui.loader('wave') + '</div>' : '') +
@@ -325,6 +325,7 @@ function guitarSync() {
   const want = cfg().mode === 'guitar' && S.state === 'on' && !!S.cam;
   if (want && !S.G) {
     S.G = createGuitar(guitarLabels);
+    S.G.mirror(cfg().facing !== 'environment');
     S.cam.hd(true);
     const v = host.querySelector('video.tmcam');
     S.G.start(v, { request: () => ctx.mic.request(), sound: cfg().gmic }).then((err) => { if (err && ctx) ctx.ui.toast(ctx.t(err === 'denied' ? 'gMicDenied' : 'gMicNo')); });
@@ -854,7 +855,7 @@ export default {
       g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
       if (v && v.videoWidth && s.showCam) {
         const k = Math.max(c.width / v.videoWidth, c.height / v.videoHeight), dw = v.videoWidth * k, dh = v.videoHeight * k;
-        g.save(); g.translate(c.width, 0); g.scale(-1, 1);
+        g.save(); if (s.facing !== 'environment') { g.translate(c.width, 0); g.scale(-1, 1); } // задняя камера — без зеркала
         if ('filter' in g) g.filter = 'saturate(.7) brightness(.78) contrast(1.06)';
         g.drawImage(v, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
         g.restore();

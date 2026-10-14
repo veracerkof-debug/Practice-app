@@ -29,6 +29,9 @@ export function createGuitar(onChange) {
   let rec = null, stable = null, bassA = true;
   // порожек, отмеченный касанием: сдвиг номеров ладов; держится, пока гриф ведётся слежением (номера не меняются)
   let manual = null;
+  // картинка зеркальная (передняя камера) или нет (задняя): точки рук и кадр сводятся с учётом этого
+  let mir = true;
+  const fx = (x) => (mir ? 1 - x : x);
   const tracker = createChordTracker();
   const setState = (st) => { if (st !== state) { state = st; onChange(); } };
 
@@ -44,7 +47,7 @@ export function createGuitar(onChange) {
     const img = g.getImageData(0, 0, W, H);
     busy = true; lastGrab = t; frame = { W, H };
     // руки — чтобы лады под ними считались закрытыми, а не отсутствующими (точки в пикселях этого кадра)
-    const hands = lastHands.map((h) => h.lm.map((p) => ({ x: (1 - p.x) * W, y: p.y * H })));
+    const hands = lastHands.map((h) => h.lm.map((p) => ({ x: fx(p.x) * W, y: p.y * H })));
     worker.postMessage({ img, hands }, [img.data.buffer]);
   }
 
@@ -87,7 +90,7 @@ export function createGuitar(onChange) {
   // Рисунок поверх камеры. map — доли кадра (зеркальные, как у рук) → точки окна; o: { tint, hud, size, dia }
   function draw(g, W, H, map, o) {
     if (!fb) return;
-    const quiet = o.hud === 'quiet', D = (p) => p && { x: map.x(1 - p.x / fb.W), y: map.y(p.y / fb.H) };
+    const quiet = o.hud === 'quiet', D = (p) => p && { x: map.x(fx(p.x / fb.W)), y: map.y(p.y / fb.H) };
     const shift = manual != null ? manual : stable ? stable.shift : rec && rec.best ? rec.best.shift : 0, ei = (s) => (bassA ? s : 5 - s);
     const last = Math.min(22, fb.frets.length - 1 + shift), at = (s, n, back) => D(pointAt(fb, ei(s), n - shift, back));
     const s0 = at(0, 5, 0.5), s5 = at(5, 5, 0.5), gap = s0 && s5 ? Math.hypot(s5.x - s0.x, s5.y - s0.y) / 5 : 8;
@@ -170,6 +173,7 @@ export function createGuitar(onChange) {
   }
 
   return {
+    mirror(v) { mir = !!v; },
     get state() { return state; },
     get chord() { return stable; },
     get heard() { return stable ? stable.heard : null; },
@@ -193,7 +197,7 @@ export function createGuitar(onChange) {
     // map — как у draw. true — отмечено
     markNut(x, y, map) {
       if (!fb) return false;
-      const fx = (1 - map.ix(x)) * fb.W, fy = map.iy(y) * fb.H, L = locate(fb, fx, fy);
+      const fxp = fx(map.ix(x)) * fb.W, fy = map.iy(y) * fb.H, L = locate(fb, fxp, fy);
       if (!L || L.v < -0.6 || L.v > 1.6) return false;
       manual = -Math.round(L.pos);
       tracker.reset(); stable = null; onChange();
@@ -208,7 +212,7 @@ export function createGuitar(onChange) {
       if (!busy && t - lastGrab >= GRAB_MS) grab(t);
       const before = stable ? stable.name + stable.frets : '';
       if (fb) {
-        const pts = hands.map((h) => h.lm.map((p) => ({ x: (1 - p.x) * fb.W, y: p.y * fb.H })));
+        const pts = hands.map((h) => h.lm.map((p) => ({ x: fx(p.x) * fb.W, y: p.y * fb.H })));
         const alts = manual != null ? [{ shift: manual, prior: 1 }] : tracker.alts(fb.alts);
         rec = pts.length ? recognize(fb, pts, { chroma, alts, side: bassA }) : null;
         if (rec && rec.sideSure) bassA = rec.bassA;
