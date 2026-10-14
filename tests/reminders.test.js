@@ -29,9 +29,13 @@ describe('цитаты', () => {
     expect(quoteAt(0).ref).toBeTruthy();
     expect(quoteAt(1).ref).toBeFalsy();
   });
+  it('вне церковного режима — только истории музыкантов', () => {
+    for (let i = 0; i < 25; i++) expect(quoteAt(i, 'ru', false).ref).toBeFalsy();
+  });
+  // стихи цитируются дословно (в них «ты» допустимо) — проверяются зовы и истории
   it('текст уведомления без «ты» и «вы»', () => {
     for (let i = 0; i < 30; i++) {
-      const n = notifyText(i, Date.now() + i * 86400000);
+      const n = notifyText(i, Date.now() + i * 86400000, 'ru', false);
       expect(n.title + ' ' + n.body).not.toMatch(/(^|\s)(ты|вы|тебя|вас)(\s|[,.!?]|$)/i);
     }
   });

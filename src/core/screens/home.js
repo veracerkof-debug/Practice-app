@@ -24,6 +24,7 @@ import { nextEventsHTML } from './calendar.js';
 import { extWho } from '../ext.js';
 import { refText } from '../bible.js';
 import { nextOf } from '../reading.js';
+import { quoteAt, dayIndex } from '../quotes.js';
 
 // Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
 export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
@@ -80,13 +81,19 @@ function readingCard(app, mono = false) {
   return '<button class="' + (mono ? 'mread' : 'hread') + '" data-act="bible" data-key="' + next + '"><span class="hrt">' + t('read.today') + ' · ' + t('read.day', { d: r.day, n: r.days }) + '</span>' +
     '<span class="hrr">' + esc(refText(r.keys)) + '</span><span class="hrs">' + (all ? t('read.done') : t('read.progress', { done: r.done, n: r.keys.length })) + '</span></button>';
 }
+// Слово дня — голос маскота: история музыканта или (в церковном режиме) стих; одно на день, по кругу
+function quoteHTML(st, cls) {
+  if (!isOn(st, 'quote')) return '';
+  const q = quoteAt(dayIndex(), getLang(), !!st.church);
+  return '<p class="' + cls + '">' + esc(q.text) + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p>';
+}
 const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';
 
 function homeMonoHTML(app) {
   const st = app.store.state.settings, plain = !!st.toolsOnly, now = new Date();
   // (имя приложения в строчке — с lang="el": прописными по-гречески, без ударения)
   // Приветствие — место, где приложение потом будет говорить: спрашивать, предлагать, напоминать (без даты: это не календарь)
-  let h = '<div class="mono-home">' + topbar(logoHTML()) + '<div class="mvoice" aria-live="polite">' + helloHTML(st, now) + '</div>';
+  let h = '<div class="mono-home">' + topbar(logoHTML()) + '<div class="mvoice" aria-live="polite">' + helloHTML(st, now) + quoteHTML(st, 'mquote') + '</div>';
   if (!plain) {
     const w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st), today = weekday(Date.now()), WD = weekdays();
     h += mhead(t('home.week'), '<button class="mbtn" data-pp="' + (st.configured ? 'stats' : 'week') + '" aria-label="' + esc(t('home.stats')) + '">' + ARROW + '</button>') +
@@ -125,7 +132,7 @@ export function homeHTML(app) {
   const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
   const today = weekday(Date.now()), plan = st.days, WD = weekdays();
   // заголовка «Сегодня» нет: место — неделе и делу (личное обращение после кода — строкой сверху)
-  let h = topbar(logoHTML()) + helloClassic(st) + '<div class="hcols"><div>';
+  let h = topbar(logoHTML()) + helloClassic(st) + quoteHTML(st, 'hquote') + '<div class="hcols"><div>';
   // «Только инструменты»: без недели, цели, камня и звания — сразу рабочее место и инструменты
   const plain = !!st.toolsOnly;
   if (!plain) h += '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +

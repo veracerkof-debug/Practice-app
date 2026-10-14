@@ -268,3 +268,6 @@
 .hgreet b{font-size:20px;font-weight:700;letter-spacing:-.01em}
 .hgreet span{font-size:14px;line-height:1.4;color:var(--l2)}
 .hgreet [lang="el"]{font-family:"Melete Greek","GFS Didot",Georgia,serif;font-size:1.05em;font-weight:400;color:inherit;letter-spacing:0;text-transform:none}
+/* слово дня (маскот): история музыканта или стих — тихой строкой над неделей */
+.hquote{margin:4px 6px 14px;font-size:14px;line-height:1.45;color:var(--l2);font-style:italic}
+.hquote .qref{display:block;margin-top:3px;font-style:normal;font-size:12px;font-weight:600}

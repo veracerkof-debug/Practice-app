@@ -3,7 +3,7 @@ import { watchMarks } from '../ui/marks.js';
 import { accentVars, paintTools, hueColor, ACCENT_HUE, forcedText } from './palettes.js';
 
 // Функции ядра, которые можно выключить (модули выключаются так же — по id); данные при этом сохраняются
-export const CORE_FEATURES = ['streak', 'mastery'];
+export const CORE_FEATURES = ['streak', 'mastery', 'quote'];
 
 // Режим «Только инструменты»: без учёта времени, статистики, званий, значков и уведомлений — только инструменты,
 // песни и календарь. Уже записанные данные не удаляются и вернутся, если режим выключить

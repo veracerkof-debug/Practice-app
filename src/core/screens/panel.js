@@ -15,6 +15,7 @@ import { scaleOf } from '../library.js';
 import { hasDemo, addDemo, removeDemo } from '../demo.js';
 import { remindOf, remindAvailable, remindPermission, remindTest, STYLES } from '../reminders.js';
 import { notifyText } from '../quotes.js';
+const QUOTE_IC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M10 7H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5A1.5 1.5 0 0 1 6.5 18H6v2h.5A3.5 3.5 0 0 0 10 16.5zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5a1.5 1.5 0 0 1-1.5 1.5H16v2h.5a3.5 3.5 0 0 0 3.5-3.5z"/></svg>';
 import { PALETTE_IDS, PALETTES, hueColor, onColor, TEXT_MODES } from '../palettes.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
@@ -296,7 +297,7 @@ function featHTML(app) {
     (guardAvailable() ? '<div class="hdr">' + t('guard.hdr') + '</div><div class="group"><div class="cell"><span class="grow">' + t('guard.on') + '</span><label class="sw"><input type="checkbox" data-psw="guardShots"' + (st.guardShots !== false ? ' checked' : '') + ' aria-label="' + esc(t('guard.on')) + '"><i></i></label></div></div><p class="ftr">' + t('guard.hint') + '</p>' : '') +
     '<div class="group" style="margin-top:12px"><button class="cell act" data-helpreset>' + t('help.again') + '</button></div>' +
     // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
-    (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : FLAME, k === 'mastery' ? '#646493' : '#9C7242', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
+    (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : k === 'quote' ? QUOTE_IC : FLAME, k === 'mastery' ? '#646493' : k === 'quote' ? '#5E7E6A' : '#9C7242', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
     '<p class="ftr">' + t('feat.own') + '</p>' +
     (skippedModules.length ? '<p class="ftr" style="color:var(--red)">' + esc(t('feat.skipped', { list: skippedModules.map((x) => x.path.split('/').slice(-2, -1)[0] + ' (' + x.err + ')').join(', ') })) + '</p>' : '');
 }
@@ -411,7 +412,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); relang(); return; }
       if ((b = g('[data-seg="remstyle"] [data-v]'))) { const st = app.store.state.settings; (st.remind = remindOf(st)).style = b.dataset.v; changed(); return; }
-      if (g('[data-remtest]')) { remindTest((i, at) => notifyText(i, at, getLang()), remindOf(app.store.state.settings).style).then((ok) => toast(t(ok ? 'rem.testSent' : 'rem.denied'))); return; }
+      if (g('[data-remtest]')) { remindTest((i, at) => notifyText(i, at, getLang(), !!app.store.state.settings.church), remindOf(app.store.state.settings).style).then((ok) => toast(t(ok ? 'rem.testSent' : 'rem.denied'))); return; }
       if (g('[data-act="demo"]')) {
         if (hasDemo(app.store.state)) {
           confirm(t('demo.removeTitle'), t('demo.removeText'), t('demo.removeYes')).then((ok) => {

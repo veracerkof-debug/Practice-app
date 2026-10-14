@@ -63,11 +63,12 @@ export const CALLS = {
   en: ['Time to practise', 'The instrument is waiting', 'Fifteen minutes today is a step', 'Today’s hour is still ahead', 'Time to pick it up'],
 };
 
-// i-я цитата (по кругу, писание и музыканты по очереди) на языке lang → { text, ref? }
-export function quoteAt(i, lang = 'ru') {
+// i-я цитата (по кругу, писание и музыканты по очереди) на языке lang → { text, ref? }.
+// Стихи — только в церковном режиме (scripture = settings.church), иначе — только музыканты
+export function quoteAt(i, lang = 'ru', scripture = true) {
   const all = [];
   for (let k = 0; k < Math.max(SCRIPTURE.length, MUSICIANS.length); k++) {
-    if (SCRIPTURE[k]) all.push({ s: SCRIPTURE[k] });
+    if (scripture && SCRIPTURE[k]) all.push({ s: SCRIPTURE[k] });
     if (MUSICIANS[k]) all.push({ m: MUSICIANS[k] });
   }
   const q = all[((i % all.length) + all.length) % all.length];
@@ -79,7 +80,7 @@ export function quoteAt(i, lang = 'ru') {
 export const dayIndex = (ts = Date.now()) => Math.floor((ts - new Date(ts).getTimezoneOffset() * 60000) / 86400000);
 
 // Текст уведомления: заголовок — зов маскота, текст — цитата
-export function notifyText(i, at, lang = 'ru') {
-  const calls = CALLS[lang] || CALLS.ru, d = dayIndex(at), q = quoteAt(d * 3 + i, lang);
+export function notifyText(i, at, lang = 'ru', scripture = true) {
+  const calls = CALLS[lang] || CALLS.ru, d = dayIndex(at), q = quoteAt(d * 3 + i, lang, scripture);
   return { title: calls[(d + i) % calls.length], body: q.text + (q.ref ? ' — ' + q.ref : '') };
 }
