@@ -26,7 +26,6 @@ let host = null, ctx = null, size = 'full', ro = null, unbindSyn = () => {}, uns
 // педаль: 0 — выкл, 1 — Sustain (отпущенная нота звучит долгим хвостом, как с педалью пианино), 2 — Hold (нота держится)
 const PEDAL = ['off', 'sus', 'hold'];
 const offs = [], ptr = new Map(), hold = { mode: 0, k: new Map() };
-let tiltOff = () => {};
 
 const P = () => ctx.store.all();
 const rotated = () => false; // поворачивается весь экран (rotate ниже), клавиатура внутри окна — нет
@@ -115,20 +114,6 @@ function holdToggle() {
   ctx.ui.toast(ctx.t('pedal.' + PEDAL[hold.mode]));
 }
 
-// Сторона поворота — по наклону телефона (ось x ускорения с гравитацией: телефон лёг на бок)
-function tiltWatch() {
-  tiltOff();
-  if (!P().rot || typeof DeviceMotionEvent === 'undefined') return;
-  const onMove = (e) => {
-    const g = e.accelerationIncludingGravity;
-    if (!g || g.x == null || Math.abs(g.x) < 6.5 || Math.abs(g.y || 0) > 6) return;
-    const dir = g.x > 0 ? 'r' : 'l', p = P();
-    if (p.rotDir !== dir) { p.rotDir = dir; ctx.store.save(); dispatchEvent(new Event('melete:rot')); }
-  };
-  addEventListener('devicemotion', onMove);
-  tiltOff = () => { removeEventListener('devicemotion', onMove); tiltOff = () => {}; };
-}
-
 function bind() {
   const on = (el, ev, fn, o) => { el.addEventListener(ev, fn, o); offs.push(() => el.removeEventListener(ev, fn, o)); };
   const syn = ctx.audio.synth;
@@ -175,7 +160,12 @@ function bind() {
     if (a === 'psound') synthSheet(ctx);
     else if (a === 'phold') { holdToggle(); render(); }
     else if (a === 'pdual') { p.dual = !p.dual; ctx.store.save(); render(); }
-    else if (a === 'prot') { p.rot = !p.rot; ctx.store.save(); tiltWatch(); render(); dispatchEvent(new Event('melete:rot')); }
+    // Поворот — только по кнопке: выкл → вправо → влево → выкл (сам по наклону телефона больше не переворачивается)
+    else if (a === 'prot') {
+      if (!p.rot) { p.rot = true; p.rotDir = 'r'; } else if (p.rotDir !== 'l') p.rotDir = 'l'; else p.rot = false;
+      ctx.store.save(); render(); dispatchEvent(new Event('melete:rot'));
+      ctx.ui.toast(ctx.t(p.rot ? (p.rotDir === 'l' ? 'rotL' : 'rotR') : 'rotOff'));
+    }
     else if (a === 'hloff') ctx.shared.set('highlight', null);
   });
 }
@@ -201,7 +191,6 @@ export default {
     host = el; ctx = c; size = sz;
     render();
     bind();
-    tiltWatch();
     ro = new ResizeObserver(() => layout());
     ro.observe(host);
     unsubShared = ctx.shared.subscribe((k) => { if (k === 'highlight') render(); });
@@ -212,7 +201,6 @@ export default {
     unsubShared();
     unbindSyn();
     offs.splice(0).forEach((f) => f());
-    tiltOff();
     ptr.forEach((p) => ctx.audio.synth.off(p.key));
     ptr.clear();
     // Hold переживает закрытие окна: удержанные ноты звучат, пока занимаются другим инструментом
