@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { plan, remindTimes, DEFAULT_REMIND } from '../src/core/reminders.js';
-import { quoteAt, notifyText, SCRIPTURE, MUSICIANS } from '../src/core/quotes.js';
+import { quoteAt, notifyText, SCRIPTURE, MUSICIANS, SAYINGS } from '../src/core/quotes.js';
+import { readFileSync } from 'node:fs';
 
 const st = (r, days = [1, 1, 1, 1, 1, 0, 0]) => ({ days, remind: { ...DEFAULT_REMIND, on: true, ...r } });
 const mon = new Date(2026, 9, 12, 9, 0).getTime(); // понедельник, 9:00
@@ -29,8 +30,9 @@ describe('цитаты', () => {
     expect(quoteAt(0).ref).toBeTruthy();
     expect(quoteAt(1).ref).toBeFalsy();
   });
-  it('вне церковного режима — только истории музыкантов', () => {
-    for (let i = 0; i < 25; i++) expect(quoteAt(i, 'ru', false).ref).toBeFalsy();
+  it('вне церковного режима — без стихов', () => {
+    const refs = new Set(SCRIPTURE.map((s) => s.ref));
+    for (let i = 0; i < 60; i++) expect(refs.has(quoteAt(i, 'ru', false).ref)).toBe(false);
   });
   // стихи цитируются дословно (в них «ты» допустимо) — проверяются зовы и истории
   it('текст уведомления без «ты» и «вы»', () => {
@@ -38,5 +40,21 @@ describe('цитаты', () => {
       const n = notifyText(i, Date.now() + i * 86400000, 'ru', false);
       expect(n.title + ' ' + n.body).not.toMatch(/(^|\s)(ты|вы|тебя|вас)(\s|[,.!?]|$)/i);
     }
+  });
+  // стихи — дословно из Синодального перевода в приложении (без учёта знаков препинания и регистра)
+  it('стихи совпадают с Синодальным переводом', () => {
+    const norm = (x) => x.toLowerCase().replace(/ё/g, 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    for (const q of SCRIPTURE) {
+      const [b, c, v] = q.at.split(' ');
+      const book = JSON.parse(readFileSync('public/bible/synodal/' + b + '.json', 'utf8'));
+      const verse = book[c - 1][v - 1] + (q.ref.includes('–') ? ' ' + book[c - 1][v] : '');
+      expect(norm(verse), q.ref).toContain(norm(q.ru));
+    }
+  });
+  it('у слов людей есть автор и источник, вне церковного режима — без христианских', () => {
+    SAYINGS.forEach((x) => { expect(x.who && x.whoEn && x.src.length > 10 && x.ru && x.en).toBeTruthy(); });
+    const all = Array.from({ length: 60 }, (_, i) => quoteAt(i, 'ru', false));
+    expect(all.some((q) => q.ref === 'Чайковский')).toBe(true);
+    expect(all.some((q) => q.ref === 'Брат Лаврентий')).toBe(false);
   });
 });
