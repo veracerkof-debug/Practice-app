@@ -40,3 +40,19 @@
 .lgbtn b{font-size:18px;font-weight:650}
 .lgbtn span{font-size:13px;color:var(--l2)}
 .lgbtn:active{transform:scale(.98)}
+
+/* Знакомство (первый экран): маскот, видение, язык, соглашение */
+.langgate{overflow-y:auto;align-items:stretch;justify-content:flex-start}
+.wlbox{width:min(92vw,460px);margin:0 auto;padding:calc(18px + env(safe-area-inset-top,0px)) 4px calc(28px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.wllang{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.wllb{min-height:40px;padding:0 14px;border-radius:999px;border:0;background:var(--fill);color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
+.wllb.on{background:var(--tint);color:var(--on-tint,#fff);font-weight:600}
+.wlhero{display:flex;flex-direction:column;align-items:center;gap:8px;margin:10px 0 4px}
+.wllogo{transform:scale(1.2);margin:4px 0}
+.wlh{font-size:24px;line-height:1.2;margin:4px 0 0;text-align:center;font-weight:700;letter-spacing:-.01em}
+.wlp{margin:0;font-size:16px;line-height:1.5}
+.wlgood{font-weight:600}
+.wllegal{font-size:13.5px;line-height:1.45;color:var(--l2);padding:12px 14px;border-radius:14px;background:var(--fill)}
+.wldocs{display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:center}
+.wldocs .link{font-size:15px;min-height:40px}
+.wlaccept{margin:4px 0 0;font-size:13px;line-height:1.4;color:var(--l2);text-align:center}

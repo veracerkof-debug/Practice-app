@@ -1191,5 +1191,14 @@
   "mascot.f": "Melete",
   "mascot.m": "Meletius",
   "mascot.f.sub": "speaks as she",
-  "mascot.m.sub": "speaks as he"
+  "mascot.m.sub": "speaks as he",
+  "wel.title": "Melete — a musician’s companion",
+  "wel.p1": "Melete helps to practise music regularly and calmly: practice tracking, songs and a calendar, a metronome, a tuner and other tools — in one app. The rhythm is weekly, with no pressure of daily streaks.",
+  "wel.p2": "The app was created with Claude Code. It is completely free and open: the source code is distributed under the GPL-3.0 licence. No ads, subscriptions, accounts or data collection — everything stays on the device.",
+  "wel.p3": "Melete was made for one purpose — to benefit musicians and to serve the good.",
+  "wel.legal": "The app is provided “as is”, without warranties of any kind. To the extent permitted by applicable law, the developer is not responsible for how the app is used or for the materials added to it.",
+  "wel.accept": "Tapping “Start” means agreement with the Terms of Use and the Privacy Policy.",
+  "wel.go": "Start",
+  "wel.about": "About Melete",
+  "legal.about": "About Melete"
 }

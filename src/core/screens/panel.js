@@ -363,7 +363,7 @@ function rootHTML(app) {
     '<div class="group" style="margin-top:20px">' + Object.entries(PAGES).filter(([k]) => !plain || !PLAIN_HIDE.includes(k)).map(([k, [c, ic]]) => '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t('page.' + k + '.sub') + '</span></span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="' + iconBg(app.store.state.settings, 'pink') + '">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button>' +
       '<button class="cell" data-act="report"><span class="ticon" style="' + iconBg(app.store.state.settings, 'graphite') + '">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button></div>' +
-    '<div class="group" style="margin-top:12px">' + ['tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
+    '<div class="group" style="margin-top:12px">' + ['about', 'tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
 }
 
@@ -587,6 +587,8 @@ const ruOnly = () => (getLang() === 'ru' ? '' : '<p class="ftr">' + t('legal.ruO
 
 export function legalSheet(kind) {
   let body;
+  // «О Melete» — тот же текст, что на первом экране: видение, философия, «как есть»
+  if (kind === 'about') { import('./onboard.js').then((m) => sheet(() => snav(t('wel.about')) + m.welcomeHTML(), (el) => el.addEventListener('click', (e) => { const d = e.target.closest('[data-wldoc]'); if (d) legalSheet(d.dataset.wldoc); }))); return; }
   if (kind === 'priv') body = snav(t('legal.privShort')) + ruOnly() + '<div class="legal" lang="ru"><h2>Политика конфиденциальности</h2>' + PRIV_HTML + '</div>';
   else if (kind === 'tos') body = snav(t('legal.tosShort')) + ruOnly() + '<div class="legal" lang="ru"><h2>Пользовательское соглашение</h2>' + TOS_HTML + '</div>';
   else {

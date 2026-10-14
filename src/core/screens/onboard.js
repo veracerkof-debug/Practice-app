@@ -13,6 +13,9 @@ import { logoHTML } from '../../ui/logo.js';
 import { meleteHTML, bindMelete } from './melete.js';
 import { remindOf, setRemind, remindAvailable, remindPermission } from '../reminders.js';
 import { gemSVG } from '../../ui/gems.js';
+import { mascotSVG } from '../../ui/mascot.js';
+import { TOS_VER } from '../legal.js';
+import { legalSheet } from './panel.js';
 import { weekdays } from './common.js';
 
 const STEPS = ['name', 'inst', 'level', 'tools', 'exp', 'goal', 'melete'];
@@ -193,23 +196,37 @@ export function onboarding(app, done = () => {}) {
   render();
 }
 
-// Самый первый экран: язык приложения (до соглашения и регистрации). Названия языков — на самих языках,
-// чтобы выбрать, не зная остальных. Уже выбранный язык (или есть профиль) — экран пропускается
+// Самый первый экран — знакомство (решение автора): маскот, видение и философия Melete, выбор языка,
+// согласие с пользовательским соглашением и политикой, ссылка на лицензии. Язык меняется сразу, на месте.
+// Уже выбран язык и принято соглашение (или есть профиль) — экран пропускается; позже тот же текст — «О Melete»
+export function welcomeHTML({ gate = false } = {}) {
+  const lang = getLang();
+  return '<div class="wlbox">' + (gate ? '<div class="wllang" role="group" aria-label="' + esc(t('look.lang')) + '">' + LANGS.map((k) => '<button type="button" class="wllb' + (lang === k ? ' on' : '') + '" data-lg="' + k + '" lang="' + k + '" aria-pressed="' + (lang === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div>' : '') +
+    '<div class="wlhero">' + mascotSVG('glad', { size: 96 }) + '<div class="wllogo">' + logoHTML() + '</div><h1 class="wlh">' + t('wel.title') + '</h1></div>' +
+    '<p class="wlp">' + t('wel.p1') + '</p><p class="wlp">' + t('wel.p2') + '</p><p class="wlp wlgood">' + t('wel.p3') + '</p>' +
+    '<p class="wlp wllegal">' + t('wel.legal') + '</p>' +
+    '<div class="wldocs">' + ['tos', 'priv', 'lic'].map((k) => '<button type="button" class="link" data-wldoc="' + k + '">' + t('legal.' + k) + '</button>').join('') + '</div>' +
+    (gate ? '<p class="wlaccept">' + t('wel.accept') + '</p><button type="button" class="btn fill block" data-wlgo>' + t('wel.go') + '</button>' : '') + '</div>';
+}
+
 export function langGate(app, then = () => {}) {
   const st = app.store.state.settings;
-  if (st.lang || st.profile) { then(); return; }
+  if (st.profile || (st.lang && st.tosOk === TOS_VER)) { then(); return; }
+  if (!st.lang) initI18n(st.lang || undefined); // язык системы — до выбора
   const l = document.createElement('div');
   l.className = 'onb langgate';
   l.setAttribute('role', 'dialog');
   l.setAttribute('aria-modal', 'true');
-  const HELLO = { ru: 'Здравствуйте', uz: 'Assalomu alaykum', en: 'Welcome' };
-  l.innerHTML = '<div class="lgbox"><div class="lglogo">' + logoHTML() + '</div><div class="lglist">' +
-    LANGS.map((k) => '<button type="button" class="lgbtn" data-lg="' + k + '" lang="' + k + '"><b>' + LANG_NAMES[k] + '</b><span>' + HELLO[k] + '</span></button>').join('') + '</div></div>';
+  const render = () => { l.innerHTML = welcomeHTML({ gate: true }); l.setAttribute('aria-label', t('wel.title')); };
+  render();
   document.body.appendChild(l);
   l.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-lg]');
-    if (!b) return;
-    st.lang = b.dataset.lg;
+    const b = e.target.closest('[data-lg]'), d = e.target.closest('[data-wldoc]');
+    if (b) { st.lang = b.dataset.lg; app.store.settingsChanged(); initI18n(st.lang); const y = l.scrollTop; render(); l.scrollTop = y; return; }
+    if (d) { legalSheet(d.dataset.wldoc); return; }
+    if (!e.target.closest('[data-wlgo]')) return;
+    st.lang = st.lang || getLang();
+    st.tosOk = TOS_VER; // согласие принято на этом экране — отдельное окно соглашения не нужно
     app.store.settingsChanged();
     initI18n(st.lang);
     l.remove();
