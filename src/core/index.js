@@ -37,6 +37,7 @@ import { createFiles } from './files.js';
 import { createRecorder } from './recorder.js';
 import { reschedule } from './reminders.js';
 import { notifyText } from './quotes.js';
+import { initShareIn } from './screens/share.js';
 
 export function boot(root) {
   // журнал — первым: ошибки запуска тоже попадут в него
@@ -192,6 +193,8 @@ export function boot(root) {
   initBack(app);
   // Статус медиатеки и табов зависит от файлов, которые читаются из базы асинхронно
   files.ready.then(() => { if (!app.openTool) app.render(); });
+  // файл .melete от команды, открытый в Melete
+  initShareIn(app);
   // прошлый запуск закрылся неожиданно — предложить отправить отчёт
   crashOffer(app);
   // касание названия раздела — его стих (в обоих видах)

@@ -14,6 +14,7 @@ import { songEventsHTML } from './calendar.js';
 import { lookup, KEYS, keyName } from '../songinfo.js';
 import { analyzeAudio } from '../songanalyze.js';
 import { fileSongs } from '../files.js';
+import { SHARE_IC } from './share.js';
 
 const chipHTML = (it, cls, attrs) => '<span class="lchip ' + (cls || '') + '" style="--c:' + it.color + ';--t:' + textColor(it) + '" ' + (attrs || '') + '>' + esc(it.name) + '</span>';
 const diffLabel = (d) => t('diff.' + d);
@@ -28,6 +29,8 @@ const IMPORT_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 export function libraryHTML(app, view) {
   const L = ensureLib(app.store.state, t), songs = app.store.songs(), st = app.store.state.settings;
   let h = topbar('<div class="vrow tight"><button class="addbtn" style="margin:0" data-act="libman" aria-label="' + t('songs.labelsAria') + '">' + TAG_IC + '</button>' +
+    // команда: отправить песни и сет-листы, принять файл .melete
+    '<button class="addbtn" style="margin:0" data-act="share" aria-label="' + t('share.team') + '">' + SHARE_IC + '</button>' +
     // церковный режим: импорт песен из программ для вывода текста и Holyrics
     (st.church ? '<button class="addbtn" style="margin:0" data-act="songImport" aria-label="' + t('songs.import') + '">' + IMPORT_IC + '</button>' : '') +
     '<button class="addbtn" style="margin:0" data-act="addSong" aria-label="' + t('songs.add') + '">' + ADD_IC + '</button></div>') + '<div class="large">' + t('songs.title') + '</div>';
@@ -81,7 +84,7 @@ export function songHTML(app, id) {
   if (!s) return null;
   const L = ensureLib(app.store.state, t), st = songStats(app.store.sessions(), id), p = getPct(s), plain = !!app.store.state.settings.toolsOnly;
   const g = genreOf(L, s.genre), c = catOf(L, s.cat), tg = (s.tags || []).map((x) => tagOf(L, x)).filter(Boolean);
-  let h = '<div class="navrow"><button class="link" data-go="library">' + BACK + t('songs.title') + '</button>' + icb('data-edit="' + s.id + '"', IC.pen, t('song.edit'), 'plain') + '</div>' +
+  let h = '<div class="navrow"><button class="link" data-go="library">' + BACK + t('songs.title') + '</button>' + '<span class="vrow tight">' + icb('data-act="share" data-sid="' + s.id + '"', SHARE_IC, t('share.title'), 'plain') + icb('data-edit="' + s.id + '"', IC.pen, t('song.edit'), 'plain') + '</span></div>' +
     '<div class="large" style="margin:6px 4px 2px">' + esc(s.title) + '</div><p class="sub" style="margin:0 4px 16px">' + esc([s.artist, s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + '</p>' +
     (g || c || tg.length ? '<div class="tagrow" style="margin:-8px 4px 14px">' + (c ? chipHTML(c) : '') + (g ? chipHTML(g) : '') + tg.map((x) => chipHTML(x)).join('') + '</div>' : '') +
     '<div class="card shero"><div class="mring">' + mRing(p, 72, scaleOf(app.store.state.settings)) + '</div><div class="grow">' +

@@ -266,6 +266,8 @@ export function eventSheet(app, id, os, rerender) {
       (e.place ? '<div class="cdl">' + I.pin + '<span>' + esc(e.place) + '</span></div>' : '') + '</div></div>';
     if (songs.length) h += '<div class="hdr">' + t('cal.songs') + '</div><div class="group">' + songs.map((s) => '<button class="cell cdsong" data-cgs="' + s.id + '">' + I.note + '<span class="grow">' + esc(s.title) + '</span>' + icons.chev + '</button>').join('') + '</div>';
     if (e.note) h += '<div class="hdr">' + t('cal.note') + '</div><div class="group"><div class="notes">' + esc(e.note) + '</div></div>';
+    // сет-лист — команде одним файлом (песни, табы, ноты и само событие)
+    if (songs.length) h += '<div class="group" style="margin-top:16px"><button class="cell act center" data-ce="share">' + t('share.setSend') + '</button></div>';
     if (task) h += '<div class="group" style="margin-top:16px"><button class="cell act center" data-ce="done">' + t(done ? 'cal.undoneBtn' : 'cal.doneBtn') + '</button></div>';
     h += askDel
       ? '<div class="hdr">' + t('cal.delRepeat') + '</div><div class="group"><button class="cell danger center" data-ce="del1">' + t('cal.delOne') + '</button><button class="cell danger center" data-ce="delAll">' + t('cal.delAll') + '</button><button class="cell center" data-ce="noDel">' + t('ui.cancel') + '</button></div>'
@@ -280,6 +282,7 @@ export function eventSheet(app, id, os, rerender) {
     const x = ev(), a = b.dataset.ce;
     if (!x) return;
     if (a === 'edit') { sh.close(); eventForm(app, x, {}, rerender); }
+    else if (a === 'share') { const { shareSheet } = await import('./share.js'); shareSheet(app, { ev: { ...x, start: os, end: os + (x.end - x.start), repeat: 'none' } }); }
     else if (a === 'done') { toggleDone(app.store, x, os); sh.update(); rerender(); }
     else if (a === 'del') {
       if ((x.repeat || 'none') !== 'none') { askDel = true; sh.update(); return; }
