@@ -99,9 +99,14 @@
   "m.monStop": "Stop checking",
   "help.what": "Recorder: capture from the chosen microphone, process the take and play it back on the chosen output.",
   "help.1": "Input — phone mic, headset, Bluetooth or a lavalier USB receiver; output — speaker, headphones, Bluetooth.",
-  "help.2": "Record starts, pause continues into the same file; “Check the level” checks the sound without recording.",
+  "help.2": "At the top — a mini window: spectrum and level bar; the input is heard right away (wave — on/off, headphones — hear yourself). The record button is at the bottom; pause continues the same file.",
   "help.3": "The lamp flashes on peaks: red means the take is clipping — lower the input or move the mic away.",
-  "help.4": "Processing: trim, low cut, noise reduction, gate, compression, EQ, reverb — before and after can be compared.",
+  "help.4": "Processing is heard even before recording: gain, EQ, low cut, compression, reverb; after recording — trimming, noise reduction, gate, before/after comparison.",
   "help.5": "Processing never changes the original; the result is saved to the media library. Recordings stay on this device only.",
-  "help.tip": "Noise reduction needs a second of silence at the start of the take — that is how it learns the noise."
+  "help.tip": "Noise reduction needs a second of silence at the start of the take — that is how it learns the noise.",
+  "live.title": "Sound before recording",
+  "live.on": "Listen to the input",
+  "live.hear": "Hear yourself in headphones",
+  "live.off": "The input is not being listened to — tap the wave above.",
+  "live.hint": "Gain, EQ, low cut, compression and reverb are heard right away — in headphones, if the headphones icon is on. The original is written to the file; processing with these same settings is applied on save, as are noise reduction, gate and normalisation. Through the speaker without headphones, feedback may whistle."
 }

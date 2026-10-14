@@ -99,9 +99,14 @@
   "m.monStop": "Tekshirishni to‘xtatish",
   "help.what": "Diktofon: tanlangan mikrofondan yozish, ishlov berish va tanlangan chiqishda tinglash.",
   "help.1": "Kirish — telefon mikrofoni, garnitura, Bluetooth yoki petlichka USB-qabul qilgichi; chiqish — dinamik, quloqchin, Bluetooth.",
-  "help.2": "Yozish tugmasi — boshlash, pauza — xuddi shu faylga davom ettirish; «Darajani tekshirish» — yozmasdan ovozni tekshirish.",
+  "help.2": "Yuqorida — mini oyna: spektr va daraja chizigʻi, kirish darhol tinglanadi (toʻlqin — yoqish/oʻchirish, quloqchin — oʻzini eshitish). Yozish tugmasi — pastda, pauza oʻsha faylni davom ettiradi.",
   "help.3": "Chiroq cho‘qqilarda yonadi: qizil — yozuv haddan oshgan, kirishni pasaytirish yoki mikrofonni uzoqlashtirish kerak.",
-  "help.4": "Ishlov: kesish, pastki chastotalarni kesish, shovqinni kamaytirish, geyt, kompressiya, ekvalayzer, reverberatsiya — oldin va keyin taqqoslanadi.",
+  "help.4": "Ishlov yozishdan oldin ham eshitiladi: kuchaytirish, ekvalayzer, past chastotani kesish, kompressiya, reverberatsiya; yozgandan keyin — kesish, shovqinni kamaytirish, geyt, oldin va keyin taqqoslash.",
   "help.5": "Ishlov asl yozuvni o‘zgartirmaydi; natija mediatekaga saqlanadi. Yozuvlar faqat shu qurilmada saqlanadi.",
-  "help.tip": "Shovqinni kamaytirish uchun yozuv boshida bir soniya sukunat kerak — u shovqinni shu orqali taniydi."
+  "help.tip": "Shovqinni kamaytirish uchun yozuv boshida bir soniya sukunat kerak — u shovqinni shu orqali taniydi.",
+  "live.title": "Yozishdan oldingi ovoz",
+  "live.on": "Kirishni tinglash",
+  "live.hear": "Quloqchinda oʻzini eshitish",
+  "live.off": "Kirish tinglanmayapti — yuqoridagi toʻlqinni bosing.",
+  "live.hint": "Kuchaytirish, ekvalayzer, past chastotani kesish, kompressiya va reverberatsiya darhol eshitiladi — quloqchin belgisi yoqilsa, quloqchinda. Faylga asl ovoz yoziladi, xuddi shu sozlamalar bilan ishlov saqlashda qoʻllanadi; shovqinni kamaytirish, geyt va normallashtirish ham saqlashda. Quloqchinsiz dinamik orqali hushtak boʻlishi mumkin."
 }

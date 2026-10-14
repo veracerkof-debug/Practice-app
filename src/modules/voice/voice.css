@@ -62,3 +62,27 @@
 .voice .vc-eqb label{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--l2)}
 .voice .vc-eqb b{font-size:12px;color:var(--ink)}
 .voice .vc-eqb input{width:100%;accent-color:var(--tint)}
+/* большое окно: сверху мини-окно (спектр и уровень), посередине — настройки, внизу — кнопка записи под пальцем */
+.voice.big{display:flex;flex-direction:column;overflow:hidden;padding:0}
+.voice.big .vc-top{flex:none;max-height:42%;overflow:hidden;padding:4px 2px 0}
+.voice.big .vc-top .vc-mon{margin-bottom:6px}
+.voice.big .vc-mid{flex:1;min-height:0;overflow:auto;padding:4px 2px 12px;-webkit-overflow-scrolling:touch}
+.voice.big .vc-mid.vc-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.voice.big .vc-mid .vc-time{font-size:56px}
+.voice .vc-bot{flex:none;display:flex;align-items:center;justify-content:space-around;gap:12px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--sep);background:var(--bg)}
+.voice .vc-btn.ghost{visibility:hidden}
+.voice .vc-btn.done{color:var(--tint)}
+.voice .vc-btn:disabled{opacity:.4}
+/* мини-окно: компактный спектр */
+.voice .vc-mon.mini .vc-spec,.voice.big .vc-top .vc-spec{height:clamp(70px,16vh,150px)}
+.voice .vc-monh .ic.on{background:var(--tint);color:var(--on-tint)}
+.voice .vc-monh .ic:disabled{opacity:.35}
+.voice .vc-off{margin:8px 0 0;font-size:13px;text-align:center}
+/* полоса уровня «огоньками»: заливка во всю ширину, видна до уровня (clip-path), подсветка у перегруза */
+.voice .vc-bar.vcled{height:14px;border-radius:4px;-webkit-mask:repeating-linear-gradient(90deg,#000 0 5px,transparent 5px 7px);mask:repeating-linear-gradient(90deg,#000 0 5px,transparent 5px 7px)}
+.voice .vc-bar.vcled i{width:100% !important;clip-path:inset(0 100% 0 0);transition:clip-path .05s linear}
+.voice .vc-bar.vcled.hot{filter:drop-shadow(0 0 4px rgba(210,70,63,.8))}
+:root[data-style="mono"] .voice .vc-bot{border-top:0}
+.voice .vc-mon.mini .vc-dbs b{font-size:24px}
+.voice .vc-mon.mini .vc-monh{gap:6px}
+.voice .vc-mon.mini .vc-monh .ic{width:40px;height:40px}
