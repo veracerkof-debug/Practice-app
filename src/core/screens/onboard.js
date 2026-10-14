@@ -10,10 +10,12 @@ import { INSTRUMENTS, LEVELS, GOAL_BY_LEVEL, PRIOR_MAX, newProfile, saveProfile,
 import { modules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { rankOf } from '../rank.js';
+import { meleteHTML, bindMelete } from './melete.js';
+import { remindOf, setRemind, remindAvailable, remindPermission } from '../reminders.js';
 import { rankSVG, rankName, RANK_COLORS } from '../../ui/rank.js';
 import { weekdays } from './common.js';
 
-const STEPS = ['name', 'inst', 'level', 'tools', 'exp', 'goal'];
+const STEPS = ['name', 'inst', 'level', 'tools', 'exp', 'goal', 'melete'];
 
 // Карточки для выбора (инструменты, уровень)
 const card = (attr, on, title, sub = '') => '<button type="button" class="obcard' + (on ? ' on' : '') + '" ' + attr + ' aria-pressed="' + on + '"><b>' + esc(title) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</button>';
@@ -28,6 +30,8 @@ export function onboarding(app, done = () => {}) {
   if (document.getElementById('onboard')) return;
   const st = app.store.state.settings;
   const p = { ...newProfile(), ...(st.profile || {}) };
+  // новому человеку — классические напоминания (выбор — на последнем шаге)
+  if (!st.remind) setRemind(st, { mode: 'classic' });
   const f = { step: 0, years: 0, perWeek: 0, goalMin: st.goalMin, days: st.days.slice(), goalTouched: false, tools: null, toolsTouched: false };
   const allIds = modules.map((m) => m.id);
   const aboutOf = (m) => { const l = getLang(); return m.i18n?.[l]?.about ?? m.i18n?.ru?.about ?? ''; };
@@ -66,6 +70,8 @@ export function onboarding(app, done = () => {}) {
           '<span class="obtic" style="background:' + (m.color || '#8E8E93') + ';color:' + (m.on || '#fff') + '">' + m.icon + '</span><span><b>' + esc(moduleName(m)) + '</b><small>' + esc(aboutOf(m)) + '</small></span></button>').join('') +
         '</div><p class="ftr">' + t('ob.toolsHint') + '</p>';
     }
+    // Мелета: характер напоминаний и маскота, время занятий, обращение, наборы слов
+    if (s === 'melete') return '<h1 class="obh">' + t('ob.meleteTitle') + '</h1><p class="obp">' + t('ob.meleteText') + '</p>' + meleteHTML(st, { sets: true });
     if (s === 'exp') {
       return '<h1 class="obh">' + t('ob.expTitle') + '</h1><p class="obp">' + t('ob.expText') + (p.level === 'beginner' ? '' : ' ' + t('ob.expRequired')) + '</p>' +
         '<div class="group"><label class="cell"><span class="grow">' + t('ob.hours') + '</span><input class="inp num obhours" id="obhours" type="number" inputmode="numeric" min="0" max="' + PRIOR_MAX + '" placeholder="0" aria-label="' + t('ob.hours') + '" value="' + (p.priorHours || '') + '"></label></div>' +
@@ -111,6 +117,7 @@ export function onboarding(app, done = () => {}) {
     st.goalMin = f.goalMin;
     st.days = f.days;
     app.store.settingsChanged();
+    if (remindOf(st).mode !== 'quiet' && remindAvailable()) remindPermission().then((ok) => { if (!ok) toast(t('rem.denied')); });
     applyLevelDefaults(app.device, app.store.state.settings.profile);
     app.saveDevice();
     layer.remove();
@@ -132,6 +139,8 @@ export function onboarding(app, done = () => {}) {
       if (STEPS[f.step] === 'level' && !f.toolsTouched) f.tools = toolsFor(p.level, p.instruments, allIds);
       if (STEPS[f.step] === 'tools' && !f.tools.length) { toast(t('ob.pickTool')); return; }
       if (f.step === STEPS.length - 1) { finish(); return; }
+      // перед шагом «Мелета»: имя (для обращения), дни и цель — уже в настройках, чтобы образец был настоящим
+      if (STEPS[f.step + 1] === 'melete') { saveProfile(app.store, p); st.goalMin = f.goalMin; st.days = f.days.slice(); }
       f.step++;
       render();
     } else if (g('[data-obback]')) { f.step = Math.max(0, f.step - 1); render(); }
@@ -185,6 +194,8 @@ export function onboarding(app, done = () => {}) {
       if (box) box.innerHTML = rankBox(p.priorHours);
     }
   });
+  // характер Мелеты: перерисовка без прокрутки наверх
+  bindMelete(layer, st, { save: () => app.store.settingsChanged(), ask: false, rerender: () => { const b = layer.querySelector('.obbody'), y = b ? b.scrollTop : 0; render(); const nb = layer.querySelector('.obbody'); if (nb) nb.scrollTop = y; } });
   layer.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); layer.querySelector('[data-obnext]').click(); } });
   render();
 }

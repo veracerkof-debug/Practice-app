@@ -24,7 +24,8 @@ import { nextEventsHTML } from './calendar.js';
 import { extWho } from '../ext.js';
 import { refText } from '../bible.js';
 import { nextOf } from '../reading.js';
-import { quoteAt, dayIndex, setsOf, pushyLine } from '../quotes.js';
+import { quoteAt, dayIndex, setsOf } from '../quotes.js';
+import { pleaLine } from '../remindtexts.js';
 import { remindOf } from '../reminders.js';
 import { moodOf } from '../mascot.js';
 import { mascotSVG } from '../../ui/mascot.js';
@@ -89,14 +90,14 @@ function readingCard(app, mono = false) {
 function moodNow(app) {
   const st = app.store.state.settings, po = app.pomodoro;
   return moodOf({ active: !!app.active, pomoBreak: !!(po && po.active() && po.phase !== 'work'), weekSec: weekData(app.store.sessions()).total,
-    goalSec: st.toolsOnly ? 0 : st.goalMin * 60, days: st.days, sessions: app.store.sessions(), mode: remindOf(st).style });
+    goalSec: st.toolsOnly ? 0 : st.goalMin * 60, days: st.days, sessions: app.store.sessions(), mode: remindOf(st).mode });
 }
-// Настойчивая Мелета: в день практики, пока не занимались, — строка-просьба, к вечеру сильнее
+// Навязчивая Мелета: в день практики, пока не занимались, — строка-просьба, к вечеру сильнее
 function pleaHTML(app, cls) {
   const st = app.store.state.settings, now = new Date(), h = now.getHours();
-  if (remindOf(st).style !== 'pushy' || app.active || !st.days[weekday(now.getTime())] || h < 8 || h >= 23) return '';
+  if (remindOf(st).mode !== 'pushy' || app.active || !st.days[weekday(now.getTime())] || h < 8 || h >= 23) return '';
   if (app.store.sessions().some((x) => dayKey(x.start) === dayKey(now.getTime()))) return '';
-  return '<b class="' + cls + '">' + esc(pushyLine(h < 12 ? 0 : h < 16 ? 1 : h < 19 ? 2 : 3, dayIndex(), getLang())) + '</b>';
+  return '<b class="' + cls + '">' + esc(pleaLine(h, getLang())) + '</b>';
 }
 function quoteHTML(app, mono) {
   const st = app.store.state.settings;

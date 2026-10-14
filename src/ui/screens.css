@@ -299,3 +299,11 @@
 /* инструкция для нейросети — текст как есть, с переносами */
 .aidoc{white-space:pre-wrap;word-break:break-word;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;background:var(--cell);border-radius:12px;padding:12px 14px;margin:12px 0 24px;user-select:text;-webkit-user-select:text}
 .mplea{display:block;font-style:normal;font-weight:700;color:var(--ink);margin-bottom:3px}
+/* характер Мелеты: лицо и выбор режима, образцы уведомлений */
+.mlhead{display:flex;flex-direction:column;align-items:center;gap:10px}
+.mlhead .seg{align-self:stretch}
+.mlhead .seg button{white-space:normal;line-height:1.15;min-height:44px}
+.rprev{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.rpn{background:var(--fill);border-radius:12px;padding:8px 12px;font-size:13px;line-height:1.35}
+.rpn b{display:block;font-weight:650;color:var(--ink)}
+.rpn span{display:block;color:var(--l2)}

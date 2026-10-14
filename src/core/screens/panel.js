@@ -13,8 +13,8 @@ import {
 import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { hasDemo, addDemo, removeDemo } from '../demo.js';
-import { remindOf, remindAvailable, remindPermission, remindTest, STYLES, LEADS } from '../reminders.js';
-import { notifyText, setsOf, QSETS } from '../quotes.js';
+import { meleteHTML, bindMelete } from './melete.js';
+import { setsOf, QSETS } from '../quotes.js';
 const QUOTE_IC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M10 7H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5A1.5 1.5 0 0 1 6.5 18H6v2h.5A3.5 3.5 0 0 0 10 16.5zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5a1.5 1.5 0 0 1-1.5 1.5H16v2h.5a3.5 3.5 0 0 0 3.5-3.5z"/></svg>';
 import { PALETTE_IDS, PALETTES, hueColor, onColor, TEXT_MODES } from '../palettes.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
@@ -181,26 +181,8 @@ function weekHTML(app) {
 function notifHTML(app) {
   const st = app.store.state.settings;
   const row = (k, on) => '<div class="group"><div class="cell"><span class="grow">' + t('notif.' + k) + '</span>' + psw(k, on, t('notif.' + k)) + '</div></div><p class="ftr">' + t('notif.' + k + '.hint') + '</p>';
-  const r = remindOf(st);
-  // характер Мелеты — и маскота на главной, и напоминаний
-  const mode = '<div class="hdr">' + t('rem.style') + '</div><div class="group"><div class="cellcol">' + seg('remstyle', STYLES.map((k) => [k, t('rem.' + k)]), r.style, t('rem.style')) +
-    '<div class="segcap">' + t('rem.' + r.style + 'Hint') + '</div></div></div>';
-  const tm = (attr, v, label) => '<input type="time" class="inp" ' + attr + ' value="' + esc(v) + '" aria-label="' + esc(label) + '">';
-  const when = r.style === 'minimal'
-    // минимал: своё время, одно или два
-    ? '<label class="cell"><span class="grow">' + t('rem.at1') + '</span>' + tm('data-rem="t0"', r.times[0], t('rem.at1')) + '</label>' +
-      (r.times[1] ? '<div class="cell"><span class="grow">' + t('rem.at2') + '</span>' + tm('data-rem="t1"', r.times[1], t('rem.at2')) + '<button class="ic sm" data-remt2="del" aria-label="' + esc(t('rem.at2del')) + '" style="margin-left:8px">' + IC.minus + '</button></div>'
-        : '<button class="cell act" data-remt2="add">' + t('rem.at2add') + '</button>')
-    // классика и настойчивая: время занятий и «напомнить за»
-    : '<label class="cell"><span class="grow">' + t('rem.time') + '</span>' + tm('data-rem="time"', r.time, t('rem.time')) + '</label>' +
-      '<div class="cellcol"><span>' + t('rem.lead') + '</span><div class="pickrow" style="margin-top:8px">' + LEADS.map((m) => '<button type="button" class="lchip pick' + (r.leads.includes(m) ? ' on' : '') + '" data-remlead="' + m + '" aria-pressed="' + r.leads.includes(m) + '" style="--c:var(--tint);--t:var(--on-tint)">' +
-        t(m ? 'rem.leadH' : 'rem.lead0', { n: m / 60 }) + '</button>').join('') + '</div></div>';
-  // напоминания о практике — уведомления телефона (в браузере их нет)
-  const rem = mode + '<div class="hdr">' + t('rem.title') + '</div>' + (remindAvailable() ?
-    '<div class="group"><div class="cell"><span class="grow">' + t('rem.on') + '</span><label class="sw"><input type="checkbox" data-rem="on"' + (r.on ? ' checked' : '') + ' aria-label="' + esc(t('rem.on')) + '"><i></i></label></div>' +
-    (r.on ? when + '<button class="cell act" data-remtest>' + t('rem.test') + '</button>' : '') + '</div>' +
-    '<p class="ftr">' + t('rem.hint', { from: r.quietFrom, to: r.quietTo }) + (r.style === 'minimal' ? ' ' + t('rem.minimalSets') : '') + '</p>'
-    : '<p class="ftr">' + t('rem.webOnly') + '</p>');
+  // характер Мелеты — и маскота на главной, и напоминаний (src/core/screens/melete.js)
+  const rem = '<div class="hdr">' + t('rem.style') + '</div>' + meleteHTML(st, { test: true });
   return '<div class="large">' + t('page.notif') + '</div>' + rem +
     '<div class="hdr">' + t('rem.inApp') + '</div>' +
     row('askIdle', st.askIdle !== false) + row('noSoundNote', st.noSoundNote !== false) + row('rankNote', st.rankNote !== false);
@@ -394,6 +376,8 @@ export function createPanel(app, onChange) {
   };
   const changed = () => { app.store.settingsChanged(); render(); onChange(); };
   function bind() {
+    // характер Мелеты (страница «Уведомления»)
+    bindMelete(layer, () => app.store.state.settings, { save: () => { app.store.settingsChanged(); onChange(); }, rerender: () => render() });
     layer.addEventListener('click', (e) => {
       const g = (s) => e.target.closest(s);
       let b;
@@ -433,17 +417,6 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="track"] [data-v]'))) { app.store.state.settings.trackMode = b.dataset.v; changed(); return; }
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); relang(); return; }
-      if ((b = g('[data-seg="remstyle"] [data-v]'))) { const st = app.store.state.settings; (st.remind = remindOf(st)).style = b.dataset.v; app.store.settingsChanged(); render(); onChange(); return; }
-      if ((b = g('[data-remlead]'))) {
-        const st = app.store.state.settings, r = (st.remind = remindOf(st)), m = +b.dataset.remlead, s = new Set(r.leads);
-        if (s.has(m) && s.size > 1) s.delete(m); else s.add(m);
-        r.leads = LEADS.filter((x) => s.has(x)); app.store.settingsChanged(); render(); return;
-      }
-      if ((b = g('[data-remt2]'))) {
-        const st = app.store.state.settings, r = (st.remind = remindOf(st));
-        r.times = b.dataset.remt2 === 'add' ? [r.times[0], '21:00'] : [r.times[0]]; app.store.settingsChanged(); render(); return;
-      }
-      if (g('[data-remtest]')) { remindTest((i, at, n, style) => notifyText(i, at, getLang(), setsOf(app.store.state.settings), app.store.state.settings.quoteBooks || [], 2, style), remindOf(app.store.state.settings).style).then((ok) => toast(t(ok ? 'rem.testSent' : 'rem.denied'))); return; }
       if (g('[data-act="demo"]')) {
         if (hasDemo(app.store.state)) {
           confirm(t('demo.removeTitle'), t('demo.removeText'), t('demo.removeYes')).then((ok) => {
@@ -496,16 +469,6 @@ export function createPanel(app, onChange) {
       }
       if (e.target.hasAttribute('data-bplan')) { const v = e.target.value; app.bible.setPlan(v === 'none' ? null : v, dayKeyOf(Date.now())); render(); onChange(); return; }
       if (e.target.hasAttribute('data-thfind')) { const st = app.store.state.settings; (st.theory ??= {}).find = e.target.checked; app.store.settingsChanged(); return; }
-      if (d.rem) { // напоминания: включение (с разрешением), время
-        const st = app.store.state.settings, r = (st.remind = remindOf(st));
-        if (d.rem === 'on') {
-          r.on = e.target.checked;
-          if (r.on) remindPermission().then((ok) => { if (!ok) { r.on = false; toast(t('rem.denied')); } app.store.settingsChanged(); render(); });
-          else { app.store.settingsChanged(); render(); }
-        } else if (d.rem === 'time' && e.target.value) { r.time = e.target.value; app.store.settingsChanged(); }
-        else if ((d.rem === 't0' || d.rem === 't1') && e.target.value) { r.times[+d.rem[1]] = e.target.value; app.store.settingsChanged(); }
-        return;
-      }
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });

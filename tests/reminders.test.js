@@ -3,37 +3,39 @@ import { plan, remindTimes, remindOf, DEFAULT_REMIND } from '../src/core/reminde
 import { quoteAt, notifyText, SCRIPTURE, MUSICIANS, SAYINGS, MEME, QSETS, setsOf } from '../src/core/quotes.js';
 import { readFileSync } from 'node:fs';
 
-const st = (r, days = [1, 1, 1, 1, 1, 0, 0]) => ({ days, remind: { ...DEFAULT_REMIND, on: true, ...r } });
+const st = (r, days = [1, 1, 1, 1, 1, 0, 0]) => ({ days, remind: { ...DEFAULT_REMIND, ...r } });
 const mon = new Date(2026, 9, 12, 9, 0).getTime(); // понедельник, 9:00
+const hours = (r) => remindTimes(remindOf(st(r)), new Date(2026, 9, 12).getTime()).map((x) => new Date(x.ts).getHours() + new Date(x.ts).getMinutes() / 60);
 
 describe('напоминания', () => {
-  it('выключены — ничего', () => { expect(plan({ days: [1, 1, 1, 1, 1, 1, 1], remind: { on: false } }, false, mon)).toEqual([]); });
-  it('классика — одно в день практики, по выходным нет', () => {
-    const ts = plan(st({ style: 'classic' }), false, mon);
-    expect(ts.length).toBe(5);
-    ts.forEach((x) => { expect(new Date(x).getHours()).toBe(19); expect([0, 6]).not.toContain(new Date(x).getDay()); });
+  it('без уведомлений — ничего', () => { expect(plan(st({ mode: 'quiet' }), false, mon)).toEqual([]); });
+  it('классика по умолчанию: за час и за 5 минут, только в дни практики', () => {
+    expect(hours({ mode: 'classic', time: '19:00' })).toEqual([18, 18 + 55 / 60]);
+    const ts = plan(st({ mode: 'classic' }), false, mon);
+    expect(ts.length).toBe(10);
+    ts.forEach((x) => expect([0, 6]).not.toContain(new Date(x.ts).getDay()));
+    expect(remindTimes(remindOf(st({ mode: 'classic' })), new Date(2026, 9, 12).getTime()).map((x) => x.slot)).toEqual(['lead:60', 'lead:5']);
   });
-  const hours = (r) => remindTimes(remindOf(st(r)), new Date(2026, 9, 12).getTime()).map((x) => new Date(x).getHours() + new Date(x).getMinutes() / 60);
   it('классика — за 1, 2, 3 часа по выбору', () => {
-    expect(hours({ style: 'classic', time: '19:00', leads: [180, 60, 0] })).toEqual([16, 18, 19]);
-    expect(hours({ style: 'classic', time: '19:00', leads: [120] })).toEqual([17]);
+    expect(hours({ mode: 'classic', time: '19:00', leads: [180, 60] })).toEqual([16, 18]);
   });
-  it('настойчивая — много, до тихих часов, не больше 8', () => {
-    expect(hours({ style: 'pushy', time: '18:00', leads: [60] })).toEqual([17, 17.5, 18, 19, 20, 21]);
-    expect(hours({ style: 'pushy', time: '10:00', leads: [180, 120, 60, 0] }).length).toBe(8);
+  it('навязчивая — весь день, 6–8 раз, тихие часы соблюдаются', () => {
+    const h = hours({ mode: 'pushy', time: '19:00' });
+    expect(h.length).toBeGreaterThanOrEqual(6); expect(h.length).toBeLessThanOrEqual(8);
+    expect(h[0]).toBe(8.5);
+    expect(h.every((x) => x >= 8 && x < 22)).toBe(true);
+    const slots = remindTimes(remindOf(st({ mode: 'pushy', time: '19:00' })), new Date(2026, 9, 12).getTime()).map((x) => x.slot);
+    expect(slots).toEqual(expect.arrayContaining(['morning', 'lunch', 'lead:60', 'lead:5', 'after']));
   });
-  it('минимал — только своё время, одно-два', () => {
-    expect(hours({ style: 'minimal', times: ['07:30', '23:00'] })).toEqual([]); // 7:30 и 23:00 — тихие часы
-    expect(hours({ style: 'minimal', times: ['09:00', '20:00', '21:00'] })).toEqual([9, 20]);
-  });
-  it('прежние характеры переводятся', () => {
-    expect(remindOf({ remind: { style: 'insistent' } }).style).toBe('pushy');
-    expect(remindOf({ remind: { style: 'soft' } }).style).toBe('minimal');
-    expect(remindOf({ remind: { style: 'normal' } }).style).toBe('classic');
+  it('прежние настройки переводятся', () => {
+    expect(remindOf({ remind: { on: true, style: 'insistent' } }).mode).toBe('pushy');
+    expect(remindOf({ remind: { on: true, style: 'normal' } }).mode).toBe('classic');
+    expect(remindOf({ remind: { on: false, style: 'normal' } }).mode).toBe('quiet');
+    expect(remindOf({}).mode).toBe('quiet');
   });
   it('сегодня уже занимались — сегодня не напоминает', () => {
     const a = plan(st({}), false, mon), b = plan(st({}), true, mon);
-    expect(b.length).toBe(a.length - 1);
+    expect(b.length).toBe(a.length - 2);
   });
 });
 
@@ -111,21 +113,23 @@ describe('наборы цитат', () => {
   });
 });
 
-import { pushyLine, PUSHY } from '../src/core/quotes.js';
+import { remindText, pleaLine, PUSHY_TEXTS } from '../src/core/remindtexts.js';
 describe('характеры Мелеты', () => {
   const at = (h) => new Date(2026, 9, 14, h, 0).getTime(), days = [1, 1, 1, 1, 1, 0, 0];
-  it('настойчивая давит в течение дня, минимал — спокоен', () => {
+  it('навязчивая давит в течение дня, без уведомлений — спокойна', () => {
     expect(moodOf({ now: at(10), goalSec: 300, weekSec: 0, days, sessions: [], mode: 'pushy' })).toBe('wait');
     expect(moodOf({ now: at(15), goalSec: 300, weekSec: 0, days, sessions: [], mode: 'pushy' })).toBe('sad');
     expect(moodOf({ now: at(20), goalSec: 300, weekSec: 0, days, sessions: [], mode: 'pushy' })).toBe('upset');
-    expect(moodOf({ now: at(20), goalSec: 300, weekSec: 0, days, sessions: [], mode: 'minimal' })).toBe('calm');
+    expect(moodOf({ now: at(20), goalSec: 300, weekSec: 0, days, sessions: [], mode: 'quiet' })).toBe('calm');
     expect(moodOf({ now: at(20), goalSec: 300, weekSec: 10, days, sessions: [{ start: at(9) }], mode: 'pushy' })).toBe('glad');
   });
-  it('строки настойчивой — сильнее с каждым напоминанием, без «ты/вы»', () => {
-    expect(PUSHY.ru[0]).toContain(pushyLine(0, 0));
-    expect(PUSHY.ru[3]).toContain(pushyLine(9, 0));
-    for (const l of ['ru', 'uz', 'en']) expect(PUSHY[l].flat().length).toBe(12);
-    PUSHY.ru.flat().forEach((x) => expect(x).not.toMatch(/(^|\s)(ты|вы|тебя|вас|тебе|вам)(\s|[,.!?…]|$)/i));
-    expect(notifyText(0, Date.now(), 'ru', ['classic'], [], 3, 'pushy').title).toMatch(/./);
+  it('тексты: классика за час и за 5 минут, имя, без «ты/вы»', () => {
+    expect(remindText({ slot: 'lead:60', mode: 'classic' }, { lang: 'ru' }).title).toBe('Сегодня практика — через час');
+    expect(remindText({ slot: 'lead:5', mode: 'classic' }, { lang: 'ru' }).title).toBe('Пора доставать инструмент');
+    expect(remindText({ slot: 'lead:5', mode: 'classic' }, { lang: 'ru', name: 'Алекс' }).title).toBe('Алекс, пора доставать инструмент');
+    expect(remindText({ slot: 'morning', mode: 'pushy' }, { lang: 'en' }).title).toMatch(/Good morning/);
+    expect(pleaLine(13)).toBe(PUSHY_TEXTS.ru.pushy.lunch[0]);
+    for (const l of ['ru', 'uz', 'en']) expect(Object.keys(PUSHY_TEXTS[l].pushy).length).toBe(8);
+    Object.values(PUSHY_TEXTS.ru.pushy).flat().concat(PUSHY_TEXTS.ru.five).forEach((x) => expect(x).not.toMatch(/(^|\s)(ты|вы|тебя|вас|тебе|вам)(\s|[,.!?…]|$)/i));
   });
 });

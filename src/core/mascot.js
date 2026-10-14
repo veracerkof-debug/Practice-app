@@ -5,10 +5,10 @@ import { weekday, dayKey } from './time.js';
 const DAY = 86400000;
 
 // s: { now, active, pomoBreak, weekSec, goalSec, days[7], sessions[], mode }
-// mode — характер: 'classic' | 'pushy' (давит: ждёт → грустит → дуется в течение дня) | 'minimal' (только спокойные лица)
+// mode — характер: 'classic' | 'pushy' (навязчивая: ждёт → грустит → дуется в течение дня) | 'quiet' (только спокойные лица)
 export function moodOf(s) {
   const m = baseMood(s);
-  if (s.mode === 'minimal') return ['sleep', 'focus', 'rest', 'happy', 'glad'].includes(m) ? m : 'calm';
+  if (s.mode === 'quiet' || s.mode === 'minimal') return ['sleep', 'focus', 'rest', 'happy', 'glad'].includes(m) ? m : 'calm';
   if (s.mode === 'pushy' && ['calm', 'wait', 'sad'].includes(m) && !s.active) {
     const now = s.now ?? Date.now(), h = new Date(now).getHours(), list = s.sessions || [];
     if (list.some((x) => dayKey(x.start) === dayKey(now))) return m;
