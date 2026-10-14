@@ -31,6 +31,8 @@
   "time.m": "{n} min",
   "time.lt1m": "<1 min",
   "tools.title": "Tools",
+  "tools.pure": "Full screen",
+  "tools.pureHint": "Leave full screen with Back",
   "tools.recorded": "{tool}: {dur} added to stats",
   "preset.save": "Save",
   "preset.saveBtn": "Save",

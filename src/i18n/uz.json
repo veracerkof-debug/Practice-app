@@ -31,6 +31,8 @@
   "time.m": "{n} daq",
   "time.lt1m": "<1 daq",
   "tools.title": "Asboblar",
+  "tools.pure": "Toʻliq ekran",
+  "tools.pureHint": "Toʻliq ekrandan chiqish — «Orqaga»",
   "tools.recorded": "{tool}: {dur} statistikada",
   "preset.save": "Saqlash",
   "preset.saveBtn": "Saqlash",

@@ -31,6 +31,8 @@
   "time.m": "{n} мин",
   "time.lt1m": "<1 мин",
   "tools.title": "Инструменты",
+  "tools.pure": "Полный экран",
+  "tools.pureHint": "Выход из полного экрана — «Назад»",
   "tools.recorded": "{tool}: {dur} в статистике",
   "preset.save": "Сохранить",
   "preset.saveBtn": "Сохранить",

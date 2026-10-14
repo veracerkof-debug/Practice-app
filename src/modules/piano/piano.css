@@ -123,3 +123,7 @@
   .psyn .knob svg{width:clamp(28px,30cqh,52px);height:clamp(28px,30cqh,52px)}
   .psyn .kl,.psyn .kx{font-size:clamp(8.5px,6cqh,10px)}
 }
+/* Полный экран (src/core/pure.js): клавиатура на весь экран — без панели, последней ноты и эффектов */
+.tview.pure .pbar,.tview.pure .lastnote,.tview.pure .psyn,.tview.pure .hlp{display:none!important}
+.tview.pure .pwrap{justify-content:stretch}
+.tview.pure .kbs{flex:1!important;gap:0}

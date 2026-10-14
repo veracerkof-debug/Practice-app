@@ -401,6 +401,7 @@ export default {
   multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами
   sizes: ['full', 'half', 'quarter', 'strip'],
   immersive: true, // в отдельном окне — на весь экран, без шапки
+  pure: true, // и полный экран: только поверхность, без кнопок (src/core/pure.js)
   status(c) {
     const s = c.store.all(), lo = s.lo ?? 60, w = s.width ?? 12;
     return mName(lo) + '–' + mName(lo + w) + ' · ' + c.t('snap.' + (s.snap || 'magnet'));

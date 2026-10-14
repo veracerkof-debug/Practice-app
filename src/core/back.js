@@ -18,6 +18,8 @@ export function backStep(app) {
   if (closeTopSheet()) return true;
   const panel = document.getElementById('panelLayer');
   if (panel) return click('#panelLayer .navrow [data-pp="root"]') || click('#panelLayer [data-act="pclose"]');
+  const tv = document.querySelector('.tview.pure:not(.leaving)');
+  if (tv && tv.parentElement.pureExit && tv.parentElement.pureExit()) return true; // полный экран инструмента — сначала из него
   if (click('.tview:not(.leaving) [data-tv="close"]')) return true;
   if (click('.session [data-s="hide"]')) return true;
   return app.shellBack ? app.shellBack() : false;

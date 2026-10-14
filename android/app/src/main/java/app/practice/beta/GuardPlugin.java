@@ -1,6 +1,9 @@
 package app.practice.beta;
 
 import android.view.WindowManager;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -18,6 +21,20 @@ public class GuardPlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             if (on) getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
             else getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+            call.resolve();
+        });
+    }
+
+    // Полный экран инструмента: системные панели (статус и навигация) скрыты, появляются от края жестом и прячутся снова
+    @PluginMethod
+    public void immersive(PluginCall call) {
+        boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
+        getActivity().runOnUiThread(() -> {
+            WindowInsetsControllerCompat c = WindowCompat.getInsetsController(getActivity().getWindow(), getActivity().getWindow().getDecorView());
+            if (on) {
+                c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                c.hide(WindowInsetsCompat.Type.systemBars());
+            } else c.show(WindowInsetsCompat.Type.systemBars());
             call.resolve();
         });
     }

@@ -87,3 +87,6 @@
 .glov .ic.on{color:var(--tint-text)}
 /* мелодия сверху слева — подпись ноты ниже, чтобы не закрывала полосу */
 .glpad:has(.glmel) .glnote{top:34%}
+/* Полный экран (src/core/pure.js): только доска — без кнопок, ноты крупно и подписи эффектов */
+.tview.pure .glov,.tview.pure .glnote,.tview.pure .glaxis,.tview.pure .mlbtn{display:none!important}
+.tview.pure .glpad{border-radius:0}
