@@ -23,6 +23,7 @@ import { mInput, bindM } from './common.js';
 import { freeTagName } from './panel.js';
 import { clockNotice } from './clock.js';
 import { coreHelp } from '../help.js';
+import { bareScope } from '../../i18n/index.js';
 
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -107,7 +108,8 @@ export function createSessionScreen(app) {
   }
 
   /* ---------- экран ---------- */
-  function open() {
+  function open() { return bareScope(() => openNow()); }
+  function openNow() {
     if (!app.active) return;
     if (layer) return;
     const a = app.active, tm = a.type === 'tool', hide = st().showClock === false || !!st().toolsOnly;
@@ -169,7 +171,8 @@ export function createSessionScreen(app) {
   }
 
   // Содержимое окна: переключатель модулей группы (если их два) и место для модуля
-  function fillPane(frame, i, size) {
+  function fillPane(frame, i, size) { return bareScope(() => fillPaneNow(frame, i, size)); }
+  function fillPaneNow(frame, i, size) {
     const g = w.panes[i], m = pickModule(st(), w, g, size), list = members(st(), g), big = size === 'full' || size === 'half';
     frame.querySelectorAll(':scope > :not(.grip)').forEach((x) => x.remove());
     let host;
@@ -190,7 +193,8 @@ export function createSessionScreen(app) {
     panes[i] = { frame, mod: m, size, inst: m ? mountModule(app, m, host, size, frame) : null };
   }
 
-  function renderWS(animIdx) {
+  function renderWS(animIdx) { return bareScope(() => renderWSNow(animIdx)); }
+  function renderWSNow(animIdx) {
     if (!wsEl) return;
     fixWS(w, sessionGroups(st()), app.active);
     unmountAll();
@@ -373,7 +377,8 @@ export function createSessionScreen(app) {
   }
 
   /* ---------- время, бездействие ---------- */
-  function updClock() {
+  function updClock() { return bareScope(() => updClockNow()); }
+  function updClockNow() {
     const a = app.active;
     if (!a || !layer) return;
     const c = layer.querySelector('#clk');
@@ -382,7 +387,8 @@ export function createSessionScreen(app) {
     if (s) { s.classList.toggle('paused', !!a.pausedAt); s.setAttribute('aria-label', t(a.pausedAt ? 'ses.resume' : 'ses.pause')); }
   }
 
-  function tick() {
+  function tick() { return bareScope(() => tickNow()); }
+  function tickNow() {
     updClock();
     const pc = layer && layer.querySelector('#pchip');
     if (pc) { const h = pchipHTML(); if (pc.dataset.h !== h) { pc.dataset.h = h; pc.innerHTML = h; } }

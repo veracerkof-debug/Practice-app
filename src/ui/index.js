@@ -2,7 +2,7 @@
 // Разметка и классы — как в прототипе (стили в ui.css).
 import './ui.css';
 import { loader } from './loader.js';
-import { t } from '../i18n/index.js';
+import { t, withText } from '../i18n/index.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -77,7 +77,7 @@ export function sheet(render, init, { onClose } = {}) {
     el,
     update() {
       const y = el.scrollTop;
-      el.innerHTML = '<div class="grab"></div>' + render();
+      el.innerHTML = '<div class="grab"></div>' + withText(render); // настройки — с текстом и в «Минимале» без текста
       el.scrollTop = y;
     },
     close() {
@@ -135,6 +135,7 @@ export const closeTopSheet = () => { const s = stack.at(-1); if (!s) return fals
 /* ---------- сообщение ---------- */
 
 export function toast(msg) {
+  if (!msg || !String(msg).trim()) return; // «Минимал» без текста: сообщение без слов не показывается
   document.querySelectorAll('.toast').forEach((x) => x.remove()); // новое сообщение сменяет старое сразу
   const el = document.createElement('div');
   el.className = 'toast';

@@ -21,6 +21,7 @@ import { calendarHTML, bindCalendar, calAct } from './calendar.js';
 import { onboarding, langGate } from './onboard.js';
 import { logoHTML } from '../../ui/logo.js';
 import { coreHelp } from '../help.js';
+import { bareScope } from '../../i18n/index.js';
 
 export function createShell(app, root) {
   const tabsNow = () => visibleTabs(app.store.state.settings, tabIds(app.store.state.settings));
@@ -47,7 +48,9 @@ export function createShell(app, root) {
     bible = { host, ...mountModule(app, moduleById('bible'), host, 'full') };
   }
 
-  function render() {
+  // «Минимал» без текста: рабочие экраны рисуются без слов (i18n: bareScope)
+  const render = () => bareScope(renderNow);
+  function renderNow() {
     // первый запуск: до конца регистрации — только заставка (поздние перерисовки — файлы, синхронизация — не в счёт)
     if (root.classList.contains('starting')) return;
     rankCheck(app);

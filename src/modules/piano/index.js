@@ -42,7 +42,7 @@ function view() {
     mName(lastWhite(m0, p.size)) + '</span>' + pk('data-step="poct" data-d="1"', '›', t('octUp')) + '</div><div class="pgrp">' +
     pk('data-step="pkeys" data-d="-1"', I.minus, t('keysLess')) + pk('data-step="pkeys" data-d="1"', I.plus, t('keysMore')) +
     (panelOn() ? '' : pk('data-x="psound"', I.wave, t('sound'))) +
-    (full ? '<button class="pk txt2' + (hold.mode ? ' on' : '') + '" data-x="phold" aria-pressed="' + !!hold.mode + '" aria-label="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '" title="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '">' + (hold.mode === 1 ? 'Sus' : 'Hold') + '</button>' +
+    (full ? '<button class="pk txt2' + (hold.mode ? ' on' : '') + '" data-x="phold" aria-pressed="' + !!hold.mode + '" aria-label="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '" title="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '">' + '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 20h12M9 20l2-12h2l2 12" style="fill:none;stroke:currentColor;stroke-width:2"/>' + (hold.mode === 2 ? '<circle cx="12" cy="5" r="2" style="fill:currentColor"/>' : '') + '</svg></i><span class="bt">' + (hold.mode === 1 ? 'Sus' : 'Hold') + '</span></button>' +
       pk('data-x="pdual"', I.dual, t('dual'), !!p.dual) + pk('data-x="prot"', I.rot, t('rotate'), !!p.rot) : '') + '</div></div>';
   const hlBtn = hl ? '<button class="pk txt on hlp" data-x="hloff" aria-label="' + t('hlOff') + '">' + ui.esc(hl.label) + ' ×</button>' : '';
   const kb = (m) => kbHTML(m, p.size, hl ? hl.pcs : null, hl ? hl.root : null);

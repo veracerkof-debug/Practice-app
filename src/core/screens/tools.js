@@ -11,8 +11,10 @@ import { showHelp } from '../help.js';
 import { recButtonHTML, bindRec } from './rec.js';
 import { canRecord } from '../recorder.js';
 import { pureEnter, pureLeave } from '../pure.js';
+import { bareScope } from '../../i18n/index.js';
 
-export function renderTools(app, root) {
+export const renderTools = (app, root) => bareScope(() => renderToolsNow(app, root));
+function renderToolsNow(app, root) {
   const list = modules.filter((m) => !m.tab && isOn(app.store.state.settings, m.id)); // Библия — своя вкладка
   root.innerHTML = topbar() + '<div class="large">' + t('tools.title') + '</div><div class="tgrid">' + list.map((m) => {
     let st = '';
@@ -28,7 +30,8 @@ export function renderTools(app, root) {
 
 const EXPAND = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
 
-export function openToolView(app, id, onClose) {
+export const openToolView = (app, id, onClose) => bareScope(() => openToolViewNow(app, id, onClose));
+function openToolViewNow(app, id, onClose) {
   const mod = moduleById(id), name = moduleName(mod);
   // полный экран (manifest.pure): кнопка — рядом с «?», выход — «Назад», Esc
   const pureBtn = mod.pure ? ui.icb('data-tv="pure"', EXPAND, t('tools.pure'), 'sm' + (mod.immersive ? ' tvpure' : '')) : '';

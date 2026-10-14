@@ -1,6 +1,6 @@
 // Хозяин модулей: создаёт ctx по контракту (MODULE_SPEC.md), монтирует модуль в окно,
 // учитывает время инструмента, открытого вне сессии.
-import { getLang, makeT, makeTn, fmtNum, t as coreT } from '../i18n/index.js';
+import { getLang, makeT, makeTn, fmtNum, CORE_DICTS as coreDicts } from '../i18n/index.js';
 import { ui } from '../ui/index.js';
 import { createToolView, toolViewMs, toolViewVisibility, saveToolView, recordToolTime, trackMode, countsWhileHidden, FREE_TAGS, freeTagName } from './session.js';
 import { overlapMs, mergeSegs } from './stopwatch.js';
@@ -68,8 +68,9 @@ export function createShared() {
 // ctx — всё, что ядро даёт модулю
 export function makeCtx(app, mod) {
   // Строки модуля; если ключа нет — общие строки ядра (ui.*, preset.*)
-  const mt = makeT(mod.i18n || {}), tn = makeTn(mod.i18n || {});
-  const t = (k, v) => { const r = mt(k, v); return r === k ? coreT(k, v) : r; };
+  // «Минимал» без текста: строки инструмента — без слов везде, кроме шторок настроек (i18n: makeT(…, false))
+  const mt = makeT(mod.i18n || {}, false), tn = makeTn(mod.i18n || {}, false), ct = makeT(coreDicts, false);
+  const t = (k, v) => { const r = mt(k, v); return r === k ? ct(k, v) : r; };
   return {
     id: mod.id,
     t, tn,

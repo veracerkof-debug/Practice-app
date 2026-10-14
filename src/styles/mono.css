@@ -406,3 +406,20 @@
 /* Мелета под приветствием */
 .mono-home .mvo { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
 .mono-home .mvo .mquote { margin: 0; flex: 1; }
+
+/* ---------- «Минимал» без текста (settings.monoBare, data-bare): значки, графика и цифры ---------- */
+/* Слова интерфейса убирает i18n (stripWords); здесь — то, что приходит не из строк: цитаты, стихи, названия инструментов */
+.bareic{display:none}
+:root[data-bare] .bareic{display:inline-flex;align-items:center;justify-content:center}
+:root[data-bare] .bareic svg{width:30px;height:30px;fill:currentColor;stroke:none}
+:root[data-bare] .mquote,:root[data-bare] .hquote,:root[data-bare] .mverse,:root[data-bare] .qref,
+:root[data-bare] .mlbl,:root[data-bare] .qn,:root[data-bare] .tcn2,:root[data-bare] .tview .tvhd .stitle2,
+:root[data-bare] .session .stitle2,:root[data-bare] .tmhint,:root[data-bare] .tmpriv,:root[data-bare] .large:empty,
+:root[data-bare] .hdr:empty,:root[data-bare] .ftr:empty,:root[data-bare] .sub:empty,:root[data-bare] p:empty{display:none!important}
+:root[data-bare] .segic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;vertical-align:middle}
+:root[data-bare] .mdays span:empty::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.5}
+:root[data-bare] .mdays span.today:empty::before{opacity:1}
+/* панель синтезатора пианино: латинские подписи блоков (PRACTICE · SYN-1, OSC, FILTER…) — только ручки и цифры */
+:root[data-bare] .rhead b,:root[data-bare] .rsec .rt,:root[data-bare] .sclab,:root[data-bare] .lcdn{visibility:hidden}
+:root[data-bare] .bt,:root[data-bare] .bpmlbl{display:none!important}
+:root[data-bare] .bareic svg path,:root[data-bare] .bareic svg circle{vector-effect:non-scaling-stroke}

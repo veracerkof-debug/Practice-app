@@ -114,7 +114,7 @@ function view() {
   const tags = [c.sub === 2 && c.swing ? t('tag.swing') : '', c.trainer.on ? t('tag.trainer', { step: c.trainer.step, every: c.trainer.every }) : '',
     c.gap.on ? t('tag.gap', { play: c.gap.play, mute: c.gap.mute }) : ''].filter(Boolean);
   const ctl = size === 'quarter' ? [meter, sub]
-    : [meter, tile('data-s="tap"', '<b class="tapt">TAP</b>', t('tap')), sub, tile('data-s="more"', ui.icons.gear, t('settings'))];
+    : [meter, tile('data-s="tap"', '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" style="fill:currentColor"/><circle cx="12" cy="12" r="7.5" style="fill:none;stroke:currentColor;stroke-width:1.6"/></svg></i><b class="tapt bt">TAP</b>', t('tap')), sub, tile('data-s="more"', ui.icons.gear, t('settings'))];
   return '<div class="mv ' + size + '">' + wheelHTML() + '<div class="mside"><div class="mctl n' + ctl.length + '">' + ctl.join('') +
     '</div><div class="barct num" id="barct" aria-live="off">' + tags.join(' · ') + '</div>' + sigHTML() + '</div></div>';
 }

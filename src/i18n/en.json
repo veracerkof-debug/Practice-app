@@ -1023,6 +1023,8 @@
   "lic.onest.sub": "Additional interface font",
   "mono.lang": "Biblical names",
   "mono.langHint": "Section and tool names in Greek, words of the Septuagint and the New Testament; other text in Russian. Off — the language chosen above.",
+  "mono.bare": "No text",
+  "mono.bareHint": "Icons, graphics and numbers only — on the home screen, tabs, tools and in the session. Settings, confirmations and instructions (via “?”) keep their text, otherwise they could not be read.",
   "verses.hint": "Each section has its verse: tapping a section name opens it. Text — World English Bible (psalms in Hebrew numbering).",
   "verses.title": "Names and verses",
   "name.aria": "Μελέτη — about the name",

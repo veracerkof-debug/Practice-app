@@ -4,7 +4,7 @@
 // (не чаще раза за запуск приложения); в самый первый раз кнопка «Понятно» оживает через секунду — чтобы карточку
 // прочитали, а не смахнули не глядя. Все инструкции — в «Профиль → Инструкции», у инструмента — значок «?».
 // Тексты: у модуля — в его i18n (help.what, help.1…help.6, help.tip); у механизмов — в i18n ядра (hc.<id>.*).
-import { t, getLang } from '../i18n/index.js';
+import { t, getLang, isBare } from '../i18n/index.js';
 import { esc, leave } from '../ui/index.js';
 import { moduleName } from './modules.js';
 
@@ -52,6 +52,7 @@ const once = (st) => st.helpOnce || (st.helpOnce = {}); // хоть раз по�
 // Инструмент или механизм открыт: карточка, если её не просили больше не показывать (раз за запуск)
 export function firstHelp(app, x) {
   const st = app.store.state.settings, tp = x.core ? x : modTopic(x);
+  if (isBare()) return; // «Минимал» без текста: инструкции — только по «?» и из профиля
   if (!st.configured || never(st)[tp.id] || thisRun.has(tp.id) || !helpOf(tp) || queue.some((q) => q.tp.id === tp.id)) return;
   thisRun.add(tp.id);
   queue.push({ app, tp, auto: true });

@@ -243,7 +243,9 @@ function lookHTML(app) {
     '<div class="hdr">' + t('look.theme') + '</div><div class="group"><div class="cellcol">' + seg('theme', [['system', t('look.auto')], ['light', t('look.light')], ['dark', t('look.dark')]], st.theme, t('look.theme')) + '</div></div>' +
     (!extOn(st) ? '' : '<div class="hdr">' + t('mono.title') + '</div><div class="group"><div class="cellcol">' + seg('uistyle', [['default', t('mono.default')], ['mono', t('mono.name')]], st.uiStyle === 'mono' ? 'mono' : 'default', t('mono.title')) +
     '<div class="segcap">' + t('mono.hint') + '</div></div></div>') +
-    (st.uiStyle === 'mono' && extOn(st) ? '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('mono.lang') + '</span>' + psw('monoLang', st.monoLang !== false, t('mono.lang')) + '</div></div><p class="ftr">' + t('mono.langHint') + '</p>' : '') +
+    (st.uiStyle === 'mono' && extOn(st) ? '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('mono.lang') + '</span>' + psw('monoLang', st.monoLang !== false, t('mono.lang')) + '</div></div><p class="ftr">' + t('mono.langHint') + '</p>' +
+      // без текста: значки, графика и цифры на рабочих экранах; настройки и диалоги — с текстом
+      '<div class="group"><div class="cell"><span class="grow">' + t('mono.bare') + '</span>' + psw('monoBare', !!st.monoBare, t('mono.bare')) + '</div></div><p class="ftr">' + t('mono.bareHint') + '</p>' : '') +
     // стихи разделов — в обоих видах
     '<div class="group" style="margin-top:16px"><button class="cell act" data-verses>' + t('verses.title') + '</button></div><p class="ftr">' + t('verses.hint') + '</p>' +
     (st.uiStyle === 'mono' ? '' : '<div class="hdr">' + t('look.style') + '</div><div class="skins">' + [['paper', t('look.paper'), '#F4EFE6', '#2B2620'], ['oled', 'OLED', '#000', '#fff']].map(([k, n, bg, fg]) =>
@@ -510,7 +512,7 @@ export function createPanel(app, onChange) {
       }
       if (e.target.hasAttribute('data-bplan')) { const v = e.target.value; app.bible.setPlan(v === 'none' ? null : v, dayKeyOf(Date.now())); render(); onChange(); return; }
       if (e.target.hasAttribute('data-thfind')) { const st = app.store.state.settings; (st.theory ??= {}).find = e.target.checked; app.store.settingsChanged(); return; }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
         if (r.locked) { toast(t('me.priorLocked')); e.target.value = r.priorHours || ''; }

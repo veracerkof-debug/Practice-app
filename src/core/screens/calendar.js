@@ -4,7 +4,7 @@ import '../../ui/calendar.css';
 import { epigraphHTML } from './verses.js';
 import { refText } from '../bible.js';
 import { nextOf } from '../reading.js';
-import { t, tn } from '../../i18n/index.js';
+import { t, tn, bareNow, withText } from '../../i18n/index.js';
 import { esc, sheet, snav, toast, confirm, seg, sw, icb, icons } from '../../ui/index.js';
 import { fmtDur } from '../format.js';
 import { DAY, dayStart, dayKey, weekStart, monthStart, weekday, pad2, uid } from '../time.js';
@@ -28,9 +28,15 @@ const I = {
 
 /* ---------- даты по-человечески ---------- */
 
-const months = () => t('cal.months').split(' ');
-const monthsGen = () => t('cal.monthsGen').split(' ');
-const wdFull = () => t('cal.wdFull').split(' ');
+// «Минимал» без текста: вид календаря — значками (месяц — сетка, неделя — столбцы, список — строки)
+const CVIEW_IC = [['month', '<svg class="segic" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M4 15h16M9.3 10v10M14.7 10v10"/></svg>'],
+  ['week', '<svg class="segic" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 5v15M12 5v15M16 5v15"/></svg>'],
+  ['list', '<svg class="segic" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></svg>']];
+// «Минимал» без текста: месяцы — числами (10 2026, 14.10), дни недели — без названий
+const NUMS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+const months = () => (bareNow() ? NUMS : withText(() => t('cal.months')).split(' '));
+const monthsGen = () => (bareNow() ? NUMS : withText(() => t('cal.monthsGen')).split(' '));
+const wdFull = () => (bareNow() ? Array(7).fill('') : withText(() => t('cal.wdFull')).split(' '));
 export const hm = (ts) => { const d = new Date(ts); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
 const dayFmt = (ts, wd = true) => { const d = new Date(ts); return t(wd ? 'cal.dayFmt' : 'cal.dateFmt', { wd: wdFull()[weekday(ts)], d: d.getDate(), m: monthsGen()[d.getMonth()], y: d.getFullYear() }); };
 const monthTitle = (ts) => { const d = new Date(ts); return t('cal.monthFmt', { m: months()[d.getMonth()], y: d.getFullYear() }); };
@@ -46,6 +52,7 @@ export function relDate(ts, now = Date.now()) {
 // Заголовок дня: «Сегодня, 7 октября», «Завтра, 8 октября» или «Пятница, 9 октября»
 function dayLabel(day, now = Date.now()) {
   const n = Math.round((dayStart(day) - dayStart(now)) / DAY);
+  if (bareNow()) { const d = new Date(day); return d.getDate() + '.' + NUMS[d.getMonth()]; } // без текста — 14.10
   return n === 0 || n === 1 ? t(n ? 'cal.tomorrowCap' : 'cal.todayCap') + ', ' + dayFmt(day, false) : dayFmt(day);
 }
 
@@ -83,7 +90,7 @@ export function calendarHTML(app, cv) {
   const right = '<span class="ctop">' + icb('data-cics', I.share, t('cal.export'), 'plain') + icb('data-cnew', IC.plus, t('cal.new'), 'plain') + '</span>';
   // стих эпиграфом — Пс 89:12 (src/core/verses.js)
   let h = topbar(right) + '<div class="large">' + t('cal.title') + '</div>' + epigraphHTML() + '<div class="calw">' + head +
-    seg('cview', [['month', t('cal.v.month')], ['week', t('cal.v.week')], ['list', t('cal.v.list')]], cv.view, t('cal.view'));
+    seg('cview', bareNow() ? CVIEW_IC : [['month', t('cal.v.month')], ['week', t('cal.v.week')], ['list', t('cal.v.list')]], cv.view, withText(() => t('cal.view')));
   h += cv.view === 'week' ? weekHTML(app, cv) : cv.view === 'list' ? listHTML(app, cv) : monthHTML(app, cv);
   return h + '</div>';
 }

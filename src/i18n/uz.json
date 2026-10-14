@@ -1014,6 +1014,8 @@
   "lic.onest.sub": "Qoʻshimcha interfeys shrifti",
   "mono.lang": "Bibliya nomlari",
   "mono.langHint": "Boʻlim va asbob nomlari — yunoncha, Septuaginta va Yangi Ahd soʻzlari bilan; qolgan matn — rus tilida. Oʻchirilgan — yuqoridagi til.",
+  "mono.bare": "Matnsiz",
+  "mono.bareHint": "Faqat belgilar, grafika va raqamlar — bosh sahifada, boʻlimlarda, asboblarda va sessiyada. Sozlamalar, tasdiqlar va yoʻriqnomalar («?» orqali) matn bilan qoladi, aks holda ularni oʻqib boʻlmaydi.",
   "verses.hint": "Har bir boʻlimning oʻz oyati bor: boʻlim nomiga bosilsa, u ochiladi. Matn — «Muqaddas Kitob».",
   "verses.title": "Nomlar va oyatlar",
   "name.aria": "Μελέτη — nom haqida",

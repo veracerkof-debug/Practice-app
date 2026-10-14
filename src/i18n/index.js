@@ -7,6 +7,7 @@ import en from './en.json';
 import el from './el.json';
 
 const dicts = { ru, uz, en, el };
+export const CORE_DICTS = dicts;
 export const LANGS = ['ru', 'uz', 'en'];
 export const MONO_LANG = 'el';
 // Название языка на нём самом
@@ -24,15 +25,33 @@ export function getLang() {
   return lang;
 }
 
+// «Минимал» без текста (settings.monoBare): на рабочих экранах (главная, вкладки, инструменты, сессия) строки интерфейса
+// теряют слова — остаются цифры и знаки (12:30, 5, ♯, %); значения в {…} (названия песен, ноты) — как есть.
+// Ядро — только внутри bareScope (отрисовка рабочих экранов: диалоги и настройки по нажатию — с текстом);
+// инструменты — всегда, кроме шторок (настройки) — их отрисовка идёт в withText
+let bareOn = false, depth = 0, keep = 0;
+export const setBare = (on) => { bareOn = !!on; };
+export const isBare = () => bareOn;
+export function bareScope(fn) { depth++; try { return fn(); } finally { depth--; } }
+export function withText(fn) { keep++; try { return fn(); } finally { keep--; } }
+const stripping = (scoped) => bareOn && keep === 0 && (!scoped || depth > 0);
+// Сейчас рисуется рабочий экран без слов (ядро): для списков-данных (месяцы, дни недели) — числа или ничего
+export const bareNow = () => stripping(true);
+// Без слов: буквы долой (кроме {подстановок}), остаток — без висячих знаков препинания
+export const stripWords = (s) => s.replace(/\{\w+\}|[\p{L}\p{M}ʻʼ'’]+/gu, (m) => (m[0] === '{' ? m : ''))
+  .replace(/[.,!?;«»"“”„()…]/g, '').replace(/\s+/g, ' ').replace(/^[\s:—–\-·/]+|[\s:—–\-·/]+$/g, '').trim();
+
 // {name} в строке заменяется значением из vars
 const fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m)) : s);
 
 // Словарь с запасным русским
-export function makeT(byLang) {
+// scoped — строки ядра (без слов только внутри bareScope); false — строки инструментов (без слов везде, кроме withText)
+export function makeT(byLang, scoped = true) {
   return (key, vars) => {
     const v = byLang[lang]?.[key] ?? byLang.ru?.[key];
     if (v == null) return key;
-    return fill(Array.isArray(v) ? v[0] : v, vars);
+    const s = Array.isArray(v) ? v[0] : v;
+    return fill(stripping(scoped) ? stripWords(s) : s, vars);
   };
 }
 
@@ -50,11 +69,12 @@ export function pluralForm(n, forms, l = lang) {
 }
 
 // t с числом: tn('cents', 5) → «5 центов»; vars.n подставляется в {n}
-export function makeTn(byLang) {
+export function makeTn(byLang, scoped = true) {
   return (key, n, vars) => {
     const v = byLang[lang]?.[key] ?? byLang.ru?.[key];
     if (v == null) return key;
-    return fill(pluralForm(n, v, byLang[lang]?.[key] != null ? lang : 'ru'), { n: fmtNum(n), ...vars });
+    const s = pluralForm(n, v, byLang[lang]?.[key] != null ? lang : 'ru');
+    return fill(stripping(scoped) ? stripWords(s) : s, { n: fmtNum(n), ...vars });
   };
 }
 

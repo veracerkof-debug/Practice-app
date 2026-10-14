@@ -1,4 +1,5 @@
 // Настройки ядра: цель недели, дни практики, тема, функции (вкл/выкл).
+import { setBare } from '../i18n/index.js';
 import { watchMarks } from '../ui/marks.js';
 import { accentVars, paintTools, hueColor, ACCENT_HUE, forcedText } from './palettes.js';
 
@@ -106,6 +107,10 @@ export function applyTheme(settings, de = document.documentElement) {
   else de.setAttribute('data-theme', t);
   if (isMono(settings)) de.setAttribute('data-style', 'mono');
   else de.removeAttribute('data-style');
+  // «Минимал» без текста: значки, графика и цифры (i18n: setBare)
+  const bare = isMono(settings) && !!settings.monoBare;
+  setBare(bare);
+  if (bare) de.setAttribute('data-bare', ''); else de.removeAttribute('data-bare');
   if (typeof document !== 'undefined' && document.body) watchMarks(isMono(settings));
   applyScale(settings);
   // палитра: инструменты и акцент (в «Минимал» — без цвета)

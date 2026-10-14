@@ -1,6 +1,6 @@
 // Общее для экранов ядра: значки, дни недели, «сегодня/вчера», шкала выученности.
 // Перенесено из legacy/practice.html (ICONS, IC, AVATAR, CHEV, relDay, mRing, mBadge, mCap, mInput, bindM, lvl).
-import { t, tn } from '../../i18n/index.js';
+import { t, tn, bareNow, withText } from '../../i18n/index.js';
 import { esc, seg } from '../../ui/index.js';
 import { dayStart, DAY } from '../time.js';
 import { scaleOf, toScale, fromScale, masteryLevel } from '../library.js';
@@ -34,7 +34,7 @@ export const TAB_ICONS = {
 };
 
 // Пн…Вс на языке интерфейса
-export const weekdays = () => t('wd').split(' ');
+export const weekdays = () => (bareNow() ? Array(7).fill('') : withText(() => t('wd')).split(' ')); // «Минимал» без текста — без названий
 
 export function relDay(ts, now = Date.now()) {
   const d = Math.round((dayStart(now) - dayStart(ts)) / DAY);
