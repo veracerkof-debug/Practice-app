@@ -148,7 +148,7 @@ export function pickFile(app, onDone = null) {
 // Инструкция для нейросети (src/core/aidoc.js): показать, скопировать, отправить файлом
 export async function aiDocSheet(app, onDone = null) {
   const { aiDoc } = await import('../aidoc.js');
-  const text = aiDoc();
+  const text = aiDoc(getLang());
   coreHelp(app, 'owndata');
   sheet(() => snav(t('ai.short')) + '<p class="ftr" style="margin-top:0">' + t('ai.how') + '</p>' +
     '<div class="group"><button class="cell act" data-ai="copy">' + t('ai.copy') + '</button><button class="cell act" data-ai="send">' + t('ai.send') + '</button>' +

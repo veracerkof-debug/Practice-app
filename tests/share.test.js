@@ -88,7 +88,7 @@ describe('файл .melete', () => {
 });
 
 import { normKey, cleanProfile } from '../src/core/share.js';
-import { aiDoc } from '../src/core/aidoc.js';
+import { aiDoc, AI_EXAMPLE } from '../src/core/aidoc.js';
 import { quoteAt, setsOf } from '../src/core/quotes.js';
 import { readFileSync } from 'node:fs';
 
@@ -99,17 +99,18 @@ const fullStore = (songs = []) => {
 };
 
 describe('файл от нейросети (простой JSON)', () => {
-  it('пример из инструкции принимается целиком', async () => {
-    const ex = /## Пример полного файла\n\n```json\n([\s\S]*?)\n```/.exec(aiDoc())[1];
+  const BY = { ru: 'П. И. Чайковский', en: 'P. I. Tchaikovsky', uz: 'P. I. Chaykovskiy' };
+  for (const lang of ['ru', 'uz', 'en']) it('пример из инструкции принимается целиком: ' + lang, async () => {
+    const ex = new RegExp('## ' + AI_EXAMPLE[lang] + '\\n\\n```json\\n([\\s\\S]*?)\\n```').exec(aiDoc(lang))[1];
     const un = unpack(enc(ex)), m = un.manifest;
     expect(m.songs[0].key).toBe('G');
-    expect(m.quotes[0].items[0].by).toBe('П. И. Чайковский');
+    expect(m.quotes[0].items[0].by).toBe(BY[lang]);
     const store = fullStore();
     const r = await applyImport({ store, files: null, unpacked: un, plan: planImport([], m) });
     expect(r.added).toBe(1); expect(r.books).toBe(1); expect(r.profile).toBe(true);
     const S = store.state.settings, id = 'own:' + S.quoteBooks[0].id;
     expect(setsOf(S)).toContain(id);
-    expect(quoteAt(0, 'ru', [id], S.quoteBooks).ref).toBe('П. И. Чайковский');
+    expect(quoteAt(0, lang, [id], S.quoteBooks).ref).toBe(BY[lang]);
     expect(S.profile.instruments).toEqual(['guitar']);
   });
   it('часы, занятия и опыт файлом не меняются', async () => {
@@ -130,7 +131,9 @@ describe('файл от нейросети (простой JSON)', () => {
     expect(m.songs).toEqual([{ ref: 'ai1-X', title: 'X' }]);
     expect(m.quotes[0].items).toEqual([{ text: 'a' }]);
   });
-  it('docs/ai-format.md совпадает с инструкцией в приложении', () => {
-    expect(readFileSync('docs/ai-format.md', 'utf8')).toBe(aiDoc());
+  it('docs/ai-format*.md совпадают с инструкцией в приложении', () => {
+    expect(readFileSync('docs/ai-format.md', 'utf8')).toBe(aiDoc('ru'));
+    expect(readFileSync('docs/ai-format.uz.md', 'utf8')).toBe(aiDoc('uz'));
+    expect(readFileSync('docs/ai-format.en.md', 'utf8')).toBe(aiDoc('en'));
   });
 });

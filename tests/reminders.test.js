@@ -76,6 +76,22 @@ describe('цитаты', () => {
 });
 
 import { moodOf } from '../src/core/mascot.js';
+describe('цитаты на трёх языках', () => {
+  it('у каждой цитаты есть ru, en, uz', () => {
+    expect(SCRIPTURE.every((s) => s.uz && s.refUz)).toBe(true);
+    expect(SAYINGS.every((w) => w.ru && w.en && w.uz && w.whoUz)).toBe(true);
+    expect(MUSICIANS.every((m) => m.ru && m.en && m.uz)).toBe(true);
+    expect(MEME.every((x) => x.length === 3 && x.every(Boolean))).toBe(true);
+  });
+  it('узбекский — по-узбекски, не по-русски', () => {
+    for (let i = 0; i < 60; i++) {
+      const q = quoteAt(i, 'uz', QSETS);
+      expect(q.text).not.toMatch(/[а-яё]/i);
+      expect(q.text).toBe(quoteAt(i, 'uz', QSETS).text);
+    }
+  });
+});
+
 describe('настроение Мелеты', () => {
   const at = (h, d = 14) => new Date(2026, 9, d, h, 0).getTime(); // 14.10.2026 — среда
   const days = [1, 1, 1, 1, 1, 0, 0];
