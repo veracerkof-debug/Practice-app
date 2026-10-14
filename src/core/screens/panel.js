@@ -24,7 +24,7 @@ import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
 import { extOn } from '../ext.js';
 import { bgAvailable, bgStatus, bgRows, bindBg } from '../background.js';
 import { guardAvailable } from '../guard.js';
-import { helpOf, showHelp, resetHelp } from '../help.js';
+import { helpOf, showHelp, resetHelp, coreHelp, coreTopic, CORE_TOPICS } from '../help.js';
 import { freeTagName, trackMode } from '../session.js';
 import { INSTRUMENTS, LEVELS, PRIOR_MAX, lifetimeSec, saveProfile, newProfile } from '../profile.js';
 import { rankOf } from '../rank.js';
@@ -44,6 +44,7 @@ const PAGES = {
   week: ['orange', '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg>'],
   notif: ['red', '<svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>'],
   look: ['indigo', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" style="fill:var(--on,#fff)"/></svg>'],
+  help: ['blue', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.6M12 16.8v.2"/></svg>'],
   data: ['green', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
 // Страницы, которых нет в режиме «Только инструменты»
@@ -278,6 +279,19 @@ function dataHTML(app) {
     '<div class="group" style="margin-top:28px"><button class="cell danger center" data-act="reset">' + t('data.reset') + '</button></div>';
 }
 
+// Все инструкции: механизмы приложения и инструменты; «Показывать все снова»
+function helpHTML(app) {
+  const st = app.store.state.settings, never = st.helpSeen || {};
+  const row = (key, icon, color, name, id) => '<button class="cell" data-hshow="' + esc(key) + '"><span class="ticon" style="background:' + color + ';--on:' + onColor(color) + '">' + icon + '</span><span class="grow">' + esc(name) +
+    (never[id] ? '<span class="psub">' + t('help.never') + '</span>' : '') + '</span>' + CHEV + '</button>';
+  const core = CORE_TOPICS.filter((k) => !st.toolsOnly || ['folder', 'share', 'owndata'].includes(k)).map((k) => { const tp = coreTopic(k); return row('core:' + k, tp.icon, tp.color, tp.name, tp.id); });
+  const mods = modules.filter((m) => !m.tab && helpOf(m) && (!CHURCH_MODULES.includes(m.id) || st.church)).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), m.id));
+  return '<div class="large">' + t('page.help') + '</div><p class="sub" style="margin:0 4px 12px">' + t('help.listHint') + '</p>' +
+    '<div class="hdr">' + t('help.listCore') + '</div><div class="group">' + core.join('') + '</div>' +
+    '<div class="hdr">' + t('help.listTools') + '</div><div class="group">' + mods.join('') + '</div>' +
+    '<div class="group" style="margin-top:12px"><button class="cell act" data-helpreset>' + t('help.all') + '</button></div>';
+}
+
 // Модули (встроенные и личные из src/modules-local) и функции ядра: включить и выключить
 const theoryFind = (st) => { const d = st.theory || {}; return st.uiStyle === 'mono' ? d.find !== false : d.find === true; };
 function featHTML(app) {
@@ -305,7 +319,6 @@ function featHTML(app) {
     (bgAvailable() ? '<div class="hdr">' + t('bg.feat') + '</div><div data-bgbox><p class="ftr" style="margin-top:0">' + t('bg.featHint') + '</p>' + bgRows(null) + '</div>' : '') +
     // защита игры от снимка экрана тремя пальцами (Android)
     (guardAvailable() ? '<div class="hdr">' + t('guard.hdr') + '</div><div class="group"><div class="cell"><span class="grow">' + t('guard.on') + '</span><label class="sw"><input type="checkbox" data-psw="guardShots"' + (st.guardShots !== false ? ' checked' : '') + ' aria-label="' + esc(t('guard.on')) + '"><i></i></label></div></div><p class="ftr">' + t('guard.hint') + '</p>' : '') +
-    '<div class="group" style="margin-top:12px"><button class="cell act" data-helpreset>' + t('help.again') + '</button></div>' +
     // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
     (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : k === 'quote' ? QUOTE_IC : FLAME, k === 'mastery' ? '#646493' : k === 'quote' ? '#5E7E6A' : '#9C7242', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
     // наборы слов Мелеты (слово дня и напоминания)
@@ -373,7 +386,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML }[page](app);
+    const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML }[page](app);
     layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="link" data-pp="root">' + BACK + t('panel.back') + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
     // переход между страницами: вперёд — справа, назад в корень — слева; перерисовка той же страницы — без движения
@@ -381,6 +394,9 @@ export function createPanel(app, onChange) {
     layer.scrollTop = lastPage && lastPage !== page ? 0 : y;
     lastPage = page;
     if (page === 'look') mountSizePreview(app, layer);
+    // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»
+    if (page === 'data') coreHelp(app, 'folder');
+    if (page === 'notif') coreHelp(app, 'melete');
     // работа в фоне: отметки ✓ у выданных разрешений — после ответа системы
     const bb = page === 'feat' && layer.querySelector('[data-bgbox]');
     if (bb) {
@@ -402,7 +418,8 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, tabIds(app.store.state.settings), b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
       if ((b = g('[data-day]'))) { toggleDay(app.store, +b.dataset.day); render(); onChange(); return; }
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
-      if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); return; }
+      if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); render(); return; }
+      if ((b = g('[data-hshow]'))) { const k = b.dataset.hshow, m = k.startsWith('core:') ? coreTopic(k.slice(5)) : moduleById(k); if (m) showHelp(app, m); return; }
       if (g('[data-brestart]')) { app.bible.setPlan(app.bible.st().plan, dayKeyOf(Date.now())); toast(t('church.restarted')); render(); onChange(); return; }
       if ((b = g('[data-goal]'))) { changeGoal(app.store, +b.dataset.goal); render(); onChange(); return; }
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }

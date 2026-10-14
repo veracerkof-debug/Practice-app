@@ -22,6 +22,7 @@ import { mountModule, moduleName } from '../modules.js';
 import { mInput, bindM } from './common.js';
 import { freeTagName } from './panel.js';
 import { clockNotice } from './clock.js';
+import { coreHelp } from '../help.js';
 
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -123,6 +124,7 @@ export function createSessionScreen(app) {
         '</div></div>') + '</div>';
     document.body.appendChild(layer);
     wsEl = layer.querySelector('.ws');
+    if (!tm) coreHelp(app, 'session'); // сессия с окнами (у инструмента вне сессии — своя инструкция)
     const ses = layer.querySelector('.session');
     ses.addEventListener('pointerdown', (e) => {
       if (app.active) { touch(app.active); saveActive(app.active); }

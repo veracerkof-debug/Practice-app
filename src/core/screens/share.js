@@ -6,6 +6,7 @@ import { esc, sheet, snav, toast, seg } from '../../ui/index.js';
 import { emptySong } from '../library.js';
 import { log, logErr } from '../log.js';
 import { weekdays } from './common.js';
+import { coreHelp } from '../help.js';
 
 const Share = Capacitor.isNativePlatform() ? registerPlugin('Share') : null;
 export const SHARE_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 7.5 12 3.5l4 4M6 11H5v9h14v-9h-1"/></svg>';
@@ -38,6 +39,7 @@ export function shareSheet(app, { songIds = [], ev = null, all = false } = {}) {
   const list = (all ? [...order.map((id) => app.store.songById(id)).filter(Boolean), ...S().filter((s) => !order.includes(s.id)).sort((a, b) => a.title.localeCompare(b.title))] : order.map((id) => app.store.songById(id)).filter(Boolean));
   const on = new Set(order.filter((id) => app.store.songById(id)));
   const o = { tabs: true, audio: false, set: !!ev };
+  coreHelp(app, 'share');
   let busy = false;
   const fl = async () => (await import('../share.js')).filesFor(app.files ? [...app.files.list('tab'), ...app.files.list('audio')] : [], [...on], o);
   let size = 0;
@@ -147,6 +149,7 @@ export function pickFile(app, onDone = null) {
 export async function aiDocSheet(app, onDone = null) {
   const { aiDoc } = await import('../aidoc.js');
   const text = aiDoc();
+  coreHelp(app, 'owndata');
   sheet(() => snav(t('ai.short')) + '<p class="ftr" style="margin-top:0">' + t('ai.how') + '</p>' +
     '<div class="group"><button class="cell act" data-ai="copy">' + t('ai.copy') + '</button><button class="cell act" data-ai="send">' + t('ai.send') + '</button>' +
     '<button class="cell act" data-ai="load">' + t('ai.load') + '</button></div>' +
@@ -166,6 +169,7 @@ export async function aiDocSheet(app, onDone = null) {
 
 // Меню из списка песен: отправить или принять
 export function shareMenu(app) {
+  coreHelp(app, 'share');
   const api = sheet(() => snav(t('share.team')) + '<div class="group"><button class="cell act" data-sm="send">' + t('share.sendSongs') + '</button>' +
     '<button class="cell act" data-sm="get">' + t('share.get') + '</button></div><p class="ftr">' + t('share.about') + '</p>', (el) => {
     el.addEventListener('click', (e) => {

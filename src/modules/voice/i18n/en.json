@@ -96,5 +96,12 @@
   "m.range": "Scale, dB",
   "m.hint": "For music, keep peaks around −12…−6 dBFS: headroom before clipping, and normalization will raise the loudness. The CLIP light blinks when the level reached the threshold; “∞” keeps it lit until tapped.",
   "m.monStart": "Check the level (no recording)",
-  "m.monStop": "Stop checking"
+  "m.monStop": "Stop checking",
+  "help.what": "Recorder: capture from the chosen microphone, process the take and play it back on the chosen output.",
+  "help.1": "Input — phone mic, headset, Bluetooth or a lavalier USB receiver; output — speaker, headphones, Bluetooth.",
+  "help.2": "Record starts, pause continues into the same file; “Check the level” checks the sound without recording.",
+  "help.3": "The lamp flashes on peaks: red means the take is clipping — lower the input or move the mic away.",
+  "help.4": "Processing: trim, low cut, noise reduction, gate, compression, EQ, reverb — before and after can be compared.",
+  "help.5": "Processing never changes the original; the result is saved to the media library. Recordings stay on this device only.",
+  "help.tip": "Noise reduction needs a second of silence at the start of the take — that is how it learns the noise."
 }

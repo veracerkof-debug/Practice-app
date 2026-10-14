@@ -96,5 +96,12 @@
   "m.range": "Shkala, dB",
   "m.hint": "Musiqa yozish uchun cho‘qqilarni −12…−6 dBFS atrofida ushlash qulay. CLIP chirog‘i daraja chegaraga yetganda miltillaydi; «∞» — bosilmaguncha yonadi.",
   "m.monStart": "Darajani tekshirish (yozmasdan)",
-  "m.monStop": "Tekshirishni to‘xtatish"
+  "m.monStop": "Tekshirishni to‘xtatish",
+  "help.what": "Diktofon: tanlangan mikrofondan yozish, ishlov berish va tanlangan chiqishda tinglash.",
+  "help.1": "Kirish — telefon mikrofoni, garnitura, Bluetooth yoki petlichka USB-qabul qilgichi; chiqish — dinamik, quloqchin, Bluetooth.",
+  "help.2": "Yozish tugmasi — boshlash, pauza — xuddi shu faylga davom ettirish; «Darajani tekshirish» — yozmasdan ovozni tekshirish.",
+  "help.3": "Chiroq cho‘qqilarda yonadi: qizil — yozuv haddan oshgan, kirishni pasaytirish yoki mikrofonni uzoqlashtirish kerak.",
+  "help.4": "Ishlov: kesish, pastki chastotalarni kesish, shovqinni kamaytirish, geyt, kompressiya, ekvalayzer, reverberatsiya — oldin va keyin taqqoslanadi.",
+  "help.5": "Ishlov asl yozuvni o‘zgartirmaydi; natija mediatekaga saqlanadi. Yozuvlar faqat shu qurilmada saqlanadi.",
+  "help.tip": "Shovqinni kamaytirish uchun yozuv boshida bir soniya sukunat kerak — u shovqinni shu orqali taniydi."
 }

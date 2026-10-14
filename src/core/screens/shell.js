@@ -20,6 +20,7 @@ import { createPanel, donateSheet, legalSheet, tosGate, unverifiedSheet } from '
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
 import { onboarding, langGate } from './onboard.js';
 import { logoHTML } from '../../ui/logo.js';
+import { coreHelp } from '../help.js';
 
 export function createShell(app, root) {
   const tabsNow = () => visibleTabs(app.store.state.settings, tabIds(app.store.state.settings));
@@ -56,12 +57,13 @@ export function createShell(app, root) {
     unmountBible();
     if (view.tab === 'tools') { renderTools(app, main); return; }
     main.onclick = null;
-    if (view.tab === 'calendar') { main.innerHTML = calendarHTML(app, view.cal); bindCalendar(app, main, view.cal, render); return; }
+    if (view.tab === 'calendar') { main.innerHTML = calendarHTML(app, view.cal); bindCalendar(app, main, view.cal, render); coreHelp(app, 'calendar'); return; }
     if (view.tab === 'library') {
       const h = view.song && songHTML(app, view.song);
       if (!h) view.song = null;
       main.innerHTML = h || libraryHTML(app, view);
-    } else { main.innerHTML = homeHTML(app); mountStones(app, main); }
+      coreHelp(app, 'songs');
+    } else { main.innerHTML = homeHTML(app); mountStones(app, main); if (!app.store.state.settings.toolsOnly) coreHelp(app, 'start'); }
   }
 
   // Новая вкладка или экран: содержимое поднимается, блоки — по очереди (styles/motion.css). Только при переходе,
