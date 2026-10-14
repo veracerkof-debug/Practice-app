@@ -2,7 +2,7 @@
 // цель недели и дни практики.
 // Аккаунта нет: всё хранится на устройстве (settings.profile) и меняется потом в профиле.
 import '../../ui/onboard.css';
-import { t, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
+import { t, getLang, LANGS, LANG_NAMES, initI18n } from '../../i18n/index.js';
 import { esc, toast } from '../../ui/index.js';
 import { fmtDur } from '../format.js';
 import { GOAL_MIN, GOAL_MAX } from '../settings.js';
@@ -10,6 +10,7 @@ import { INSTRUMENTS, LEVELS, GOAL_BY_LEVEL, PRIOR_MAX, newProfile, saveProfile,
 import { modules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { rankOf } from '../rank.js';
+import { logoHTML } from '../../ui/logo.js';
 import { meleteHTML, bindMelete } from './melete.js';
 import { remindOf, setRemind, remindAvailable, remindPermission } from '../reminders.js';
 import { rankSVG, rankName, RANK_COLORS } from '../../ui/rank.js';
@@ -177,10 +178,11 @@ export function onboarding(app, done = () => {}) {
     else if ((b = g('[data-obday]'))) { const i = +b.dataset.obday; f.days[i] = f.days[i] ? 0 : 1; render(); }
     else if ((b = g('[data-oblang]'))) {
       if (b.dataset.oblang === getLang()) return;
-      saveProfile(app.store, p);
+      // язык — сразу, без перезапуска: регистрация перерисовывается на новом языке
       st.lang = b.dataset.oblang;
       app.store.settingsChanged();
-      setTimeout(() => location.reload(), 150);
+      initI18n(st.lang);
+      render();
     }
   });
   // Опыт и подсчёт: значок и подпись кнопки обновляются по мере ввода
@@ -199,3 +201,28 @@ export function onboarding(app, done = () => {}) {
   layer.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); layer.querySelector('[data-obnext]').click(); } });
   render();
 }
+
+// Самый первый экран: язык приложения (до соглашения и регистрации). Названия языков — на самих языках,
+// чтобы выбрать, не зная остальных. Уже выбранный язык (или есть профиль) — экран пропускается
+export function langGate(app, then = () => {}) {
+  const st = app.store.state.settings;
+  if (st.lang || st.profile) { then(); return; }
+  const l = document.createElement('div');
+  l.className = 'onb langgate';
+  l.setAttribute('role', 'dialog');
+  l.setAttribute('aria-modal', 'true');
+  const HELLO = { ru: 'Здравствуйте', uz: 'Assalomu alaykum', en: 'Welcome' };
+  l.innerHTML = '<div class="lgbox"><div class="lglogo">' + logoHTML() + '</div><div class="lglist">' +
+    LANGS.map((k) => '<button type="button" class="lgbtn" data-lg="' + k + '" lang="' + k + '"><b>' + LANG_NAMES[k] + '</b><span>' + HELLO[k] + '</span></button>').join('') + '</div></div>';
+  document.body.appendChild(l);
+  l.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-lg]');
+    if (!b) return;
+    st.lang = b.dataset.lg;
+    app.store.settingsChanged();
+    initI18n(st.lang);
+    l.remove();
+    then();
+  });
+}
+

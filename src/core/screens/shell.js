@@ -18,7 +18,8 @@ import { songImportMenu } from './songimport.js';
 import { shareSheet, shareMenu } from './share.js';
 import { createPanel, donateSheet, legalSheet, tosGate, unverifiedSheet } from './panel.js';
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
-import { onboarding } from './onboard.js';
+import { onboarding, langGate } from './onboard.js';
+import { logoHTML } from '../../ui/logo.js';
 
 export function createShell(app, root) {
   const tabsNow = () => visibleTabs(app.store.state.settings, tabIds(app.store.state.settings));
@@ -46,6 +47,8 @@ export function createShell(app, root) {
   }
 
   function render() {
+    // первый запуск: до конца регистрации — только заставка (поздние перерисовки — файлы, синхронизация — не в счёт)
+    if (root.classList.contains('starting')) return;
     rankCheck(app);
     renderTabs();
     document.documentElement.style.setProperty('--tabh', tabs.parentElement.offsetHeight + 'px');
@@ -165,10 +168,17 @@ export function createShell(app, root) {
   app.go = go;
   app.render = render;
   app.shellAct = act;
+  // Первый запуск (профиля ещё нет): главная не показывается вовсе — заставка, затем язык, соглашение и регистрация;
+  // главная появляется только после регистрации
+  if (!app.store.state.settings.profile) {
+    root.classList.add('starting');
+    main.innerHTML = '<div class="splash" aria-hidden="true">' + logoHTML() + '</div>';
+    langGate(app, () => tosGate(app, () => onboarding(app, () => { root.classList.remove('starting'); render(); enter(); })));
+    return { render, go, panel };
+  }
   render();
   enter(); // первый экран тоже появляется плавно
-  // Соглашение, затем регистрация (у кого ещё нет профиля — в том числе у тех, кто пользовался прототипом)
-  // перезапуск из настроек (язык, вид) — обратно на ту же страницу настроек, а не на главную
+  // Соглашение (новая редакция) — поверх главной; перезапуск из настроек (язык, вид) — обратно на ту же страницу настроек
   const reopened = panel.reopen();
   if (!reopened) setTimeout(() => tosGate(app, () => { if (!app.store.state.settings.profile) onboarding(app, render); }), 400);
   return { render, go, panel };
