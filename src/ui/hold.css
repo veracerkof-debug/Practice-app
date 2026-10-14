@@ -1,0 +1,16 @@
+/* Меню по долгому нажатию и перестановка строк (src/ui/hold.js) */
+.hmenu{position:fixed;z-index:120;min-width:200px;max-width:min(300px,calc(100vw - 16px));background:var(--cell);color:var(--ink);border-radius:14px;padding:6px;box-shadow:0 12px 40px rgba(0,0,0,.28);animation:hmin .16s ease-out}
+.hmt{font-size:13px;color:var(--l2);padding:6px 10px 4px}
+.hmenu button{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:0 10px;border-radius:10px;font-size:16px;text-align:left;color:inherit}
+.hmenu button:active,.hmenu button:focus-visible{background:var(--fill,rgba(127,127,127,.14))}
+.hmenu button.dng{color:var(--red)}
+.hmi{width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex:none}
+.hmi svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.held{transform:scale(.94);transition:transform .15s}
+@keyframes hmin{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.sorting{user-select:none;-webkit-user-select:none}
+.lifted{position:relative;z-index:5;background:var(--cell);box-shadow:0 8px 24px rgba(0,0,0,.22);border-radius:12px}
+.sorting .lifted{transition:none}
+@media (prefers-reduced-motion:reduce){.hmenu{animation:none}}
+:root[data-style="mono"] .hmenu{box-shadow:none;border:1px solid var(--line,var(--sep))}
+:root[data-style="mono"] .lifted{box-shadow:none;outline:1px solid var(--ink)}

@@ -26,6 +26,8 @@ import { pleaLine } from '../remindtexts.js';
 import { remindOf } from '../reminders.js';
 import { moodOf } from '../mascot.js';
 import { mascotSVG } from '../../ui/mascot.js';
+import { holdMenu, sortable } from '../../ui/hold.js';
+import { showHelp } from '../help.js';
 
 // Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
 export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
@@ -180,12 +182,40 @@ export function homeHTML(app) {
   return h + '</div></div>';
 }
 
-// Быстрый доступ: до 8 инструментов, порядок стрелкой
+// Долгое нажатие на инструмент (главная — быстрый доступ, вкладка «Инструменты»): меню у кнопки —
+// открыть, сдвинуть левее/правее, убрать с главной или добавить, вся панель, инструкция
+const HI = {
+  open: '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>',
+  left: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  right: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
+  minus: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8M12 8v8"/></svg>',
+  edit: '<svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="17" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg>',
+  help: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.5M12 16.8v.2"/></svg>',
+};
+export function toolHoldMenu(app, btn, rerender, open) {
+  const st = app.store.state.settings, id = btn.dataset.openTool, m = moduleById(id);
+  if (!m) return;
+  const onHome = !!btn.closest('.qgrid, .mtools'), vis = quickList(st), i = vis.indexOf(id), inQuick = i >= 0;
+  const save = (q) => { st.quick = q; app.store.settingsChanged(); rerender(); };
+  // сдвиг среди видимых: меняемся местами с соседом в полном списке (выключенные инструменты остаются на своих местах)
+  const shift = (d) => { const full = (st.quick || QUICK_DEF).slice(), a = full.indexOf(id), b = full.indexOf(vis[i + d]); [full[a], full[b]] = [full[b], full[a]]; save(full); };
+  const items = [{ icon: HI.open, label: t('hold.open'), run: () => open(id) }];
+  if (onHome && i > 0) items.push({ icon: HI.left, label: t('hold.left'), run: () => shift(-1) });
+  if (onHome && i < vis.length - 1) items.push({ icon: HI.right, label: t('hold.right'), run: () => shift(1) });
+  if (inQuick) items.push({ icon: HI.minus, label: t('hold.unquick'), danger: onHome, run: () => save((st.quick || QUICK_DEF).filter((x) => x !== id)) });
+  else items.push({ icon: HI.plus, label: t('hold.quick'), run: () => { if (vis.length >= QUICK_MAX) { toast(t('quick.max', { max: QUICK_MAX })); return; } save((st.quick || QUICK_DEF).concat(id)); toast(t('hold.added')); } });
+  if (onHome) items.push({ icon: HI.edit, label: t('hold.edit'), run: () => quickEdit(app, rerender) });
+  items.push({ icon: HI.help, label: t('hold.help'), run: () => showHelp(app, m) });
+  holdMenu(btn, items, moduleName(m));
+}
+
+// Быстрый доступ: до 8 инструментов, порядок — перетаскиванием по удержанию или стрелкой
 export function quickEdit(app, rerender) {
   const st = app.store.state.settings, sel = () => (st.quick || QUICK_DEF).slice();
   const row = (id, on, i) => {
     const m = moduleById(id);
-    return '<div class="cell"><span class="ticon" style="background:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
+    return '<div class="cell"' + (on ? ' data-q-row="' + id + '"' : '') + '><span class="ticon" style="background:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
       (on ? (i > 0 ? '<button class="ic sm plain" data-qu="' + id + '" aria-label="' + t('quick.up') + '">' + IC.up + '</button>' : '') +
         '<button class="ic sm plain" data-qr="' + id + '" aria-label="' + t('quick.remove') + '" style="color:var(--red)">' + IC.minus + '</button>'
         : '<button class="ic sm plain" data-qa="' + id + '" aria-label="' + t('quick.add') + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
@@ -197,18 +227,22 @@ export function quickEdit(app, rerender) {
       (rest.length ? '<div class="hdr">' + t('quick.canAdd') + '</div><div class="group">' + rest.map((id) => row(id, false)).join('') + '</div>' : '') +
       '<p class="ftr">' + t('quick.hint') + '</p>';
   };
-  sheet(body, (el, sh) => el.addEventListener('click', (e) => {
-    const g = (s) => e.target.closest(s);
-    let b, q = sel();
-    if ((b = g('[data-qa]'))) { if (q.length >= QUICK_MAX) { toast(t('quick.max', { max: QUICK_MAX })); return; } q.push(b.dataset.qa); }
-    else if ((b = g('[data-qr]'))) q = q.filter((x) => x !== b.dataset.qr);
-    else if ((b = g('[data-qu]'))) { const i = q.indexOf(b.dataset.qu); if (i > 0) [q[i - 1], q[i]] = [q[i], q[i - 1]]; }
-    else return;
-    st.quick = q;
-    app.store.settingsChanged();
-    sh.update();
-    rerender();
-  }));
+  sheet(body, (el, sh) => {
+    // удержать строку и вести вверх-вниз — новый порядок (выключенные инструменты — на своих местах в конце)
+    sortable(el, '[data-q-row]', 'data-q-row', (ids) => { st.quick = ids.concat(sel().filter((x) => !ids.includes(x))); app.store.settingsChanged(); sh.update(); rerender(); });
+    el.addEventListener('click', (e) => {
+      const g = (s) => e.target.closest(s);
+      let b, q = sel();
+      if ((b = g('[data-qa]'))) { if (q.length >= QUICK_MAX) { toast(t('quick.max', { max: QUICK_MAX })); return; } q.push(b.dataset.qa); }
+      else if ((b = g('[data-qr]'))) q = q.filter((x) => x !== b.dataset.qr);
+      else if ((b = g('[data-qu]'))) { const i = q.indexOf(b.dataset.qu); if (i > 0) [q[i - 1], q[i]] = [q[i], q[i - 1]]; }
+      else return;
+      st.quick = q;
+      app.store.settingsChanged();
+      sh.update();
+      rerender();
+    });
+  });
 }
 
 export function streakSheet(app) {

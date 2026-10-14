@@ -169,6 +169,16 @@ export function visibleTabs(settings, known) {
 export const hiddenTabs = (settings, known) => known.filter((k) => !visibleTabs(settings, known).includes(k));
 
 // Действия на экране «Вкладки»: 'up' — выше, 'off' — убрать, 'on' — вернуть в конец
+// Новый порядок видимых вкладок (перетаскивание в «Вкладках»): только те, что уже видны
+export function orderTabs(store, known, ids) {
+  const st = store.state.settings, vis = visibleTabs(st, known);
+  const next = ids.filter((k) => vis.includes(k)).concat(vis.filter((k) => !ids.includes(k)));
+  if (next.join() === vis.join()) return false;
+  st.tabs = next;
+  store.settingsChanged();
+  return true;
+}
+
 export function editTabs(store, known, id, action) {
   const st = store.state.settings, vis = visibleTabs(st, known), off = new Set(st.tabsOff || []);
   const i = vis.indexOf(id);
