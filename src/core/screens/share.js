@@ -80,7 +80,7 @@ export function shareSheet(app, { songIds = [], ev = null, all = false } = {}) {
 }
 
 // Шторка «Принять»: что в файле и что с этим сделать (добавить, обновить, пропустить), сет-лист — в календарь
-export async function receive(app, u8, name = '') {
+export async function receive(app, u8, name = '', onDone = null) {
   const S = await import('../share.js');
   let un;
   try { un = S.unpack(u8); } catch (e) { toast(t(e.message === 'newer' ? 'share.newer' : e.message === 'empty' ? 'share.empty2' : 'share.notMelete')); return; }
@@ -124,26 +124,27 @@ export async function receive(app, u8, name = '') {
         api.close();
         toast([m.songs.length ? t('share.done', { a: r.added, u: r.updated, f: r.files }) : '', r.books ? tn('share.booksDone', r.books) : '', r.profile ? t('share.profileDone') : ''].filter(Boolean).join(' · '));
         if (app.render) app.render();
+        if (onDone) onDone(r);
       } catch (err) { logErr('share', err); toast(t('share.fail')); }
     });
   });
 }
 
 // «Принять файл»: выбрать .melete на устройстве
-export function pickFile(app) {
+export function pickFile(app, onDone = null) {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.melete,.json,application/json,application/octet-stream,application/zip';
   input.addEventListener('change', async () => {
     const f = input.files[0];
     if (!f) return;
-    receive(app, new Uint8Array(await f.arrayBuffer()), f.name);
+    receive(app, new Uint8Array(await f.arrayBuffer()), f.name, onDone);
   });
   input.click();
 }
 
 // Инструкция для нейросети (src/core/aidoc.js): показать, скопировать, отправить файлом
-export async function aiDocSheet(app) {
+export async function aiDocSheet(app, onDone = null) {
   const { aiDoc } = await import('../aidoc.js');
   const text = aiDoc();
   sheet(() => snav(t('ai.short')) + '<p class="ftr" style="margin-top:0">' + t('ai.how') + '</p>' +
@@ -158,7 +159,7 @@ export async function aiDocSheet(app) {
       } else if (b.dataset.ai === 'send') {
         const r = await sendFile(new TextEncoder().encode(text), 'melete-ai-format.md', t('ai.title'), 'text/markdown');
         if (r === 'saved') toast(t('share.saved'));
-      } else { sh.close(); pickFile(app); }
+      } else { sh.close(); pickFile(app, onDone); }
     });
   });
 }

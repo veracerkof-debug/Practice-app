@@ -46,7 +46,10 @@ export function onboarding(app, done = () => {}) {
         '<div class="hdr">' + t('ob.name') + '</div><div class="group"><label class="cell"><input class="inp left" id="obname" maxlength="40" autocomplete="given-name" placeholder="' + t('ob.namePh') + '" aria-label="' + t('ob.name') + '" value="' + esc(p.name) + '"></label></div>' +
         '<div class="hdr">' + t('look.lang') + '</div><div class="group"><div class="cellcol"><div class="seg uc" role="group" aria-label="' + t('look.lang') + '">' +
         LANGS.map((k) => '<button type="button" data-oblang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>' +
-        '<p class="ftr">' + t('ob.private') + '</p>';
+        '<p class="ftr">' + t('ob.private') + '</p>' +
+        // уже есть свои данные (файл от команды или собранный нейросетью) — сразу загрузить
+        '<div class="hdr">' + t('ob.import') + '</div><div class="group"><button type="button" class="cell act" data-obimp="file">' + t('ai.load') + '</button>' +
+        '<button type="button" class="cell act" data-obimp="ai">' + t('ai.title') + '</button></div><p class="ftr">' + t('ob.importHint') + '</p>';
     }
     if (s === 'inst') {
       return '<h1 class="obh">' + t('ob.instTitle') + '</h1><p class="obp">' + t('ob.instText') + '</p><div class="obgrid">' +
@@ -144,6 +147,21 @@ export function onboarding(app, done = () => {}) {
       f.toolsTouched = true;
       b.classList.toggle('on');
       b.setAttribute('aria-pressed', f.tools.includes(id));
+    }
+    else if ((b = g('[data-obimp]'))) {
+      // после приёма: профиль, дни и цель из файла — в шаги регистрации (их можно проверить и поменять)
+      const after = (r) => {
+        const S = app.store.state.settings, q = S.profile || {};
+        if (r.profile) {
+          if (q.name) p.name = q.name;
+          if (q.instruments && q.instruments.length) p.instruments = q.instruments.slice();
+          if (q.level) p.level = q.level;
+          f.days = S.days.slice(); f.goalMin = S.goalMin; f.goalTouched = true;
+        }
+        render();
+      };
+      saveProfile(app.store, p);
+      import('./share.js').then((m) => (b.dataset.obimp === 'ai' ? m.aiDocSheet(app, after) : m.pickFile(app, after)));
     }
     else if (g('[data-obcalc]')) { p.priorHours = Math.min(PRIOR_MAX, estimateHours(f.years, f.perWeek)); render(); }
     else if ((b = g('[data-obgoal]'))) { f.goalMin = Math.max(GOAL_MIN, Math.min(GOAL_MAX, f.goalMin + +b.dataset.obgoal)); f.goalTouched = true; render(); }

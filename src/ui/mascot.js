@@ -50,6 +50,7 @@ export const MOODS = {
   delight: ['brMhi', 'sharps', 'nose', 'mSmile'], // в восторге — новое звание, рекорд
   surprised: ['brMhi', 'eyesWhole', 'nose', 'mO'], // удивлена
   sad: ['brSad', 'eyes', 'nose', 'mDown'], // скучает — давно не занимались
+  upset: ['brAngry', 'eyes', 'nose', 'mDown'], // дуется — настойчивая Мелета вечером без занятий
   wait: ['brM', 'eyesSide', 'nose', 'mSmirk'], // ждёт — день практики, а занятия ещё не было
   sleep: ['brM', 'eyesShut', 'nose', 'mCalm', 'zz'], // спит — ночь
   rest: ['rests', 'nose', 'mCalm'], // перерыв помодоро — глаза-паузы
@@ -68,7 +69,7 @@ export function mascotSVG(mood = 'calm', { size = 56, label = '', ring = true, c
 
 // Реакции на касание: для каждого лица — своя (и запасные), цитата при этом не меняется
 const POKE = { calm: ['wink', 'surprised', 'sing'], glad: ['delight', 'sing'], happy: ['delight', 'cool'], cool: ['delight', 'wink'], delight: ['happy'],
-  surprised: ['glad'], sad: ['surprised', 'glad'], wait: ['surprised', 'wink'], sleep: ['surprised'], rest: ['wink', 'glad'], focus: ['sing', 'surprised'],
+  surprised: ['glad'], sad: ['surprised', 'glad'], wait: ['surprised', 'wink'], sleep: ['surprised'], upset: ['sad', 'surprised'], rest: ['wink', 'glad'], focus: ['sing', 'surprised'],
   sing: ['delight'], wink: ['glad'], grow: ['delight'] };
 let pokeT = 0;
 // Любая кнопка с data-mascot (главная, конец занятия) — касание вызывает реакцию

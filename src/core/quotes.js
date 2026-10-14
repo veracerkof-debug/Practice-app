@@ -223,8 +223,37 @@ export function quoteAt(i, lang = 'ru', sets = true, books = []) {
 // Номер дня (для «одна цитата в день, не повторяется неделями»)
 export const dayIndex = (ts = Date.now()) => Math.floor((ts - new Date(ts).getTimezoneOffset() * 60000) / 86400000);
 
-// Текст уведомления: заголовок — зов маскота, текст — цитата
-export function notifyText(i, at, lang = 'ru', sets = true, books = []) {
+// Настойчивая Мелета: давит на эмоции, с каждым напоминанием дня — сильнее (4 ступени по 3 строки).
+// Без «ты/вы» (правило проекта) — Мелета говорит о себе и об инструменте
+export const PUSHY = {
+  ru: [
+    ['Мелета ждёт у инструмента', 'Пятнадцать минут — и день засчитан', 'Время занятий. Камертон уже звенит'],
+    ['Струны скучают. Мелета тоже', 'Метроном тикает впустую', 'Гитара смотрит из угла. Грустно смотрит'],
+    ['Сегодня ни одной ноты… Мелета вздыхает', 'Камень сам себя не отшлифует', 'Мелета не обижается. Почти'],
+    ['Пять минут. Ну пожалуйста. Мелета просит', 'Где-то кто-то прямо сейчас учит это соло', 'Мелета пишет уже не первый раз. Ответ — инструментом'],
+  ],
+  uz: [
+    ['Melete cholg‘u yonida kutmoqda', 'O‘n besh daqiqa — va kun hisoblanadi', 'Mashg‘ulot vaqti. Kamerton jiringlayapti'],
+    ['Torlar sog‘inyapti. Melete ham', 'Metronom behuda chiqillayapti', 'Gitara burchakdan qarab turibdi. G‘amgin qarab'],
+    ['Bugun birorta ham nota yo‘q… Melete xo‘rsinadi', 'Tosh o‘zini o‘zi silliqlamaydi', 'Melete xafa emas. Deyarli'],
+    ['Besh daqiqa. Iltimos. Melete so‘rayapti', 'Kimdir aynan hozir o‘sha soloni o‘rganmoqda', 'Melete birinchi marta yozmayapti. Javob — cholg‘u bilan'],
+  ],
+  en: [
+    ['Melete is waiting by the instrument', 'Fifteen minutes and the day counts', 'Practice time. The tuning fork is ringing'],
+    ['The strings miss their player. So does Melete', 'The metronome is ticking for nobody', 'The guitar is watching from the corner. Sadly'],
+    ['Not a single note today… Melete sighs', 'The stone won’t polish itself', 'Melete isn’t upset. Almost'],
+    ['Five minutes. Please. Melete is asking', 'Somewhere someone is learning that solo right now', 'Melete has written more than once. Answer with the instrument'],
+  ],
+};
+// Строка настойчивой Мелеты: n — номер напоминания в этот день
+export function pushyLine(n, d = dayIndex(), lang = 'ru') {
+  const L = PUSHY[lang] || PUSHY.ru, lv = L[Math.min(n, L.length - 1)];
+  return lv[(d + n) % lv.length];
+}
+
+// Текст уведомления: заголовок — зов маскота (у настойчивой — давит на эмоции, у минимала — коротко), текст — цитата
+export function notifyText(i, at, lang = 'ru', sets = true, books = [], n = 0, style = 'classic') {
   const calls = CALLS[lang] || CALLS.ru, d = dayIndex(at), q = quoteAt(d * 3 + i, lang, sets, books);
-  return { title: calls[(d + i) % calls.length], body: q.text + (q.ref ? ' — ' + q.ref : '') };
+  const title = style === 'pushy' ? pushyLine(n, d, lang) : style === 'minimal' ? 'Melete' : calls[(d + i) % calls.length];
+  return { title, body: q.text + (q.ref ? ' — ' + q.ref : '') };
 }

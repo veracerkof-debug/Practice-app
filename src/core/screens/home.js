@@ -14,7 +14,7 @@ import { gemSVG } from '../../ui/gems.js';
 import { trackMode } from '../session.js';
 import { genreOf, ensureLib } from '../library.js';
 import { isOn } from '../settings.js';
-import { weekday } from '../time.js';
+import { weekday, dayKey } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
@@ -24,7 +24,8 @@ import { nextEventsHTML } from './calendar.js';
 import { extWho } from '../ext.js';
 import { refText } from '../bible.js';
 import { nextOf } from '../reading.js';
-import { quoteAt, dayIndex, setsOf } from '../quotes.js';
+import { quoteAt, dayIndex, setsOf, pushyLine } from '../quotes.js';
+import { remindOf } from '../reminders.js';
 import { moodOf } from '../mascot.js';
 import { mascotSVG } from '../../ui/mascot.js';
 
@@ -88,14 +89,21 @@ function readingCard(app, mono = false) {
 function moodNow(app) {
   const st = app.store.state.settings, po = app.pomodoro;
   return moodOf({ active: !!app.active, pomoBreak: !!(po && po.active() && po.phase !== 'work'), weekSec: weekData(app.store.sessions()).total,
-    goalSec: st.toolsOnly ? 0 : st.goalMin * 60, days: st.days, sessions: app.store.sessions() });
+    goalSec: st.toolsOnly ? 0 : st.goalMin * 60, days: st.days, sessions: app.store.sessions(), mode: remindOf(st).style });
+}
+// Настойчивая Мелета: в день практики, пока не занимались, — строка-просьба, к вечеру сильнее
+function pleaHTML(app, cls) {
+  const st = app.store.state.settings, now = new Date(), h = now.getHours();
+  if (remindOf(st).style !== 'pushy' || app.active || !st.days[weekday(now.getTime())] || h < 8 || h >= 23) return '';
+  if (app.store.sessions().some((x) => dayKey(x.start) === dayKey(now.getTime()))) return '';
+  return '<b class="' + cls + '">' + esc(pushyLine(h < 12 ? 0 : h < 16 ? 1 : h < 19 ? 2 : 3, dayIndex(), getLang())) + '</b>';
 }
 function quoteHTML(app, mono) {
   const st = app.store.state.settings;
   if (!isOn(st, 'quote')) return '';
   const q = quoteAt(dayIndex(), getLang(), setsOf(st), st.quoteBooks || []);
   return '<div class="' + (mono ? 'mvo' : 'hvoice') + '"><button class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' +
-    (q.text ? '<p class="' + (mono ? 'mquote' : 'hquote') + '">' + esc(q.text) + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p>' : '') + '</div>';
+    (q.text ? '<p class="' + (mono ? 'mquote' : 'hquote') + '">' + pleaHTML(app, 'mplea') + esc(q.text) + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p>' : '') + '</div>';
 }
 const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';
 

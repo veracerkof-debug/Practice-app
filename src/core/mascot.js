@@ -4,8 +4,21 @@ import { weekday, dayKey } from './time.js';
 
 const DAY = 86400000;
 
-// s: { now, active, pomoBreak, weekSec, goalSec, days[7], sessions[] }
+// s: { now, active, pomoBreak, weekSec, goalSec, days[7], sessions[], mode }
+// mode — характер: 'classic' | 'pushy' (давит: ждёт → грустит → дуется в течение дня) | 'minimal' (только спокойные лица)
 export function moodOf(s) {
+  const m = baseMood(s);
+  if (s.mode === 'minimal') return ['sleep', 'focus', 'rest', 'happy', 'glad'].includes(m) ? m : 'calm';
+  if (s.mode === 'pushy' && ['calm', 'wait', 'sad'].includes(m) && !s.active) {
+    const now = s.now ?? Date.now(), h = new Date(now).getHours(), list = s.sessions || [];
+    if (list.some((x) => dayKey(x.start) === dayKey(now))) return m;
+    if (s.days && !s.days[weekday(now)]) return m === 'sad' ? 'sad' : 'calm';
+    return h < 12 ? 'wait' : h < 18 ? 'sad' : 'upset';
+  }
+  return m;
+}
+
+function baseMood(s) {
   const now = s.now ?? Date.now(), h = new Date(now).getHours();
   if (s.active) return s.pomoBreak ? 'rest' : 'focus';
   if (h >= 23 || h < 6) return 'sleep';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { plan, remindTimes, DEFAULT_REMIND } from '../src/core/reminders.js';
+import { plan, remindTimes, remindOf, DEFAULT_REMIND } from '../src/core/reminders.js';
 import { quoteAt, notifyText, SCRIPTURE, MUSICIANS, SAYINGS, MEME, QSETS, setsOf } from '../src/core/quotes.js';
 import { readFileSync } from 'node:fs';
 
@@ -8,14 +8,28 @@ const mon = new Date(2026, 9, 12, 9, 0).getTime(); // понедельник, 9:
 
 describe('напоминания', () => {
   it('выключены — ничего', () => { expect(plan({ days: [1, 1, 1, 1, 1, 1, 1], remind: { on: false } }, false, mon)).toEqual([]); });
-  it('обычно — одно в день практики, по выходным нет', () => {
-    const ts = plan(st({ style: 'normal' }), false, mon);
+  it('классика — одно в день практики, по выходным нет', () => {
+    const ts = plan(st({ style: 'classic' }), false, mon);
     expect(ts.length).toBe(5);
     ts.forEach((x) => { expect(new Date(x).getHours()).toBe(19); expect([0, 6]).not.toContain(new Date(x).getDay()); });
   });
-  it('настойчиво — до трёх, тихие часы соблюдаются', () => {
-    expect(remindTimes(st({ style: 'insistent', time: '18:00' }).remind, new Date(2026, 9, 12).getTime()).map((x) => new Date(x).getHours())).toEqual([18, 20]);
-    expect(remindTimes(st({ style: 'insistent', time: '12:00' }).remind, new Date(2026, 9, 12).getTime()).length).toBe(3);
+  const hours = (r) => remindTimes(remindOf(st(r)), new Date(2026, 9, 12).getTime()).map((x) => new Date(x).getHours() + new Date(x).getMinutes() / 60);
+  it('классика — за 1, 2, 3 часа по выбору', () => {
+    expect(hours({ style: 'classic', time: '19:00', leads: [180, 60, 0] })).toEqual([16, 18, 19]);
+    expect(hours({ style: 'classic', time: '19:00', leads: [120] })).toEqual([17]);
+  });
+  it('настойчивая — много, до тихих часов, не больше 8', () => {
+    expect(hours({ style: 'pushy', time: '18:00', leads: [60] })).toEqual([17, 17.5, 18, 19, 20, 21]);
+    expect(hours({ style: 'pushy', time: '10:00', leads: [180, 120, 60, 0] }).length).toBe(8);
+  });
+  it('минимал — только своё время, одно-два', () => {
+    expect(hours({ style: 'minimal', times: ['07:30', '23:00'] })).toEqual([]); // 7:30 и 23:00 — тихие часы
+    expect(hours({ style: 'minimal', times: ['09:00', '20:00', '21:00'] })).toEqual([9, 20]);
+  });
+  it('прежние характеры переводятся', () => {
+    expect(remindOf({ remind: { style: 'insistent' } }).style).toBe('pushy');
+    expect(remindOf({ remind: { style: 'soft' } }).style).toBe('minimal');
+    expect(remindOf({ remind: { style: 'normal' } }).style).toBe('classic');
   });
   it('сегодня уже занимались — сегодня не напоминает', () => {
     const a = plan(st({}), false, mon), b = plan(st({}), true, mon);
@@ -94,5 +108,24 @@ describe('наборы цитат', () => {
   });
   it('цитатник — без «ты/вы» и с переводом', () => {
     MEME.forEach(([ru, en]) => { expect(en).toBeTruthy(); expect(ru).not.toMatch(/(^|\s)(ты|вы|тебя|вас|тебе|вам)(\s|[,.!?»]|$)/i); });
+  });
+});
+
+import { pushyLine, PUSHY } from '../src/core/quotes.js';
+describe('характеры Мелеты', () => {
+  const at = (h) => new Date(2026, 9, 14, h, 0).getTime(), days = [1, 1, 1, 1, 1, 0, 0];
+  it('настойчивая давит в течение дня, минимал — спокоен', () => {
+    expect(moodOf({ now: at(10), goalSec: 300, weekSec: 0, days, sessions: [], mode: 'pushy' })).toBe('wait');
+    expect(moodOf({ now: at(15), goalSec: 300, weekSec: 0, days, sessions: [], mode: 'pushy' })).toBe('sad');
+    expect(moodOf({ now: at(20), goalSec: 300, weekSec: 0, days, sessions: [], mode: 'pushy' })).toBe('upset');
+    expect(moodOf({ now: at(20), goalSec: 300, weekSec: 0, days, sessions: [], mode: 'minimal' })).toBe('calm');
+    expect(moodOf({ now: at(20), goalSec: 300, weekSec: 10, days, sessions: [{ start: at(9) }], mode: 'pushy' })).toBe('glad');
+  });
+  it('строки настойчивой — сильнее с каждым напоминанием, без «ты/вы»', () => {
+    expect(PUSHY.ru[0]).toContain(pushyLine(0, 0));
+    expect(PUSHY.ru[3]).toContain(pushyLine(9, 0));
+    for (const l of ['ru', 'uz', 'en']) expect(PUSHY[l].flat().length).toBe(12);
+    PUSHY.ru.flat().forEach((x) => expect(x).not.toMatch(/(^|\s)(ты|вы|тебя|вас|тебе|вам)(\s|[,.!?…]|$)/i));
+    expect(notifyText(0, Date.now(), 'ru', ['classic'], [], 3, 'pushy').title).toMatch(/./);
   });
 });

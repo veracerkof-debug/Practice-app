@@ -150,7 +150,7 @@ export function boot(root) {
   app.rec = createRecorder(app);
   // напоминания о практике: расписание на неделю — при запуске, смене настроек и после занятий (с задержкой)
   let remT = 0;
-  const remSync = () => { clearTimeout(remT); remT = setTimeout(() => reschedule(store.state, (i, at) => notifyText(i, at, getLang(), setsOf(store.state.settings), store.state.settings.quoteBooks || [])), 1500); };
+  const remSync = () => { clearTimeout(remT); remT = setTimeout(() => reschedule(store.state, (i, at, n, style) => notifyText(i, at, getLang(), setsOf(store.state.settings), store.state.settings.quoteBooks || [], n, style)), 1500); };
   store.subscribe(remSync);
   remSync();
   // Церковный режим: чтение Библии — план, отметки, место (src/core/reading.js)
