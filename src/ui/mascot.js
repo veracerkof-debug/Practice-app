@@ -76,11 +76,14 @@ const lashes = (keys) => {
   const [l, r] = LASH[k];
   return T('M' + (l - 4.5) + ' 44.5 l-3 -2.4 M' + (l - 2.5) + ' 43 l-1.6 -3') + (r != null ? T('M' + (r + 4.5) + ' 44.5 l3 -2.4 M' + (r + 2.5) + ' 43 l1.6 -3') : '');
 };
-const BOW = '<g class="mbow"><path class="md mbw" d="M68 23 L59 17.5 Q57 23 59 28.5 Z"/><path class="md mbw" d="M68 23 L77 17.5 Q79 23 77 28.5 Z"/><circle class="md" cx="68" cy="23" r="2.6"/></g>';
-// Нос Мелеты — нотка: головка наклонным овалом, штиль вверх и флажок-штрих (вместо камертона)
+// бантик сидит на макушке справа и наклонён вдоль линии головы
+const BOW = '<g class="mbow" transform="translate(73 17) rotate(35)"><path class="md mbw" d="M0 0 L-8.5 -5 Q-10.5 0 -8.5 5 Z"/><path class="md mbw" d="M0 0 L8.5 -5 Q10.5 0 8.5 5 Z"/><circle class="md" cx="0" cy="0" r="2.5"/></g>';
+// Нос Мелеты — нотка: головка наклонным овалом и штиль вверх, без флажка (вместо камертона)
 const NOTE = (dy = 0) => '<g class="mfork mnote"><ellipse class="md" cx="48" cy="' + (60 + dy) + '" rx="4.2" ry="3" transform="rotate(-22 48 ' + (60 + dy) + ')"/>' +
-  T('M51.6 ' + (59 + dy) + ' V' + (46 + dy) + ' q0.4 3.6 4.2 5.6') + '</g>';
-const NOSE_F = { nose: NOTE(0), noseLow: NOTE(6), noseBob: '<g class="mbob">' + NOTE(0) + '</g>' };
+  T('M51.6 ' + (59 + dy) + ' V' + (46 + dy)) + '</g>';
+const NOSE_F = { nose: NOTE(0), noseLow: NOTE(6), noseBob: '<g class="mbob">' + NOTE(0) + '</g>',
+  // у Мелеты справа наверху бантик: «ζζ» сна и «Δ» роста — слева
+  zz: '<g class="mzz">' + G(22, 30, 15, 'ζ') + G(13, 22, 10, 'ζ') + '</g>', delta: G(20, 30, 18, 'Δ') };
 
 // ring: false — без круга («Минимал»); cls — доп. класс (mpoke — реакция на касание); gender — вариант (по умолчанию — выбранный)
 export function mascotSVG(mood = 'calm', { size = 56, label = '', ring = true, cls = '', gender = GENDER } = {}) {
