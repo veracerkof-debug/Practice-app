@@ -1,44 +1,103 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Маскот: эскизы</title>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Маскот Мелета</title>
 <style>
-:root{--bg:#f4f2ee;--ink:#141414;--l2:#6b6b6b;--card:#fff;--line:#e2e0dc}
-@media (prefers-color-scheme:dark){:root{--bg:#141414;--ink:#f2f2f2;--l2:#9a9a9a;--card:#1f1f1f;--line:#333}}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif;padding:16px}
-h1{font-size:22px;margin:4px 0 14px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
-.c{background:var(--card);border-radius:18px;padding:14px;text-align:center}
-svg{width:120px;height:120px}.c b{display:block;margin-top:6px}.c span{color:var(--l2);font-size:13px}
-.f{fill:var(--card);stroke:var(--line);stroke-width:1.5}.s{fill:none;stroke:var(--ink);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}.d{fill:var(--ink)}
-.blink{animation:b 4s infinite;transform-origin:50% 45%}@keyframes b{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
-</style></head><body><h1>Маскот: эскизы (черновые, вектор)</h1><div class="grid">
+:root{--bg:#f4f2ee;--ink:#141414;--l2:#6b6b6b;--card:#fff;--line:#e2e0dc;--acc:#9C7242}
+@media (prefers-color-scheme:dark){:root{--bg:#141414;--ink:#f2f2f2;--l2:#9a9a9a;--card:#1f1f1f;--line:#333;--acc:#c99a63}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif;padding:16px;max-width:980px;margin:auto}
+h1{font-size:24px;margin:4px 0 4px}h2{font-size:18px;margin:26px 0 4px}p.l{color:var(--l2);margin:0 0 12px;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.c{background:var(--card);border-radius:18px;padding:12px 10px;text-align:center}
+.c svg{width:112px;height:112px}.c b{display:block;margin-top:4px;font-size:14.5px}.c span{display:block;color:var(--l2);font-size:12.5px;line-height:1.35;margin-top:2px}
+.f{fill:var(--card);stroke:var(--line);stroke-width:1.5}.s{fill:none;stroke:var(--ink);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.t{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.d{fill:var(--ink)}
+.g{font-family:"GFS Didot",Georgia,"Times New Roman",serif;fill:var(--ink)}
+.blink{animation:b 4.5s infinite;transform-box:fill-box;transform-origin:center}@keyframes b{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.12)}}
+.bob{animation:bob 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:bottom}@keyframes bob{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.zz{animation:zz 3s ease-in-out infinite}@keyframes zz{0%{opacity:0;transform:translate(0,4px)}40%{opacity:1}100%{opacity:0;transform:translate(4px,-8px)}}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.bd{background:var(--card);border-radius:16px;padding:10px 12px;display:flex;gap:10px;align-items:center}
+.bd i{flex:none;width:42px;height:42px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font:400 24px "GFS Didot",Georgia,serif;font-style:normal}
+.bd b{display:block;font-size:14px}.bd span{color:var(--l2);font-size:12.5px;line-height:1.3}
+</style></head><body>
+<h1>Мелета — маскот</h1>
+<p class="l">Черновые векторные эскизы. Основа — «Μ»: брови — буква Μ из логотипа, нос — λ. Лицо меняется нотными знаками и греческими буквами.
+В приложении всё будет SVG: моргает, качает носом в такт, меняет состояние по событиям.</p>
+<div id="app"></div>
+<script>
+// детали лица (viewBox 100×100, круг r=46)
+const F = '<circle class="f" cx="50" cy="50" r="46"/>';
+const P = {
+  brM: '<path class="s" d="M27 41 q11 -13 22 0 q11 -13 22 0"/>',
+  brMhi: '<path class="s" d="M27 36 q11 -15 22 -2 q11 -15 22 -2"/>',
+  brAngry: '<path class="s" d="M28 37 l18 7"/><path class="s" d="M72 37 l-18 7"/>',
+  brSad: '<path class="s" d="M30 42 l15 -6"/><path class="s" d="M70 42 l-15 -6"/>',
+  brFlat: '<path class="s" d="M30 39 h15"/><path class="s" d="M55 39 h15"/>',
+  eyes: '<g class="blink"><circle class="d" cx="38" cy="47" r="3.2"/><circle class="d" cx="60" cy="47" r="3.2"/></g>',
+  eyesSide: '<g class="blink"><circle class="d" cx="42" cy="47" r="3.2"/><circle class="d" cx="64" cy="47" r="3.2"/></g>',
+  eyesHappy: '<path class="s" d="M33 49 q5 -6 10 0"/><path class="s" d="M55 49 q5 -6 10 0"/>',
+  eyesShut: '<path class="s" d="M33 47 q5 5 10 0"/><path class="s" d="M55 47 q5 5 10 0"/>',
+  eyesWhole: '<ellipse class="t" cx="38" cy="47" rx="5" ry="3.6" transform="rotate(-20 38 47)" style="stroke-width:3"/><ellipse class="t" cx="60" cy="47" rx="5" ry="3.6" transform="rotate(-20 60 47)" style="stroke-width:3"/>',
+  nose: '<path class="s" d="M51 50 l-5 15 M48.5 56 l6 9"/>',
+  noseBob: '<g class="bob"><path class="s" d="M51 50 l-5 15 M48.5 56 l6 9"/></g>',
+  mCalm: '<path class="s" d="M43 74 q7 3 14 0"/>',
+  mOmega: '<path class="s" d="M38 71 q6 9 12 0 q6 9 12 0"/>',
+  mSmile: '<path class="s" d="M38 70 q12 12 24 0"/>',
+  mDown: '<path class="s" d="M41 77 q9 -7 18 0"/>',
+  mFlat: '<path class="s" d="M43 75 h14"/>',
+  mO: '<ellipse class="s" cx="50" cy="75" rx="4.5" ry="5.5"/>',
+  mSmirk: '<path class="s" d="M42 75 q10 3 17 -4"/>',
+};
+const svg = (...parts) => '<svg viewBox="0 0 100 100" aria-hidden="true">' + F + parts.map((p) => P[p] || p).join('') + '</svg>';
+const card = (s, title, note) => '<div class="c">' + s + '<b>' + title + '</b><span>' + note + '</span></div>';
+const sec = (h, l, cards) => '<h2>' + h + '</h2><p class="l">' + l + '</p><div class="grid">' + cards.join('') + '</div>';
 
-<div class="c"><svg viewBox="0 0 100 100"><circle class="f" cx="50" cy="50" r="46"/>
-<path class="s" d="M27 41 q11 -13 22 0 q11 -13 22 0"/><g class="blink"><circle class="d" cx="38" cy="47" r="3"/><circle class="d" cx="60" cy="47" r="3"/></g>
-<path class="s" d="M51 50 l-5 15 M48.5 56 l6 9"/><path class="s" d="M42 74 q8 4 16 0"/></svg>
-<b>1. «Μ»</b><span>брови — буква Μ из логотипа, нос — λ. Это сама Мелета</span></div>
+const states = [
+  card(svg('brM', 'eyes', 'nose', 'mCalm'), 'Спокойна', 'по умолчанию: главная, слово дня'),
+  card(svg('brMhi', 'eyes', 'nose', 'mOmega'), 'Рада', 'рот — ω: занятие началось, песня добавлена'),
+  card(svg('brMhi', 'eyesHappy', 'nose', 'mSmile'), 'Довольна', 'глаза-дуги: цель дня выполнена'),
+  card(svg('brAngry', 'eyes', 'nose', 'mDown'), 'Недовольна', 'брови сведены: цель недели «горит» (без укора — один раз)'),
+  card(svg('brSad', 'eyes', 'nose', 'mDown'), 'Скучает', 'давно не занимались'),
+  card(svg('brMhi', 'eyesWhole', 'nose', 'mO'), 'Удивлена', 'глаза — целые ноты: новый рекорд, новое звание'),
+  card(svg('brM', 'eyesShut', 'nose', 'mCalm', '<g class="zz"><text class="g" x="70" y="30" font-size="15">ζ</text><text class="g" x="79" y="22" font-size="10">ζ</text></g>'), 'Спит', 'вместо «z» — греческая ζ: перерыв, тихие часы'),
+  card(svg('brFlat', 'eyes', 'noseBob', 'mFlat'), 'Сосредоточена', 'нос качается в такт метронома; рот — тенуто'),
+  card(svg('brM', 'eyesSide', 'nose', 'mSmirk'), 'Ждёт', 'смотрит в сторону кнопки «Начать»'),
+  card(svg('brM', '<circle class="d" cx="38" cy="47" r="3.2"/><path class="s" d="M55 47 q5 4 10 0"/>', 'nose', 'mSmirk'), 'Подмигивает', 'после отправки песен команде'),
+  card(svg('brMhi', 'eyes', 'nose', 'mO', '<g class="bob" style="animation-duration:.9s"><circle class="d" cx="70" cy="73" r="3.2"/><path class="t" d="M73 73 v-14 q5 2 6 7"/></g>'), 'Поёт', 'рядом пляшет восьмая: звучит пианино, пэды, синтезатор'),
+  card(svg('brSad', 'eyes', 'nose', 'mFlat', '<text class="g" x="70" y="34" font-size="16">?</text>'), 'Сомневается', 'долгая пауза в сессии: «ещё здесь?»'),
+];
 
-<div class="c"><svg viewBox="0 0 100 100"><circle class="f" cx="50" cy="50" r="46"/>
-<path class="s" d="M26 46 a11 11 0 0 1 22 0"/><path class="s" d="M54 46 a11 11 0 0 1 22 0"/>
-<g class="blink"><circle class="d" cx="37" cy="44" r="3"/><circle class="d" cx="65" cy="44" r="3"/></g>
-<path class="s" d="M52 54 q3 4 -1 8"/><path class="s" d="M38 70 q13 9 26 0"/></svg>
-<b>2. «Ферматы»</b><span>глаза — ферматы (знак «задержать»), рот — лига</span></div>
+const notes = [
+  card(svg('<path class="s" d="M28 36 q7 -4 14 -1"/>',
+    '<ellipse class="d" cx="38" cy="51" rx="9.5" ry="6.8" transform="rotate(-15 38 51)"/><ellipse class="d" cx="62" cy="51" rx="9.5" ry="6.8" transform="rotate(-15 62 51)"/>',
+    '<path class="s" d="M46.8 48 V39 M70.8 48 V39"/><path d="M45.2 36 L72.4 36 L72.4 41 L45.2 41 Z" class="d"/><path class="s" d="M29 49 l-4 -2"/>', '<path class="s" d="M51 56 l-4 11 M49 61 l5 6"/>', '<path class="s" d="M41 76 q10 3 18 -4"/>'), 'Крутая', 'очки — две восьмые, соединённые ребром (♫): цель недели перевыполнена'),
+  card(svg('brMhi', '<g class="blink"><path class="t" d="M33 43 v10 M37 42 v10 M31 46 l8 -2.2 M31 50 l8 -2.2"/><path class="t" d="M57 43 v10 M61 42 v10 M55 46 l8 -2.2 M55 50 l8 -2.2"/></g>', 'nose', 'mSmile'), 'В восторге', 'глаза — диезы ♯: «звёзды в глазах»'),
+  card(svg('<path class="s" d="M30 41 h15"/><path class="t" d="M58 28 v14 q8 -6 8 -1 q0 4 -8 5"/>', 'eyes', 'nose', 'mSmirk'), 'Хм…', 'одна бровь — бемоль ♭: сомнение, вопрос'),
+  card(svg('<path class="s" d="M28 41 h44"/>', '<rect class="d" x="33" y="41" width="10" height="5" rx="1"/><rect class="d" x="55" y="41" width="10" height="5" rx="1"/>', 'nose', 'mCalm'), 'Перерыв', 'глаза — целые паузы под линейкой: помодоро-перерыв'),
+  card(svg('<path class="s" d="M27 46 a11 11 0 0 1 22 0"/><path class="s" d="M51 46 a11 11 0 0 1 22 0"/>', '<g class="blink"><circle class="d" cx="38" cy="44" r="3"/><circle class="d" cx="62" cy="44" r="3"/></g>', 'nose', '<path class="s" d="M38 70 q13 9 26 0"/>'), 'Фермата', 'глаза — ферматы («задержать»): долгая нота, удержание в синтезаторе'),
+  card(svg('brM', 'eyes', '<path class="s" d="M52 30 v30"/><path class="s" d="M52 30 q12 4 13 15"/><ellipse class="d" cx="46" cy="61" rx="7" ry="5" transform="rotate(-22 46 61)"/>', 'mCalm'), 'Нота-нос', 'нос — восьмая нота вместо λ (вариант основы)'),
+  card(svg('brM', 'eyes', 'nose', '<path class="s" d="M62 70 L39 75 L62 80"/>'), 'Крещендо', 'рот — вилка < : громче, быстрее, темп растёт'),
+  card(svg('brAngry', '<g class="blink"><circle class="d" cx="38" cy="47" r="3.2"/><circle class="d" cx="60" cy="47" r="3.2"/></g>', 'nose', '<text class="g" x="40" y="81" font-size="16" font-style="italic" font-weight="700">sf</text>'), 'Сфорцандо', 'рот — sf: резкий акцент, «не сдаваться» (настойчивые напоминания)'),
+];
 
-<div class="c"><svg viewBox="0 0 100 100"><circle class="f" cx="50" cy="50" r="46"/>
-<path class="s" d="M30 36 q7 -6 14 -1"/><path class="s" d="M52 26 v34"/><path class="s" d="M52 26 q12 4 14 16"/>
-<ellipse class="d" cx="46" cy="62" rx="7" ry="5" transform="rotate(-22 46 62)"/>
-<g class="blink"><circle class="d" cx="38" cy="44" r="3"/><circle class="d" cx="64" cy="48" r="3"/></g><path class="s" d="M40 77 q9 3 17 -1"/></svg>
-<b>3. «Нота-нос»</b><span>нос — восьмая нота, флажок — вторая бровь (ближе всего к Notion)</span></div>
+const greek = [
+  card(svg('brM', '<g class="blink"><text class="g" x="28" y="55" font-size="21">θ</text><text class="g" x="56" y="55" font-size="21">θ</text></g>', 'nose', 'mOmega'), 'Θ-глаза', 'зоркая: тюнер, слух, точная настройка'),
+  card(svg('brMhi', '<text class="g" x="30" y="53" font-size="17">ε</text><text class="g" x="66" y="53" font-size="17" transform="scale(-1 1) translate(-134 0)">ε</text>', 'nose', 'mOmega'), 'Смеётся', 'глаза — ε и зеркальная ε, рот — ω'),
+  card(svg('brM', 'eyes', 'nose', '<text class="g" x="40.5" y="82" font-size="18">ω</text>'), 'Омега', 'ω буквой: «финал» — конец сессии, итог недели'),
+  card(svg('brM', 'eyes', '<text class="g" x="44" y="68" font-size="22">φ</text>', 'mCalm'), 'Фи-нос', 'φ — «фокус»: режим без отвлечений'),
+  card(svg('<text class="g" x="27" y="43" font-size="20">Ψ</text><text class="g" x="56" y="43" font-size="20">Ψ</text>', 'eyesShut', 'nose', 'mSmile'), 'Ψ — душа', 'брови-Ψ (ψυχή): поклонение, церковный режим'),
+  card(svg('brM', 'eyes', 'nose', 'mCalm', '<text class="g" x="66" y="30" font-size="18">Δ</text>'), 'Δ — рост', 'Δ над головой: темп или время выросли за неделю'),
+];
 
-<div class="c"><svg viewBox="0 0 100 100"><circle class="f" cx="50" cy="50" r="46"/>
-<path class="s" d="M32 38 q6 -4 12 0"/><path class="s" d="M56 38 q6 -4 12 0"/><g class="blink"><circle class="d" cx="38" cy="46" r="3"/><circle class="d" cx="62" cy="46" r="3"/></g>
-<path class="s" d="M45 52 v6 q0 5 5 5 q5 0 5 -5 v-6 M50 63 v8"/><path class="s" d="M40 78 h20"/></svg>
-<b>4. «Камертон»</b><span>нос — камертон; спокойный, «настроенный»</span></div>
+const badges = [
+  ['Σ', 'Сумма', 'всего часов, итог недели'], ['Δ', 'Разница', 'рост к прошлой неделе'], ['τ', 'Темп', 'BPM, τέμπο'],
+  ['μ', 'Мастерство', 'выученность песни'], ['α', 'Начало', 'первое занятие, новая песня'], ['ω', 'Финал', 'конец сессии, цель'],
+  ['φ', 'Фокус', 'режим без отвлечений'], ['ψ', 'Душа', 'поклонение, церковный режим'], ['λ', 'Длина', 'длительность занятия'],
+  ['ρ', 'Ритм', 'ρυθμός: метроном'], ['κ', 'Ключ', 'тональность (κλειδί)'], ['π', 'Пауза', 'перерыв, παύση'],
+];
 
-<div class="c"><svg viewBox="0 0 100 100"><circle class="f" cx="50" cy="50" r="46"/>
-<path class="s" d="M27 41 q11 -13 22 0 q11 -13 22 0"/><path class="s" d="M32 48 q6 4 12 0"/><path class="s" d="M54 48 q6 4 12 0"/>
-<path class="s" d="M51 50 l-5 15 M48.5 56 l6 9"/><path class="s" d="M44 74 h12"/></svg>
-<b>1б. «Μ» спит</b><span>состояние: перерыв помодоро, тихие часы</span></div>
-
-<div class="c"><svg viewBox="0 0 100 100"><circle class="f" cx="50" cy="50" r="46"/>
-<path class="s" d="M27 37 q11 -15 22 -2 q11 -15 22 -2"/><circle class="d" cx="38" cy="46" r="3.4"/><circle class="d" cx="60" cy="46" r="3.4"/>
-<path class="s" d="M51 50 l-5 15 M48.5 56 l6 9"/><path class="s" d="M38 70 q12 12 24 0"/></svg>
-<b>1в. «Μ» рада</b><span>состояние: цель недели выполнена</span></div>
-</div></body></html>
+document.getElementById('app').innerHTML =
+  sec('Состояния', 'Одно лицо — разное настроение. Меняется по событиям: начало и конец занятия, цель, долгая пауза, перерыв.', states) +
+  sec('Нотные знаки', 'Ноты, паузы, знаки альтерации и динамики становятся очками, глазами, бровями и ртом.', notes) +
+  sec('Греческие буквы на лице', 'Буквы из того же шрифта, что логотип «Μελέτη».', greek) +
+  '<h2>Греческие буквы как значки</h2><p class="l">Инфографика в статистике и на главной: одна буква — одно понятие, без подписей там, где мало места.</p><div class="badges">' +
+  badges.map(([g, n, d]) => '<div class="bd"><i>' + g + '</i><div><b>' + n + '</b><span>' + d + '</span></div></div>').join('') + '</div>';
+</script></body></html>
