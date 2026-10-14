@@ -139,3 +139,8 @@
 /* помодоро в шторке сессии: у окна модуля размер не зависит от содержимого (container-type: size),
    поэтому высота задаётся явно — иначе таймер сжимался в полоску */
 .pomohost{height:min(72vh,620px);min-height:360px;display:flex;flex-direction:column;margin-top:4px}
+/* маскот в шторке микшера: убрать с экрана / вернуть (src/core/screens/mixer.js) */
+.mxm{justify-content:flex-end;margin-left:4px;padding-left:8px;border-left:1px solid rgba(255,255,255,.12)}
+.mxm .mxi{padding:0;background:transparent;overflow:visible}
+.mxm .mxi svg{width:34px;height:34px;fill:revert-layer;stroke:revert-layer;stroke-width:revert-layer}
+.mxm.mu .mxi{background:transparent;opacity:.55}

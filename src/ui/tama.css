@@ -7,3 +7,8 @@
 @keyframes tamain{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.tamas.in{animation:none}}
 :root[data-style="mono"] .tamas{box-shadow:none;border:1px solid var(--line,var(--sep))}
+/* своё место (перетащили): позиция — в tama.js; справа — облачко слева от лица */
+.tama.moved{margin:0}
+.tama.flip{flex-direction:row-reverse}
+.tama.flip .tamas{border-radius:16px 16px 4px 16px}
+.tamab{touch-action:none}

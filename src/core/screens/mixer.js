@@ -1,7 +1,9 @@
 // Микшер сбоку экрана: язычок справа появляется, когда что-то звучит; потянуть или нажать — пять ползунков
 // (клик, пианино, глайдер, пэды и дрон, медиа, теория и слух), нажатие на значок — выключить звук источника.
+// Последняя колонка — маскот-тамагочи (если он на экране занятия): убрать с экрана или вернуть.
 // Перенесено из legacy/practice.html (MIXSRC, mxFader, mxInit, mxSet, mxOpen, mxTick).
 import { t } from '../../i18n/index.js';
+import { mascotSVG } from '../../ui/mascot.js';
 import { esc } from '../../ui/index.js';
 import { MIX_MAX } from '../../audio/mixer.js';
 import { moduleById } from '../../modules/index.js';
@@ -21,7 +23,14 @@ export function createMixerDrawer(app) {
       '<b style="height:' + (v / MIX_MAX) * 100 + '%"></b><i style="bottom:' + (v / MIX_MAX) * 100 + '%"></i><em style="bottom:' + (1 / MIX_MAX) * 100 + '%"></em></div>' +
       '<button class="mxi" data-mute="' + k + '" aria-label="' + esc(t(mu ? 'mix.unmute' : 'mix.mute', { src: lab })) + '" title="' + esc(lab) + '">' + ((moduleById(icon) || {}).icon || '') + '</button></div>';
   };
-  const render = () => { el.querySelector('.mxp').innerHTML = SRC.map(fader).join(''); tick(); };
+  const tamaCol = () => {
+    const tm = app.tama;
+    if (!tm || !tm.here()) return '';
+    const off = tm.hidden();
+    return '<div class="mxf mxm' + (off ? ' mu' : '') + '" style="--c:#646493"><button class="mxi" data-tama aria-pressed="' + !off + '" aria-label="' + esc(t(off ? 'tama.show' : 'tama.hide')) + '">' + mascotSVG(off ? 'sleep' : 'glad', { size: 30 }) + '</button></div>';
+  };
+  let hadTama = false;
+  const render = () => { hadTama = !!(app.tama && app.tama.here()); el.querySelector('.mxp').innerHTML = SRC.map(fader).join('') + tamaCol(); tick(); };
   const setOpen = (o) => { open = o; el.classList.toggle('open', o); el.querySelector('.mxh').setAttribute('aria-expanded', o); if (o) render(); };
 
   function tick() {
@@ -32,7 +41,10 @@ export function createMixerDrawer(app) {
       const f = el.querySelector('.mxf[data-k="' + k + '"]');
       if (f) f.classList.toggle('act', a);
     });
-    el.classList.toggle('show', any || open);
+    const tm = !!(app.tama && app.tama.here());
+    if (open && tm !== hadTama) render();
+    // маскот на экране занятия — язычок виден и в тишине: через него маскота возвращают
+    el.classList.toggle('show', any || open || tm);
     el.classList.toggle('live', any);
   }
 
@@ -75,6 +87,7 @@ export function createMixerDrawer(app) {
   });
   el.addEventListener('pointerup', () => { drag = null; sw = null; });
   el.addEventListener('click', (e) => {
+    if (e.target.closest('[data-tama]')) { app.tama.toggle(); render(); return; }
     const b = e.target.closest('[data-mute]');
     if (!b) return;
     mixer.toggleMute(b.dataset.mute);
