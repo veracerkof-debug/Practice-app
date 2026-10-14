@@ -312,3 +312,13 @@
 .mlrow{gap:8px;flex-wrap:wrap}
 .mlrow .sortsel{flex:1;min-width:0}
 .mlrow .inp{flex:none;width:auto}
+
+/* Мелета или Мелетий: выбор (src/core/screens/melete.js); бантик Мелеты — цветом оформления */
+.mascot .mbow{color:var(--tint)}
+.mascot .mbw{stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+:root[data-style="mono"] .mascot .mbow{color:currentColor}
+.mlwho{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
+.mlwb{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 8px;border-radius:18px;background:var(--cell);border:2px solid transparent;min-height:44px}
+.mlwb.on{border-color:var(--tint)}
+.mlwb b{font-size:16px}
+.mlwb small{font-size:12px;color:var(--l2);text-align:center}

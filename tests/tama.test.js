@@ -37,3 +37,26 @@ describe('Мелета-тамагочи', () => {
     expect(JSON.stringify(TAMA_TEXTS.ru)).not.toMatch(/(^|[^а-яё])(ты|вы|тебя|вас|твой|ваш)([^а-яё]|$)/i);
   });
 });
+
+import { setMascotGender, makeT } from '../src/i18n/index.js';
+import { mascotSVG, setMascotLook } from '../src/ui/mascot.js';
+import { remindText } from '../src/core/remindtexts.js';
+describe('Мелета и Мелетий', () => {
+  it('строки с вариантом @m — для Мелетия, без него — общие', () => {
+    const tt = makeT({ ru: { a: 'Мелета рада', 'a@m': 'Мелетий рад', b: 'Общее' } });
+    setMascotGender('m');
+    expect([tt('a'), tt('b')]).toEqual(['Мелетий рад', 'Общее']);
+    expect(remindText({ slot: 'lead:60', mode: 'pushy' }, { lang: 'ru' }).body).toMatch(/Мелетий уже настроил/);
+    expect(tamaLine('hello', 'ru') + tamaLine('hello', 'ru')).toMatch(/Мелетий рядом/);
+    setMascotGender('f');
+    expect(tt('a')).toBe('Мелета рада');
+    expect(remindText({ slot: 'lead:60', mode: 'pushy' }, { lang: 'ru' }).body).toMatch(/Мелета уже настроила/);
+  });
+  it('лицо: у Мелеты бантик, у Мелетия бородка', () => {
+    expect(mascotSVG('calm', { gender: 'f' })).toMatch(/mbow/);
+    expect(mascotSVG('calm', { gender: 'm' })).not.toMatch(/mbow/);
+    setMascotLook('m');
+    expect(mascotSVG('calm')).toMatch(/data-g="m"/);
+    setMascotLook('f');
+  });
+});

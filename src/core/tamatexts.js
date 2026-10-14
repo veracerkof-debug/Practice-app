@@ -1,7 +1,9 @@
 // Реплики Мелеты-тамагочи (src/core/tama.js) на трёх языках. Нейтрально, без «ты/вы», без укоров.
+// Имя — {M} (Мелета или Мелетий, src/i18n: mascotGender); о себе — без рода (говорит «слушаю», а не «рада»).
+import { mascotGender } from '../i18n/index.js';
 export const TAMA_TEXTS = {
   ru: {
-    hello: ['Начали. Слушаю.', 'Занятие пошло — Мелета рядом.', 'Инструмент в руках — уже хорошо.'],
+    hello: ['Начали. Слушаю.', 'Занятие пошло — {M} рядом.', 'Инструмент в руках — уже хорошо.'],
     brk: ['Перерыв: плечи вниз, вдох.', 'Отдых тоже часть занятия.', 'Пауза. Руки отдыхают.'],
     flow: ['Шесть минут без остановки — это поток.', 'Звучит ровно. Так и держать.', 'Слышно, что пошло.'],
     quiet: ['Тихо. Размышление — тоже практика.', 'Пауза затянулась — инструмент ждёт.', 'Тишина. Может, сыграть ещё раз медленно?'],
@@ -14,7 +16,7 @@ export const TAMA_TEXTS = {
     soft: ['Очень тихо и аккуратно — красиво.', 'Нежный звук. Можно и смелее.'],
   },
   uz: {
-    hello: ['Boshladik. Tinglayapman.', 'Mashgʻulot boshlandi — Meleta yonida.', 'Cholgʻu qoʻlda — bu allaqachon yaxshi.'],
+    hello: ['Boshladik. Tinglayapman.', 'Mashgʻulot boshlandi — {M} yonida.', 'Cholgʻu qoʻlda — bu allaqachon yaxshi.'],
     brk: ['Tanaffus: yelkalarni tushirib, chuqur nafas.', 'Dam olish ham mashgʻulotning bir qismi.', 'Pauza. Qoʻllar dam oladi.'],
     flow: ['Olti daqiqa toʻxtovsiz — bu oqim.', 'Bir tekis yangrayapti. Shunday davom.', 'Ish ketgani eshitilib turibdi.'],
     quiet: ['Jimlik. Oʻylash ham mashq.', 'Pauza choʻzildi — cholgʻu kutmoqda.', 'Jimlik. Balki yana bir bor sekin chalinsa?'],
@@ -27,7 +29,7 @@ export const TAMA_TEXTS = {
     soft: ['Juda sokin va ehtiyotkor — chiroyli.', 'Nozik ovoz. Dadilroq ham boʻladi.'],
   },
   en: {
-    hello: ['Here we go. Listening.', 'Practice is on — Melete is here.', 'Instrument in hand — already good.'],
+    hello: ['Here we go. Listening.', 'Practice is on — {M} is here.', 'Instrument in hand — already good.'],
     brk: ['Break: shoulders down, breathe in.', 'Rest is part of practice too.', 'Pause. Hands are resting.'],
     flow: ['Six minutes non-stop — that is flow.', 'Sounds steady. Keep it there.', 'It is clearly coming together.'],
     quiet: ['Quiet. Thinking is practice too.', 'A long pause — the instrument is waiting.', 'Silence. Maybe once more, slowly?'],
@@ -41,8 +43,9 @@ export const TAMA_TEXTS = {
   },
 };
 
+export const MASCOT_NAME = { f: { ru: 'Мелета', uz: 'Melete', en: 'Melete' }, m: { ru: 'Мелетий', uz: 'Meletiy', en: 'Meletius' } };
 let n = 0;
 export function tamaLine(key, lang = 'ru') {
   const list = (TAMA_TEXTS[lang] || TAMA_TEXTS.ru)[key] || TAMA_TEXTS.ru[key] || [''];
-  return list[n++ % list.length];
+  return list[n++ % list.length].replace('{M}', MASCOT_NAME[mascotGender()][lang] || MASCOT_NAME.f.ru);
 }

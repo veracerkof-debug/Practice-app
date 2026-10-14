@@ -2,6 +2,8 @@
 // наборы слов. Один и тот же блок — при регистрации (src/core/screens/onboard.js) и в «Уведомлениях» (panel.js).
 import { t } from '../../i18n/index.js';
 import { esc, seg, toast } from '../../ui/index.js';
+import { setMascotGender } from '../../i18n/index.js';
+import { setMascotLook } from '../../ui/mascot.js';
 import { STYLES, LEADS, OFFSETS, TONES, CUSTOM_MAX, remindOf, setRemind, remindAvailable, remindPermission, remindTest } from '../reminders.js';
 import { remindText, remindCtx } from '../remindtexts.js';
 import { QSETS, setsOf } from '../quotes.js';
@@ -27,7 +29,11 @@ function preview(st, mode) {
 export function meleteHTML(st, { sets = false, test = false } = {}) {
   const r = remindOf(st), mode = r.mode;
   const tm = '<input type="time" class="inp" data-ml="time" value="' + esc(r.time) + '" aria-label="' + esc(t('rem.time')) + '">';
-  let h = '<div class="group"><div class="cellcol"><div class="mlhead">' + mascotSVG(FACE[mode], { size: 52, ring: st.uiStyle !== 'mono' }) +
+  // кто: Мелета или Мелетий — лицо и то, как говорит о себе
+  const g = st.mascot === 'm' ? 'm' : 'f', ring = st.uiStyle !== 'mono';
+  let h = '<div class="mlwho" role="group" aria-label="' + esc(t('mascot.who')) + '">' + ['f', 'm'].map((k) => '<button type="button" class="mlwb' + (g === k ? ' on' : '') + '" data-mlg="' + k + '" aria-pressed="' + (g === k) + '">' +
+    mascotSVG('glad', { size: 56, ring, gender: k }) + '<b>' + t('mascot.' + k) + '</b><small>' + t('mascot.' + k + '.sub') + '</small></button>').join('') + '</div>';
+  h += '<div class="group"><div class="cellcol"><div class="mlhead">' + mascotSVG(FACE[mode], { size: 52, ring: st.uiStyle !== 'mono' }) +
     seg('mlmode', STYLES.map((k) => [k, t('rem.' + k)]), mode, t('rem.style')) + '</div><div class="segcap">' + t('rem.' + mode + 'Hint') + '</div>' + preview(st, mode) + '</div>';
   if (mode !== 'quiet') {
     h += '<label class="cell"><span class="grow">' + t('rem.time') + '</span>' + tm + '</label>';
@@ -70,7 +76,11 @@ export function bindMelete(el, getSt, { save, rerender, ask = true }) {
   el.addEventListener('click', (e) => {
     const st = S(), g = (s) => e.target.closest(s);
     let b;
-    if ((b = g('[data-seg="mlmode"] [data-v]'))) {
+    if ((b = g('[data-mlg]'))) {
+      st.mascot = b.dataset.mlg === 'm' ? 'm' : 'f';
+      setMascotGender(st.mascot); setMascotLook(st.mascot);
+      save(); rerender();
+    } else if ((b = g('[data-seg="mlmode"] [data-v]'))) {
       const mode = b.dataset.v;
       setRemind(st, { mode });
       save(); rerender();

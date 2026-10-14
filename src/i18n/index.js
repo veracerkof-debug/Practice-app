@@ -41,6 +41,13 @@ export const bareNow = () => stripping(true);
 export const stripWords = (s) => s.replace(/\{\w+\}|[\p{L}\p{M}ʻʼ'’]+/gu, (m) => (m[0] === '{' ? m : ''))
   .replace(/[.,!?;«»"“”„()…]/g, '').replace(/\s+/g, ' ').replace(/^[\s:—–\-·/]+|[\s:—–\-·/]+$/g, '').trim();
 
+// Маскот — Мелета (по умолчанию) или Мелетий (settings.mascot = 'm'): строки, где он назван или говорит о себе,
+// имеют мужской вариант — тот же ключ с «@m» (в словаре ядра или модуля). Чего нет — берётся обычная строка
+let gender = 'f';
+export const setMascotGender = (g) => { gender = g === 'm' ? 'm' : 'f'; };
+export const mascotGender = () => gender;
+const pickG = (d, key) => (gender === 'm' && d && d[key + '@m'] != null ? d[key + '@m'] : d && d[key]);
+
 // {name} в строке заменяется значением из vars
 const fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m)) : s);
 
@@ -48,7 +55,7 @@ const fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? 
 // scoped — строки ядра (без слов только внутри bareScope); false — строки инструментов (без слов везде, кроме withText)
 export function makeT(byLang, scoped = true) {
   return (key, vars) => {
-    const v = byLang[lang]?.[key] ?? byLang.ru?.[key];
+    const v = pickG(byLang[lang], key) ?? pickG(byLang.ru, key);
     if (v == null) return key;
     const s = Array.isArray(v) ? v[0] : v;
     return fill(stripping(scoped) ? stripWords(s) : s, vars);
@@ -71,7 +78,7 @@ export function pluralForm(n, forms, l = lang) {
 // t с числом: tn('cents', 5) → «5 центов»; vars.n подставляется в {n}
 export function makeTn(byLang, scoped = true) {
   return (key, n, vars) => {
-    const v = byLang[lang]?.[key] ?? byLang.ru?.[key];
+    const v = pickG(byLang[lang], key) ?? pickG(byLang.ru, key);
     if (v == null) return key;
     const s = pluralForm(n, v, byLang[lang]?.[key] != null ? lang : 'ru');
     return fill(stripping(scoped) ? stripWords(s) : s, { n: fmtNum(n), ...vars });

@@ -64,11 +64,27 @@ export const MOODS = {
   grow: ['brM', 'eyes', 'nose', 'mCalm', 'delta'], // рост к прошлой неделе
 };
 
-// ring: false — без круга («Минимал»); cls — доп. класс (mpoke — реакция на касание)
-export function mascotSVG(mood = 'calm', { size = 56, label = '', ring = true, cls = '' } = {}) {
-  const parts = (MOODS[mood] || MOODS.calm).map((k) => P[k]).join('');
+// Вариант маскота (settings.mascot): 'f' — Мелета: бантик-завиток (как флажок восьмой) и ресницы;
+// 'm' — Мелетий: бородка по линии подбородка и брови чуть плотнее. Остальное лицо — общее
+let GENDER = 'f';
+export const setMascotLook = (g) => { GENDER = g === 'm' ? 'm' : 'f'; };
+// Ресницы — у внешних уголков открытых глаз (смещение глаз по настроению)
+const LASH = { eyes: [38, 60], eyesSide: [42, 64], eyesWhole: [38, 60], wink: [38, null] };
+const lashes = (keys) => {
+  const k = keys.find((x) => LASH[x]);
+  if (!k) return '';
+  const [l, r] = LASH[k];
+  return T('M' + (l - 4.5) + ' 44.5 l-3 -2.4 M' + (l - 2.5) + ' 43 l-1.6 -3') + (r != null ? T('M' + (r + 4.5) + ' 44.5 l3 -2.4 M' + (r + 2.5) + ' 43 l1.6 -3') : '');
+};
+const BOW = '<g class="mbow"><path class="md mbw" d="M68 23 L59 17.5 Q57 23 59 28.5 Z"/><path class="md mbw" d="M68 23 L77 17.5 Q79 23 77 28.5 Z"/><circle class="md" cx="68" cy="23" r="2.6"/></g>';
+const BEARD = S('M29 67 q2.5 22 21 24 q18.5 -2 21 -24') + T('M38 86 l-1 3 M50 89.5 v3 M62 86 l1 3');
+
+// ring: false — без круга («Минимал»); cls — доп. класс (mpoke — реакция на касание); gender — вариант (по умолчанию — выбранный)
+export function mascotSVG(mood = 'calm', { size = 56, label = '', ring = true, cls = '', gender = GENDER } = {}) {
+  const keys = MOODS[mood] || MOODS.calm;
+  const parts = keys.map((k) => P[k]).join('') + (gender === 'm' ? BEARD : BOW + lashes(keys));
   return '<svg class="mascot' + (cls ? ' ' + cls : '') + '" viewBox="0 0 100 100" width="' + size + '" height="' + size + '" data-mood="' + mood + '"' + (label ? ' role="img" aria-label="' + label.replace(/"/g, '&quot;') + '"' : ' aria-hidden="true"') +
-    '>' + (ring ? '<circle class="mf" cx="50" cy="50" r="46"/>' : '') + parts + '</svg>';
+    ' data-g="' + gender + '">' + (ring ? '<circle class="mf" cx="50" cy="50" r="46"/>' : '') + parts + '</svg>';
 }
 
 // Реакции на касание: для каждого лица — своя (и запасные), цитата при этом не меняется
@@ -77,15 +93,15 @@ const POKE = { calm: ['wink', 'surprised', 'sing'], glad: ['delight', 'sing'], h
   sing: ['delight'], wink: ['glad'], grow: ['delight'] };
 let pokeT = 0;
 // Любая кнопка с data-mascot (главная, конец занятия) — касание вызывает реакцию
-if (typeof document !== 'undefined') document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-mascot]'); if (b) pokeMascot(b); });
+if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-mascot]'); if (b) pokeMascot(b); });
 // Касание по кнопке с маскотом: другое лицо на 1,3 с, подпрыгивание и звон камертона, потом — прежнее лицо
 export function pokeMascot(btn) {
   const svg = btn && btn.querySelector('svg.mascot');
   if (!svg) return;
-  const base = btn.dataset.mood || svg.dataset.mood || 'calm', size = +svg.getAttribute('width') || 56, ring = !!svg.querySelector('.mf');
+  const base = btn.dataset.mood || svg.dataset.mood || 'calm', size = +svg.getAttribute('width') || 56, ring = !!svg.querySelector('.mf'), gender = svg.dataset.g || GENDER;
   btn.dataset.mood = base;
   const list = POKE[base] || POKE.calm, next = list[Math.floor(Math.random() * list.length)];
-  btn.innerHTML = mascotSVG(next, { size, ring, cls: 'mpoke' });
+  btn.innerHTML = mascotSVG(next, { size, ring, cls: 'mpoke', gender });
   clearTimeout(pokeT);
-  pokeT = setTimeout(() => { if (btn.isConnected) { btn.innerHTML = mascotSVG(base, { size, ring }); delete btn.dataset.mood; } }, 1300);
+  pokeT = setTimeout(() => { if (btn.isConnected) { btn.innerHTML = mascotSVG(base, { size, ring, gender }); delete btn.dataset.mood; } }, 1300);
 }

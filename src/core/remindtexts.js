@@ -3,7 +3,7 @@
 // «Алекс, сегодня практика…».
 import { quoteAt, dayIndex, setsOf } from './quotes.js';
 import { remindOf } from './reminders.js';
-import { getLang } from '../i18n/index.js';
+import { getLang, mascotGender } from '../i18n/index.js';
 
 const T = {
   ru: {
@@ -58,6 +58,36 @@ const T = {
     },
   },
 };
+// Мелетий (мужской вариант маскота): реплики, где он говорит о себе (остальные — общие)
+const PUSHY_M = {
+  ru: {
+    morning: ['Доброе утро! Сегодня ведь будет практика? 🥺', 'Мелетий проснулся раньше всех и уже ждёт у инструмента'],
+    lunch: ['Обед — отличное время подумать о гаммах', 'Мелетий просто напоминает. Ещё раз. На всякий случай 👉👈'],
+    afternoon: ['Мелетий совсем не навязывается…', '…просто инструмент сегодня ещё не открывали. Совсем-совсем'],
+    dinner: ['Перед ужином — пятнадцать минут практики?', 'И Мелетий будет самым счастливым на свете ✨'],
+    'lead:60': ['Через час практика! Ура-ура', 'Мелетий уже настроил камертон и сидит у инструмента'],
+    after: ['Время занятий прошло… Мелетий не обижается', 'Совсем чуть-чуть. Но ещё можно всё исправить'],
+    late: ['Ещё не поздно! Пять минут — и день спасён', 'Мелетий будет ждать. Он всегда ждёт 🥺'],
+  },
+  uz: {
+    morning: ['Xayrli tong! Bugun mash‘ulot bo‘ladi-ku? 🥺', 'Meletiy hammadan oldin uyg‘ondi va cholg‘u yonida kutyapti'],
+    lunch: ['Tushlik — gammalar haqida o‘ylash uchun ajoyib vaqt', 'Meletiy shunchaki eslatyapti. Yana bir bor. Har ehtimolga qarshi 👉👈'],
+    afternoon: ['Meletiy umuman majburlamayapti…', '…shunchaki cholg‘u bugun hali ochilmadi. Umuman'],
+    dinner: ['Kechki ovqatdan oldin — o‘n besh daqiqa mashg‘ulot?', 'Shunda Meletiy dunyodagi eng baxtli bo‘ladi ✨'],
+    'lead:60': ['Bir soatdan keyin mashg‘ulot! Ura-ura', 'Meletiy kamertonni sozlab, cholg‘u yonida o‘tiribdi'],
+    after: ['Mashg‘ulot vaqti o‘tdi… Meletiy xafa emas', 'Ozgina xolos. Lekin hali hammasini tuzatish mumkin'],
+    late: ['Hali kech emas! Besh daqiqa — va kun qutqarildi', 'Meletiy kutadi. U doim kutadi 🥺'],
+  },
+  en: {
+    morning: ['Good morning! There will be practice today, right? 🥺', 'Meletius woke up before everyone and is already waiting by the instrument'],
+    lunch: ['Lunch is a great time to think about scales', 'Meletius is just reminding. Again. Just in case 👉👈'],
+    afternoon: ['Meletius isn’t being pushy at all…', '…it’s just that the instrument hasn’t been opened today. Not even once'],
+    dinner: ['Fifteen minutes of practice before dinner?', 'And Meletius will be the happiest in the world ✨'],
+    'lead:60': ['Practice in an hour! Yay', 'Meletius has tuned the fork and is sitting by the instrument'],
+    after: ['Practice time has passed… Meletius isn’t upset', 'Just a tiny bit. But it can all still be fixed'],
+    late: ['It’s not too late! Five minutes and the day is saved', 'Meletius will wait. He always waits 🥺'],
+  },
+};
 const lowerFirst = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 
 // Текст напоминания: { i, ts, n, slot, mode } + язык, наборы слов, свои сборники, имя (если обращение по имени)
@@ -76,7 +106,8 @@ export function remindText({ i = 0, ts = Date.now(), slot = 'lead:60', mode = 'c
       else slot = m === 0 ? 'call' : m >= -5 ? 'lead:5' : m > -60 ? 'soon:' + -m : 'lead:' + Math.round(-m / 60) * 60;
     }
   }
-  if (mode === 'pushy') [title, body] = L.pushy[slot.startsWith('lead:') && slot !== 'lead:5' ? 'lead:60' : slot] || L.pushy.afternoon;
+  const PU = mascotGender() === 'm' ? { ...L.pushy, ...(PUSHY_M[lang] || PUSHY_M.ru) } : L.pushy;
+  if (mode === 'pushy') [title, body] = PU[slot.startsWith('lead:') && slot !== 'lead:5' ? 'lead:60' : slot] || PU.afternoon;
   else if (slot === 'lead:5') [title, body] = L.five;
   else if (slot === 'after') [title, body] = L.after;
   else if (slot === 'call' || slot.startsWith('soon:')) {
@@ -93,7 +124,7 @@ export function remindText({ i = 0, ts = Date.now(), slot = 'lead:60', mode = 'c
 
 // Строка навязчивой Мелеты для главной: по времени суток (утро → перед обедом → днём → перед ужином → вечер)
 export function pleaLine(h, lang = 'ru') {
-  const P = (T[lang] || T.ru).pushy;
+  const P0 = (T[lang] || T.ru).pushy, P = mascotGender() === 'm' ? { ...P0, ...(PUSHY_M[lang] || PUSHY_M.ru) } : P0;
   return (h < 12 ? P.morning : h < 15 ? P.lunch : h < 18 ? P.afternoon : h < 20 ? P.dinner : P.late)[0];
 }
 export const PUSHY_TEXTS = T;

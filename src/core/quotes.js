@@ -7,6 +7,8 @@
 // 3) Слова людей (SAYINGS) — проверенные цитаты с автором и источником.
 // Свои тексты (зовы) — без прямого обращения на «ты/вы» (правило проекта); в цитатах оно остаётся как у автора.
 
+import { mascotGender } from '../i18n/index.js';
+
 export const SCRIPTURE = [
   // at — книга, глава, стих в public/bible/synodal (по нему тест сверяет русский текст дословно)
   { at: 'COL 3 23', ref: 'Кол 3:23', refEn: 'Col 3:23', ru: 'И все, что делаете, делайте от души, как для Господа, а не для человеков', en: 'And whatsoever ye do, do it heartily, as to the Lord, and not unto men', uz: 'Har bir ishni insonlar uchun emas, Rabbimiz Iso Masih uchun qilayotganday chin qalbdan bajaringlar', refUz: 'Kolosaliklar 3:23' },
@@ -247,7 +249,7 @@ export function quoteAt(i, lang = 'ru', sets = true, books = []) {
   if (q.s) return L === 'en' ? { text: q.s.en, ref: q.s.refEn } : L === 'uz' ? { text: q.s.uz, ref: q.s.refUz } : { text: q.s.ru, ref: q.s.ref };
   if (q.w) return { text: q.w[L], ref: L === 'en' ? q.w.whoEn : L === 'uz' ? q.w.whoUz : q.w.who };
   if (q.o) return { text: q.o.text, ref: q.o.by };
-  if (q.x) return { text: q.x[{ ru: 0, en: 1, uz: 2 }[L]], ref: { ru: 'Цитатник Мелеты', en: 'Melete’s book of wisdom', uz: 'Meleta hikmatlari' }[L] };
+  if (q.x) return { text: q.x[{ ru: 0, en: 1, uz: 2 }[L]], ref: (mascotGender() === 'm' ? { ru: 'Цитатник Мелетия', en: 'Meletius’s book of wisdom', uz: 'Meletiy hikmatlari' } : { ru: 'Цитатник Мелеты', en: 'Melete’s book of wisdom', uz: 'Melete hikmatlari' })[L] };
   return { text: q.m[L] };
 }
 
