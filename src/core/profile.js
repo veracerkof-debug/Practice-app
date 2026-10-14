@@ -20,6 +20,7 @@ const BY_LEVEL = {
 export function toolsFor(level, instruments = [], all = []) {
   const on = new Set(BY_LEVEL[level] || all.filter((id) => id !== 'theremin')); // продвинутым — всё, кроме камеры
   if (instruments.includes('vocal')) { on.add('piano'); on.add('drone'); } // голосу нужна опора для интонации
+  on.add('bible'); // церковный режим включён по умолчанию — Библия у всех (видна, только пока режим включён)
   if (instruments.length && instruments.every((x) => x === 'piano' || x === 'drums')) on.delete('tuner'); // настраивать нечего
   return all.filter((id) => on.has(id));
 }

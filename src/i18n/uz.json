@@ -1214,5 +1214,7 @@
   "mascot.none.sub": "matnlar va maslahatlar — betaraf",
   "mascot.says": "Melete maslahati:",
   "mascot.says@m": "Meletiy maslahati:",
-  "mascot.says@n": "Maslahat:"
+  "mascot.says@n": "Maslahat:",
+  "ob.mascotTitle": "Kim yonida boʻladi",
+  "ob.mascotText": "Maskot mashq haqida eslatadi va har kuni bitta soʻz aytadi. Maskotsiz ham boʻladi — unda hammasi betaraf. Eslatmalar feʼli — shu yerda; qolgani oʻzi sozlanadi va keyin sozlamalarda oʻzgartiriladi."
 }

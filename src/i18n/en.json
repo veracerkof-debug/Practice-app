@@ -1241,5 +1241,7 @@
   "mascot.none.sub": "texts and hints stay neutral",
   "mascot.says": "Melete’s tip:",
   "mascot.says@m": "Meletius’s tip:",
-  "mascot.says@n": "Tip:"
+  "mascot.says@n": "Tip:",
+  "ob.mascotTitle": "Who will be beside",
+  "ob.mascotText": "The mascot reminds about practice and says one word a day. It also works without a mascot — then everything stays neutral. The reminder character is set here; the rest sets itself up and can be changed later in settings."
 }

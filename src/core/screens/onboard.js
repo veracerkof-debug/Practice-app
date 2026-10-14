@@ -18,7 +18,9 @@ import { TOS_VER } from '../legal.js';
 import { legalSheet } from './panel.js';
 import { weekdays } from './common.js';
 
-const STEPS = ['name', 'inst', 'level', 'tools', 'exp', 'goal', 'melete'];
+// Регистрация — коротко (решение автора): маскот и характер, имя, инструменты, уровень. Остальное — по умолчанию
+// (цель и набор инструментов — по уровню, церковный режим, демо-набор) и меняется потом в настройках
+const STEPS = ['melete', 'name', 'inst', 'level'];
 
 // Карточки для выбора (инструменты, уровень)
 const card = (attr, on, title, sub = '') => '<button type="button" class="obcard' + (on ? ' on' : '') + '" ' + attr + ' aria-pressed="' + on + '"><b>' + esc(title) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</button>';
@@ -30,8 +32,10 @@ export function onboarding(app, done = () => {}) {
   if (document.getElementById('onboard')) return;
   const st = app.store.state.settings;
   const p = { ...newProfile(), ...(st.profile || {}) };
-  // новому человеку — классические напоминания (выбор — на последнем шаге)
+  // новому человеку — классические напоминания, Мелетий, церковный режим (наборы слов — классика, рок и джаз, Библия, христианские авторы)
   if (!st.remind) setRemind(st, { mode: 'classic' });
+  if (!st.mascot) st.mascot = 'm';
+  if (st.church == null) st.church = true;
   const f = { step: 0, years: 0, perWeek: 0, goalMin: st.goalMin, days: st.days.slice(), goalTouched: false, tools: null, toolsTouched: false };
   const allIds = modules.map((m) => m.id);
   const aboutOf = (m) => { const l = getLang(); return m.i18n?.[l]?.about ?? m.i18n?.ru?.about ?? ''; };
@@ -48,8 +52,6 @@ export function onboarding(app, done = () => {}) {
     if (s === 'name') {
       return '<h1 class="obh">' + t('ob.hello') + '</h1><p class="obp">' + t('ob.intro') + '</p>' +
         '<div class="hdr">' + t('ob.name') + '</div><div class="group"><label class="cell"><input class="inp left" id="obname" maxlength="40" autocomplete="given-name" placeholder="' + t('ob.namePh') + '" aria-label="' + t('ob.name') + '" value="' + esc(p.name) + '"></label></div>' +
-        '<div class="hdr">' + t('look.lang') + '</div><div class="group"><div class="cellcol"><div class="seg uc" role="group" aria-label="' + t('look.lang') + '">' +
-        LANGS.map((k) => '<button type="button" data-oblang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>' +
         '<p class="ftr">' + t('ob.private') + '</p>' +
         // уже есть свои данные (файл от команды или собранный нейросетью) — сразу загрузить
         '<div class="hdr">' + t('ob.import') + '</div><div class="group"><button type="button" class="cell act" data-obimp="file">' + t('ai.load') + '</button>' +
@@ -63,31 +65,9 @@ export function onboarding(app, done = () => {}) {
       return '<h1 class="obh">' + t('ob.levelTitle') + '</h1><p class="obp">' + t('ob.levelText') + '</p><div class="oblist">' +
         LEVELS.map((k) => card('data-oblevel="' + k + '"', p.level === k, t('level.' + k), t('level.' + k + '.text'))).join('') + '</div>';
     }
-    // Набор инструментов: по уровню и инструментам подставлен, любой можно отметить или снять
-    if (s === 'tools') {
-      return '<h1 class="obh">' + t('ob.toolsTitle') + '</h1><p class="obp">' + t('ob.toolsText.' + (p.level === 'beginner' ? 'beginner' : 'other')) + '</p><div class="oblist">' +
-        modules.filter((m) => !m.tab).map((m) => '<button type="button" class="obcard obtool' + (f.tools.includes(m.id) ? ' on' : '') + '" data-obtool="' + m.id + '" aria-pressed="' + f.tools.includes(m.id) + '">' +
-          '<span class="obtic" style="background:' + (m.color || '#8E8E93') + ';color:' + (m.on || '#fff') + '">' + m.icon + '</span><span><b>' + esc(moduleName(m)) + '</b><small>' + esc(aboutOf(m)) + '</small></span></button>').join('') +
-        '</div><p class="ftr">' + t('ob.toolsHint') + '</p>';
-    }
     // Мелета: характер напоминаний и маскота, время занятий, обращение, наборы слов
-    if (s === 'melete') return '<h1 class="obh">' + t('ob.meleteTitle') + '</h1><p class="obp">' + t('ob.meleteText') + '</p>' + meleteHTML(st, { sets: true });
-    if (s === 'exp') {
-      return '<h1 class="obh">' + t('ob.expTitle') + '</h1><p class="obp">' + t('ob.expText') + '' + '</p>' +
-        '<div class="group"><label class="cell"><span class="grow">' + t('ob.hours') + '</span><input class="inp num obhours" id="obhours" type="number" inputmode="numeric" min="0" max="' + PRIOR_MAX + '" placeholder="0" aria-label="' + t('ob.hours') + '" value="' + (p.priorHours || '') + '"></label></div>' +
-        '<div class="hdr">' + t('ob.calc') + '</div><div class="group"><label class="cell"><span class="grow">' + t('ob.years') + '</span><input class="inp num" id="obyears" type="number" inputmode="decimal" min="0" max="80" step="0.5" placeholder="0" value="' + (f.years || '') + '"></label>' +
-        '<label class="cell"><span class="grow">' + t('ob.perWeek') + '</span><input class="inp num" id="obweek" type="number" inputmode="decimal" min="0" max="80" step="0.5" placeholder="0" value="' + (f.perWeek || '') + '"></label>' +
-        '<button type="button" class="cell act center" data-obcalc>' + t('ob.calcUse', { h: estimateHours(f.years, f.perWeek) }) + '</button></div>' +
-        '<div class="obgem">' + leagueBox() + '</div>';
-    }
-    const WD = weekdays();
-    return '<h1 class="obh">' + t('ob.goalTitle') + '</h1><p class="obp">' + t('ob.goalText') + '</p>' +
-      '<div class="hdr">' + t('week.goal') + '</div><div class="group"><div class="cell"><span class="grow">' + t('week.perWeek') + '</span><span class="val num" style="color:var(--ink);margin-right:6px">' + fmtDur(f.goalMin * 60) +
-      '</span><span class="stepper"><button type="button" data-obgoal="-30" aria-label="' + t('week.minus30') + '">−</button><button type="button" data-obgoal="30" aria-label="' + t('week.plus30') + '">+</button></span></div></div>' +
-      '<p class="ftr">' + t('ob.goalHint') + '</p>' +
-      '<div class="hdr">' + t('week.days') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" aria-label="' + t('week.days') + '">' +
-      WD.map((d, i) => '<button type="button" data-obday="' + i + '" aria-pressed="' + !!f.days[i] + '">' + d + '</button>').join('') + '</div></div></div>' +
-      '<p class="ftr">' + t('week.restHint') + '</p>';
+    if (s === 'melete') return '<h1 class="obh">' + t('ob.mascotTitle') + '</h1><p class="obp">' + t('ob.mascotText') + '</p>' + meleteHTML(st);
+    return '';
   };
 
   const render = () => {
@@ -110,6 +90,9 @@ export function onboarding(app, done = () => {}) {
   };
 
   const finish = () => {
+    // по уровню — набор инструментов и цель недели; дни — как есть (будни)
+    f.tools = toolsFor(p.level, p.instruments, allIds);
+    f.goalMin = GOAL_BY_LEVEL[p.level];
     saveProfile(app.store, p, { done: true });
     // не отмеченные инструменты выключаются (как в «Настройки → Функции»); функции ядра в st.off не трогаются
     const off = st.off || (st.off = {});
@@ -122,6 +105,8 @@ export function onboarding(app, done = () => {}) {
     app.saveDevice();
     layer.remove();
     toast(t('ob.welcome', { name: p.name.trim() || t('ob.musician') }));
+    // демо-набор — сразу (песни, табы, ноты, записи, события); убрать — «Данные и копии»
+    import('../demo.js').then((m) => m.addDemo(app, t)).then(() => app.render && app.render()).catch(() => {});
     done();
   };
 

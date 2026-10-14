@@ -279,8 +279,9 @@ function dataHTML(app) {
     '<p class="ftr">' + t('data.hint') + '</p>' +
     folderHTML(app) +
     // демо-набор: песни, табулатуры, ноты, записи и события — показать, как всё устроено; убирается одной кнопкой
-    '<div class="hdr">' + t('demo.title') + '</div><div class="group"><button class="cell act' + (demo ? ' danger' : '') + '" data-act="demo">' + t(demo ? 'demo.remove' : 'demo.add') + '</button></div>' +
-    '<p class="ftr">' + t('demo.hint') + '</p>' +
+    // демо-набор ставится при регистрации; здесь — только убрать (решение автора)
+    (demo ? '<div class="hdr">' + t('demo.title') + '</div><div class="group"><button class="cell act danger" data-act="demo">' + t('demo.remove') + '</button></div>' +
+    '<p class="ftr">' + t('demo.hint') + '</p>' : '') +
     '<div class="group" style="margin-top:28px"><button class="cell danger center" data-act="reset">' + t('data.reset') + '</button></div>';
 }
 
