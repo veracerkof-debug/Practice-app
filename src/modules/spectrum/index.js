@@ -28,7 +28,7 @@ let freq = null, time = null, wts = null;
 const st = () => ctx.store.all();
 const cfg = () => {
   const s = st();
-  s.view ??= 'spec'; s.weight ??= 'A'; s.speed ??= 'fast'; s.cal ??= 0; s.hold ??= true;
+  s.weight ??= 'A'; s.speed ??= 'fast'; s.cal ??= 0; s.hold ??= true;
   return s;
 };
 const big = () => size === 'full' || size === 'half';
@@ -144,30 +144,24 @@ function micNote() {
   return '<div class="spnomic" role="alert"><span>' + t(micErr === 'denied' ? 'micDenied' : 'micNone') + '</span><button class="link" data-x="spretry">' + t('micRetry') + '</button></div>';
 }
 
-function splHTML() {
-  const { t } = ctx, c = cfg();
+// Одно окно (решение автора): сверху спектр, под ним уровень — крупное число, полоса и мин / Leq / макс;
+// управление — одной полосой внизу. В полоске окна — спектр и число рядом
+function allHTML() {
+  const { t, ui } = ctx, c = cfg();
+  const cv = '<div class="spbox"><canvas id="spcv" role="img" aria-label="' + t('specAria') + '"></canvas><span class="spdom num" id="spdom"></span>' +
+    '<div class="spclip" id="spclip" hidden>' + t('clip') + '</div></div>';
+  if (size === 'strip') return '<div class="srow2">' + cv + '<b class="splv num" id="splv">—</b><span class="l2" id="splw">' + t('unit.' + c.weight) + '</span></div>';
   const stats = '<div class="splst num"><span>' + t('min') + '<b id="splmin">—</b></span><span>' + t('leq') + '<b id="splleq">—</b></span><span>' + t('max') + '<b id="splmax">—</b></span></div>';
-  if (size === 'strip') return '<div class="srow2">' + '<b class="splv num" id="splv">—</b><span class="l2" id="splw">' + t('unit.' + c.weight) + '</span><span class="sgrow"></span><div class="splmeter sm"><i id="splbar"></i></div></div>';
-  return '<div class="splwrap"><div class="splbig"><b class="splv num" id="splv">—</b><span class="l2" id="splw">' + t('unit.' + c.weight) + '</span></div>' +
-    '<div class="splmeter" aria-hidden="true"><i id="splbar"></i><em style="left:50%"></em><em style="left:65%"></em></div>' +
-    (big() ? '<div class="splscale l2">' + [20, 70, 85, 120].map((v) => '<span style="left:' + (v - 20) + '%">' + v + '</span>').join('') + '</div>' + stats : stats) +
-    '<div class="spclip" id="spclip" hidden>' + t('clip') + '</div>' +
-    (big() ? '<div class="vrow tight spctl">' + ctx.ui.icb('data-x="spreset"', I.reset, t('resetStats'), 'sm') + '</div><p class="ftr spnote">' + t('approx') + '</p>' : '') + '</div>';
-}
-
-function specHTML() {
-  const { t, ui } = ctx;
-  const cv = '<div class="spbox"><canvas id="spcv" role="img" aria-label="' + t('specAria') + '"></canvas><span class="spdom num" id="spdom"></span></div>';
-  if (size === 'strip') return '<div class="srow2">' + cv + '</div>';
-  return '<div class="spwrap">' + cv + (big() ? '<div class="vrow tight spctl">' + ui.icb('data-x="spfreeze"', M.frozen ? I.play : I.pause, t(M.frozen ? 'unfreeze' : 'freeze'), 'sm') + '</div>' : '') + '</div>';
+  const lvl = '<div class="spl2"><div class="splbig"><b class="splv num" id="splv">—</b><span class="l2" id="splw">' + t('unit.' + c.weight) + '</span></div>' +
+    '<div class="spl2r"><div class="splmeter" aria-hidden="true"><i id="splbar"></i><em style="left:50%"></em><em style="left:65%"></em></div>' + (size === 'quarter' ? '' : stats) + '</div></div>';
+  const ctl = big() ? '<div class="vrow tight spctl">' + ui.icb('data-x="spfreeze"', M.frozen ? I.play : I.pause, t(M.frozen ? 'unfreeze' : 'freeze'), 'sm') +
+    ui.icb('data-x="spreset"', I.reset, t('resetStats'), 'sm') + ui.icb('data-x="spset"', ui.icons.gear, t('settings'), 'sm') + '</div>' : '';
+  return cv + lvl + ctl;
 }
 
 function render() {
   if (!host) return;
-  const { t, ui } = ctx, c = cfg();
-  const head = big() ? '<div class="sphead">' + ui.seg('spview', [['spec', t('view.spec')], ['spl', t('view.spl')]], c.view, t('view.aria')) +
-    ui.icb('data-x="spset"', ui.icons.gear, t('settings'), 'sm') + '</div>' : '';
-  host.innerHTML = '<div class="spmod ' + size + '">' + head + (c.view === 'spl' ? splHTML() : specHTML()) + micNote() + '</div>';
+  host.innerHTML = '<div class="spmod all ' + size + '">' + allHTML() + micNote() + '</div>';
   updateNumbers();
 }
 
@@ -183,7 +177,7 @@ function settingsSheet() {
     (c.cal > 0 ? '+' : '') + ctx.num(c.cal, 1) + ' ' + t('db') + '</span>' + ui.stepper('cal', t('set.offset')) + '</div>' +
     '<div class="cell"><button class="link" data-x="calreset">' + t('set.calReset') + '</button></div></div><p class="ftr">' + t('set.calHint') + '</p>' +
     '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('set.hold') + '</span>' + ui.sw('sphold', c.hold, t('set.hold')) + '</div></div>' +
-    '<p class="ftr">' + t('privacy') + '</p>';
+    '<p class="ftr">' + t('approx') + ' ' + t('privacy') + '</p>';
   ui.sheet(body, (el, sh) => {
     const done = () => { ctx.store.save(); sh.update(); render(); };
     el.addEventListener('click', (e) => {
