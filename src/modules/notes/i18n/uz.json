@@ -84,5 +84,10 @@
   "pdf.err.pw": "Fayl parol bilan himoyalangan",
   "pdf.err.mem": "Qurilma xotirasi yetmadi",
   "pdf.err.other": "PDF ochilmadi",
-  "pdf.err.read": "Fayl oʻqilmayapti. Uni telefon xotirasiga saqlab, qayta yuklash maʼqul"
+  "pdf.err.read": "Fayl oʻqilmayapti. Uni telefon xotirasiga saqlab, qayta yuklash maʼqul",
+  "lib.title": "Matnlar va akkordlar",
+  "lib.withText": "Matnli",
+  "lib.noText": "Matnsiz — qo‘shish",
+  "lib.empty": "Hozircha matnlar yo‘q: ularni qo‘shiqqa qo‘shish yoki .cho/.txt fayl sifatida Melete → Lyrics jildiga qo‘yish mumkin.",
+  "lib.session": "sessiyada"
 }

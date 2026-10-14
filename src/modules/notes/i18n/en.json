@@ -85,5 +85,10 @@
   "pdf.err.pw": "The file is password-protected",
   "pdf.err.mem": "Not enough device memory",
   "pdf.err.other": "The PDF did not open",
-  "pdf.err.read": "The file cannot be read. Save it to the phone storage and upload it again"
+  "pdf.err.read": "The file cannot be read. Save it to the phone storage and upload it again",
+  "lib.title": "Lyrics and chords",
+  "lib.withText": "With lyrics",
+  "lib.noText": "No lyrics — add",
+  "lib.empty": "No lyrics yet: add them to a song or drop a .cho/.txt file into the Melete → Lyrics folder.",
+  "lib.session": "in session"
 }

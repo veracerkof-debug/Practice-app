@@ -322,14 +322,32 @@ function songKey(song) {
   return d.length ? (tonicIsMinor(d) ? { pc: 9, minor: true, sharp: null, assumed: true } : { pc: 0, minor: false, sharp: null, assumed: true }) : null;
 }
 const viewOf = () => (st().view === 'degrees' ? 'degrees' : 'chords');
+// Чей текст на экране: выбранный в библиотеке текстов (пока идёт та же сессия) или песни сессии
+function textId() {
+  const sess = ctx.session && ctx.session.songId, p = st().textPick;
+  if (p && ctx.song(p.id) && (!sess || p.sess === sess)) return p.id;
+  return sess || (p && ctx.song(p.id) ? p.id : null);
+}
+const curSong = () => { const id = textId(); return id ? ctx.song(id) : null; };
+const updCur = (patch) => { const id = textId(); if (id) ctx.updateSong(patch, id); };
+
+// Библиотека текстов и аккордов: все песни — сначала с текстом, потом без (добавить текст)
+function textLibHTML(withTitle = true) {
+  const { t } = ctx, all = ctx.songs(), cur = textId(), sess = ctx.session && ctx.session.songId;
+  const row = (s) => '<button class="cell act" data-x="npick" data-id="' + esc(s.id) + '"' + (s.id === cur ? ' aria-current="true"' : '') + '><span class="grow" style="text-align:left"><span>' + esc(s.title) +
+    (s.id === sess ? ' <span class="lchip sm off">' + t('lib.session') + '</span>' : '') + '</span><span class="st l2" style="display:block;font-size:12.5px">' + esc([s.artist, s.key].filter(Boolean).join(' · ')) + '</span></span></button>';
+  const w = all.filter((s) => s.text), wo = all.filter((s) => !s.text);
+  return (withTitle ? '' : '') + (w.length ? '<div class="hdr">' + t('lib.withText') + '</div><div class="group">' + w.map(row).join('') + '</div>' : '<p class="l2" style="font-size:14px;text-align:center;margin:14px 8px">' + t('lib.empty') + '</p>') +
+    (wo.length ? '<div class="hdr">' + t('lib.noText') + '</div><div class="group">' + wo.map(row).join('') + '</div>' : '');
+}
 const dstyle = () => (st().dstyle === 'nash' ? 'nash' : 'roman');
 
 function textBody() {
-  const { t } = ctx, song = ctx.song();
-  if (!song) return '<div class="vq l2" style="font-size:14px">' + t('textNeedsSong') + '</div>';
+  const { t } = ctx, song = curSong();
+  if (!song) return '<div class="tablist">' + (ctx.songs().length ? textLibHTML() : '<div class="vq l2" style="font-size:14px">' + t('textNeedsSong') + '</div>') + '</div>';
   const n = song.tr, key = songKey(song);
   const keyBtn = key ? '<button class="trkey num" data-x="nkey" aria-label="' + esc(t('tr.pick')) + '">' + esc(keyLabel(key)) + (n ? ' → <b>' + esc(keyLabel(shiftKey(key, n))) + '</b>' : '') + '</button>' : '';
-  return '<div class="ntools"><div class="vrow tight">' + icb('data-x="ntr" data-d="-1"', I.minus, t('trDown'), 'sm') + '<span class="num trv">' + (n > 0 ? '+' : '') + n + '</span>' +
+  return '<div class="ntools">' + icb('data-x="nlib"', I.list, t('lib.title'), 'sm') + '<span class="sgrow aname" style="text-align:left">' + esc(song.title) + '</span></div><div class="ntools"><div class="vrow tight">' + icb('data-x="ntr" data-d="-1"', I.minus, t('trDown'), 'sm') + '<span class="num trv">' + (n > 0 ? '+' : '') + n + '</span>' +
     icb('data-x="ntr" data-d="1"', I.plus, t('trUp'), 'sm') + keyBtn +
     // вид: аккорды или ступени (римские цифры / нэшвиллская запись — в выборе тональности)
     (key ? '<button class="trview" data-x="nview" aria-pressed="' + (viewOf() === 'degrees') + '" aria-label="' + esc(t(viewOf() === 'degrees' ? 'deg.toChords' : 'deg.toDegrees')) + '">' +
@@ -374,7 +392,7 @@ function tabSheet() {
 
 // Выбор тональности напрямую: 12 вариантов того же наклонения, «Исходная» — сброс сдвига
 function keySheet() {
-  const { t, ui } = ctx, song = ctx.song(), key = song && songKey(song);
+  const { t, ui } = ctx, song = curSong(), key = song && songKey(song);
   if (!key) return;
   const opts = Array.from({ length: 12 }, (_, i) => { const d = shiftTo(key, (key.pc + i) % 12); return { d, label: keyLabel(shiftKey(key, d)) }; }).sort((a, b) => a.d - b.d);
   ui.sheet(() => ui.snav(t('tr.key')) + '<p class="ftr" style="margin-top:0">' + esc(t(key.given ? 'tr.fromSong' : key.assumed ? 'tr.fromAssumed' : 'tr.fromChords', { k: keyLabel(key) })) + '</p>' +
@@ -392,19 +410,29 @@ function keySheet() {
     }
     const b = e.target.closest('[data-trd]');
     if (!b) return;
-    ctx.updateSong({ tr: +b.dataset.trd });
+    updCur({ tr: +b.dataset.trd });
     sh.close();
     render();
   }));
 }
 
+// Шторка библиотеки текстов
+function libSheet() {
+  const { t, ui } = ctx;
+  ui.sheet(() => ui.snav(t('lib.title')) + textLibHTML(), (el, sh) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-x="npick"]');
+    if (!b) return;
+    e.stopPropagation(); sh.close(); act('npick', b);
+  }, true));
+}
+
 function lyricsEdit() {
-  const { t, ui } = ctx, song = ctx.song();
+  const { t, ui } = ctx, song = curSong();
   if (!song) return;
   ui.sheet(() => ui.snav(t('sec.text'), { left: '<button class="link l" data-close>' + t('cancel') + '</button>', right: '<button class="link b r" id="lsave">' + t('save') + '</button>' }) +
     '<div class="group"><textarea class="ta" id="lta" style="min-height:52vh" aria-label="' + t('sec.text') + '" placeholder="' + esc(t('textPh')) + '">' + esc(song.notes) + '</textarea></div><p class="ftr">' + t('textHint') + '</p>',
   (el, sh) => el.querySelector('#lsave').addEventListener('click', () => {
-    ctx.updateSong({ notes: el.querySelector('#lta').value });
+    updCur({ notes: el.querySelector('#lta').value });
     sh.close();
     render();
   }));
@@ -463,7 +491,7 @@ async function onFile(e) {
   const song = ctx.song();
   let first = null, lost = false;
   for (const f of list) {
-    const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type,
+    const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), ext: (/\.([^.]+)$/.exec(f.name) || [])[1] || '', size: f.size, type: f.type,
       fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' || (await sniffPdf(f)) ? 'pdf' : 'score',
       songs: song ? [song.id] : [], created: Date.now(), blob: f };
     const { saved, rr, ok } = await storeFile(rec, f);
@@ -483,7 +511,9 @@ function act(a, el) {
   const { t, ui } = ctx, x = el.dataset.id ? ctx.files.get(el.dataset.id) : null;
   switch (a) {
     case 'nsec': st().sec = el.dataset.v; ctx.store.save(); render(); break;
-    case 'ntr': { const s = ctx.song(); if (s) { ctx.updateSong({ tr: s.tr + +el.dataset.d }); render(); } break; }
+    case 'ntr': { const s = curSong(); if (s) { updCur({ tr: s.tr + +el.dataset.d }); render(); } break; }
+    case 'nlib': libSheet(); break;
+    case 'npick': st().textPick = { id: el.dataset.id, sess: (ctx.session && ctx.session.songId) || null }; ctx.store.save(); render(); break;
     case 'nfs': st().fs = Math.max(11, Math.min(26, (st().fs || 15) + +el.dataset.d)); ctx.store.save(); render(); break;
     case 'nedit': lyricsEdit(); break;
     case 'nkey': keySheet(); break;

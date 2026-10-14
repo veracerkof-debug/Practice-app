@@ -91,8 +91,8 @@ export function makeCtx(app, mod) {
     // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
     files: app.files,
     confirmUpload: () => app.confirmUpload(),
-    // Песни библиотеки — только чтение: [{ id, title }]
-    songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title })),
+    // Песни библиотеки — только чтение: [{ id, title, artist, key, text }] (text — есть ли текст с аккордами)
+    songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title, artist: s.artist || '', key: s.key || null, text: !!String(s.notes || '').trim() })),
     // Данные модуля в общем состоянии (попадают в резервную копию): state.settings[id]
     data: () => (app.store.state.settings[mod.id] ??= {}),
     saveData: () => app.store.settingsChanged(),
@@ -122,14 +122,15 @@ export function makeCtx(app, mod) {
     peek: (id) => JSON.parse(JSON.stringify(app.device[id] || {})),
     shared: app.shared,
     get session() { return app.active ? { type: app.active.type, songId: app.active.songId } : null; },
-    // Песня текущей сессии (копия): { id, title, notes, tr, key } или null
-    song() {
-      const s = app.active && app.active.songId && app.store.songById(app.active.songId);
+    // Песня (копия): { id, title, notes, tr, key } или null. Без id — песня текущей сессии; с id — любая из библиотеки
+    // (библиотека текстов и аккордов в «Табах и текстах»)
+    song(id) {
+      const s = id ? app.store.songById(id) : app.active && app.active.songId && app.store.songById(app.active.songId);
       return s ? { id: s.id, title: s.title, notes: s.notes || '', tr: s.tr || 0, key: s.key || null } : null;
     },
-    // Правка песни текущей сессии: только текст с аккордами (notes) и транспонирование (tr)
-    updateSong(patch) {
-      const s = app.active && app.active.songId && app.store.songById(app.active.songId);
+    // Правка песни (без id — текущей сессии): только текст с аккордами (notes) и транспонирование (tr)
+    updateSong(patch, id) {
+      const s = id ? app.store.songById(id) : app.active && app.active.songId && app.store.songById(app.active.songId);
       if (!s) return;
       if ('notes' in patch) s.notes = String(patch.notes);
       if ('tr' in patch) s.tr = Math.max(-11, Math.min(11, Math.round(+patch.tr || 0)));

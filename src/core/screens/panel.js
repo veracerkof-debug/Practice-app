@@ -254,10 +254,24 @@ function lookHTML(app) {
     [20, 60, 100].map((p) => mBadge(p, st)).join('') + '</div></div><p class="ftr">' + t('look.scaleHint') + '</p>';
 }
 
+// Папка Melete (Android): выбрать, синхронизировать, восстановить данные из папки
+function folderHTML(app) {
+  const F = app.folder;
+  if (!F || !F.available) return '<div class="hdr">' + t('fold.title') + '</div><p class="ftr" style="margin-top:0">' + t('fold.webOnly') + '</p>';
+  const s = F.state;
+  return '<div class="hdr">' + t('fold.title') + '</div><div class="group">' +
+    '<div class="cell"><span class="grow"><span>' + (s.ok ? esc(s.name || t('fold.chosen')) : t('fold.none')) + '</span>' +
+    (s.ok ? '<span class="st l2" style="display:block;font-size:13px">' + (F.busy ? t('fold.busy') : F.last ? t('fold.last', { t: new Date(F.last).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit' }) }) : t('fold.ready')) + '</span>' : '') + '</span></div>' +
+    '<button class="cell act" data-fold="pick">' + t(s.ok ? 'fold.change' : 'fold.pick') + '</button>' +
+    (s.ok ? '<button class="cell act" data-fold="sync">' + t('fold.sync') + '</button><button class="cell act" data-fold="restore">' + t('fold.restore') + '</button><button class="cell act danger" data-fold="forget">' + t('fold.forget') + '</button>' : '') +
+    '</div><p class="ftr">' + t('fold.hint') + '</p>';
+}
+
 function dataHTML(app) {
   const demo = hasDemo(app.store.state);
   return '<div class="large">' + t('data.title') + '</div><div class="group"><button class="cell act" data-act="export">' + t('data.export') + '</button><button class="cell act" data-act="import">' + t('data.import') + '</button></div>' +
     '<p class="ftr">' + t('data.hint') + '</p>' +
+    folderHTML(app) +
     // демо-набор: песни, табулатуры, ноты, записи и события — показать, как всё устроено; убирается одной кнопкой
     '<div class="hdr">' + t('demo.title') + '</div><div class="group"><button class="cell act' + (demo ? ' danger' : '') + '" data-act="demo">' + t(demo ? 'demo.remove' : 'demo.add') + '</button></div>' +
     '<p class="ftr">' + t('demo.hint') + '</p>' +
@@ -376,6 +390,8 @@ export function createPanel(app, onChange) {
   };
   const changed = () => { app.store.settingsChanged(); render(); onChange(); };
   function bind() {
+    // папка Melete: состояние синхронизации — на странице «Данные и копии»
+    if (app.folder) app.folder.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
     // характер Мелеты (страница «Уведомления»)
     bindMelete(layer, () => app.store.state.settings, { save: () => { app.store.settingsChanged(); onChange(); }, rerender: () => render() });
     layer.addEventListener('click', (e) => {
@@ -430,6 +446,14 @@ export function createPanel(app, onChange) {
         return;
       }
       if (g('[data-act="export"]')) { exportBackup(app); return; }
+      if ((b = g('[data-fold]'))) {
+        const F = app.folder, a = b.dataset.fold;
+        if (a === 'pick') F.pick().then((ok) => { render(); if (ok) toast(t('fold.done')); });
+        else if (a === 'sync') { toast(t('fold.busy')); F.sync().then((r) => { render(); toast(r ? t('fold.synced', { w: r.wrote, r: r.read + r.songs + r.texts }) : t('fold.fail')); }); }
+        else if (a === 'restore') confirm(t('fold.restoreTitle'), t('fold.restoreText'), t('fold.restoreYes')).then((ok) => ok && F.restore().then((n) => { toast(n == null ? t('fold.noData') : tn('data.imported', n)); onChange(); render(); }).catch(() => toast(t('data.notBackup'))));
+        else if (a === 'forget') confirm(t('fold.forgetTitle'), t('fold.forgetText'), t('fold.forget')).then((ok) => ok && F.forget().then(render));
+        return;
+      }
       if (g('[data-act="import"]')) { input.click(); return; }
       if (g('[data-act="reset"]')) {
         confirm(t('data.resetTitle'), t('data.resetText'), t('data.resetYes')).then((ok) => {
