@@ -1128,7 +1128,7 @@
   "hc.melete.name": "Melete and reminders",
   "hc.melete.what": "Melete is the app’s mascot: on the home screen she shows the week’s mood and says one word a day; in notifications she reminds about practice.",
   "hc.melete.1": "Character: “Classic” — an hour and 5 minutes before practice; “Clingy” — all day; “Custom” — an own list; “No notifications” — silence.",
-  "hc.melete.2": "Practice time, how early to remind and addressing by name — in Profile → Notifications.",
+  "hc.melete.2": "Practice time, how early to remind and addressing by name — in this same profile section.",
   "hc.melete.3": "Melete’s words come from the chosen sets: rock and jazz, classical, Bible, Christian writers, the book of wisdom; an own collection can be added.",
   "hc.melete.4": "Tapping Melete makes her react; her face follows the week: glad, happy, waiting, missing practice, asleep.",
   "hc.melete.5": "On a day with practice done, reminders stop; from 22:00 to 8:00 it is quiet.",
@@ -1243,5 +1243,12 @@
   "mascot.says@m": "Meletius’s tip:",
   "mascot.says@n": "Tip:",
   "ob.mascotTitle": "Who will be beside",
-  "ob.mascotText": "The mascot reminds about practice and says one word a day. It also works without a mascot — then everything stays neutral. The reminder character is set here; the rest sets itself up and can be changed later in settings."
+  "ob.mascotText": "The mascot reminds about practice and says one word a day. It also works without a mascot — then everything stays neutral. The reminder character is set here; the rest sets itself up and can be changed later in settings.",
+  "page.mascot": "Melete",
+  "page.mascot@m": "Meletius",
+  "page.mascot@n": "Word of the day and reminders",
+  "page.mascot.sub": "Character, reminders, tamagotchi, words of the day",
+  "page.mascot.sub@n": "Mascot, reminder character, words of the day",
+  "rem.where": "Practice reminders are in the mascot section",
+  "rem.where@n": "Practice reminders are in “Word of the day and reminders”"
 }

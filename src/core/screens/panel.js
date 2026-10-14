@@ -43,13 +43,14 @@ const PAGES = {
   tabs: ['graphite', '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 15.5h17M9.2 15.5v4M14.8 15.5v4"/></svg>'],
   stats: ['blue', '<svg viewBox="0 0 24 24"><path d="M5 20v-6M10 20V9M15 20v-8M20 20V5"/></svg>'],
   week: ['orange', '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg>'],
+  mascot: ['indigo', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M7.5 10q2.2-2.6 4.5 0q2.3-2.6 4.5 0M10.6 11.6v2.4q1.4 1 2.8 0v-2.4M12 15v1.6M9.5 17.2q2.5 1.4 5 0"/></svg>'],
   notif: ['red', '<svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>'],
   look: ['indigo', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" style="fill:var(--on,#fff)"/></svg>'],
   help: ['blue', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.6M12 16.8v.2"/></svg>'],
   data: ['green', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
 // Страницы, которых нет в режиме «Только инструменты»
-const PLAIN_HIDE = ['stats', 'week', 'notif'];
+const PLAIN_HIDE = ['stats', 'week', 'notif', 'mascot'];
 // «Сообщить о проблеме» — лист со строчками журнала
 const BUG = '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 14h7M9 17h4"/></svg>';
 const HEART = '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
@@ -179,11 +180,17 @@ function weekHTML(app) {
 }
 
 // Уведомления: каждое выключается раз и навсегда
+// Маскот (Мелетий, Мелета или без маскота): характер, напоминания, тамагочи, слова дня — свой раздел (решение автора)
+function mascotHTML(app) {
+  const st = app.store.state.settings;
+  return '<div class="large">' + t('page.mascot') + '</div>' + meleteHTML(st, { test: true, sets: true });
+}
+
 function notifHTML(app) {
   const st = app.store.state.settings;
   const row = (k, on) => '<div class="group"><div class="cell"><span class="grow">' + t('notif.' + k) + '</span>' + psw(k, on, t('notif.' + k)) + '</div></div><p class="ftr">' + t('notif.' + k + '.hint') + '</p>';
-  // характер Мелеты — и маскота на главной, и напоминаний (src/core/screens/melete.js)
-  const rem = '<div class="hdr">' + t('rem.style') + '</div>' + meleteHTML(st, { test: true });
+  // напоминания о практике — в разделе маскота (характер, время, «напомнить за»)
+  const rem = '<div class="group"><button class="cell" data-pp="mascot"><span class="grow">' + t('rem.where') + '</span>' + CHEV + '</button></div>';
   return '<div class="large">' + t('page.notif') + '</div>' + rem +
     '<div class="hdr">' + t('rem.inApp') + '</div>' +
     row('askIdle', st.askIdle !== false) + row('noSoundNote', st.noSoundNote !== false) + row('rankNote', st.rankNote !== false);
@@ -393,7 +400,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML }[page](app);
+    const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML }[page](app);
     layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="link" data-pp="root">' + BACK + t('panel.back') + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
     // переход между страницами: вперёд — справа, назад в корень — слева; перерисовка той же страницы — без движения
@@ -403,7 +410,7 @@ export function createPanel(app, onChange) {
     if (page === 'look') mountSizePreview(app, layer);
     // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»
     if (page === 'data') coreHelp(app, 'folder');
-    if (page === 'notif') coreHelp(app, 'melete');
+    if (page === 'mascot') coreHelp(app, 'melete');
     // работа в фоне: отметки ✓ у выданных разрешений — после ответа системы
     const bb = page === 'feat' && layer.querySelector('[data-bgbox]');
     if (bb) {

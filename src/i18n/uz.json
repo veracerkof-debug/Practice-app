@@ -1101,7 +1101,7 @@
   "hc.melete.name": "Melete va eslatmalar",
   "hc.melete.what": "Melete — ilova maskoti: bosh sahifada haftaning kayfiyatini koʻrsatadi va kuniga bitta soʻz aytadi, bildirishnomalarda mashq haqida eslatadi.",
   "hc.melete.1": "Feʼli: «Klassika» — mashgʻulotdan bir soat va 5 daqiqa oldin; «Qistovchi» — kun boʻyi; «Oʻzim» — oʻz roʻyxati; «Bildirishnomasiz» — sukunat.",
-  "hc.melete.2": "Mashgʻulot vaqti, qancha oldin eslatish va ism bilan murojaat — «Profil → Bildirishnomalar»da.",
+  "hc.melete.2": "Mashgʻulot vaqti, qancha oldin eslatish va ism bilan murojaat — profilning shu boʻlimida.",
   "hc.melete.3": "Melete soʻzlari tanlangan toʻplamlardan: rok va jaz, klassika, Muqaddas Kitob, masihiy mualliflar, iqtiboslar kitobi; oʻz toʻplamini qoʻshish mumkin.",
   "hc.melete.4": "Meletega teginish — munosabat; yuzi haftaga qarab oʻzgaradi: xursand, mamnun, kutyapti, sogʻinyapti, uxlayapti.",
   "hc.melete.5": "Mashgʻulot boʻlgan kuni eslatmalar kelmaydi; 22:00 dan 8:00 gacha — sukunat.",
@@ -1216,5 +1216,12 @@
   "mascot.says@m": "Meletiy maslahati:",
   "mascot.says@n": "Maslahat:",
   "ob.mascotTitle": "Kim yonida boʻladi",
-  "ob.mascotText": "Maskot mashq haqida eslatadi va har kuni bitta soʻz aytadi. Maskotsiz ham boʻladi — unda hammasi betaraf. Eslatmalar feʼli — shu yerda; qolgani oʻzi sozlanadi va keyin sozlamalarda oʻzgartiriladi."
+  "ob.mascotText": "Maskot mashq haqida eslatadi va har kuni bitta soʻz aytadi. Maskotsiz ham boʻladi — unda hammasi betaraf. Eslatmalar feʼli — shu yerda; qolgani oʻzi sozlanadi va keyin sozlamalarda oʻzgartiriladi.",
+  "page.mascot": "Melete",
+  "page.mascot@m": "Meletiy",
+  "page.mascot@n": "Kun soʻzi va eslatmalar",
+  "page.mascot.sub": "Feʼl, eslatmalar, tamagochi, kun soʻzlari",
+  "page.mascot.sub@n": "Maskot, eslatmalar feʼli, kun soʻzlari",
+  "rem.where": "Mashq eslatmalari — maskot boʻlimida",
+  "rem.where@n": "Mashq eslatmalari — «Kun soʻzi va eslatmalar» boʻlimida"
 }
