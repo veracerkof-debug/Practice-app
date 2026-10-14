@@ -6,6 +6,7 @@ import { t } from '../i18n/index.js';
 import { esc, toast, leave } from '../ui/index.js';
 import { openMic } from '../audio/mic.js';
 import { touch, noteHeard, idleAction, markAsked, confirmPlaying, saveActive, QUIET_MS } from './session.js';
+import { tamaOf } from './tama.js';
 
 export const MIC_TICK_MS = 250;
 
@@ -83,8 +84,12 @@ export function createActivity(app, { soundingAudio }) {
   addEventListener('pointerdown', onAct, { capture: true, passive: true });
   addEventListener('keydown', onAct, { capture: true });
 
-  /* ---------- микрофон: «подтверждение игры звуком» ---------- */
-  const wantMic = () => !!st().micPresence && !off() && !micErr && document.visibilityState === 'visible' && (!!app.active || app.stopwatch.running || act.tools > 0);
+  /* ---------- микрофон: «подтверждение игры звуком» и слух Мелеты-тамагочи ---------- */
+  // Учёт времени слушает только при «подтверждении игры звуком» (micPresence); тамагочи (tama.listen) — только чтобы
+  // говорить, как идёт занятие: на статистику его слух не влияет
+  const presence = () => !!st().micPresence;
+  const tamaEar = () => { const tm = tamaOf(st()); return tm.on && tm.listen; };
+  const wantMic = () => (presence() || tamaEar()) && !off() && !micErr && document.visibilityState === 'visible' && (!!app.active || app.stopwatch.running || act.tools > 0);
   async function micStart() {
     if (mic || opening) return;
     opening = true;
@@ -98,15 +103,17 @@ export function createActivity(app, { soundingAudio }) {
     if (!mic) return;
     if (!wantMic()) { micStop(); return; }
     gate = createLevelGate();
-    act.listening = true;
+    act.listening = presence();
+    act.hearing = true;
     const now = Date.now();
-    if (app.active && !app.active.micFrom) { app.active.micFrom = now; saveActive(app.active); }
+    if (presence() && app.active && !app.active.micFrom) { app.active.micFrom = now; saveActive(app.active); }
     micT = setInterval(() => {
       const db = levelDb(mic.read()), now2 = Date.now();
       act.level = db;
       // свой звук приложения (метроном, пэды) за игру не считается
-      if (soundingAudio()) return;
-      if (gate.push(db)) heard(now2);
+      if (soundingAudio()) { act.playing = false; return; }
+      act.playing = gate.push(db);
+      if (act.playing && presence()) heard(now2);
     }, MIC_TICK_MS);
     sync();
   }
@@ -115,6 +122,8 @@ export function createActivity(app, { soundingAudio }) {
     if (mic) mic.stop();
     mic = null;
     act.listening = false;
+    act.hearing = false;
+    act.playing = false;
     act.level = null;
     sync();
   }
@@ -167,8 +176,9 @@ export function createActivity(app, { soundingAudio }) {
   function tick() {
     const now = Date.now();
     if (soundingAudio()) heard(now);
-    if (!st().micPresence) micErr = false; // настройку выключили — при следующем включении можно снова спросить разрешение
+    if (!presence() && !tamaEar()) micErr = false; // настройки выключили — при следующем включении можно снова спросить разрешение
     if (wantMic()) micStart(); else if (mic) micStop();
+    if (mic) act.listening = presence(); // «подтверждение звуком» включили или выключили, пока микрофон открыт
     sessionCheck(now);
     watchCheck(now);
   }

@@ -1124,5 +1124,15 @@
   "guard.hint": "Ko'p telefonlarda uch barmoq bilan tegish — ekran surati, va pianino yoki paddagi akkord skrinshotga aylanadi. Pianino, glayder yoki pedlar ochiq turganda ekran surati olinmaydi — bu vaqtda ekran yozuvi ham ishlamaydi (Android shunday ishlaydi). Boshqa cholg'ularda va ilovaning barcha ekranlarida suratlar va ekran yozuvi ishlaydi. Pianinodagi o'yinni yozish uchun bu himoyani shu yerda o'chirish mumkin. Imo-ishoraning o'zi telefon sozlamalarida ham o'chiriladi (Imo-ishoralar → Uch barmoq bilan ekran surati).",
   "gem.obsidian": "Obsidian",
   "gem.new": "Yangi liga: {name}",
-  "ob.leagueNote": "Boshlangʻich liga. Faqat ilovadagi mashgʻulotdan oʻsadi."
+  "ob.leagueNote": "Boshlangʻich liga. Faqat ilovadagi mashgʻulotdan oʻsadi.",
+  "tama.title": "Meleta-tamagochi",
+  "tama.on": "Meleta mashgʻulotda yonida",
+  "tama.onHint": "Mashgʻulot ekranining burchagida kichik yuz, vaqti-vaqti bilan — gap",
+  "tama.listen": "Chalishni tinglash",
+  "tama.listenHint": "Mikrofon faqat ovoz balandligini oʻlchaydi: oqim, pauzalar, qaytish. Ovoz yozilmaydi",
+  "tama.chat": "Qanchalik tez-tez gapirish",
+  "tama.chat.normal": "Odatdagidek",
+  "tama.chat.rare": "Kamdan-kam",
+  "tama.hint": "Meleta mashgʻulot boshlanishi, vaqt bosqichlari, pomodoro tanaffuslarini, eshitganda esa — oqim, choʻzilgan pauzalar va balandlikni payqaydi. Uning eshitishi statistika va ligaga taʼsir qilmaydi. Shu yerda oʻchiriladi.",
+  "tama.aria": "Meleta"
 }

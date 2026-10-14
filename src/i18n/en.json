@@ -1151,5 +1151,15 @@
   "guard.hint": "On many phones a three-finger touch takes a screenshot, turning a chord on the piano or pads into a screenshot. While the piano, glider or pads are open, screenshots are blocked — and screen recording pauses too (this is how Android works). In other instruments and on all app screens screenshots and screen recording work. To record playing the piano, turn this protection off here. The gesture itself can also be turned off in the phone settings (Gestures → Three-finger screenshot).",
   "gem.obsidian": "Obsidian",
   "gem.new": "New league: {name}",
-  "ob.leagueNote": "The starting league. It grows only from practice in the app."
+  "ob.leagueNote": "The starting league. It grows only from practice in the app.",
+  "tama.title": "Melete tamagotchi",
+  "tama.on": "Melete beside the practice",
+  "tama.onHint": "A small face in the corner of the practice screen, now and then a remark",
+  "tama.listen": "Listen to the playing",
+  "tama.listenHint": "The microphone only measures loudness: flow, pauses, coming back. Nothing is recorded",
+  "tama.chat": "How often to speak",
+  "tama.chat.normal": "Normal",
+  "tama.chat.rare": "Rarely",
+  "tama.hint": "Melete notices the start of practice, time milestones and pomodoro breaks, and with listening on — flow, long pauses and loudness. Her listening does not affect statistics or the league. Turned off right here.",
+  "tama.aria": "Melete"
 }

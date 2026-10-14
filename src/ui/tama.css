@@ -1,0 +1,9 @@
+/* Мелета-тамагочи (src/ui/tama.js): в левом нижнем углу над панелью занятия, не перехватывает касания поверхности */
+.tama{position:fixed;z-index:44;left:calc(10px + env(safe-area-inset-left,0px));bottom:calc(92px + env(safe-area-inset-bottom,0px));display:flex;align-items:flex-end;gap:8px;pointer-events:none;max-width:min(320px,calc(100vw - 20px))}
+.tamab{pointer-events:auto;width:48px;height:48px;padding:2px;border-radius:50%;flex:none;opacity:.92;filter:drop-shadow(0 4px 10px rgba(0,0,0,.18))}
+.tamab svg{display:block}
+.tamas{pointer-events:none;background:var(--cell);color:var(--ink);font-size:14px;line-height:1.35;padding:9px 12px;border-radius:16px 16px 16px 4px;box-shadow:0 6px 20px rgba(0,0,0,.14);margin-bottom:22px}
+.tamas.in{animation:tamain .32s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes tamain{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.tamas.in{animation:none}}
+:root[data-style="mono"] .tamas{box-shadow:none;border:1px solid var(--line,var(--sep))}

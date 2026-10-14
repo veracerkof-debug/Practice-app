@@ -6,6 +6,7 @@ import { STYLES, LEADS, OFFSETS, TONES, CUSTOM_MAX, remindOf, setRemind, remindA
 import { remindText, remindCtx } from '../remindtexts.js';
 import { QSETS, setsOf } from '../quotes.js';
 import { mascotSVG } from '../../ui/mascot.js';
+import { tamaOf } from '../tama.js';
 
 const DEL = '<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>';
 const FACE = { classic: 'glad', pushy: 'wait', custom: 'wink', quiet: 'sleep' };
@@ -48,6 +49,13 @@ export function meleteHTML(st, { sets = false, test = false } = {}) {
     if (test && remindAvailable()) h += '<button class="cell act" data-mltest>' + t('rem.test') + '</button>';
   }
   h += '</div><p class="ftr">' + (mode === 'quiet' ? t('rem.quietHint') : t('rem.hint', { from: r.quietFrom, to: r.quietTo })) + (remindAvailable() || mode === 'quiet' ? '' : ' ' + t('rem.webOnly')) + '</p>';
+  // Мелета-тамагочи: рядом на занятии, по желанию слушает и говорит, как идёт (src/core/tama.js)
+  const tmc = tamaOf(st), tsw = (k, on, label, hint = '') => '<div class="cell"><span class="grow"><span>' + label + '</span>' + (hint ? '<span class="st l2" style="display:block;font-size:13px;white-space:normal">' + hint + '</span>' : '') + '</span>' +
+    '<label class="sw"><input type="checkbox" data-mltama="' + k + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(label) + '"><i></i></label></div>';
+  h += '<div class="hdr">' + t('tama.title') + '</div><div class="group">' + tsw('on', tmc.on, t('tama.on'), t('tama.onHint')) +
+    (tmc.on ? tsw('listen', tmc.listen, t('tama.listen'), t('tama.listenHint')) + '<div class="cellcol"><span>' + t('tama.chat') + '</span><div style="margin-top:8px">' +
+      seg('mltchat', [['normal', t('tama.chat.normal')], ['rare', t('tama.chat.rare')]], tmc.chat, t('tama.chat')) + '</div></div>' : '') +
+    '</div><p class="ftr">' + t('tama.hint') + '</p>';
   if (sets) {
     const on = setsOf(st);
     h += '<div class="hdr">' + t('qset.title') + '</div><div class="group">' + QSETS.map((k) => '<label class="cell"><span class="grow">' + t('qset.' + k) + '</span>' +
@@ -68,6 +76,8 @@ export function bindMelete(el, getSt, { save, rerender, ask = true }) {
       save(); rerender();
       // разрешение на уведомления — сразу при выборе (в регистрации — в конце)
       if (ask && mode !== 'quiet' && remindAvailable()) remindPermission().then((ok) => { if (!ok) toast(t('rem.denied')); });
+    } else if ((b = g('[data-seg="mltchat"] [data-v]'))) {
+      st.tama = { ...tamaOf(st), chat: b.dataset.v }; save(); rerender();
     } else if ((b = g('[data-mllead]'))) {
       const m = +b.dataset.mllead, s = new Set(remindOf(st).leads);
       if (s.has(m) && s.size > 1) s.delete(m); else s.add(m);
@@ -87,6 +97,7 @@ export function bindMelete(el, getSt, { save, rerender, ask = true }) {
   el.addEventListener('change', (e) => {
     const st = S(), d = e.target.dataset;
     if (d.ml === 'time' && e.target.value) { setRemind(st, { time: e.target.value }); save(); }
+    else if (d.mltama) { st.tama = { ...tamaOf(st), [d.mltama]: e.target.checked }; save(); rerender(); }
     else if (d.ml === 'byName') { setRemind(st, { byName: e.target.checked }); save(); rerender(); }
     else if (d.mlwhen != null || d.mlat != null || d.mltone != null) {
       const r = remindOf(st), c = r.custom.map((x) => ({ ...x })), i = +(d.mlwhen ?? d.mlat ?? d.mltone), x = c[i];
