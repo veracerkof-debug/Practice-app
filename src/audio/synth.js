@@ -24,10 +24,16 @@ export const PRESETS = {
   abass: { kind: 'saw', tone: 0.6, bright: 0.1, att: 3, dec: 0.4, sus: 0.6, rel: 0.12, cho: 0, rev: 0.04, gain: 1.5, res: 7, fenv: 0.9, sub: 0.55 },
   // струнный ансамбль: широкий хорус из расстроенных пил, медленная атака, лёгкое вибрато
   strings: { kind: 'saw', tone: 0.75, bright: 0.36, att: 320, dec: 0.9, sus: 0.9, rel: 1.3, cho: 0.95, rev: 0.55, vib: [5.2, 7] },
+  // Набор для поклонения (эмбиент): широкие пэды с долгим вступлением и хвостом, мерцание сверху, тёплые клавиши
+  wshimmer: { kind: 'saw', tone: 0.7, bright: 0.26, att: 1100, dec: 1, sus: 1, rel: 3, cho: 0.9, rev: 0.95, shimmer: 0.45 },
+  wswell: { kind: 'saw', tone: 0.8, bright: 0.42, att: 500, dec: 1, sus: 1, rel: 2.6, cho: 0.85, rev: 0.9, swell: 2.8 },
+  wkeys: { kind: 'soft', tone: 0.25, bright: 0.42, att: 5, dec: 1.7, sus: 0.35, rel: 2.4, cho: 0.5, rev: 0.8, tine: 2, tineAmp: 0.07 },
 };
+// Пресеты набора для поклонения (на панели — отдельной группой)
+export const WORSHIP = ['wshimmer', 'wswell', 'wkeys'];
 // Поля звука, которые не ручки, но входят в пресет (свои пресеты сохраняют их тоже)
-export const PATCH_EXTRA = ['kind', 'tine', 'ham', 'tineAmp', 'gain', 'partials', 'fm', 'res', 'fenv', 'sub', 'vib'];
-const sigOf = (s) => JSON.stringify([s.kind || 'soft', s.tine || 0, s.partials || 0, s.fm || 0, s.sub || 0, s.vib || 0]);
+export const PATCH_EXTRA = ['kind', 'tine', 'ham', 'tineAmp', 'gain', 'partials', 'fm', 'res', 'fenv', 'sub', 'vib', 'shimmer', 'swell'];
+const sigOf = (s) => JSON.stringify([s.kind || 'soft', s.tine || 0, s.partials || 0, s.fm || 0, s.sub || 0, s.vib || 0, s.shimmer || 0, s.swell || 0]);
 // Ручки панели и их диапазоны
 export const PATCH_KEYS = ['tone', 'bright', 'att', 'dec', 'sus', 'rel', 'cho', 'rev'];
 export const PATCH_RANGE = { tone: [0, 1], bright: [0, 1], cho: [0, 1], att: [1, 1500], dec: [0.05, 2], sus: [0, 1], rel: [0.03, 3], rev: [0, 1] };
@@ -93,6 +99,9 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
       } else if (s.fenv) { // огибающая фильтра: удар открывает, дальше закрывается к «яркости»
         lp.frequency.setValueAtTime(Math.min(18000, cut * (1 + s.fenv * 9)), t);
         lp.frequency.setTargetAtTime(cut, t + att, dec * 0.22);
+      } else if (s.swell) { // свелл: фильтр раскрывается медленно, звук «вырастает»
+        lp.frequency.setValueAtTime(Math.max(120, f * 1.1), t);
+        lp.frequency.linearRampToValueAtTime(cut, t + s.swell);
       } else lp.frequency.value = cut;
       g.gain.setValueAtTime(0.0001, t);
       g.gain.linearRampToValueAtTime(peak, t + att);
@@ -120,6 +129,21 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
         main.forEach((o) => mg.connect(o.frequency));
         mo.start(t);
         os.push(mo);
+      }
+      if (s.shimmer) { // мерцание: октава и квинта над ней, вступают медленнее основы и звучат, пока держится нота
+        [[2, 1, -0.5], [3, 0.45, 0.5], [4, 0.25, 0]].forEach(([k, a, pn]) => {
+          const so = c.createOscillator(), sg = c.createGain();
+          so.type = 'sine';
+          so.frequency.value = f * k;
+          so.detune.value = (Math.random() - 0.5) * 8;
+          sg.gain.setValueAtTime(0, t);
+          sg.gain.linearRampToValueAtTime(s.shimmer * a * 0.5, t + att * 1.8 + 0.6);
+          let node = so.connect(sg);
+          if (c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pn; node = node.connect(p); }
+          node.connect(g);
+          so.start(t);
+          os.push(so);
+        });
       }
       if (s.sub) { // саб-генератор: квадрат октавой ниже
         const so = c.createOscillator(), sg = c.createGain();

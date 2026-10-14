@@ -62,5 +62,8 @@
   "rotHint": "Ekranni burish",
   "pre.fmep": "FM-pianino",
   "pre.abass": "Analog bas",
-  "pre.strings": "Torli ansambl"
+  "pre.strings": "Torli ansambl",
+  "pre.wshimmer": "Shimmer-ped",
+  "pre.wswell": "Swell-ped",
+  "pre.wkeys": "Iliq klavishlar"
 }

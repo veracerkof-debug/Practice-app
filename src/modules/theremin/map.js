@@ -98,7 +98,10 @@ export const PINCH_ON = 0.32, PINCH_OFF = 0.45;
 
 // Что можно назначить жесту. space — пространство: реверберация и эхо вместе; vol — громкость
 export const TARGETS = ['off', 'vol', 'space', 'tone', 'vib', 'trem', 'drive', 'fuzz', 'echo', 'verb'];
-export const DEFAULT_MAP = { open: 'vol', height: 'space', rot: 'tone', tilt: 'vib', dist: 'drive', turn: 'trem', x: 'off', pinch: 'freeze' };
+// По умолчанию — просто: ладонь раскрыта — звук, кулак — тишина; остальные движения ничего не меняют
+export const DEFAULT_MAP = { open: 'vol', height: 'off', rot: 'off', tilt: 'off', dist: 'off', turn: 'off', x: 'off', pinch: 'off' };
+// «Все эффекты» — прежний набор: пространство, тембр, вибрато, перегруз, тремоло, фиксация щепотью
+export const RICH_MAP = { open: 'vol', height: 'space', rot: 'tone', tilt: 'vib', dist: 'drive', turn: 'trem', x: 'off', pinch: 'freeze' };
 
 // Силы жестов → эффекты: { bright, vib, trem, drive, fuzz, echo, verb } (наибольшее из назначенных) и vol (произведение; 1 — не назначено)
 export function applyGestures(vals, map = DEFAULT_MAP) {

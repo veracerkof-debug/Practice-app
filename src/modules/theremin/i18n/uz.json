@@ -217,5 +217,13 @@
   "sum.auto": "Kamera darhol",
   "pre.fmep": "FM-pianino",
   "pre.abass": "Analog bas",
-  "pre.strings": "Torli ansambl"
+  "pre.strings": "Torli ansambl",
+  "cs.shimmer": "Shimmer",
+  "gRich": "Barcha effektlar (avvalgidek)",
+  "pre.wshimmer": "Shimmer-ped",
+  "pre.wswell": "Swell-ped",
+  "pre.wkeys": "Iliq klavishlar",
+  "sndPads": "Pedlar",
+  "sndPadsHint": "«Pedlar» modulidagi kabi yumshoq tovushlar: qo'l notani boshqaradi, kaft — balandlikni. «Shimmer» — sajda uchun: sekin kirish va yuqorida jilvalanish.",
+  "sndSynth": "Sintezator"
 }

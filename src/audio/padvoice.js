@@ -4,13 +4,15 @@
 import { wave } from './waves.js';
 import { SOUNDS } from './drone.js';
 
-export const PAD_SOUNDS = Object.keys(SOUNDS).filter((k) => k !== 'tanpura'); // тампура — щипок по рисунку, не созвучие
+// тампура — щипок по рисунку, не созвучие. «Шиммер» — пэд для поклонения: тёплая основа, медленное вступление
+// и мерцающий хвост из октавы и квинты сверху (как отражения большого зала), только у голоса пэда
+export const PAD_SOUNDS = ['shimmer', ...Object.keys(SOUNDS).filter((k) => k !== 'tanpura')];
 // Уровень генератора по тембру: подобран так, чтобы аккорд любым пэдом звучал так же громко,
 // как голосом соло (замер: среднеквадратичный уровень четырёх голосов ≈ 0,09)
-const LVL = { soft: 0.152, pad: 0.205, bow: 0.224, choir: 0.5, glass: 0.147 };
+const LVL = { soft: 0.152, pad: 0.205, bow: 0.224, choir: 0.5, glass: 0.147, shimmer: 0.15 };
 
 export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5, move = 0.5 } = {}) {
-  const snd = PAD_SOUNDS.includes(sound) ? sound : 'soft', bright0 = SOUNDS[snd], t0 = c.currentTime + 0.003;
+  const snd = PAD_SOUNDS.includes(sound) ? sound : 'soft', bright0 = snd === 'shimmer' ? 0.62 : SOUNDS[snd], t0 = c.currentTime + 0.003;
   const freq = (m) => a4 * Math.pow(2, (m - 69) / 12);
   const lp = c.createBiquadFilter(), amp = c.createGain(), vol = c.createGain(), out = c.createGain();
   lp.type = 'lowpass';
@@ -63,6 +65,9 @@ export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5,
   const type = snd === 'pad' || snd === 'choir' ? 'sawtooth' : snd === 'glass' ? 'sine' : null;
   [[-det, -pan], [det, pan]].forEach(([d, pn]) => add(type, 1, d, pn, LVL[snd]));
   if (snd === 'glass') add('sine', 2, 0, 0, 0.049); // октава сверху
+  if (snd === 'shimmer') { // мерцание: октава и квинта над ней, тихо и широко, вступают медленнее основы
+    add('sine', 2, -det * 0.5, -0.6, 0.05); add('sine', 2, det * 0.5, 0.6, 0.05); add('sine', 3, 0, 0, 0.022);
+  }
 
   let m0 = 60, bright = 0, dead = false;
   const filter = (tau) => {
@@ -78,7 +83,7 @@ export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5,
       lfos.forEach((o) => o.start(t0));
       // пэд вступает мягко
       amp.gain.setValueAtTime(0, t0);
-      amp.gain.linearRampToValueAtTime(1, t0 + (snd === 'glass' ? 0.25 : 0.55));
+      amp.gain.linearRampToValueAtTime(1, t0 + (snd === 'glass' ? 0.25 : snd === 'shimmer' ? 1.1 : 0.55));
       v.fx(fx, true);
     },
     pitch(m, tau = 0.05) {
@@ -104,7 +109,7 @@ export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5,
     release() {
       if (dead) return;
       dead = true;
-      const t = c.currentTime, r = snd === 'glass' ? 0.9 : 1.4;
+      const t = c.currentTime, r = snd === 'glass' ? 0.9 : snd === 'shimmer' ? 2.6 : 1.4;
       amp.gain.cancelScheduledValues(t);
       amp.gain.setValueAtTime(amp.gain.value, t);
       amp.gain.setTargetAtTime(0, t, r / 4);

@@ -113,7 +113,7 @@ describe('звук: синтезатор, пэды, микшер, настрой
     const d = loadDevice(memStorage({ [LS_T]: JSON.stringify(stored) }));
     const { n, ...proto } = clone(L.SP());
     expect(pianoPatch(d.piano)).toEqual(proto);
-    expect(Object.keys(PRESETS)).toEqual(['piano', 'epiano', 'organ', 'sine', 'pad', 'bell', 'fmep', 'abass', 'strings']); // прототип + три классических синтезаторных звука
+    expect(Object.keys(PRESETS)).toEqual(['piano', 'epiano', 'organ', 'sine', 'pad', 'bell', 'fmep', 'abass', 'strings', 'wshimmer', 'wswell', 'wkeys']); // прототип + три классических синтезаторных звука + набор для поклонения
   });
   it('пэды: значения по умолчанию, ноты, тампура', () => {
     const d = loadDevice(memStorage({ [LS_T]: JSON.stringify(stored) }));

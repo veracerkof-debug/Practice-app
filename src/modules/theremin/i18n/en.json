@@ -217,5 +217,13 @@
   "sum.auto": "Camera at once",
   "pre.fmep": "FM piano",
   "pre.abass": "Analog bass",
-  "pre.strings": "String ensemble"
+  "pre.strings": "String ensemble",
+  "cs.shimmer": "Shimmer",
+  "gRich": "All effects (as before)",
+  "pre.wshimmer": "Shimmer pad",
+  "pre.wswell": "Swell pad",
+  "pre.wkeys": "Warm keys",
+  "sndPads": "Pads",
+  "sndPadsHint": "Soft sounds like in the Pads module: the hand leads the note, the palm sets the volume. Shimmer is for worship: a slow entry and a shimmer on top.",
+  "sndSynth": "Synthesizer"
 }

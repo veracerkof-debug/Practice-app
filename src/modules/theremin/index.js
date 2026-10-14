@@ -20,7 +20,7 @@ import { SCALE_TYPES } from '../../music/theory.js';
 import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, clampLo, notesIn } from '../glider/scale.js';
 import { createGlideVoice, createFxBus } from '../glider/voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, PRESETS } from '../glider/fx.js';
-import { twoHandSign, assign, palm, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, PINCH_ON, PINCH_OFF } from './map.js';
+import { twoHandSign, assign, palm, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, RICH_MAP, PINCH_ON, PINCH_OFF } from './map.js';
 import { startHands } from './hands.js';
 import { readSign, chordOf, chordName, voicing, shapeOf, harmOf, harmOffsets, HARM_IDS } from './chords.js';
 import { createPadVoice, PAD_SOUNDS } from '../../audio/padvoice.js';
@@ -38,7 +38,10 @@ const I = {
   flip: '<svg viewBox="0 0 24 24"><path d="M3 8h3l2-2.5h8L18 8h3v11H3z"/><path d="M9 12.5a3 3 0 0 1 5.2-2"/><path d="M15 13.5a3 3 0 0 1-5.2 2"/><path d="M14.4 8.6v2h-2M9.6 17.4v-2h2"/></svg>',
   light: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>',
 };
-const SOUNDS = ['app', ...Object.keys(SYN)];
+// Звуки: сначала пэды (как в модуле «Пэды», «Шиммер» — для поклонения, по умолчанию), затем звуки синтезатора
+const SOUNDS = [...PAD_SOUNDS.map((k) => 'pad:' + k), 'app', ...Object.keys(SYN)];
+const padOf = (k) => (k && k.startsWith('pad:') ? k.slice(4) : null);
+const soundName = (t, k) => (padOf(k) ? t('cs.' + padOf(k)) : t('pre.' + k));
 const LOST_MS = 180; // рука пропала из кадра на мгновение — звук не обрывается
 const AUTO_CAL_MS = 1500; // нейтраль запоминается сама, когда рука эффектов впервые продержалась в кадре столько
 const PINCH_MS = 150; // щепоть держится столько — переключает фиксацию (случайное касание пальцев не считается)
@@ -70,7 +73,16 @@ const S = { cam: null, state: 'off', live: false, err: '', voice: null, bus: nul
 
 const cfg = () => {
   const s = ctx.store.all();
-  s.sound ??= 'app'; s.snap ??= 'magnet'; s.scale ??= 'chrom'; s.root ??= 0; s.side ??= 'right'; s.charX ??= true; s.showCam ??= true;
+  // простой режим по умолчанию (один раз и для тех, у кого были прежние настройки по умолчанию): пэд «Шиммер»,
+  // рука эффектов — только громкость, без гармонии и наклона
+  if (!s.simple2) {
+    s.simple2 = true;
+    if (!s.sound || s.sound === 'app') s.sound = 'pad:shimmer';
+    if (!s.gmap || JSON.stringify({ ...RICH_MAP, ...s.gmap }) === JSON.stringify(RICH_MAP)) s.gmap = { ...DEFAULT_MAP };
+    if (s.harm == null || s.harm === true) s.harm = false;
+    if (s.stilt == null || s.stilt === 'vib') s.stilt = 'off';
+  }
+  s.sound ??= 'pad:shimmer'; s.snap ??= 'magnet'; s.scale ??= 'chrom'; s.root ??= 0; s.side ??= 'right'; s.charX ??= true; s.showCam ??= true;
   s.width ??= 12; s.lo ??= 60;
   if (!WIDTHS.includes(s.width)) s.width = 12;
   s.lo = clampLo(s.lo, s.width);
@@ -371,7 +383,7 @@ function playAlong(ch) {
   // звуки аккорда — тесно, от баса аккорда в малой октаве
   const ms = notesOf(ch.frets).filter((m) => m != null), pcs = [...new Set(ms.map((m) => m % 12))], root = Math.min(...ms) % 12;
   const notes = pcs.map((pc) => 48 + root + ((pc - root + 12) % 12)).sort((a, b) => a - b);
-  const sound = PAD_SOUNDS.includes(s.csound) ? s.csound : 'soft', vo = { ...voiceFx(s.fx, 0), volGain: ALONG_GAIN };
+  const sound = PAD_SOUNDS.includes(s.csound) ? s.csound : padOf(s.sound) || 'soft', vo = { ...voiceFx(s.fx, 0), volGain: ALONG_GAIN };
   ctx.audio.mixer.setReverb('glider', 0.45);
   S.cv = notes.map((m) => { const v = createPadVoice(dest.context, S.bus.input, sound, { a4: ctx.audio.mf(69) }); v.start(m, vo); return v; });
 }
@@ -381,9 +393,15 @@ function playSolo(s, h, sign, t, o, dest) {
   releaseChord();
   const pos = S.fPos.next(heightOf(h.c.y), t), m = snapPitch(posToMidi(pos, s.lo, s.width), s.snap, allowedPcs(s));
   if (!S.voice) {
-    const p = patch(s);
-    ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
-    S.voice = createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) });
+    const pad = padOf(s.sound);
+    if (pad) { // пэд под рукой: нота плавно ведётся рукой, вторая рука — громкость (и что назначено)
+      ctx.audio.mixer.setReverb('glider', 0.75);
+      S.voice = createPadVoice(dest.context, S.bus.input, pad, { a4: ctx.audio.mf(69) });
+    } else {
+      const p = patch(s);
+      ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
+      S.voice = createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) });
+    }
     S.voice.start(m, o);
   } else {
     S.voice.pitch(m, s.snap === 'note' ? 0.03 : 0.02);
@@ -436,16 +454,16 @@ function playChord(s, h, sign, t, o, dest, lean = 0, tilt = 0) {
   const vo = { ...o, volGain: (o.volGain ?? 1) * CHORD_GAIN };
   if (!S.cv) {
     // звук аккордов: как соло или пэд (тембры модуля «Пэды»)
-    const pad = PAD_SOUNDS.includes(s.csound), p = pad ? null : patch(s);
+    const pad = PAD_SOUNDS.includes(s.csound) ? s.csound : s.csound === 'same' ? padOf(s.sound) : null, p = pad ? null : patch(s);
     ctx.audio.mixer.setReverb('glider', pad ? 0.45 : (p.rev || 0) * 0.9);
-    const make = () => (pad ? createPadVoice(dest.context, S.bus.input, s.csound, { a4: ctx.audio.mf(69) }) : createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) }));
+    const make = () => (pad ? createPadVoice(dest.context, S.bus.input, pad, { a4: ctx.audio.mf(69) }) : createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) }));
     S.cv = notes.map((m) => { const v = make(); v.start(m, vo); return v; });
   } else {
     // септаккорд — на голос больше, трезвучие — на голос меньше: лишний затихает, недостающий вступает
     if (S.cv.length > notes.length) S.cv.splice(notes.length).forEach((v) => v.release());
     while (S.cv.length < notes.length) {
-      const pad = PAD_SOUNDS.includes(s.csound), m = notes[S.cv.length];
-      const v = pad ? createPadVoice(dest.context, S.bus.input, s.csound, { a4: ctx.audio.mf(69) }) : createGlideVoice(dest.context, S.bus.input, patch(s), { hold: true, a4: ctx.audio.mf(69) });
+      const pad = PAD_SOUNDS.includes(s.csound) ? s.csound : s.csound === 'same' ? padOf(s.sound) : null, m = notes[S.cv.length];
+      const v = pad ? createPadVoice(dest.context, S.bus.input, pad, { a4: ctx.audio.mf(69) }) : createGlideVoice(dest.context, S.bus.input, patch(s), { hold: true, a4: ctx.audio.mf(69) });
       v.start(m, vo);
       S.cv.push(v);
     }
@@ -470,7 +488,7 @@ function soundGesture(list, t) {
     S.twLatch = true;
     const s = cfg(), i = SOUNDS.indexOf(s.sound), n = SOUNDS[(i + (sign === 'palms' ? 1 : -1) + SOUNDS.length) % SOUNDS.length];
     s.sound = n; save();
-    ctx.ui.toast(ctx.t('soundOn', { name: ctx.t('pre.' + n) }));
+    ctx.ui.toast(ctx.t('soundOn', { name: soundName(ctx.t, n) }));
     if (navigator.vibrate) navigator.vibrate(20);
   }
   return true;
@@ -632,7 +650,7 @@ function setSheet(start = 'root') {
   const summary = (k, s) => {
     const chrom = s.scale === 'chrom';
     if (k === 'hands') return t('sum.hands', { pitch: t('hand.' + s.side), fx: t('hand.' + (s.side === 'right' ? 'left' : 'right')) });
-    if (k === 'sound') return t('pre.' + s.sound);
+    if (k === 'sound') return soundName(t, s.sound);
     if (k === 'fx') { const on = [...new Set(GESTURES.map((g) => s.gmap[g]).filter((v) => v && v !== 'off'))]; return on.length ? on.slice(0, 3).map((v) => t('tg.' + v)).join(' · ') + (on.length > 3 ? '…' : '') : t('sum.none'); }
     if (k === 'notes') return rangeTxt(s) + ' · ' + (chrom ? t('sum.chrom') : SH[s.root] + ' ' + t('scale.' + s.scale)) + ' · ' + t('snap.' + s.snap);
     if (k === 'solo') return (s.harm ? t('hst.' + s.hstyle) : t('sum.noHarm')) + ' · ' + t('stilt.' + s.stilt);
@@ -644,15 +662,19 @@ function setSheet(start = 'root') {
   const pages = {
     hands: (s) => '<div class="group"><div class="cellcol"><div class="glsub" style="margin-top:0">' + t('hands') + '</div>' + ui.seg('tside', [['right', t('hand.right')], ['left', t('hand.left')]], s.side, t('hands')) +
       '<div class="segcap">' + t('hint.' + s.side) + '</div></div>' + sw('tchar', s.charX, t('charX')) + sw('tsgest', s.sgest, t('sgest')) + '</div><p class="ftr">' + t('charHint') + ' ' + t('sgestHint') + '</p>',
-    sound: (s) => '<div class="group"><div class="cellcol"><div class="glchips">' + SOUNDS.map((k) => chip('data-ts="' + k + '"', s.sound === k, t('pre.' + k))).join('') + '</div></div></div>' +
-      '<div class="hdr">' + t('presetsBase') + '</div><div class="glpre" role="group" aria-label="' + t('presets') + '">' +
-      Object.keys(PRESETS).map((k) => chip('data-tpre="' + k + '"', false, t('preset.' + k))).join('') + '</div><p class="ftr" style="margin-top:0">' + t('fxHint') + '</p>',
+    sound: (s) => {
+      const chips = (list) => '<div class="group"><div class="cellcol"><div class="glchips">' + list.map((k) => chip('data-ts="' + k + '"', s.sound === k, soundName(t, k))).join('') + '</div></div></div>';
+      return '<div class="hdr" style="margin-top:4px">' + t('sndPads') + '</div>' + chips(SOUNDS.filter(padOf)) + '<p class="ftr">' + t('sndPadsHint') + '</p>' +
+        '<div class="hdr">' + t('sndSynth') + '</div>' + chips(SOUNDS.filter((k) => !padOf(k))) +
+        '<div class="hdr">' + t('presetsBase') + '</div><div class="glpre" role="group" aria-label="' + t('presets') + '">' +
+        Object.keys(PRESETS).map((k) => chip('data-tpre="' + k + '"', false, t('preset.' + k))).join('') + '</div><p class="ftr" style="margin-top:0">' + t('fxHint') + '</p>';
+    },
     fx: (s) => '<div class="hdr" style="margin-top:4px">' + t('fxHand.' + (s.side === 'right' ? 'left' : 'right')) + '</div><div class="group">' +
       GESTURES.map((k) => '<label class="cell"><span class="grow">' + t('g.' + k) + '</span><select class="sortsel" data-tg="' + k + '" aria-label="' + ui.esc(t('g.' + k)) + '">' +
         TARGETS.map((tg) => '<option value="' + tg + '"' + (s.gmap[k] === tg ? ' selected' : '') + '>' + t('tg.' + tg) + '</option>').join('') + '</select></label>').join('') +
       '<label class="cell"><span class="grow">' + t('g.pinch') + '</span><select class="sortsel" data-tg="pinch" aria-label="' + ui.esc(t('g.pinch')) + '">' +
         ['off', 'freeze'].map((tg) => '<option value="' + tg + '"' + (s.gmap.pinch === tg ? ' selected' : '') + '>' + t('tg.' + tg) + '</option>').join('') + '</select></label></div>' +
-      '<div class="group" style="margin-top:12px"><button class="cell act" data-tcal>' + t('cal') + '</button><button class="cell act" data-tgdef>' + t('gDefault') + '</button></div>' +
+      '<div class="group" style="margin-top:12px"><button class="cell act" data-tcal>' + t('cal') + '</button><button class="cell act" data-tgdef>' + t('gDefault') + '</button><button class="cell act" data-tgrich>' + t('gRich') + '</button></div>' +
       '<p class="ftr">' + t('calHint') + '</p>',
     notes: (s) => {
       const chrom = s.scale === 'chrom';
@@ -709,6 +731,7 @@ function setSheet(start = 'root') {
       else if ((b = g('[data-ths]'))) { s.hstyle = b.dataset.ths; releaseHarm(); }
       else if (g('[data-tcal]')) { calibrate(); return; }
       else if (g('[data-tgdef]')) { s.gmap = { ...DEFAULT_MAP }; S.frozen = null; }
+      else if (g('[data-tgrich]')) { s.gmap = { ...RICH_MAP }; S.frozen = null; }
       else if ((b = g('[data-tr]'))) s.root = +b.dataset.tr;
       else if ((b = g('[data-tck]'))) { s.ckey = +b.dataset.tck; S.chord = null; }
       else if ((b = g('[data-tlo2]'))) s.lo = clampLo(s.lo + +b.dataset.tlo2, s.width);

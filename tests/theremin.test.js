@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { palm, openness, assign, heightOf, characterOf, oneEuro, pose, gestureValues, applyGestures, DEFAULT_MAP, NEUTRAL, twoHandSign } from '../src/modules/theremin/map.js';
+import { palm, openness, assign, heightOf, characterOf, oneEuro, pose, gestureValues, applyGestures, DEFAULT_MAP, RICH_MAP, NEUTRAL, twoHandSign } from '../src/modules/theremin/map.js';
 import { stripTelemetry, TELEMETRY_HOST } from '../build/mediapipe.js';
 
 // Рука-заготовка: 21 точка вокруг (cx, cy); open — пальцы вытянуты, иначе сжаты
@@ -83,8 +83,10 @@ describe('терменвокс: рука эффектов', () => {
     expect(gestureValues({ ...p, rot: 25 }, { rot: 25 }).rot).toBe(0); // от своей нейтрали
   });
   it('назначения: пространство — реверберация и эхо, громкость — от ладони', () => {
-    const o = applyGestures({ open: 0.5, height: 1, rot: 0.4, tilt: 0, dist: 0, turn: 0, x: 0 }, DEFAULT_MAP);
+    const o = applyGestures({ open: 0.5, height: 1, rot: 0.4, tilt: 0, dist: 0, turn: 0, x: 0 }, RICH_MAP);
     expect(o).toMatchObject({ vol: 0.5, verb: 1, echo: 0.6, bright: 0.4, vib: 0 });
+    // по умолчанию — просто: только громкость от ладони, остальные движения ничего не меняют
+    expect(applyGestures({ open: 0.5, height: 1, rot: 0.4, tilt: 1, dist: 1, turn: 1, x: 1 }, DEFAULT_MAP)).toMatchObject({ vol: 0.5, verb: 0, bright: 0, vib: 0, drive: 0, trem: 0 });
     expect(applyGestures({ open: 0, rot: 1 }, { ...DEFAULT_MAP, open: 'off', rot: 'fuzz' })).toMatchObject({ vol: 1, fuzz: 1 });
   });
 });

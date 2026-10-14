@@ -62,5 +62,8 @@
   "rotHint": "Rotate the screen",
   "pre.fmep": "FM piano",
   "pre.abass": "Analog bass",
-  "pre.strings": "String ensemble"
+  "pre.strings": "String ensemble",
+  "pre.wshimmer": "Shimmer pad",
+  "pre.wswell": "Swell pad",
+  "pre.wkeys": "Warm keys"
 }
