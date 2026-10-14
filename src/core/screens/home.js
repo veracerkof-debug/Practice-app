@@ -8,7 +8,7 @@ import { fmtDur } from '../format.js';
 import { weekData, goalProgress, songStats, streakInfo } from '../stats.js';
 import { GEMS, gemOf } from '../mastery.js';
 import { gemSec } from '../profile.js';
-import { gemSVG } from '../../ui/gems.js';
+import { gemCanvas, mountGems } from '../../ui/gem3d.js';
 import { trackMode } from '../session.js';
 import { genreOf, ensureLib } from '../library.js';
 import { isOn } from '../settings.js';
@@ -278,6 +278,7 @@ export function kmText(hours) {
 // Оживить камни на экране после отрисовки (холсты с data-stone="home"); size — главная или профиль
 export function mountStones(app, root) {
   const st = app.store.state.settings, h = leagueHours(app);
+  mountGems(root, stoneSeed(st)); // камни лиг (обычный вид)
   root.querySelectorAll('canvas[data-stone="home"]').forEach((c) => {
     const v = stoneView(c, { seed: stoneSeed(st), hours: h, detail: 3, key: 'home', onTap: () => stoneSheet(app) });
     const onH = (e) => { if (!c.isConnected) { removeEventListener('sandbox:hours', onH); return; } v.setHours(e.detail); };
@@ -325,7 +326,7 @@ function gemRow(app) {
   const st = app.store.state.settings;
   if (!isOn(st, 'mastery')) return '';
   const hrs = leagueHours(app), total = hrs * 3600, g = gemOf(hrs), name = t('gem.' + g.gem.id);
-  return '<button class="gemrow" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(total) })) + '">' + gemSVG(g.gem.id, g.frac, 48) +
+  return '<button class="gemrow" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(total) })) + '">' + gemCanvas(g.gem.id, g.frac, 52) +
     '<span class="gtxt"><b>' + esc(name) + '</b><span class="l2 num">' + fmtDur(total) + (g.next ? ' · ' + esc(t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) })) : '') + '</span>' +
     (g.next ? '<span class="rkbar"><i style="width:' + g.frac * 100 + '%"></i></span>' : '') + '</span></button>';
 }
@@ -333,13 +334,15 @@ function gemRow(app) {
 export function gemSheet(app) {
   if (app.store.state.settings.uiStyle === 'mono') { stoneSheet(app); return; }
   const hrs = leagueHours(app), total = hrs * 3600, g = gemOf(hrs);
-  sheet(() => snav(t('gem.title')) +
-    '<div class="gemhero">' + gemSVG(g.gem.id, g.frac, 150, t('gem.' + g.gem.id)) + '<div class="gname">' + t('gem.' + g.gem.id) + '</div><div class="l2 num">' + t('gem.total', { total: fmtDur(total) }) + '</div>' +
+  // камни — объёмные, крутятся сами и пальцем (src/ui/gem3d.js); в списке вращается только текущий
+  const api = sheet(() => snav(t('gem.title')) +
+    '<div class="gemhero">' + gemCanvas(g.gem.id, g.frac, 180, t('gem.' + g.gem.id)) + '<div class="gname">' + t('gem.' + g.gem.id) + '</div><div class="l2 num">' + t('gem.total', { total: fmtDur(total) }) + '</div>' +
     (g.next ? bar(g.frac) + '<div class="l2" style="font-size:13px">' +
       t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) }) + '</div>' : '<div class="l2" style="font-size:13px">' + t('gem.top') + '</div>') + '</div>' +
-    '<div class="group">' + GEMS.map((x, i) => '<div class="cell gemli' + (i > g.i ? ' locked' : '') + (i === g.i ? ' cur' : '') + '">' + gemSVG(x.id, i < g.i ? 1 : i === g.i ? g.frac : 0, 40) +
+    '<div class="group">' + GEMS.map((x, i) => '<div class="cell gemli' + (i > g.i ? ' locked' : '') + (i === g.i ? ' cur' : '') + '">' + gemCanvas(x.id, i < g.i ? 1 : i === g.i ? g.frac : 0, 48, '', i === g.i) +
       '<span class="grow">' + t('gem.' + x.id) + (x.id === 'obsidian' ? '<span class="st l2" style="display:block;font-size:12px">' + t('gem.pro') + '</span>' : '') + '</span><span class="val num">' + t('gem.from', { h: fmtNum(x.h) }) + '</span></div>').join('') + '</div>' +
     '<p class="ftr">' + t('gem.hint') + '</p>');
+  if (api && api.el) mountGems(api.el, stoneSeed(app.store.state.settings));
 }
 
 // Новая лига — одно короткое сообщение (выключается в «Уведомлениях»). Номер последней показанной лиги —

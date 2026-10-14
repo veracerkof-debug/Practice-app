@@ -32,6 +32,7 @@ import { gemOf } from '../mastery.js';
 import { APP_ICON_IDS, appIconSVG } from '../../ui/appicons.js';
 import { iconOf, setAppIcon } from '../appicon.js';
 import { gemSVG } from '../../ui/gems.js';
+import { gemCanvas } from '../../ui/gem3d.js';
 import { mountStones } from './home.js';
 import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
@@ -380,7 +381,7 @@ function rootHTML(app) {
   // «Минимал»: лиг нет — вместо самоцвета крутящийся камень (src/ui/stone.js)
   const mono = app.store.state.settings.uiStyle === 'mono';
   return '<div class="phero">' + (plain ? '<div class="pav">' + AVATAR + '</div>' : mono ? '<canvas class="pstone" data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title')) + '"></canvas>'
-    : '<button class="prank" data-act="gem" aria-label="' + esc(t('gem.aria', { name: gn, total: fmtDur(gemSec(all)) })) + '">' + gemSVG(g.gem.id, g.frac, 88) + '</button>') +
+    : '<button class="prank" data-act="gem" aria-label="' + esc(t('gem.aria', { name: gn, total: fmtDur(gemSec(all)) })) + '">' + gemCanvas(g.gem.id, g.frac, 104) + '</button>') +
     '<div class="large" style="margin:12px 0 0;text-align:center">' + esc(pr.name || t('panel.title')) + '</div>' +
     (plain ? '' : '<button class="prname" data-act="gem">' + esc(mono ? t('stone.title') : gn) + '</button>') +
     (sub ? '<div class="l2" style="text-align:center;font-size:15px">' + esc(sub) + '</div>' : '') + '</div>' +

@@ -218,7 +218,7 @@
 .gbar{width:min(100%,280px);height:8px;border-radius:4px;background:var(--fill);overflow:hidden;margin-top:6px}
 .gbar i{display:block;height:100%;background:var(--bc,var(--tint));border-radius:4px}
 .gemli{gap:12px}
-.gemli.locked .gem,.gemli.locked .rank{filter:grayscale(1);opacity:.35}
+.gemli.locked .gem,.gemli.locked .gem3d,.gemli.locked .rank{filter:grayscale(1);opacity:.35}
 .gemli.locked .grow{color:var(--l2)}
 .gemli.cur{background:color-mix(in srgb,var(--tint) 8%,var(--cell))}
 /* Логотип: «Μελέτη» шрифтом GFS Didot — по центру верхней строки; нажатие — справка о названии */
@@ -336,3 +336,4 @@
 .owncol::-webkit-color-swatch-wrapper{padding:0}
 .owncol::-webkit-color-swatch{border:none;border-radius:50%;box-shadow:inset 0 0 0 1px var(--sep)}
 .owncol::-moz-color-swatch{border:none;border-radius:50%}
+.gem3d{flex:none;display:block;cursor:grab;touch-action:none}
