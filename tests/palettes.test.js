@@ -29,3 +29,23 @@ describe('палитры', () => {
     expect(onColor('#1F3F9F')).toBe('#ffffff');
   });
 });
+
+describe('свои цвета', () => {
+  it('свой цвет: все оттенки из одного, акцент — сам цвет', async () => {
+    const { ownPalette, hueColor, accentVars } = await import('../src/core/palettes.js');
+    const P = ownPalette('#C0392B');
+    HUES.forEach((h) => expect(P[h]).toMatch(/^#[0-9A-F]{6}$/));
+    expect(P.orange).toBe('#C0392B');
+    expect(new Set(Object.values(P)).size).toBe(HUES.length);
+    expect(hueColor({ palette: 'own', ownMain: '#C0392B' }, 'orange')).toBe('#C0392B');
+    expect(accentVars({ palette: 'own', ownMain: '#C0392B', accent: 'blue' })['--tint']).toBe('#C0392B');
+  });
+  it('свой фон: тёмный — тёмная схема и светлый текст', async () => {
+    const { bgVars } = await import('../src/core/palettes.js');
+    expect(bgVars('nope')).toBe(null);
+    const d = bgVars('#2A0A3A'), l = bgVars('#FFD0E0');
+    expect(d.dark).toBe(true); expect(l.dark).toBe(false);
+    expect(onColor(d.vars['--ink'])).toBe('#1c1c1e'); // светлый текст на тёмном
+    expect(onColor(l.vars['--ink'])).toBe('#ffffff');
+  });
+});

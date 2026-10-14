@@ -2,7 +2,7 @@
 import { setBare, setMascotGender } from '../i18n/index.js';
 import { setMascotLook } from '../ui/mascot.js';
 import { watchMarks } from '../ui/marks.js';
-import { accentVars, paintTools, hueColor, ACCENT_HUE, forcedText } from './palettes.js';
+import { accentVars, paintTools, hueColor, ACCENT_HUE, forcedText, bgVars } from './palettes.js';
 
 // Функции ядра, которые можно выключить (модули выключаются так же — по id); данные при этом сохраняются
 export const CORE_FEATURES = ['streak', 'mastery', 'quote'];
@@ -104,6 +104,7 @@ export function applyScale(settings) {
   if (!applyScale.bound) { applyScale.bound = true; addEventListener('orientationchange', () => setTimeout(() => applyScale(settings), 200)); }
 }
 
+const BG_KEYS = ['--bg', '--cell', '--ink', '--l2', '--l3', '--sep', '--fill', '--fill2', '--bar'];
 export function applyTheme(settings, de = document.documentElement) {
   const t = settings.theme;
   if (t === 'system' || !THEMES.includes(t)) de.removeAttribute('data-theme');
@@ -123,6 +124,11 @@ export function applyTheme(settings, de = document.documentElement) {
   const vars = isMono(settings) ? null : accentVars(settings), keys = ['--tint', '--tint-text', '--on-tint', '--red'];
   keys.forEach((k) => { if (!vars || !(k in vars)) de.style.removeProperty(k); });
   if (vars) Object.entries(vars).forEach(([k, v]) => de.style.setProperty(k, v));
+  // свой фон (settings.ownBg): все цвета поверхности — из него; тёмный фон — тёмная схема (не в «Минимале»)
+  const bv = isMono(settings) ? null : bgVars(settings.ownBg);
+  BG_KEYS.forEach((k) => de.style.removeProperty(k));
+  if (bv) { Object.entries(bv.vars).forEach(([k, v]) => de.style.setProperty(k, v)); de.style.colorScheme = bv.dark ? 'dark' : 'light'; de.setAttribute('data-ownbg', bv.dark ? 'dark' : 'light'); }
+  else { de.style.removeProperty('color-scheme'); de.removeAttribute('data-ownbg'); }
   // выбранный цвет текста на цветном — и для элементов со своим белым текстом (календарь, значки)
   const f = forcedText();
   if (f && !isMono(settings)) de.style.setProperty('--on-fixed', f); else de.style.removeProperty('--on-fixed');

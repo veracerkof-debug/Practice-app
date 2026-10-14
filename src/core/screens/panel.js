@@ -17,7 +17,7 @@ import { hasDemo, addDemo, removeDemo } from '../demo.js';
 import { meleteHTML, bindMelete } from './melete.js';
 import { setsOf, QSETS } from '../quotes.js';
 const QUOTE_IC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M10 7H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5A1.5 1.5 0 0 1 6.5 18H6v2h.5A3.5 3.5 0 0 0 10 16.5zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5a1.5 1.5 0 0 1-1.5 1.5H16v2h.5a3.5 3.5 0 0 0 3.5-3.5z"/></svg>';
-import { PALETTE_IDS, PALETTES, hueColor, onColor, TEXT_MODES } from '../palettes.js';
+import { PALETTE_IDS, PALETTES, SPECIAL_PALETTES, ownPalette, OWN_DEFAULT, isHex, hueColor, onColor, TEXT_MODES } from '../palettes.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { AVATAR, CHEV, BACK, IC, tabIds, TAB_ICONS, weekdays, mBadge } from './common.js';
@@ -230,11 +230,20 @@ function mountSizePreview(app, root) {
 // Палитры: полоска оттенков (как будут выглядеть инструменты) и название
 const PAL_SHOW = ['orange', 'red', 'yellow', 'green', 'mint', 'cyan', 'blue', 'indigo', 'purple', 'pink'];
 function paletteHTML(st) {
-  const cur = PALETTES[st.palette] ? st.palette : 'classic';
-  return '<div class="hdr">' + t('pal.title') + '</div><div class="pals" role="group" aria-label="' + esc(t('pal.title')) + '">' + PALETTE_IDS.map((k) =>
-    '<button class="pal' + (cur === k ? ' on' : '') + '" data-pal="' + k + '" aria-pressed="' + (cur === k) + '"><span class="palrow">' +
-    PAL_SHOW.map((h) => '<i style="background:' + PALETTES[k][h] + '"></i>').join('') + '</span><span class="paln">' + t('pal.' + k) + '</span></button>').join('') +
+  const cur = st.palette === 'own' ? 'own' : PALETTES[st.palette] ? st.palette : 'classic';
+  const tile = (k, P, name, wide) => '<button class="pal' + (wide ? ' wide' : '') + (cur === k ? ' on' : '') + '" data-pal="' + k + '" aria-pressed="' + (cur === k) + '"><span class="palrow">' +
+    PAL_SHOW.map((h) => '<i style="background:' + P[h] + '"></i>').join('') + '</span><span class="paln">' + esc(name) + '</span></button>';
+  const main = isHex(st.ownMain) ? st.ownMain : OWN_DEFAULT, bg = isHex(st.ownBg) ? st.ownBg : null;
+  return '<div class="hdr">' + t('pal.title') + '</div><div class="pals" role="group" aria-label="' + esc(t('pal.title')) + '">' +
+    PALETTE_IDS.map((k) => tile(k, PALETTES[k], t('pal.' + k))).join('') + tile('own', ownPalette(main), t('pal.own')) +
     '</div><p class="ftr">' + t('pal.hint') + '</p>' +
+    // свои цвета: основной (все оттенки — из него) и фон (вся поверхность — из него)
+    '<div class="hdr">' + t('own.title') + '</div><div class="group">' +
+    '<label class="cell"><span class="grow">' + t('own.main') + '</span><input type="color" class="owncol" data-owncolor="main" value="' + main.toLowerCase() + '" aria-label="' + esc(t('own.main')) + '"></label>' +
+    '<label class="cell"><span class="grow">' + t('own.bg') + (bg ? '' : '<span class="psub">' + t('own.bgNone') + '</span>') + '</span><input type="color" class="owncol" data-owncolor="bg" value="' + (bg || '#f3f2ee').toLowerCase() + '" aria-label="' + esc(t('own.bg')) + '"></label>' +
+    (bg ? '<button class="cell act" data-ownbgreset>' + t('own.bgReset') + '</button>' : '') + '</div><p class="ftr">' + t('own.hint') + '</p>' +
+    // «Лунный свет» — отдельно, для любителей оттенков серого
+    '<div class="hdr">' + t('pal.lunarTitle') + '</div><div class="pals">' + SPECIAL_PALETTES.map((k) => tile(k, PALETTES[k], t('pal.' + k), true)).join('') + '</div><p class="ftr">' + t('pal.lunarHint') + '</p>' +
     // цвет текста и значков на цветных кнопках, метках, событиях
     '<div class="hdr">' + t('ontext.title') + '</div><div class="group"><div class="cellcol">' +
     seg('ontext', TEXT_MODES.map((k) => [k, t('ontext.' + k)]), TEXT_MODES.includes(st.onText) ? st.onText : 'auto', t('ontext.title')) +
@@ -425,6 +434,10 @@ export function createPanel(app, onChange) {
     if (app.folder) app.folder.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
     // характер Мелеты (страница «Уведомления»)
     bindMelete(layer, () => app.store.state.settings, { save: () => { app.store.settingsChanged(); onChange(); }, rerender: () => render() });
+    // свои цвета: при выборе — сразу на экране, сохраняется по закрытию палитры (change)
+    const ownSet = (el) => { const st = app.store.state.settings, v = el.value.toUpperCase(); if (el.dataset.owncolor === 'main') { st.ownMain = v; st.palette = 'own'; } else st.ownBg = v; applyTheme(st); };
+    layer.addEventListener('input', (e) => { if (e.target.dataset && e.target.dataset.owncolor) ownSet(e.target); });
+    layer.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.owncolor) { ownSet(e.target); changed(); } });
     // «Вкладки»: удержать вкладку и вести вверх-вниз — новый порядок
     sortable(layer, '[data-tab-row]', 'data-tab-row', (ids) => { if (orderTabs(app.store, tabIds(app.store.state.settings), ids)) { render(); onChange(); } });
     layer.addEventListener('click', (e) => {
@@ -457,6 +470,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="szdev"] [data-v]'))) { prevDev = b.dataset.v; render(); return; }
       if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
       if ((b = g('[data-seg="ontext"] [data-v]'))) { app.store.state.settings.onText = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
+      if (g('[data-ownbgreset]')) { delete app.store.state.settings.ownBg; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-pal]'))) { app.store.state.settings.palette = b.dataset.pal; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-acc]'))) { app.store.state.settings.accent = b.dataset.acc; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-meinst]'))) {
