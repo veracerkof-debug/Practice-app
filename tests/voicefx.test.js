@@ -56,3 +56,21 @@ describe('обработка записи', () => {
     expect(peaks(out, 50).length).toBeGreaterThan(40);
   });
 });
+
+import { eq, eqResponse, EQ_PRESETS, spectrumDb } from '../src/audio/voicefx.js';
+describe('эквалайзер и спектр', () => {
+  it('полоса поднимает и опускает свою частоту, соседние почти не трогает', () => {
+    expect(eqResponse([0, 0, 6, 0, 0], 1000)).toBeCloseTo(6, 0);
+    expect(Math.abs(eqResponse([0, 0, 6, 0, 0], 100))).toBeLessThan(0.6);
+    expect(eqResponse([-6, 0, 0, 0, 0], 30)).toBeCloseTo(-6, 0);
+    expect(eqResponse([0, 0, 0, 0, 6], 16000)).toBeGreaterThan(5);
+    const y = eq([tone(1000, 1, 0.2)], SR, [0, 0, 6, 0, 0])[0];
+    expect(rms(y, SR / 2) / rms(tone(1000, 1, 0.2), SR / 2)).toBeCloseTo(2, 0);
+    expect(Object.values(EQ_PRESETS).every((p) => p.length === 5)).toBe(true);
+  });
+  it('спектр находит частоту', () => {
+    const s = spectrumDb(tone(1000, 0.1, 0.5), 1024), k = s.indexOf(Math.max(...s));
+    expect(Math.abs((k * SR) / 1024 - 1000)).toBeLessThan(SR / 1024 + 1);
+    expect(Math.max(...s)).toBeGreaterThan(-12);
+  });
+});

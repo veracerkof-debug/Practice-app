@@ -33,7 +33,7 @@ import java.io.RandomAccessFile;
 public class VoicePlugin extends Plugin {
 
     private AudioManager am;
-    private volatile boolean recording = false, paused = false, playing = false;
+    private volatile boolean recording = false, paused = false, playing = false, monitor = false;
     private Thread recThread, playThread;
     private File recFile;
     private int recRate = 48000, recCh = 1;
@@ -169,6 +169,8 @@ public class VoicePlugin extends Plugin {
         int id = call.getInt("deviceId", -1);
         boolean stereo = Boolean.TRUE.equals(call.getBoolean("stereo", false));
         boolean raw = Boolean.TRUE.equals(call.getBoolean("raw", true));
+        // проверка уровня: всё как при записи, но в файл ничего не пишется
+        monitor = Boolean.TRUE.equals(call.getBoolean("monitor", false));
         AudioDeviceInfo dev = id >= 0 ? find(AudioManager.GET_DEVICES_INPUTS, id) : null;
         boolean bt = isBtVoice(dev);
         if (bt) useComm(dev);
@@ -197,6 +199,7 @@ public class VoicePlugin extends Plugin {
         recThread = new Thread(() -> {
             short[] buf = new short[recRate / 20 * recCh]; // 50 мс
             byte[] bytes = new byte[buf.length * 2];
+            byte[] pcm = new byte[2048]; // последние 1024 отсчёта (моно) — для спектра на экране
             try (FileOutputStream out = new FileOutputStream(recFile)) {
                 out.write(new byte[44]); // заголовок — при остановке
                 while (recording) {
@@ -204,8 +207,16 @@ public class VoicePlugin extends Plugin {
                     if (n <= 0) continue;
                     int peak = 0; double sum = 0;
                     for (int i = 0; i < n; i++) { int v = Math.abs(buf[i]); if (v > peak) peak = v; sum += (double) buf[i] * buf[i]; bytes[2 * i] = (byte) (buf[i] & 0xff); bytes[2 * i + 1] = (byte) ((buf[i] >> 8) & 0xff); }
-                    if (!paused) { out.write(bytes, 0, n * 2); recFrames += n / recCh; }
+                    if (!paused && !monitor) { out.write(bytes, 0, n * 2); recFrames += n / recCh; }
+                    int frames = n / recCh, m = Math.min(1024, frames), from = frames - m;
+                    for (int i = 0; i < m; i++) {
+                        int v = buf[(from + i) * recCh];
+                        if (recCh == 2) v = (v + buf[(from + i) * recCh + 1]) / 2;
+                        pcm[2 * i] = (byte) (v & 0xff); pcm[2 * i + 1] = (byte) ((v >> 8) & 0xff);
+                    }
                     JSObject lv = new JSObject();
+                    lv.put("pcm", Base64.encodeToString(pcm, 0, m * 2, Base64.NO_WRAP));
+                    lv.put("rate", recRate);
                     lv.put("peak", peak / 32768.0);
                     lv.put("rms", Math.sqrt(sum / n) / 32768.0);
                     lv.put("sec", recFrames / (double) recRate);

@@ -40,6 +40,57 @@ export function highpass(ch, sr, f = 80) {
   return ch;
 }
 
+// Эквалайзер: 5 полос (низкая полка 80 Гц, 250 Гц, 1 кГц, 3,5 кГц, высокая полка 10 кГц), усиление ±12 дБ.
+// Фильтры — биквады по формулам RBJ (Audio EQ Cookbook)
+export const EQ_BANDS = [{ f: 80, type: 'lowshelf' }, { f: 250, type: 'peak', q: 1 }, { f: 1000, type: 'peak', q: 1 }, { f: 3500, type: 'peak', q: 1 }, { f: 10000, type: 'highshelf' }];
+export const EQ_PRESETS = { flat: [0, 0, 0, 0, 0], voice: [-3, -2, 0, 2.5, 1.5], warm: [2.5, 1, 0, -1, -2.5], bright: [0, -1, 0, 2.5, 4], demud: [0, -4, -1, 1, 0], bass: [5, 2, 0, 0, -1] };
+export function biquadCoefs(type, f, db, sr, q = 0.707) {
+  const A = Math.pow(10, db / 40), w = (2 * Math.PI * Math.min(f, sr * 0.45)) / sr, cw = Math.cos(w), sw = Math.sin(w);
+  let b0, b1, b2, a0, a1, a2;
+  if (type === 'peak') {
+    const al = sw / (2 * q);
+    b0 = 1 + al * A; b1 = -2 * cw; b2 = 1 - al * A; a0 = 1 + al / A; a1 = -2 * cw; a2 = 1 - al / A;
+  } else {
+    const al = (sw / 2) * Math.SQRT2, sA = 2 * Math.sqrt(A) * al, s = type === 'lowshelf' ? 1 : -1;
+    b0 = A * ((A + 1) - s * (A - 1) * cw + sA); b1 = s * 2 * A * ((A - 1) - s * (A + 1) * cw); b2 = A * ((A + 1) - s * (A - 1) * cw - sA);
+    a0 = (A + 1) + s * (A - 1) * cw + sA; a1 = -s * 2 * ((A - 1) + s * (A + 1) * cw); a2 = (A + 1) + s * (A - 1) * cw - sA;
+  }
+  return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0];
+}
+// АЧХ эквалайзера в точке f (дБ) — для кривой на экране
+export function eqResponse(gains, f, sr = 48000) {
+  let db = 0;
+  EQ_BANDS.forEach((b, i) => {
+    if (!gains[i]) return;
+    const [b0, b1, b2, a1, a2] = biquadCoefs(b.type, b.f, gains[i], sr, b.q), w = (2 * Math.PI * f) / sr;
+    const re = (c0, c1, c2) => c0 + c1 * Math.cos(w) + c2 * Math.cos(2 * w), im = (c1, c2) => -(c1 * Math.sin(w) + c2 * Math.sin(2 * w));
+    const num = Math.hypot(re(b0, b1, b2), im(b1, b2)), den = Math.hypot(re(1, a1, a2), im(a1, a2));
+    db += 20 * Math.log10(num / den);
+  });
+  return db;
+}
+export function eq(ch, sr, gains = []) {
+  EQ_BANDS.forEach((b, i) => {
+    const g = +gains[i] || 0;
+    if (!g) return;
+    const [b0, b1, b2, a1, a2] = biquadCoefs(b.type, b.f, g, sr, b.q);
+    ch.forEach((x) => {
+      let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+      for (let k = 0; k < x.length; k++) { const x0 = x[k], y0 = b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x0; y2 = y1; y1 = y0; x[k] = y0; }
+    });
+  });
+  return ch;
+}
+
+// Спектр короткого отрывка для экрана: n — размер БПФ (степень 2) → дБ полной шкалы по n/2 полосам
+export function spectrumDb(x, n = 1024) {
+  const re = new Float32Array(n), im = new Float32Array(n), m = Math.min(n, x.length), out = new Float32Array(n / 2);
+  for (let i = 0; i < m; i++) re[i] = x[x.length - m + i] * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (m - 1 || 1)));
+  fft(re, im);
+  for (let k = 0; k < n / 2; k++) out[k] = 20 * Math.log10(Math.hypot(re[k], im[k]) * 4 / n + 1e-9);
+  return out;
+}
+
 // Гейт: тише порога (дБ) — приглушить на range дБ; плавная атака/отпускание, удержание hold
 export function gateFx(ch, sr, thrDb = -50, { range = 40, attack = 0.005, release = 0.12, hold = 0.08 } = {}) {
   const thr = dbToLin(thrDb), floor = dbToLin(-range), aC = Math.exp(-1 / (attack * sr)), rC = Math.exp(-1 / (release * sr)), hN = Math.floor(hold * sr);
@@ -155,6 +206,7 @@ export function process(ch, sr, o = {}) {
   let c = ch.map((x) => Float32Array.from(x));
   if (o.trim) c = trim(c, sr, o.trim[0], o.trim[1]);
   if (o.lowcut) highpass(c, sr, o.lowcut === true ? 80 : o.lowcut);
+  if (o.eq && o.eq.some((g) => g)) eq(c, sr, o.eq);
   if (o.denoise > 0) c = denoise(c, sr, o.denoise);
   if (o.gate != null && o.gate > -90) gateFx(c, sr, o.gate);
   if (o.comp && COMP[o.comp]) compress(c, sr, COMP[o.comp]);

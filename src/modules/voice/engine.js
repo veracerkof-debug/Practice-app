@@ -17,7 +17,9 @@ export const isLav = (d) => LAV.test(d.name || '');
 
 function nativeEngine() {
   const subs = { level: new Set(), pos: new Set(), end: new Set(), devices: new Set() };
-  ['level', 'pos', 'end', 'devices'].forEach((k) => V.addListener(k, (e) => subs[k].forEach((fn) => fn(e))));
+  // уровень: кусочек сигнала для спектра (int16, моно) → Float32Array
+  const toF = (e) => { if (e && e.pcm) { const u = unb64(e.pcm), n = u.length >> 1, x = new Float32Array(n); for (let i = 0; i < n; i++) { const v = u[2 * i] | (u[2 * i + 1] << 8); x[i] = (v > 32767 ? v - 65536 : v) / 32768; } e.samples = x; } return e; };
+  ['level', 'pos', 'end', 'devices'].forEach((k) => V.addListener(k, (e) => { if (k === 'level') toF(e); subs[k].forEach((fn) => fn(e)); }));
   return {
     native: true,
     on: (k, fn) => { subs[k].add(fn); return () => subs[k].delete(fn); },
@@ -56,7 +58,7 @@ function webEngine() {
       const map = (k) => list.filter((d) => d.kind === k && d.deviceId !== 'communications').map((d, i) => ({ id: d.deviceId, type: d.deviceId === 'default' ? (k === 'audioinput' ? 'builtin_mic' : 'speaker') : typeOf(d), name: d.label || (k === 'audioinput' ? 'Mic ' : 'Out ') + (i + 1), channels: 1 }));
       return { inputs: map('audioinput'), outputs: 'setSinkId' in HTMLMediaElement.prototype ? map('audiooutput') : [] };
     },
-    async start({ deviceId, stereo, raw }) {
+    async start({ deviceId, stereo, raw, monitor }) {
       const c = new (window.AudioContext || window.webkitAudioContext)();
       let stream;
       try {
@@ -68,11 +70,12 @@ function webEngine() {
         let peak = 0, sum = 0;
         for (let k = 0; k < nc; k++) {
           const x = e.inputBuffer.getChannelData(Math.min(k, e.inputBuffer.numberOfChannels - 1));
-          if (!paused) bufs[k].push(Float32Array.from(x));
+          if (!paused && !monitor) bufs[k].push(Float32Array.from(x));
           for (let i = 0; i < x.length; i++) { const v = Math.abs(x[i]); if (v > peak) peak = v; sum += x[i] * x[i]; }
         }
-        if (!paused) frames += e.inputBuffer.length;
-        emit('level', { peak, rms: Math.sqrt(sum / (e.inputBuffer.length * nc)), sec: frames / c.sampleRate, paused });
+        if (!paused && !monitor) frames += e.inputBuffer.length;
+        const x0 = e.inputBuffer.getChannelData(0);
+        emit('level', { peak, rms: Math.sqrt(sum / (e.inputBuffer.length * nc)), sec: frames / c.sampleRate, paused, samples: x0.slice(-1024), rate: c.sampleRate });
       };
       src.connect(sp); sp.connect(c.destination);
       rec = { c, stream, src, sp, bufs, get frames() { return frames; }, setPaused: (v) => { paused = v; } };

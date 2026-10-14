@@ -8,7 +8,7 @@ import en from './i18n/en.json';
 import el from './i18n/el.json';
 import './voice.css';
 import { engine, isLav } from './engine.js';
-import { decodeWav, encodeWav, process, peaks } from '../../audio/voicefx.js';
+import { decodeWav, encodeWav, process, peaks, spectrumDb, eqResponse, EQ_BANDS, EQ_PRESETS } from '../../audio/voicefx.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>';
 const I = {
@@ -17,12 +17,14 @@ const I = {
   pause: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.4" fill="currentColor" stroke="none"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4" fill="currentColor" stroke="none"/></svg>',
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z" fill="currentColor" stroke="none"/></svg>',
 };
-const FX_DEF = { lowcut: true, denoise: 0, gate: -90, comp: 'off', gain: 0, normalize: true, reverb: 0 };
+const FX_DEF = { lowcut: true, eq: [0, 0, 0, 0, 0], denoise: 0, gate: -90, comp: 'off', gain: 0, normalize: true, reverb: 0 };
+// Окно уровня: что показывать (настраивается — шестерёнка в окне)
+const METER_DEF = { spec: true, style: 'bars', mode: 'both', clip: -0.3, hold: 2, range: 60, smooth: 'mid' };
 
-let host = null, ctx = null, size = 'full', offs = [], onClick = null, onChange = null, onPtr = null;
-const S = { phase: 'idle', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, take: null, sel: [0, 1], playing: false, pos: 0, mode: 'proc', busy: false, devs: { inputs: [], outputs: [] }, err: null, proc: null };
+let host = null, ctx = null, size = 'full', offs = [], onClick = null, onChange = null, onPtr = null, onInput = null;
+const S = { mon: false, phase: 'idle', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, take: null, sel: [0, 1], playing: false, pos: 0, mode: 'proc', busy: false, devs: { inputs: [], outputs: [] }, err: null, proc: null };
 
-const st = () => { const s = ctx.store.all(); s.fx = { ...FX_DEF, ...(s.fx || {}) }; s.in ??= null; s.out ??= null; s.stereo ??= false; s.raw ??= true; return s; };
+const st = () => { const s = ctx.store.all(); s.fx = { ...FX_DEF, ...(s.fx || {}) }; s.meter = { ...METER_DEF, ...(s.meter || {}) }; s.in ??= null; s.out ??= null; s.stereo ??= false; s.raw ??= true; return s; };
 const big = () => size === 'full' || size === 'half';
 const esc = (s) => ctx.ui.esc(s);
 const t = (k, v) => ctx.t(k, v);
@@ -59,13 +61,27 @@ const sw = (k, on) => '<label class="sw"><input type="checkbox" data-v="' + k + 
 
 /* ---------- запись ---------- */
 
+// Проверка уровня: вход открыт, окно уровня и спектр работают, в файл ничего не пишется
+async function monStart() {
+  const s = st(), dev = curIn();
+  try { await engine().start({ deviceId: dev ? dev.id : -1, stereo: s.stereo, raw: s.raw, monitor: true }); S.mon = true; S.err = null; Object.assign(M, { hold: -120, clipAt: 0, spec: null }); }
+  catch (e) { S.err = String(e && e.message) === 'denied' ? 'denied' : 'unavailable'; }
+  render();
+}
+async function monStop() {
+  if (!S.mon) return;
+  S.mon = false;
+  try { const r = await engine().stop(); if (r && r.path) engine().remove(r.path); } catch { /* уже остановлено */ }
+}
 async function startRec() {
+  await monStop();
   if (S.take && !S.take.saved && !(await ctx.ui.confirm(t('discardTitle'), t('discardText'), t('discardYes')))) return;
   await dropTake();
   const s = st(), dev = curIn();
   try {
     const r = await engine().start({ deviceId: dev ? dev.id : -1, stereo: s.stereo, raw: s.raw });
     Object.assign(S, { phase: 'rec', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, err: null, rate: r.rate, bt: r.bt });
+    Object.assign(M, { hold: -120, clipAt: 0, spec: null, rate: r.rate || 48000 });
     ctx.log('запись: вход ' + (dev ? dev.type : 'авто') + ', ' + r.rate + ' Гц, каналов ' + r.channels);
   } catch (e) {
     S.err = String(e && e.message) === 'denied' ? 'denied' : 'unavailable';
@@ -131,14 +147,98 @@ async function save() {
 
 /* ---------- экран ---------- */
 
+// Окно уровня: дБ (пик и/или RMS), шкала с удержанием пика, лампочка перегруза, спектр
+const M = { hold: -120, holdAt: 0, clipAt: 0, spec: null, rate: 48000 };
 function meterHTML() {
-  return '<div class="vc-meter" aria-hidden="true"><i id="vrms"></i><b id="vpk"></b></div>';
+  const m = st().meter, ticks = [-60, -40, -30, -20, -12, -6, -3, 0].filter((d) => d >= -m.range);
+  return '<div class="vc-mon"><div class="vc-monh">' +
+    '<span class="vc-dbs"><b class="num" id="vc-db">−∞</b><span class="vc-dbu">' + t(m.mode === 'rms' ? 'm.rmsU' : 'm.peakU') + '</span>' +
+    (m.mode === 'both' ? '<span class="num l2" id="vc-db2"></span>' : '') + '</span>' +
+    '<button class="vc-clip" id="vc-clip" data-x="clipreset" aria-label="' + esc(t('m.clipAria')) + '"><i></i>CLIP</button>' +
+    '<button class="ic sm" data-x="mset" aria-label="' + esc(t('m.set')) + '">' + GEAR + '</button></div>' +
+    '<div class="vc-bar" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div>' +
+    '<div class="vc-ticks num" aria-hidden="true">' + ticks.map((d) => '<span style="left:' + ((d + m.range) / m.range) * 100 + '%">' + (d ? d : '0') + '</span>').join('') + '</div>' +
+    (m.spec && big() ? '<canvas id="vc-spec" class="vc-spec" aria-hidden="true"></canvas>' : '') + '</div>';
+}
+const GEAR = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg>';
+const pctOf = (db) => Math.max(0, Math.min(100, ((db + st().meter.range) / st().meter.range) * 100));
+const dbOf = (x) => (x > 1e-6 ? 20 * Math.log10(x) : -120);
+function meterUpdate(e) {
+  if (!host) return;
+  const m = st().meter, now = performance.now(), q = (s) => host.querySelector(s);
+  const pk = dbOf(e.peak), rm = dbOf(e.rms);
+  if (pk >= m.clip) M.clipAt = now;
+  if (pk > M.hold || (m.hold > 0 && now - M.holdAt > m.hold * 1000) || m.hold === 0) { M.hold = pk; M.holdAt = now; }
+  const shown = m.mode === 'rms' ? rm : pk, fmtDb = (d) => (d <= -90 ? '−∞' : (d > -0.05 ? '0.0' : d.toFixed(1)).replace('-', '−'));
+  const a = q('#vc-db'); if (a) { a.textContent = fmtDb(shown); a.classList.toggle('hot', pk >= m.clip); }
+  const b = q('#vc-db2'); if (b) b.textContent = 'RMS ' + fmtDb(rm);
+  const r = q('#vc-barr'); if (r) r.style.width = (m.mode === 'peak' ? 0 : pctOf(rm)) + '%';
+  const p = q('#vc-barp'); if (p) p.style.width = (m.mode === 'rms' ? 0 : pctOf(pk)) + '%';
+  const h = q('#vc-hold'); if (h) h.style.left = pctOf(M.hold) + '%';
+  const c = q('#vc-clip'); if (c) c.classList.toggle('on', !!M.clipAt && (m.hold === -1 || now - M.clipAt < Math.max(1, m.hold || 1) * 1000));
+  if (e.samples && m.spec) drawSpec(e.samples, e.rate || M.rate);
+}
+// Спектр: логарифмическая шкала 40 Гц…16 кГц, столбики или линия, сглаживание по времени
+function drawSpec(x, rate) {
+  const cv = host && host.querySelector('#vc-spec');
+  if (!cv) return;
+  const m = st().meter, dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const s = spectrumDb(x, 1024), NB = m.style === 'bars' ? 40 : 96, lo = Math.log10(40), hi = Math.log10(Math.min(16000, rate / 2));
+  const bands = new Float32Array(NB);
+  for (let b = 0; b < NB; b++) {
+    const f0 = Math.pow(10, lo + ((hi - lo) * b) / NB), f1 = Math.pow(10, lo + ((hi - lo) * (b + 1)) / NB);
+    let k0 = Math.floor((f0 * 1024) / rate), k1 = Math.max(k0 + 1, Math.ceil((f1 * 1024) / rate)), v = -120;
+    for (let k = k0; k < k1 && k < s.length; k++) v = Math.max(v, s[k]);
+    bands[b] = v;
+  }
+  const a = { fast: 0.7, mid: 0.4, slow: 0.18 }[m.smooth] || 0.4;
+  if (!M.spec || M.spec.length !== NB) M.spec = bands; else for (let b = 0; b < NB; b++) M.spec[b] = bands[b] > M.spec[b] ? bands[b] : M.spec[b] + (bands[b] - M.spec[b]) * a;
+  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#9C7242', l3 = cs.getPropertyValue('--l3').trim() || '#ccc';
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const y = (d) => H - (Math.max(0, Math.min(1, (d + 90) / 90)) * (H - 2));
+  // сетка: 100 Гц, 1 кГц, 10 кГц
+  g.fillStyle = l3; [100, 1000, 10000].forEach((f) => { const xx = ((Math.log10(f) - lo) / (hi - lo)) * W; if (xx > 0 && xx < W) g.fillRect(xx, 0, 1, H); });
+  if (m.style === 'bars') {
+    const bw = W / NB;
+    for (let b = 0; b < NB; b++) { const yy = y(M.spec[b]); g.fillStyle = M.spec[b] > -6 ? '#D2463F' : tint; g.fillRect(b * bw + 1, yy, Math.max(1, bw - 2), H - yy); }
+  } else {
+    g.beginPath(); for (let b = 0; b < NB; b++) { const xx = (b + 0.5) * (W / NB); b ? g.lineTo(xx, y(M.spec[b])) : g.moveTo(xx, y(M.spec[b])); }
+    g.strokeStyle = tint; g.lineWidth = 1.8; g.stroke(); g.lineTo(W, H); g.lineTo(0, H); g.closePath(); g.globalAlpha = 0.18; g.fillStyle = tint; g.fill(); g.globalAlpha = 1;
+  }
+}
+// Настройки окна уровня
+function meterSheet() {
+  const { ui } = ctx, m = () => st().meter;
+  const row = (k, opts, label) => '<div class="hdr">' + label + '</div><div class="group"><div class="cellcol">' + ui.seg('m-' + k, opts, String(m()[k]), label) + '</div></div>';
+  ui.sheet(() => ui.snav(t('m.set')) +
+    row('mode', [['both', t('m.both')], ['peak', t('m.peak')], ['rms', 'RMS']], t('m.mode')) +
+    row('spec', [['true', t('m.on')], ['false', t('m.off')]], t('m.spec')) +
+    row('style', [['bars', t('m.bars')], ['line', t('m.line')]], t('m.style')) +
+    row('smooth', [['fast', t('m.fast')], ['mid', t('m.mid')], ['slow', t('m.slow')]], t('m.smooth')) +
+    row('clip', [['-0.3', '−0,3'], ['-1', '−1'], ['-3', '−3'], ['-6', '−6']], t('m.clip')) +
+    row('hold', [['0', t('m.off')], ['1', '1 ' + t('m.s')], ['2', '2 ' + t('m.s')], ['5', '5 ' + t('m.s')], ['-1', '∞']], t('m.hold')) +
+    row('range', [['48', '48'], ['60', '60'], ['90', '90']], t('m.range')) +
+    '<p class="ftr">' + t('m.hint') + '</p>',
+  (el, sh) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-seg] [data-v]');
+    if (!b) return;
+    const k = b.closest('[data-seg]').dataset.seg.slice(2), v = b.dataset.v;
+    st().meter[k] = k === 'style' || k === 'mode' || k === 'smooth' ? v : v === 'true' ? true : v === 'false' ? false : +v;
+    ctx.store.save(); sh.update(); render();
+  }));
 }
 function fxHTML() {
   const f = st().fx, rng = (k, min, max, step, val, label, txt) => '<label class="cellcol vc-fx"><span class="vc-fxh"><span>' + label + '</span><b class="num" id="vfx-' + k + '">' + txt + '</b></span>' +
     '<input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" data-fx="' + k + '" aria-label="' + esc(label) + '"></label>';
   return '<div class="hdr">' + t('fx') + '</div><div class="group">' +
     '<div class="cell"><span class="grow"><span>' + t('fx.lowcut') + '</span><span class="st l2">' + t('fx.lowcutHint') + '</span></span><label class="sw"><input type="checkbox" data-fx="lowcut"' + (f.lowcut ? ' checked' : '') + '><i></i></label></div>' +
+    // эквалайзер: пресеты, кривая и 5 полос
+    '<div class="cellcol vc-eq"><span class="vc-fxh"><span>' + t('fx.eq') + '</span></span><div class="pickrow" style="margin:6px 0 2px">' + Object.keys(EQ_PRESETS).map((k) =>
+      '<button type="button" class="lchip pick' + (JSON.stringify(EQ_PRESETS[k]) === JSON.stringify(f.eq) ? ' on' : '') + '" data-eqp="' + k + '" style="--c:var(--tint);--t:var(--on-tint)">' + t('eq.' + k) + '</button>').join('') + '</div>' +
+      '<canvas id="vc-eqc" class="vc-eqc" aria-hidden="true"></canvas><div class="vc-eqb">' + EQ_BANDS.map((b, i) => '<label><b class="num" id="veq-' + i + '">' + eqTxt(f.eq[i]) + '</b>' +
+      '<input type="range" min="-12" max="12" step="0.5" value="' + f.eq[i] + '" data-eq="' + i + '" aria-label="' + esc(t('fx.eq') + ' ' + hz(b.f)) + '"><span class="num">' + hz(b.f) + '</span></label>').join('') + '</div></div>' +
     rng('denoise', 0, 1, 0.05, f.denoise, t('fx.denoise'), fxTxt('denoise', f.denoise)) +
     rng('gate', -90, -25, 1, f.gate, t('fx.gate'), fxTxt('gate', f.gate)) +
     '<div class="cellcol"><span>' + t('fx.comp') + '</span>' + ctx.ui.seg('vcomp', ['off', 'light', 'mid', 'strong'].map((k) => [k, t('comp.' + k)]), f.comp, t('fx.comp')) + '</div>' +
@@ -146,6 +246,24 @@ function fxHTML() {
     '<div class="cell"><span class="grow">' + t('fx.normalize') + '</span><label class="sw"><input type="checkbox" data-fx="normalize"' + (f.normalize ? ' checked' : '') + '><i></i></label></div>' +
     rng('reverb', 0, 0.6, 0.05, f.reverb, t('fx.reverb'), fxTxt('reverb', f.reverb)) + '</div>' +
     '<p class="ftr">' + t('fxHint') + '</p>';
+}
+const hz = (f) => (f >= 1000 ? f / 1000 + 'k' : String(f));
+const eqTxt = (v) => (v > 0 ? '+' : '') + (+v).toFixed(v % 1 ? 1 : 0);
+function drawEq() {
+  const cv = host && host.querySelector('#vc-eqc');
+  if (!cv) return;
+  const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#9C7242', l3 = cs.getPropertyValue('--l3').trim() || '#ccc', gains = st().fx.eq;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const lo = Math.log10(30), hi = Math.log10(18000), y = (d) => H / 2 - (d / 15) * (H / 2 - 4);
+  g.fillStyle = l3; g.fillRect(0, H / 2, W, 1);
+  [100, 1000, 10000].forEach((f) => g.fillRect(((Math.log10(f) - lo) / (hi - lo)) * W, 0, 1, H));
+  g.beginPath();
+  for (let i = 0; i <= 120; i++) { const f = Math.pow(10, lo + ((hi - lo) * i) / 120), d = eqResponse(gains, f); i ? g.lineTo((i / 120) * W, y(d)) : g.moveTo(0, y(d)); }
+  g.strokeStyle = tint; g.lineWidth = 2; g.stroke();
+  g.lineTo(W, H / 2); g.lineTo(0, H / 2); g.closePath(); g.globalAlpha = 0.15; g.fillStyle = tint; g.fill(); g.globalAlpha = 1;
 }
 function fxTxt(k, v) {
   if (k === 'gate') return v <= -90 ? t('off') : v + ' ' + t('db');
@@ -156,7 +274,7 @@ function fxTxt(k, v) {
 function html() {
   const err = S.err ? '<p class="ftr" style="color:var(--red)">' + t(S.err === 'denied' ? 'micDenied' : 'micNone') + '</p>' : '';
   if (S.phase === 'rec') {
-    return '<div class="vc-rec ' + size + '"><div class="vc-time num" id="vc-time">' + fmt(S.sec) + '</div>' + meterHTML() +
+    return '<div class="vc-rec ' + size + '"><div class="vc-time num" id="vc-time">' + fmt(S.sec) + '</div>' + (big() ? meterHTML() : '<div class="vc-bar mini" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div>') +
       '<div class="vc-btns"><button class="vc-btn sec" data-x="pause" aria-label="' + t(S.paused ? 'resume' : 'pause') + '">' + (S.paused ? I.rec : I.pause) + '</button>' +
       '<button class="vc-btn main stop" data-x="stop" aria-label="' + t('stop') + '">' + I.stop + '</button></div>' +
       (S.paused ? '<p class="l2 vc-state">' + t('paused') + '</p>' : big() ? '<p class="l2 vc-state">' + esc(curIn() ? devName(curIn()) : t('auto')) + '</p>' : '') + '</div>';
@@ -176,6 +294,8 @@ function html() {
   // ожидание
   if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-btns"><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button></div>' + err + '</div>';
   return '<div class="vc-idle"><div class="vc-rec full"><div class="vc-time num l2">0:00.0</div><div class="vc-btns"><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button></div><p class="l2 vc-state">' + t('tapRec') + '</p></div>' +
+    // проверка уровня до записи: окно уровня и спектр без записи в файл
+    (S.mon ? meterHTML() : '') + '<div class="group"><button class="cell act center" data-x="mon">' + t(S.mon ? 'm.monStop' : 'm.monStart') + '</button></div>' +
     err + '<div class="hdr">' + t('devices') + '</div>' + devHTML() + '<p class="ftr">' + t(engine().native ? 'devHint' : 'devHintWeb') + '</p></div>';
 }
 
@@ -183,6 +303,7 @@ function render() {
   if (!host) return;
   host.innerHTML = '<div class="voice ' + size + '">' + html() + '</div>';
   drawWave();
+  drawEq();
 }
 
 function drawWave() {
@@ -208,13 +329,14 @@ function drawWave() {
 
 // Обновление без перерисовки: время и уровень при записи, позиция при воспроизведении
 function onLevel(e) {
+  if (e.rate) M.rate = e.rate;
+  if (S.mon && S.phase === 'idle') { meterUpdate(e); return; }
   if (S.phase !== 'rec' || !host) return;
+  meterUpdate(e);
   S.sec = e.sec; S.paused = !!e.paused;
   if (e.peak > 0.98) S.clip = performance.now();
   const q = (s) => host.querySelector(s), db = (x) => Math.max(0, Math.min(100, ((20 * Math.log10(Math.max(1e-5, x)) + 60) / 60) * 100));
   const tm = q('#vc-time'); if (tm) tm.textContent = fmt(e.sec);
-  const r = q('#vrms'); if (r) r.style.width = db(e.rms) + '%';
-  const pk = q('#vpk'); if (pk) { pk.style.left = db(e.peak) + '%'; pk.classList.toggle('clip', performance.now() - S.clip < 1200); }
 }
 function onPos(e) {
   if (!S.playing || !S.take) return;
@@ -248,6 +370,8 @@ export default {
         if (k === 'vcomp') { st().fx.comp = sg.dataset.v; ctx.store.save(); render(); }
         return;
       }
+      const ep = e.target.closest('[data-eqp]');
+      if (ep) { st().fx.eq = EQ_PRESETS[ep.dataset.eqp].slice(); ctx.store.save(); render(); return; }
       const x = e.target.closest('[data-x]');
       if (!x || S.busy) return;
       const a = x.dataset.x;
@@ -256,12 +380,16 @@ export default {
       else if (a === 'pause') { S.paused = !S.paused; engine().pause(S.paused); render(); }
       else if (a === 'play') play();
       else if (a === 'save') save();
+      else if (a === 'mon') { if (S.mon) monStop().then(render); else monStart(); }
+      else if (a === 'mset') meterSheet();
+      else if (a === 'clipreset') { M.clipAt = 0; M.hold = -120; const c = host.querySelector('#vc-clip'); if (c) c.classList.remove('on'); }
       else if (a === 'drop') ctx.ui.confirm(t('discardTitle'), t('discardText'), t('discardYes')).then((ok) => ok && dropTake().then(render));
     };
     onChange = (e) => {
       const d = e.target.dataset, s = st();
       if (d.v === 'in' || d.v === 'out') { s[d.v] = e.target.value || null; ctx.store.save(); render(); }
       else if (d.v === 'stereo' || d.v === 'raw') { s[d.v] = e.target.checked; ctx.store.save(); }
+      else if (d.eq != null) { s.fx.eq[+d.eq] = +e.target.value; s.fx.eq = s.fx.eq.slice(); ctx.store.save(); render(); }
       else if (d.fx) {
         const v = e.target.type === 'checkbox' ? e.target.checked : +e.target.value;
         s.fx[d.fx] = v; ctx.store.save();
@@ -283,13 +411,17 @@ export default {
     host.addEventListener('click', onClick);
     host.addEventListener('change', onChange);
     host.addEventListener('pointerdown', onPtr);
+    // эквалайзер: подпись и кривая — пока тянут ползунок
+    onInput = (e) => { const i = e.target.dataset.eq; if (i == null) return; st().fx.eq[+i] = +e.target.value; const l = host.querySelector('#veq-' + i); if (l) l.textContent = eqTxt(+e.target.value); drawEq(); };
+    host.addEventListener('input', onInput);
     render();
     loadDevices();
   },
   resize(sz) { size = sz; render(); },
   unmount() {
     offs.forEach((f) => f()); offs = [];
-    if (host) { host.removeEventListener('click', onClick); host.removeEventListener('change', onChange); host.removeEventListener('pointerdown', onPtr); }
+    if (host) { host.removeEventListener('click', onClick); host.removeEventListener('change', onChange); host.removeEventListener('pointerdown', onPtr); host.removeEventListener('input', onInput); }
+    monStop();
     stopPlay();
     // запись не прерывается молча: остановить и оставить дубль до следующего открытия
     if (S.phase === 'rec') stopRec();

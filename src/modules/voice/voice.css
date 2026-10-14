@@ -31,3 +31,34 @@
 .voice .vc-dev .sortsel{flex:1;min-width:0}
 .voice .vc-note{font-size:13px}
 .voice .st{display:block;font-size:12.5px}
+/* окно уровня: дБ, шкала, лампочка перегруза, спектр */
+.voice .vc-mon{width:100%;max-width:560px;margin:0 auto 12px;background:var(--cell);border-radius:16px;padding:10px 12px 12px;box-sizing:border-box}
+.voice .vc-rec .vc-mon{width:min(100%,560px)}
+.voice .vc-monh{display:flex;align-items:center;gap:10px}
+.voice .vc-dbs{flex:1;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.voice .vc-dbs b{font-size:30px;font-weight:300;letter-spacing:-.02em;min-width:3.4ch}
+.voice .vc-dbs b.hot{color:#D2463F}
+.voice .vc-dbu{font-size:12px;color:var(--l2)}
+.voice .vc-clip{display:flex;align-items:center;gap:6px;border:1px solid var(--sep);background:none;border-radius:999px;padding:6px 10px;font:700 11px/1 var(--font);letter-spacing:.08em;color:var(--l2);min-height:32px;cursor:pointer}
+.voice .vc-clip i{width:10px;height:10px;border-radius:50%;background:var(--l3);transition:background .1s,box-shadow .1s}
+.voice .vc-clip.on{color:#D2463F;border-color:#D2463F}
+.voice .vc-clip.on i{background:#FF3B30;box-shadow:0 0 8px 2px rgba(255,59,48,.75);animation:vc-blink .5s steps(2,start) infinite}
+@keyframes vc-blink{to{opacity:.25}}
+.voice .vc-bar{position:relative;height:12px;margin-top:10px;border-radius:6px;background:var(--fill);overflow:hidden}
+.voice .vc-bar.mini{width:min(92%,420px);margin:0}
+.voice .vc-bar i{position:absolute;left:0;top:0;bottom:0;width:0}
+.voice .vc-bar #vc-barp{background:linear-gradient(90deg,#5F8568 0 70%,#C9A23A 70% 88%,#D2463F 88%);opacity:.45}
+.voice .vc-bar #vc-barr{background:linear-gradient(90deg,#5F8568 0 70%,#C9A23A 70% 88%,#D2463F 88%);z-index:1}
+.voice .vc-bar b{position:absolute;top:0;bottom:0;width:2px;left:0;background:var(--ink);z-index:2}
+.voice .vc-ticks{position:relative;height:14px;font-size:9.5px;color:var(--l2);margin-top:2px}
+.voice .vc-ticks span{position:absolute;transform:translateX(-50%)}
+.voice .vc-ticks span:first-child{transform:none}
+.voice .vc-ticks span:last-child{transform:translateX(-100%)}
+.voice .vc-spec{display:block;width:100%;height:110px;margin-top:8px}
+.voice .vc-rec.full .vc-spec{height:150px}
+/* эквалайзер */
+.voice .vc-eqc{display:block;width:100%;height:84px;margin:6px 0 4px;border-radius:10px;background:var(--fill)}
+.voice .vc-eqb{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center}
+.voice .vc-eqb label{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--l2)}
+.voice .vc-eqb b{font-size:12px;color:var(--ink)}
+.voice .vc-eqb input{width:100%;accent-color:var(--tint)}
