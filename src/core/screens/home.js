@@ -66,15 +66,6 @@ function personal(st, now) {
   return null;
 }
 const elx = (s) => esc(s).replace(/(Μελέτη|Μιχαήλ)/g, '<span lang="el">$1</span>');
-function helloHTML(st, now) {
-  const p = personal(st, now);
-  return p ? '<h1 class="mhello">' + elx(p.hello) + '</h1><p class="mrole">' + elx(p.line) + '</p>' : '<h1 class="mhello">' + esc(greet(now.getHours())) + '</h1>';
-}
-// Обычный вид: приветствие строкой над неделей — только при личном обращении
-function helloClassic(st) {
-  const p = personal(st, new Date());
-  return p ? '<div class="hgreet" aria-live="polite"><b>' + elx(p.hello) + '</b><span>' + elx(p.line) + '</span></div>' : '';
-}
 // Церковный режим: чтение дня по плану — главы, сколько прочитано, «Читать» открывает Библию на первой непрочитанной
 function readingCard(app, mono = false) {
   const st = app.store.state.settings;
@@ -99,13 +90,15 @@ function pleaHTML(app, cls) {
   if (app.store.sessions().some((x) => dayKey(x.start) === dayKey(now.getTime()))) return '';
   return '<b class="' + cls + '">' + esc(pleaLine(h, getLang())) + '</b>';
 }
+// На главной говорит только маскот: сам приветствует (по времени суток и по имени; после кода — личное обращение)
+// и говорит слово дня. Без маскота — те же слова, без лица
 function quoteHTML(app, mono) {
-  const st = app.store.state.settings;
-  if (!isOn(st, 'quote')) return '';
-  const q = quoteAt(dayIndex(), getLang(), setsOf(st), st.quoteBooks || []);
-  // без маскота — только слово дня
-  return '<div class="' + (mono ? 'mvo' : 'hvoice') + (hasMascot() ? '' : ' nomascot') + '">' + (hasMascot() ? '<button class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' : '') +
-    (q.text ? '<p class="' + (mono ? 'mquote' : 'hquote') + '">' + pleaHTML(app, 'mplea') + esc(q.text) + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p>' : '') + '</div>';
+  const st = app.store.state.settings, now = new Date(), p = personal(st, now), name = st.profile && st.profile.name;
+  const hello = p ? p.hello : greet(now.getHours()) + (name ? ', ' + name : '');
+  const q = isOn(st, 'quote') ? quoteAt(dayIndex(), getLang(), setsOf(st), st.quoteBooks || []) : {};
+  return '<div class="' + (mono ? 'mvo' : 'hvoice') + (hasMascot() ? '' : ' nomascot') + '" aria-live="polite">' + (hasMascot() ? '<button class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' : '') +
+    '<p class="' + (mono ? 'mquote' : 'hquote') + '"><b class="vhello">' + elx(hello) + '</b>' + (p ? '<span class="vrole">' + elx(p.line) + '</span>' : '') + pleaHTML(app, 'mplea') +
+    (q.text ? esc(q.text) + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') : '') + '</p></div>';
 }
 const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';
 
@@ -113,7 +106,7 @@ function homeMonoHTML(app) {
   const st = app.store.state.settings, plain = !!st.toolsOnly, now = new Date();
   // (имя приложения в строчке — с lang="el": прописными по-гречески, без ударения)
   // Приветствие — место, где приложение потом будет говорить: спрашивать, предлагать, напоминать (без даты: это не календарь)
-  let h = '<div class="mono-home">' + topbar(logoHTML()) + '<div class="mvoice" aria-live="polite">' + helloHTML(st, now) + quoteHTML(app, true) + '</div>';
+  let h = '<div class="mono-home">' + topbar(logoHTML()) + '<div class="mvoice">' + quoteHTML(app, true) + '</div>';
   if (!plain) {
     const w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st), today = weekday(Date.now()), WD = weekdays();
     h += mhead(t('home.week'), '<button class="mbtn" data-pp="' + (st.configured ? 'stats' : 'week') + '" aria-label="' + esc(t('home.stats')) + '">' + ARROW + '</button>') +
@@ -150,7 +143,7 @@ export function homeHTML(app) {
   const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
   const today = weekday(Date.now()), plan = st.days, WD = weekdays();
   // заголовка «Сегодня» нет: место — неделе и делу (личное обращение после кода — строкой сверху)
-  let h = topbar(logoHTML()) + helloClassic(st) + quoteHTML(app, false) + '<div class="hcols"><div>';
+  let h = topbar(logoHTML()) + quoteHTML(app, false) + '<div class="hcols"><div>';
   // «Только инструменты»: без недели, цели, камня и звания — сразу рабочее место и инструменты
   const plain = !!st.toolsOnly;
   if (!plain) h += '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +

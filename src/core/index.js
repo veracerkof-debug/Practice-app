@@ -1,6 +1,6 @@
 // Ядро: песни, сессии, статистика, цели, ударный режим, хранение.
 import { initTama } from '../ui/tama.js';
-import { webIcon, iconOf } from './appicon.js';
+import { webIcon, iconOf, setAppIcon, ICON_BY_MASCOT } from './appicon.js';
 import { t, initI18n, getLang } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
@@ -8,7 +8,7 @@ import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.j
 import { loadDevice, saveDevice } from './device.js';
 import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
-import { applyTheme, tabsMigrate, calmMigrate } from './settings.js';
+import { applyTheme, tabsMigrate, calmMigrate, mascotOf } from './settings.js';
 import { registerTools } from './palettes.js';
 import { extCheck } from './ext.js';
 import { createShell } from './screens/shell.js';
@@ -177,7 +177,11 @@ export function boot(root) {
   // Мелета-тамагочи: по желанию рядом на занятии, слушает (если разрешено) и говорит, как идёт
   initTama(app);
   // иконка приложения: значок вкладки в браузере (на Android — выбранный alias уже включён)
-  webIcon(iconOf(store.state.settings));
+  // Иконка следует за маскотом (по умолчанию — Мелетий), пока её не выбрали сами в «Оформлении». Один раз — и у тех,
+  // кто ставил ранние сборки, где по умолчанию была Мелета (на Android переключается ярлык запуска)
+  const sti = store.state.settings, wantIcon = ICON_BY_MASCOT[mascotOf(sti)];
+  if (!sti.appIconOwn && (sti.appIcon !== wantIcon || sti.iconSync !== 1)) { sti.iconSync = 1; setAppIcon(sti, wantIcon).then(() => store.settingsChanged()); }
+  webIcon(iconOf(sti));
   app.startSession = (type, songId, tool) => session.start(type, songId, tool);
   // Язык и вид поменялись (Оформление, доступ к «Минимал»): строки и стили — на месте, без перезапуска и без ухода с экрана
   app.relang = () => {
