@@ -9,11 +9,10 @@ import { GOAL_MIN, GOAL_MAX } from '../settings.js';
 import { INSTRUMENTS, LEVELS, GOAL_BY_LEVEL, PRIOR_MAX, newProfile, saveProfile, applyLevelDefaults, estimateHours, toolsFor } from '../profile.js';
 import { modules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
-import { rankOf } from '../rank.js';
 import { logoHTML } from '../../ui/logo.js';
 import { meleteHTML, bindMelete } from './melete.js';
 import { remindOf, setRemind, remindAvailable, remindPermission } from '../reminders.js';
-import { rankSVG, rankName, RANK_COLORS } from '../../ui/rank.js';
+import { gemSVG } from '../../ui/gems.js';
 import { weekdays } from './common.js';
 
 const STEPS = ['name', 'inst', 'level', 'tools', 'exp', 'goal', 'melete'];
@@ -21,11 +20,8 @@ const STEPS = ['name', 'inst', 'level', 'tools', 'exp', 'goal', 'melete'];
 // Карточки для выбора (инструменты, уровень)
 const card = (attr, on, title, sub = '') => '<button type="button" class="obcard' + (on ? ' on' : '') + '" ' + attr + ' aria-pressed="' + on + '"><b>' + esc(title) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</button>';
 
-// Стартовое звание по опыту до приложения
-function rankBox(hours) {
-  const r = rankOf(hours), n = rankName(r.id, r.level);
-  return rankSVG(r.id, r.level, 64, n) + '<div style="--rk:' + RANK_COLORS[r.id] + '"><b style="color:var(--rk)">' + esc(n) + '</b><small>' + t('ob.rankNote') + '</small></div>';
-}
+// Лига на старте — всегда «Камень»: опыт до приложения в лигу и статистику не идёт (решение автора)
+const leagueBox = () => gemSVG('stone', 0, 64, t('gem.stone')) + '<div><b>' + esc(t('gem.stone')) + '</b><small>' + t('ob.leagueNote') + '</small></div>';
 
 export function onboarding(app, done = () => {}) {
   if (document.getElementById('onboard')) return;
@@ -74,12 +70,12 @@ export function onboarding(app, done = () => {}) {
     // Мелета: характер напоминаний и маскота, время занятий, обращение, наборы слов
     if (s === 'melete') return '<h1 class="obh">' + t('ob.meleteTitle') + '</h1><p class="obp">' + t('ob.meleteText') + '</p>' + meleteHTML(st, { sets: true });
     if (s === 'exp') {
-      return '<h1 class="obh">' + t('ob.expTitle') + '</h1><p class="obp">' + t('ob.expText') + (p.level === 'beginner' ? '' : ' ' + t('ob.expRequired')) + '</p>' +
+      return '<h1 class="obh">' + t('ob.expTitle') + '</h1><p class="obp">' + t('ob.expText') + '' + '</p>' +
         '<div class="group"><label class="cell"><span class="grow">' + t('ob.hours') + '</span><input class="inp num obhours" id="obhours" type="number" inputmode="numeric" min="0" max="' + PRIOR_MAX + '" placeholder="0" aria-label="' + t('ob.hours') + '" value="' + (p.priorHours || '') + '"></label></div>' +
         '<div class="hdr">' + t('ob.calc') + '</div><div class="group"><label class="cell"><span class="grow">' + t('ob.years') + '</span><input class="inp num" id="obyears" type="number" inputmode="decimal" min="0" max="80" step="0.5" placeholder="0" value="' + (f.years || '') + '"></label>' +
         '<label class="cell"><span class="grow">' + t('ob.perWeek') + '</span><input class="inp num" id="obweek" type="number" inputmode="decimal" min="0" max="80" step="0.5" placeholder="0" value="' + (f.perWeek || '') + '"></label>' +
         '<button type="button" class="cell act center" data-obcalc>' + t('ob.calcUse', { h: estimateHours(f.years, f.perWeek) }) + '</button></div>' +
-        '<div class="obgem">' + rankBox(p.priorHours) + '</div>';
+        '<div class="obgem">' + leagueBox() + '</div>';
     }
     const WD = weekdays();
     return '<h1 class="obh">' + t('ob.goalTitle') + '</h1><p class="obp">' + t('ob.goalText') + '</p>' +
@@ -133,7 +129,6 @@ export function onboarding(app, done = () => {}) {
     if (g('[data-obnext]')) {
       if (STEPS[f.step] === 'inst' && !p.instruments.length) { toast(t('ob.pickInst')); return; }
       // у всех, кроме новичка, опыт обязателен: иначе уровень и звание не с чего посчитать
-      if (STEPS[f.step] === 'exp' && p.level !== 'beginner' && !p.priorHours) { toast(t('ob.needHours')); layer.querySelector('#obhours')?.focus(); return; }
       // цель по уровню подставляется, пока её не меняли вручную
       if (STEPS[f.step] === 'level' && !f.goalTouched) f.goalMin = GOAL_BY_LEVEL[p.level];
       // набор инструментов по уровню — пока его не меняли вручную
@@ -191,10 +186,6 @@ export function onboarding(app, done = () => {}) {
     read();
     const btn = layer.querySelector('[data-obcalc]');
     if (btn) btn.textContent = t('ob.calcUse', { h: estimateHours(f.years, f.perWeek) });
-    if (e.target.id === 'obhours') {
-      const box = layer.querySelector('.obgem');
-      if (box) box.innerHTML = rankBox(p.priorHours);
-    }
   });
   // характер Мелеты: перерисовка без прокрутки наверх
   bindMelete(layer, st, { save: () => app.store.settingsChanged(), ask: false, rerender: () => { const b = layer.querySelector('.obbody'), y = b ? b.scrollTop : 0; render(); const nb = layer.querySelector('.obbody'); if (nb) nb.scrollTop = y; } });

@@ -9,7 +9,7 @@ import { TAB_ICONS, tabIds } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule } from '../modules.js';
 import { visibleTabs } from '../settings.js';
-import { homeHTML, mountStones, quickEdit, streakSheet, gemSheet, rankSheet, rankCheck, nameSheet } from './home.js';
+import { homeHTML, quickEdit, streakSheet, gemSheet, leagueCheck, nameSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { bindExt } from './ext.js';
@@ -53,7 +53,7 @@ export function createShell(app, root) {
   function renderNow() {
     // первый запуск: до конца регистрации — только заставка (поздние перерисовки — файлы, синхронизация — не в счёт)
     if (root.classList.contains('starting')) return;
-    rankCheck(app);
+    leagueCheck(app);
     renderTabs();
     document.documentElement.style.setProperty('--tabh', tabs.parentElement.offsetHeight + 'px');
     if (view.tab === 'bible') { renderBible(); return; }
@@ -66,7 +66,7 @@ export function createShell(app, root) {
       if (!h) view.song = null;
       main.innerHTML = h || libraryHTML(app, view);
       coreHelp(app, 'songs');
-    } else { main.innerHTML = homeHTML(app); mountStones(app, main); if (!app.store.state.settings.toolsOnly) coreHelp(app, 'start'); }
+    } else { main.innerHTML = homeHTML(app); if (!app.store.state.settings.toolsOnly) coreHelp(app, 'start'); }
   }
 
   // Новая вкладка или экран: содержимое поднимается, блоки — по очереди (styles/motion.css). Только при переходе,
@@ -95,7 +95,7 @@ export function createShell(app, root) {
 
   // Предпросмотр масштаба в «Оформлении»: разметка главной и инструментов без обработчиков
   app.preview = {
-    home: (el) => { el.innerHTML = homeHTML(app); mountStones(app, el); },
+    home: (el) => { el.innerHTML = homeHTML(app); },
     tools: (el) => { renderTools(app, el); el.onclick = null; },
     tabs: () => tabs.innerHTML,
   };
@@ -131,7 +131,7 @@ export function createShell(app, root) {
     else if (d.act === 'streak') streakSheet(app);
     else if (d.act === 'unver') unverifiedSheet(app);
     else if (d.act === 'gem') gemSheet(app);
-    else if (d.act === 'rank') rankSheet(app);
+    else if (d.act === 'rank') gemSheet(app); // прежняя кнопка звания — теперь лига
     else if (d.act === 'name') nameSheet();
     else if (d.cat !== undefined) { view.cat = d.cat; view.genre = ''; view.tag = ''; render(); }
     else if (d.fg !== undefined) { view.genre = view.genre === d.fg ? '' : d.fg; render(); }

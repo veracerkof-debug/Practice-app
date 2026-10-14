@@ -10,7 +10,6 @@ import { log, logErr } from './log.js';
 import { epigraphHTML } from './screens/verses.js';
 import { gemSec } from './profile.js';
 import { gemOf } from './mastery.js';
-import { stoneSeed } from '../ui/stone.js';
 import { firstHelp } from './help.js';
 import { guardOpen, guardClose } from './guard.js';
 
@@ -99,7 +98,8 @@ export function makeCtx(app, mod) {
     saveData: () => app.store.settingsChanged(),
     pomodoro: app.pomodoro,
     // Камень пользователя (для сцен помодоро): зерно породы, часы занятий в приложении, текущий самоцвет
-    stone: () => { const st = app.store.state.settings, hours = gemSec(app.store.sessions()) / 3600; return { seed: stoneSeed(st), hours, gem: gemOf(hours) }; },
+    // лига музыканта (часы практики в приложении) — для модулей, которым она нужна
+    league: () => { const hours = gemSec(app.store.sessions()) / 3600; return { hours, gem: gemOf(hours) }; },
     // Церковный режим: чтение Библии (src/core/reading.js: createBible)
     bible: app.bible,
     // Секундомер «сколько я играю» (ядро; второй режим «Помодоро»). commit — записать в статистику как свободную

@@ -207,7 +207,8 @@
 .hprog .gemrow .gtxt b{font-size:17px}
 .rkrow .gtxt b{color:var(--rk);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rkbar{display:block;height:5px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:6px}
-.rkbar i{display:block;height:100%;background:var(--rk);border-radius:3px}
+.rkbar i{display:block;height:100%;background:var(--rk,var(--tint));border-radius:3px}
+.gemrow .gtxt b{font-size:17px}
 .gemrow .chev{width:8px;height:13px;stroke:var(--l3);fill:none;stroke-width:2;flex:none}
 .gem{flex:none;display:block}
 .gem .gsp{animation:gtw 2.6s ease-in-out infinite}

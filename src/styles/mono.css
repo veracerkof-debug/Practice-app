@@ -132,6 +132,8 @@
 /* камень: обычный, с дороги, круглеет с часами (src/ui/stone.js) */
 .mono-home .mstone { display: flex; align-items: center; gap: 14px; margin: 22px 0 0; }
 .mono-home .mstone canvas { width: 112px; height: 112px; flex: none; cursor: grab; border-radius: 50%; }
+.mono-home .mleague { width: 100%; text-align: left; }
+.mono-home .mleague svg { flex: none; }
 .mono-home .mstone canvas:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
 .mono-home .mstxt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .mono-home .mslbl { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--l2); font-weight: 600; }

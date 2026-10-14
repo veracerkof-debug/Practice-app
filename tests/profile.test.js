@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tuningFor, priorHours, lifetimeSec, gemSec, estimateHours, saveProfile, applyLevelDefaults, newProfile } from '../src/core/profile.js';
+import { tuningFor, priorHours, gemSec, estimateHours, saveProfile, applyLevelDefaults, newProfile } from '../src/core/profile.js';
 import { createStore } from '../src/core/store.js';
 import { profileSeal, DAY_MS } from '../src/core/integrity.js';
 import { deviceDefaults } from '../src/core/device.js';
@@ -12,7 +12,7 @@ describe('профиль', () => {
     expect(tuningFor(['piano', 'vocal'])).toBe(null);
     expect(tuningFor(['uke'])).toBe('u_std');
   });
-  it('опыт до приложения входит в общее время', () => {
+  it('опыт до приложения — воображаемый: в лигу не идёт', () => {
     const st = { profile: { priorHours: 120, createdAt: 5 } };
     st.profile.sig = profileSeal(st.profile);
     expect(priorHours(st)).toBe(120);
@@ -20,8 +20,7 @@ describe('профиль', () => {
     expect(priorHours({ profile: { ...st.profile, priorHours: 9000 } })).toBe(0);
     expect(priorHours({})).toBe(0);
     expect(priorHours({ profile: { priorHours: -5 } })).toBe(0);
-    expect(lifetimeSec([{ dur: 3600 }, { dur: 1800 }], st)).toBe(5400 + 120 * 3600);
-    // камень — только практика в приложении, без тишины, отмеченной микрофоном
+    // лига — только практика в приложении, без тишины, отмеченной микрофоном
     expect(gemSec([{ dur: 3600, quiet: 600 }, { dur: 1800 }])).toBe(4800);
   });
   it('оценка опыта: годы × часы в неделю × 52', () => {
@@ -35,16 +34,12 @@ describe('профиль', () => {
     expect(p.sig).toBe(profileSeal(p));
     expect(store.state.settings.configured).toBe(true);
   });
-  it('опыт до приложения: 7 дней свободно, потом только в меньшую сторону', () => {
+  it('опыт до приложения меняется свободно в любое время', () => {
     let now = 1000;
     const store = createStore({ storage: mem(), now: () => now });
     saveProfile(store, { name: 'A', priorHours: 100 }, { done: true });
-    now += 3 * DAY_MS;
-    expect(saveProfile(store, { name: 'A', priorHours: 200 }).priorHours).toBe(200);
-    now += 5 * DAY_MS;
-    const up = saveProfile(store, { name: 'A', priorHours: 900 });
-    expect(up.priorHours).toBe(200);
-    expect(up.locked).toBe(true);
+    now += 30 * DAY_MS;
+    expect(saveProfile(store, { name: 'A', priorHours: 900 }).priorHours).toBe(900);
     expect(saveProfile(store, { name: 'A', priorHours: 50 }).priorHours).toBe(50);
   });
   it('новичку — режим новичка в тюнере и ноты в глайдере, остальным только строй', () => {

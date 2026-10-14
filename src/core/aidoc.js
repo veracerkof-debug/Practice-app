@@ -37,7 +37,7 @@ function docRu() {
 
 ## Чего в файле быть не может
 
-Время занятий, часы, статистика, сессии, опыт до приложения, звания, камень, выученность песен — всё это приложение
+Время занятий, часы, статистика, сессии, опыт до приложения, лига, выученность песен — всё это приложение
 считает само по реальным занятиям. Через файл это **не меняется**: такие поля игнорируются. Не нужно их добавлять
 и не нужно обещать человеку, что так можно.
 
@@ -161,7 +161,7 @@ settings into the Melete app (musician practice). The task is to build, on their
 
 ## What cannot be in the file
 
-Practice time, hours, statistics, sessions, prior experience, ranks, the stone, song mastery — the app counts all of this
+Practice time, hours, statistics, sessions, prior experience, the league, song mastery — the app counts all of this
 itself from real practice. A file **does not change** any of it: such fields are ignored. Do not add them
 and do not promise the person that this is possible.
 
@@ -285,7 +285,7 @@ iqtiboslar toʻplamini yoki profil sozlamalarini yuklamoqchi. Vazifa — uning s
 
 ## Faylda nima boʻlishi mumkin emas
 
-Mashq vaqti, soatlar, statistika, sessiyalar, ilovagacha boʻlgan tajriba, unvonlar, tosh, qoʻshiqlarning oʻzlashtirilgani —
+Mashq vaqti, soatlar, statistika, sessiyalar, ilovagacha boʻlgan tajriba, liga, qoʻshiqlarning oʻzlashtirilgani —
 bularning hammasini ilova haqiqiy mashqlar boʻyicha oʻzi hisoblaydi. Fayl orqali bular **oʻzgarmaydi**: bunday maydonlar
 eʼtiborga olinmaydi. Ularni qoʻshish va insonga bu mumkin deb vaʼda berish shart emas.
 

@@ -20,7 +20,7 @@ settings into the Melete app (musician practice). The task is to build, on their
 
 ## What cannot be in the file
 
-Practice time, hours, statistics, sessions, prior experience, ranks, the stone, song mastery — the app counts all of this
+Practice time, hours, statistics, sessions, prior experience, the league, song mastery — the app counts all of this
 itself from real practice. A file **does not change** any of it: such fields are ignored. Do not add them
 and do not promise the person that this is possible.
 

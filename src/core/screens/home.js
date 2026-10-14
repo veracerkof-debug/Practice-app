@@ -7,9 +7,7 @@ import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
 import { weekData, goalProgress, songStats, streakInfo } from '../stats.js';
 import { GEMS, gemOf } from '../mastery.js';
-import { gemSec, lifetimeSec, priorHours } from '../profile.js';
-import { RANK_STEPS, rankOf } from '../rank.js';
-import { rankSVG, rankName, RANK_COLORS } from '../../ui/rank.js';
+import { gemSec } from '../profile.js';
 import { gemSVG } from '../../ui/gems.js';
 import { trackMode } from '../session.js';
 import { genreOf, ensureLib } from '../library.js';
@@ -19,7 +17,6 @@ import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
-import { stoneView, wear, stoneKm, stoneSeed, roundness } from '../../ui/stone.js';
 import { nextEventsHTML } from './calendar.js';
 import { extWho } from '../ext.js';
 import { refText } from '../bible.js';
@@ -120,14 +117,12 @@ function homeMonoHTML(app) {
       '<span class="mof num">/ ' + fmtDur(goal) + '</span></button><div class="mline"><i style="width:' + Math.min(100, p * 100) + '%"></i></div>' +
       '<div class="mdays">' + WD.map((d, i) => '<span class="' + (w.per[i] > 0 ? 'done' : st.days[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '">' + d + '</span>').join('') + '</div>';
     if (isOn(st, 'mastery')) {
-      const all = app.store.sessions(), r = rankOf(lifetimeSec(all, st) / 3600), g = gemOf(gemSec(all) / 3600);
-      // Камень вместо самоцвета: обычный, с дороги; с часами занятий круглеет (src/ui/stone.js)
-      const sec = gemSec(all), wr = wear(sec / 3600);
-      h += '<div class="mstone"><canvas data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title') + ', ' + fmtDur(sec)) + '"></canvas>' +
-        '<div class="mstxt"><span class="mslbl">' + t('stone.title') + '</span><span class="msval num">' + fmtDur(sec) + '</span><span class="mslbl">' + esc(t('stone.round', { p: Math.round(roundness(wr) * 100) })) + '</span>' +
-        '<span class="mslbl num">' + esc(kmText(sec / 3600)) + '</span></div></div>';
-      h += '<div class="mtags"><button data-act="rank">' + esc(rankName(r.id, r.level)) + '</button>' +
-        (isOn(st, 'streak') && streakInfo(all, st).weeks ? '<button data-act="streak">' + esc(tn('streak.weeks', streakInfo(all, st).weeks)) + '</button>' : '') + '</div>';
+      // лига: самоцвет по часам практики в приложении (src/core/mastery.js), без званий
+      const all = app.store.sessions(), hrs = leagueHours(app), g = gemOf(hrs), name = t('gem.' + g.gem.id);
+      h += '<button class="mstone mleague" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(hrs * 3600) })) + '">' + gemSVG(g.gem.id, g.frac, 96) +
+        '<span class="mstxt"><span class="mslbl">' + esc(name) + '</span><span class="msval num">' + fmtDur(hrs * 3600) + '</span>' +
+        (g.next ? '<span class="mslbl num">' + esc(t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) })) + '</span>' : '') + '</span></button>';
+      if (isOn(st, 'streak') && streakInfo(all, st).weeks) h += '<div class="mtags"><button data-act="streak">' + esc(tn('streak.weeks', streakInfo(all, st).weeks)) + '</button></div>';
     }
   }
   h += readingCard(app, true);
@@ -233,112 +228,41 @@ const hoursText = (h) => fmtDur(h * 3600);
 const fmtNum = (h) => new Intl.NumberFormat(getLang() === 'en' ? 'en' : 'ru').format(h);
 const bar = (frac, c = '') => '<div class="gbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(frac * 100) + '"' + (c ? ' style="--bc:' + c + '"' : '') + '><i style="width:' + frac * 100 + '%"></i></div>';
 
-// Строка под карточкой недели: камень (практика в приложении) и звание (весь опыт) — две половины,
-// без лишних подписей: подробности — в шторках
+// Часы лиги: практика в приложении; во время проверки создателем — заданные правкой числа (sandbox.js)
+const leagueHours = (app) => sandboxHours(app.store.state.settings) ?? gemSec(app.store.sessions()) / 3600;
+
+// Лига под карточкой недели: самоцвет, часы в приложении, путь до следующей лиги
 function gemRow(app) {
   const st = app.store.state.settings;
   if (!isOn(st, 'mastery')) return '';
-  const all = app.store.sessions(), total = gemSec(all), g = gemOf(total / 3600), name = t('gem.' + g.gem.id);
-  const r = rankOf(lifetimeSec(all, st) / 3600), rn = rankName(r.id, r.level);
-  return '<div class="hprog"><button class="gemrow" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(total) })) + '">' + gemSVG(g.gem.id, g.frac, 44) +
-    '<span class="gtxt"><b class="num">' + fmtDur(total) + '</b><span class="l2">' + esc(name) + '</span></span></button>' +
-    '<button class="gemrow rkrow" data-act="rank" style="--rk:' + RANK_COLORS[r.id] + '" aria-label="' + esc(t('rank.aria', { name: rn })) + '">' + rankSVG(r.id, r.level, 44) +
-    '<span class="gtxt"><b>' + esc(rn) + '</b>' + (r.next ? '<span class="rkbar"><i style="width:' + r.frac * 100 + '%"></i></span>' : '<span class="l2">' + t('rank.topShort') + '</span>') + '</span></button></div>';
-}
-
-/* ---------- камень (режим «Минимал») ---------- */
-
-// Путь камня: до километра — метры (десятками), до 10 км — с десятой, дальше — целые
-export function kmText(hours) {
-  const km = stoneKm(hours), nf = (n, d = 0) => new Intl.NumberFormat(getLang() === 'en' ? 'en' : 'ru', { maximumFractionDigits: d }).format(n);
-  return km < 1 ? t('stone.m', { n: nf(Math.round(km * 100) * 10) }) : t('stone.km', { n: nf(km, km < 10 ? 1 : 0) });
-}
-
-
-// Оживить камни на экране после отрисовки (холсты с data-stone)
-// Часы камня: занятия в приложении; во время проверки создателем — заданные правкой числа (sandbox.js)
-const stoneHours = (app) => sandboxHours(app.store.state.settings) ?? gemSec(app.store.sessions()) / 3600;
-
-export function mountStones(app, root) {
-  const st = app.store.state.settings, h = stoneHours(app);
-  root.querySelectorAll('canvas[data-stone="home"]').forEach((c) => {
-    const v = stoneView(c, { seed: stoneSeed(st), hours: h, detail: 3, key: 'home', onTap: () => stoneSheet(app) });
-    const onH = (e) => { if (!c.isConnected) { removeEventListener('sandbox:hours', onH); return; } v.setHours(e.detail); };
-    addEventListener('sandbox:hours', onH);
-    c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); stoneSheet(app); } });
-  });
-}
-
-// Камень во весь экран: крутить, рассматривать; «Каким был» — тот же камень без единого часа
-export function stoneSheet(app) {
-  const st = app.store.state.settings, hrs = stoneHours(app), sec = hrs * 3600, wr = wear(hrs);
-  const pct = (x) => Math.round(x * 100) + '%';
-  const api = sheet(() => snav(t('stone.title')) +
-    '<div class="stonefull"><canvas data-stone="full" aria-label="' + esc(t('stone.title')) + '"></canvas></div>' +
-    '<div class="seg stseg" role="group" aria-label="' + esc(t('stone.title')) + '"><button data-stv="now" aria-pressed="true">' + t('stone.now') + '</button><button data-stv="then" aria-pressed="false">' + t('stone.then') + '</button></div>' +
-    '<div class="tiles num" style="margin-top:14px"><div class="tile"><b data-hours>' + fmtDur(sec) + '</b><span>' + t('stone.hours') + '</span></div><div class="tile"><b>' + pct(wr.edges) + '</b><span>' + t('stone.edges') +
-    '</span></div><div class="tile"><b>' + pct(roundness(wr)) + '</b><span>' + t('stone.form') + '</span></div></div>' +
-    '<div class="stkm"><b class="num">' + esc(kmText(hrs)) + '</b><span>' + t('stone.path') + '</span></div>' +
-    '<p class="ftr">' + t('stone.text') + '</p>');
-  const root = api.el;
-  const cv = root.querySelector('canvas[data-stone="full"]');
-  if (!cv) return;
-  const v = stoneView(cv, { seed: stoneSeed(st), hours: hrs, detail: 4, key: 'home' });
-  root.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-stv]');
-    if (!b) return;
-    root.querySelectorAll('[data-stv]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-    v.setHours(b.dataset.stv === 'then' ? 0 : hrs);
-  });
-  // проверка создателем: часы поправили прямо здесь — камень, рёбра, форма и путь пересчитываются
-  const onH = (e) => {
-    if (!cv.isConnected) { removeEventListener('sandbox:hours', onH); return; }
-    const h = e.detail, w = wear(h), tiles = root.querySelectorAll('.tiles .tile b');
-    v.setHours(h);
-    if (tiles[1]) tiles[1].textContent = pct(w.edges);
-    if (tiles[2]) tiles[2].textContent = pct(roundness(w));
-    const km = root.querySelector('.stkm b');
-    if (km) km.textContent = kmText(h);
-  };
-  addEventListener('sandbox:hours', onH);
+  const hrs = leagueHours(app), total = hrs * 3600, g = gemOf(hrs), name = t('gem.' + g.gem.id);
+  return '<button class="gemrow" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(total) })) + '">' + gemSVG(g.gem.id, g.frac, 48) +
+    '<span class="gtxt"><b>' + esc(name) + '</b><span class="l2 num">' + fmtDur(total) + (g.next ? ' · ' + esc(t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) })) : '') + '</span>' +
+    (g.next ? '<span class="rkbar"><i style="width:' + g.frac * 100 + '%"></i></span>' : '') + '</span></button>';
 }
 
 export function gemSheet(app) {
-  const total = gemSec(app.store.sessions()), g = gemOf(total / 3600);
+  const hrs = leagueHours(app), total = hrs * 3600, g = gemOf(hrs);
   sheet(() => snav(t('gem.title')) +
     '<div class="gemhero">' + gemSVG(g.gem.id, g.frac, 150, t('gem.' + g.gem.id)) + '<div class="gname">' + t('gem.' + g.gem.id) + '</div><div class="l2 num">' + t('gem.total', { total: fmtDur(total) }) + '</div>' +
     (g.next ? bar(g.frac) + '<div class="l2" style="font-size:13px">' +
       t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) }) + '</div>' : '<div class="l2" style="font-size:13px">' + t('gem.top') + '</div>') + '</div>' +
     '<div class="group">' + GEMS.map((x, i) => '<div class="cell gemli' + (i > g.i ? ' locked' : '') + (i === g.i ? ' cur' : '') + '">' + gemSVG(x.id, i < g.i ? 1 : i === g.i ? g.frac : 0, 40) +
-      '<span class="grow">' + t('gem.' + x.id) + (x.id === 'rough' ? '<span class="st l2" style="display:block;font-size:12px">' + t('gem.pro') + '</span>' : '') + '</span><span class="val num">' + t('gem.from', { h: fmtNum(x.h) }) + '</span></div>').join('') + '</div>' +
+      '<span class="grow">' + t('gem.' + x.id) + (x.id === 'obsidian' ? '<span class="st l2" style="display:block;font-size:12px">' + t('gem.pro') + '</span>' : '') + '</span><span class="val num">' + t('gem.from', { h: fmtNum(x.h) }) + '</span></div>').join('') + '</div>' +
     '<p class="ftr">' + t('gem.hint') + '</p>');
 }
 
-// Звание: весь опыт — часы до приложения и практика в приложении
-export function rankSheet(app) {
-  const st = app.store.state.settings, total = lifetimeSec(app.store.sessions(), st), r = rankOf(total / 3600), prior = priorHours(st), c = RANK_COLORS[r.id];
-  sheet(() => snav(t('rank.title')) +
-    '<div class="gemhero" style="--rk:' + c + '">' + rankSVG(r.id, r.level, 120, rankName(r.id, r.level)) + '<div class="gname" style="color:var(--rk)">' + esc(rankName(r.id, r.level)) + '</div>' +
-    '<div class="l2 num">' + t('rank.total', { total: fmtDur(total) }) + '</div>' +
-    (prior ? '<div class="l2 num" style="font-size:13px">' + t('rank.prior', { h: hoursText(prior) }) + '</div>' : '') +
-    (r.next ? bar(r.frac, c) + '<div class="l2" style="font-size:13px">' + t('gem.toNext', { name: rankName(r.next.id, r.next.level), left: hoursText(r.left) }) + '</div>'
-      : '<div class="l2" style="font-size:13px">' + t('rank.top') + '</div>') + '</div>' +
-    '<div class="group">' + RANK_STEPS.map(([id, lv, h], i) => '<div class="cell gemli rkli' + (i > r.i ? ' locked' : '') + (i === r.i ? ' cur' : '') + '">' + rankSVG(id, lv, 40) +
-      '<span class="grow">' + esc(rankName(id, lv)) + '</span><span class="val num">' + t('gem.from', { h: fmtNum(h) }) + '</span></div>').join('') + '</div>' +
-    '<p class="ftr">' + t('rank.hint') + '</p>');
-}
-
-// Новое звание — одно короткое сообщение (его можно выключить в «Уведомлениях»). Номер последнего
-// показанного звания хранится в settings.rankSeen; в первый раз запоминается молча
-export function rankCheck(app) {
+// Новая лига — одно короткое сообщение (выключается в «Уведомлениях»). Номер последней показанной лиги —
+// settings.leagueSeen; в первый раз запоминается молча
+export function leagueCheck(app) {
   const st = app.store.state.settings;
   if (!st.profile || st.toolsOnly) return;
-  const r = rankOf(lifetimeSec(app.store.sessions(), st) / 3600);
-  if (st.rankSeen == null || r.i < st.rankSeen) { st.rankSeen = r.i; app.store.settingsChanged(); return; }
-  if (r.i === st.rankSeen) return;
-  st.rankSeen = r.i;
+  const g = gemOf(gemSec(app.store.sessions()) / 3600);
+  if (st.leagueSeen == null || g.i < st.leagueSeen) { st.leagueSeen = g.i; app.store.settingsChanged(); return; }
+  if (g.i === st.leagueSeen) return;
+  st.leagueSeen = g.i;
   app.store.settingsChanged();
-  if (st.rankNote !== false && isOn(st, 'mastery')) toast(t('rank.new', { name: rankName(r.id, r.level) }));
+  if (st.rankNote !== false && isOn(st, 'mastery')) toast(t('gem.new', { name: t('gem.' + g.gem.id) }));
 }
 
 // Справка о названии — только стих из Писания с адресом (решение автора)

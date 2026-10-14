@@ -69,30 +69,6 @@ describe('часы устройства', async () => {
   });
 });
 
-describe('камень «Минимала»', async () => {
-  const { wear, stoneMesh } = await import('../src/ui/stone.js');
-  it('рёбра — быстрее сколов, сколы — быстрее круглоты; к десяткам тысяч часов — почти шар', () => {
-    expect(wear(0)).toEqual({ edges: 0, form: 0, round: 0 });
-    const a = wear(300), z = wear(10000), w = wear(30000);
-    expect(a.edges).toBeGreaterThan(0.6);
-    expect(a.form).toBeLessThan(0.1);
-    expect(z.form).toBeGreaterThan(0.95);
-    expect(z.round).toBeLessThan(z.form);
-    expect(w.round).toBeGreaterThan(0.95);
-    // круглый, а не яйцо: радиусы почти одинаковы
-    const spread = (h) => { const r = stoneMesh(7, h, 2).V.map((p) => Math.hypot(...p)); return Math.max(...r) / Math.min(...r); };
-    expect(spread(40000)).toBeLessThan(1.25);
-    expect(spread(40000)).toBeLessThan(spread(3000));
-    expect(spread(0)).toBeGreaterThan(1.3);
-  });
-  it('у каждого свой камень, сетка в единичном размере', () => {
-    const m = stoneMesh(7, 0, 2), n = stoneMesh(8, 0, 2);
-    expect(m.V.length).toBe(n.V.length);
-    expect(m.V[5]).not.toEqual(n.V[5]);
-    expect(Math.max(...m.V.map((p) => Math.hypot(...p)))).toBeCloseTo(1, 5);
-  });
-});
-
 describe('PDF по содержимому', async () => {
   const { pdfBytes } = await import('../src/modules/notes/pdf.js');
   const enc = (s) => new TextEncoder().encode(s);
@@ -104,11 +80,3 @@ describe('PDF по содержимому', async () => {
   });
 });
 
-describe('камень только стачивается', () => {
-  it('ни одна точка не выходит за прежнюю форму; круглый — внутри исходного', async () => {
-    const { stoneMesh } = await import('../src/ui/stone.js');
-    const hs = [0, 100, 300, 1000, 3000, 10000, 30000, 60000];
-    const ms = hs.map((h) => stoneMesh(7, h, 2).V.map((p) => Math.hypot(...p)));
-    for (let k = 1; k < ms.length; k++) ms[k].forEach((r, i) => expect(r).toBeLessThanOrEqual(ms[k - 1][i] + 1e-9));
-  });
-});

@@ -1,4 +1,4 @@
-// Рисунок значка мастерства (SVG): камень → самоцветы с огранкой → алмаз-сырец → алмаз → бриллиант.
+// Рисунок лиги (SVG): камень → самоцветы с огранкой → алмаз → обсидиан (тёмное вулканическое стекло с отблеском).
 // frac 0…1 — путь до следующей ступени: с ним камень ярче, грани контрастнее, больше искр.
 let uidN = 0;
 
@@ -22,6 +22,20 @@ function stone(id, f) {
     '<polygon points="' + shape + '" fill="url(#' + id + 's)" stroke="' + hsl(30, 4, 30) + '" stroke-width="1.2" stroke-linejoin="round"/>' +
     '<path d="M36 18L44 44L18 34M44 44L60 16M44 44L54 86M44 44L88 52" fill="none" stroke="' + hsl(30, 4, 30, 0.35) + '" stroke-width="1"/>' +
     [[30, 50], [62, 58], [50, 34], [68, 42]].map(([x, y]) => '<circle cx="' + x + '" cy="' + y + '" r="1.6" fill="' + hsl(30, 4, 25, 0.5) + '"/>').join('');
+}
+
+// Обсидиан: чёрное стекло с раковистым сколом — гладкие дуги, глубокий отблеск и радужная полоса
+function obsidian(id, f) {
+  const shape = 'M50 6 C70 8 90 26 90 48 C90 72 72 92 48 92 C26 92 10 74 10 50 C10 26 28 6 50 6Z';
+  return '<defs><radialGradient id="' + id + 'o" cx="34%" cy="28%" r="80%"><stop offset="0" stop-color="' + hsl(250, 14, 30 + f * 8) + '"/><stop offset=".55" stop-color="' + hsl(250, 18, 9) + '"/>' +
+    '<stop offset="1" stop-color="' + hsl(260, 25, 4) + '"/></radialGradient><linearGradient id="' + id + 'b" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="' + hsl(190, 80, 60, 0) + '"/><stop offset=".45" stop-color="' + hsl(190, 80, 62, 0.35 + 0.35 * f) + '"/><stop offset=".55" stop-color="' + hsl(290, 70, 62, 0.3 + 0.35 * f) + '"/>' +
+    '<stop offset="1" stop-color="' + hsl(290, 70, 60, 0) + '"/></linearGradient></defs>' +
+    '<path d="' + shape + '" fill="url(#' + id + 'o)" stroke="' + hsl(250, 20, 18) + '" stroke-width="1.2"/>' +
+    // раковистые сколы — концентрические дуги
+    '<path d="M24 30 Q40 22 58 28 M20 46 Q42 34 70 42 M26 64 Q46 54 76 62" fill="none" stroke="' + hsl(240, 20, 60, 0.18 + 0.2 * f) + '" stroke-width="1.1"/>' +
+    '<path d="M18 58 C34 40 58 36 84 40" fill="none" stroke="url(#' + id + 'b)" stroke-width="5" stroke-linecap="round"/>' +
+    '<ellipse cx="36" cy="24" rx="11" ry="5" transform="rotate(-24 36 24)" fill="#fff" opacity="' + (0.22 + 0.3 * f).toFixed(2) + '"/>';
 }
 
 function rough(id, f) {
@@ -56,13 +70,13 @@ function cut(id, gem, f) {
 // id ступени (GEMS в src/core/mastery.js), frac — прогресс внутри ступени; label — подпись для чтения с экрана
 export function gemSVG(gem, frac = 0, size = 48, label = '') {
   const id = 'gm' + ++uidN, f = Math.max(0, Math.min(1, frac));
-  const body = gem === 'stone' ? stone(id, f) : gem === 'rough' ? rough(id, f) : cut(id, gem, f);
-  const [h] = BASE[gem] || [40];
+  const body = gem === 'stone' ? stone(id, f) : gem === 'obsidian' ? obsidian(id, f) : gem === 'rough' ? rough(id, f) : cut(id, gem, f);
+  const [h] = BASE[gem] || (gem === 'obsidian' ? [270] : [40]);
   // сияние вокруг: у самоцветов растёт с прогрессом, у алмазов сильнее
-  const glowO = gem === 'stone' ? 0 : (gem === 'diamond' || gem === 'brilliant' ? 0.35 : 0.15) + 0.35 * f;
+  const glowO = gem === 'stone' ? 0 : gem === 'obsidian' ? 0.2 + 0.3 * f : (gem === 'diamond' || gem === 'brilliant' ? 0.35 : 0.15) + 0.35 * f;
   const glow = glowO ? '<radialGradient id="' + id + 'g"><stop offset="0" stop-color="' + hsl(h, gem === 'diamond' || gem === 'brilliant' || gem === 'rough' ? 30 : 80, 70, glowO) + '"/><stop offset="1" stop-color="' + hsl(h, 60, 70, 0) + '"/></radialGradient>' : '';
   // искры: самоцветы — до 2, алмаз-сырец — 1, алмаз — до 4, бриллиант — все
-  const nSp = { stone: 0, rough: Math.round(f), diamond: 2 + Math.round(2 * f), brilliant: SPARK.length }[gem] ?? Math.round(2 * f);
+  const nSp = { stone: 0, rough: Math.round(f), diamond: 2 + Math.round(2 * f), brilliant: SPARK.length, obsidian: 1 + Math.round(2 * f) }[gem] ?? Math.round(2 * f);
   return '<svg class="gem" width="' + size + '" height="' + size + '" viewBox="0 0 100 100"' + (label ? ' role="img" aria-label="' + label + '"' : ' aria-hidden="true"') + '>' +
     (glow ? '<defs>' + glow + '</defs><circle cx="50" cy="50" r="50" fill="url(#' + id + 'g)"/>' : '') +
     '<g transform="translate(9 9) scale(.82)">' + body + '</g>' +

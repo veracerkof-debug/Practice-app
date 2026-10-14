@@ -20,7 +20,7 @@ iqtiboslar toʻplamini yoki profil sozlamalarini yuklamoqchi. Vazifa — uning s
 
 ## Faylda nima boʻlishi mumkin emas
 
-Mashq vaqti, soatlar, statistika, sessiyalar, ilovagacha boʻlgan tajriba, unvonlar, tosh, qoʻshiqlarning oʻzlashtirilgani —
+Mashq vaqti, soatlar, statistika, sessiyalar, ilovagacha boʻlgan tajriba, liga, qoʻshiqlarning oʻzlashtirilgani —
 bularning hammasini ilova haqiqiy mashqlar boʻyicha oʻzi hisoblaydi. Fayl orqali bular **oʻzgarmaydi**: bunday maydonlar
 eʼtiborga olinmaydi. Ularni qoʻshish va insonga bu mumkin deb vaʼda berish shart emas.
 

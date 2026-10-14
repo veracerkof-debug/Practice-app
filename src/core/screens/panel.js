@@ -26,9 +26,8 @@ import { bgAvailable, bgStatus, bgRows, bindBg } from '../background.js';
 import { guardAvailable } from '../guard.js';
 import { helpOf, showHelp, resetHelp, coreHelp, coreTopic, CORE_TOPICS } from '../help.js';
 import { freeTagName, trackMode } from '../session.js';
-import { INSTRUMENTS, LEVELS, PRIOR_MAX, lifetimeSec, saveProfile, newProfile } from '../profile.js';
-import { rankOf } from '../rank.js';
-import { rankSVG, rankName, RANK_COLORS } from '../../ui/rank.js';
+import { INSTRUMENTS, PRIOR_MAX, gemSec, saveProfile, newProfile } from '../profile.js';
+import { gemOf } from '../mastery.js';
 import { gemSVG } from '../../ui/gems.js';
 import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
@@ -152,10 +151,9 @@ function meHTML(app) {
   return '<div class="large">' + t('page.me') + '</div>' +
     '<div class="group"><label class="cell"><span class="grow">' + t('ob.name') + '</span><input class="inp" data-me="name" maxlength="40" placeholder="' + t('ob.namePh') + '" aria-label="' + t('ob.name') + '" value="' + esc(p.name) + '"></label></div>' +
     '<div class="hdr">' + t('ob.instTitle') + '</div><div class="group"><div class="cellcol"><div class="pickrow">' + INSTRUMENTS.map((k) => chip('data-meinst="' + k + '"', p.instruments.includes(k), t('inst.' + k))).join('') + '</div></div></div>' +
-    '<div class="hdr">' + t('ob.levelTitle') + '</div><div class="group"><div class="cellcol">' + seg('melevel', LEVELS.map((k) => [k, t('level.' + k)]), p.level, t('ob.levelTitle')).replace('class="seg"', 'class="seg g2"') +
-    '<div class="segcap">' + t('level.' + p.level + '.text') + '</div></div></div>' +
+    // уровень — только при регистрации: он настраивает инструменты, а не значится в профиле (решение автора)
     '<div class="hdr">' + t('ob.expTitle') + '</div><div class="group"><label class="cell"><span class="grow">' + t('ob.hours') + '</span><input class="inp num" data-me="priorHours" type="number" inputmode="numeric" min="0" max="' + PRIOR_MAX + '" placeholder="0" aria-label="' + t('ob.hours') + '" value="' + (p.priorHours || '') + '"></label></div>' +
-    '<p class="ftr">' + t('me.hint') + ' ' + t('me.lockHint') + '</p>' +
+    '<p class="ftr">' + t('me.hint') + '</p>' +
     // свои песни, сборники цитат, профиль — файлом (его может собрать нейросеть по инструкции)
     '<div class="hdr">' + t('me.own') + '</div><div class="group"><button class="cell act" data-aidoc>' + t('ai.title') + '</button>' +
     '<button class="cell act" data-loadfile>' + t('ai.load') + '</button></div><p class="ftr">' + t('me.ownHint') + '</p>';
@@ -351,15 +349,16 @@ function tabsHTML(app) {
 function rootHTML(app) {
   const all = app.store.sessions(), n = app.store.songs().length, weeks = streakInfo(all, app.store.state.settings).weeks;
   const pr = app.store.state.settings.profile || {}, sub = (pr.instruments || []).map((k) => t('inst.' + k)).join(', ');
-  // Вместо аватара — значок звания (весь опыт: до приложения и в приложении); нажатие — подробности.
-  // «Только инструменты»: ни звания, ни итогов — обычный аватар, и в списке нет статистики, недели, уведомлений
+  // Вместо аватара — лига (самоцвет по часам практики в приложении); нажатие — подробности. Званий и уровня нет.
+  // «Только инструменты»: ни лиги, ни итогов — обычный аватар, и в списке нет статистики, недели, уведомлений
   const plain = !!app.store.state.settings.toolsOnly;
-  const r = rankOf(lifetimeSec(all, app.store.state.settings) / 3600), rn = rankName(r.id, r.level);
-  return '<div class="phero">' + (plain ? '<div class="pav">' + AVATAR + '</div>' : '<button class="prank" data-act="rank" style="--rk:' + RANK_COLORS[r.id] + '" aria-label="' + esc(t('rank.aria', { name: rn })) + '">' + rankSVG(r.id, r.level, 88) + '</button>') +
+  const g = gemOf(gemSec(all) / 3600), gn = t('gem.' + g.gem.id);
+  return '<div class="phero">' + (plain ? '<div class="pav">' + AVATAR + '</div>' : '<button class="prank" data-act="gem" aria-label="' + esc(t('gem.aria', { name: gn, total: fmtDur(gemSec(all)) })) + '">' + gemSVG(g.gem.id, g.frac, 88) + '</button>') +
     '<div class="large" style="margin:12px 0 0;text-align:center">' + esc(pr.name || t('panel.title')) + '</div>' +
-    (plain ? '' : '<button class="prname" data-act="rank" style="--rk:' + RANK_COLORS[r.id] + '">' + esc(rn) + '</button>') +
-    (sub ? '<div class="l2" style="text-align:center;font-size:15px">' + esc(sub) + (pr.level ? ' · ' + t('level.' + pr.level) : '') + '</div>' : '') + '</div>' +
-    (plain ? '' : '<div class="tiles num"><div class="tile"><b data-hours>' + fmtDur(lifetimeSec(all, app.store.state.settings)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
+    (plain ? '' : '<button class="prname" data-act="gem">' + esc(gn) + '</button>') +
+    (sub ? '<div class="l2" style="text-align:center;font-size:15px">' + esc(sub) + '</div>' : '') + '</div>' +
+    // всего — только практика в приложении: часы «до приложения» воображаемые и в итоги не идут
+    (plain ? '' : '<div class="tiles num"><div class="tile"><b data-hours>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
     '<div class="group" style="margin-top:20px">' + Object.entries(PAGES).filter(([k]) => !plain || !PLAIN_HIDE.includes(k)).map(([k, [c, ic]]) => '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t('page.' + k + '.sub') + '</span></span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="' + iconBg(app.store.state.settings, 'pink') + '">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button>' +
@@ -448,7 +447,6 @@ export function createPanel(app, onChange) {
         p.instruments = p.instruments.includes(k) ? p.instruments.filter((x) => x !== k) : [...p.instruments, k];
         saveProfile(app.store, p); render(); onChange(); return;
       }
-      if ((b = g('[data-seg="melevel"] [data-v]'))) { saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), level: b.dataset.v }); render(); onChange(); return; }
       if ((b = g('[data-seg="track"] [data-v]'))) { app.store.state.settings.trackMode = b.dataset.v; changed(); return; }
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); relang(); return; }
@@ -515,7 +513,6 @@ export function createPanel(app, onChange) {
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
-        if (r.locked) { toast(t('me.priorLocked')); e.target.value = r.priorHours || ''; }
         onChange();
       }
     });

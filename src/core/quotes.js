@@ -193,7 +193,7 @@ export const MEME = [
   ['Настоящий музыкант не ищет вдохновение. Он настраивает гитару.', 'A real musician doesn’t look for inspiration. He tunes the guitar.', 'Haqiqiy musiqachi ilhom qidirmaydi. U gitarani sozlaydi.'],
   ['Кто не считает до четырёх, тот вступает не вовремя. В музыке как в жизни.', 'Whoever can’t count to four comes in at the wrong time. In music as in life.', 'Toʻrtgacha sanamagan kishi vaqtida kirmaydi. Musiqada ham, hayotda ham.'],
   ['Не бывает плохих инструментов. Бывают ненастроенные.', 'There are no bad instruments. Only untuned ones.', 'Yomon cholgʻu boʻlmaydi. Sozlanmagani boʻladi.'],
-  ['Пятнадцать минут каждый день сильнее трёх часов в субботу. Камень подтвердит.', 'Fifteen minutes a day beats three hours on Saturday. The stone will confirm.', 'Har kuni oʻn besh daqiqa shanbadagi uch soatdan kuchliroq. Tosh tasdiqlaydi.'],
+  ['Пятнадцать минут каждый день сильнее трёх часов в субботу. Лига подтвердит.', 'Fifteen minutes a day beats three hours on Saturday. The league will confirm.', 'Har kuni oʻn besh daqiqa shanbadagi uch soatdan kuchliroq. Liga tasdiqlaydi.'],
   ['Быстро — это медленно, но без перерывов.', 'Fast is just slow without the breaks.', 'Tez — bu sekin, faqat tanaffussiz.'],
   ['Пауза — тоже музыка. Но только если её досчитать.', 'A rest is music too. But only if it’s counted.', 'Pauza ham musiqa. Faqat oxirigacha sanalsa.'],
   ['Струна рвётся у того, кто играет. У того, кто не играет, рвётся мечта.', 'Strings break for those who play. For those who don’t, dreams do.', 'Torni chalayotgan uzadi. Chalmayotganning orzusi uziladi.'],

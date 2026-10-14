@@ -53,5 +53,10 @@
   "help.2": "Sessiya vaqtida tanaffus hisobni pauzaga qoʻyadi.",
   "help.3": "Sekundomer umumiy chalish vaqtini hisoblaydi; «Statistikaga» tugmasi yozib qoʻyadi.",
   "help.4": "Davomiylik va koʻrinish — sozlamalarda.",
-  "help.tip": "Har 25–50 daqiqada tanaffus qoʻllar va diqqatni asraydi."
+  "help.tip": "Har 25–50 daqiqada tanaffus qoʻllar va diqqatni asraydi.",
+  "set.scene": "Animatsiya",
+  "scene.strings": "Torlar",
+  "scene.water": "Suv",
+  "scene.sand": "Qum",
+  "scene.off": "Yoʻq"
 }

@@ -1,7 +1,7 @@
 // Профиль музыканта: имя, инструменты, уровень, опыт до приложения. Хранится только на устройстве (settings.profile,
 // попадает в резервную копию). Без DOM.
 import { totalTime } from './stats.js';
-import { profileSeal, profileOk, priorLocked } from './integrity.js';
+import { profileSeal, profileOk } from './integrity.js';
 
 // Порядок — как в списке при регистрации. Названия — ключи i18n inst.<id>
 export const INSTRUMENTS = ['guitar', 'egtr', 'bass', 'uke', 'piano', 'vocal', 'drums', 'violin', 'viola', 'cello', 'dbass',
@@ -34,10 +34,8 @@ export function tuningFor(instruments = []) {
 // Опыт до приложения — только если его печать сходится (правка в файле копии — не учитывается)
 export const priorHours = (settings) => (profileOk(settings.profile) ? Math.max(0, Math.min(PRIOR_MAX, +((settings.profile || {}).priorHours) || 0)) : 0);
 
-// Всё время музыканта, с: записанные занятия плюс опыт до приложения (для звания и «всего»)
-export const lifetimeSec = (sessions, settings) => totalTime(sessions) + priorHours(settings) * 3600;
 
-// Время для значка мастерства, с: только практика в приложении (опыт до приложения в камень не идёт),
+// Время для лиги, с: только практика в приложении (опыт до приложения в лигу не идёт),
 // без пауз тишины, отмеченных подтверждением игры звуком (rec.quiet)
 export const gemSec = (sessions) => totalTime(sessions) - sessions.reduce((s, r) => s + Math.min(r.dur || 0, r.quiet || 0), 0);
 
@@ -49,11 +47,10 @@ export function newProfile() {
 }
 
 // Сохранить профиль; done — регистрация пройдена (её больше не показывать).
-// Через 7 дней после регистрации опыт до приложения можно только уменьшить: тогда возвращает { locked: true }
+// Опыт до приложения меняется свободно: он воображаемый — ни в лигу, ни в статистику не идёт
 export function saveProfile(store, p, { done = false } = {}) {
   const st = store.state.settings, old = st.profile;
-  let want = Math.round(Math.max(0, Math.min(PRIOR_MAX, +p.priorHours || 0))), locked = false;
-  if (old && priorLocked(old, store.now()) && want > priorHours(st)) { want = priorHours(st); locked = true; }
+  const want = Math.round(Math.max(0, Math.min(PRIOR_MAX, +p.priorHours || 0)));
   st.profile = {
     name: String(p.name || '').trim().slice(0, 40),
     instruments: INSTRUMENTS.filter((x) => (p.instruments || []).includes(x)),
@@ -64,7 +61,7 @@ export function saveProfile(store, p, { done = false } = {}) {
   st.profile.sig = profileSeal(st.profile);
   if (done) st.configured = true;
   store.settingsChanged();
-  return locked ? { ...st.profile, locked } : st.profile;
+  return st.profile;
 }
 
 // Настройки инструментов под уровень (применяются при регистрации). Новичку: тюнер в режиме новичка со строем

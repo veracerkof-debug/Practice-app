@@ -8,7 +8,7 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { POMO_LIMITS } from '../../core/pomodoro.js';
-import { createScene } from './scene.js';
+import { createScene, SCENES } from './scene.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M10 3h4"/></svg>';
 const I = {
@@ -21,8 +21,9 @@ const I = {
 const R = 98, C = 2 * Math.PI * R;
 
 let host = null, ctx = null, size = 'full', timer = 0, unsub = () => {}, onClick = null, scene = null;
-// Сцена «как обрабатывается камень» (scene.js) — в полном окне, если в ядре есть камень пользователя
-const sceneHTML = () => (ctx.stone ? '<div class="tscene" aria-hidden="true"><div class="tgem"></div><canvas></canvas></div>' : '');
+// Сцена под часами (scene.js): струны, вода или песочные часы — по выбору в настройках
+const sceneKind = () => (SCENES.includes(cfg().scene) ? cfg().scene : 'strings');
+const sceneHTML = () => (sceneKind() === 'off' ? '' : '<div class="tscene ' + sceneKind() + '" aria-hidden="true"><canvas></canvas></div>');
 
 const PO = () => ctx.pomodoro;
 const SW = () => ctx.stopwatch;
@@ -103,7 +104,7 @@ function render() {
   if (scene) { scene.destroy(); scene = null; }
   host.innerHTML = cfg().style === 'flip' && !ctx.mono ? flipHTML() : ringHTML(); // «Минимал» — кольцо
   const sc = host.querySelector('.tscene');
-  if (sc) try { scene = createScene(sc, ctx, view); } catch (e) { ctx.logErr(e); }
+  if (sc) try { scene = createScene(sc, ctx, view, sceneKind()); } catch (e) { ctx.logErr(e); }
 }
 
 /* ---------- ход времени ---------- */
@@ -111,6 +112,7 @@ function render() {
 function tick() {
   if (!host) return;
   const v = view();
+  if (scene) scene.kick(); // ход интервала — на сцене (уровень воды, песок, сыгранная часть струн)
   const pt = host.querySelector('#ptime');
   if (pt) pt.textContent = fmtClock(v.shown);
   const arc = host.querySelector('#parc');
@@ -148,6 +150,8 @@ function settingsSheet() {
     '<div class="hdr">' + t('set.view') + '</div><div class="stycards" role="group" aria-label="' + t('set.view') + '">' + ['ring', 'flip'].map((k) => '<button class="stycard' +
       ((c.style || 'ring') === k ? ' on' : '') + '" data-sty="' + k + '" aria-pressed="' + ((c.style || 'ring') === k) + '"><span class="sprev ' + k + '"><i></i><i></i><i></i><i></i></span><b>' +
       t('style.' + k) + '</b></button>').join('') + '</div><div style="height:10px"></div>') +
+    // анимация под часами
+    '<div class="hdr">' + t('set.scene') + '</div><div class="group"><div class="cellcol">' + ui.seg('tscene', SCENES.map((k) => [k, t('scene.' + k)]), sceneKind(), t('set.scene')) + '</div></div><div style="height:10px"></div>' +
     '<div class="group">' + ['work', 'short', 'long', 'every'].map((k) => '<div class="cell"><span class="grow">' + t('set.' + k) +
       '</span><span class="val num" style="color:var(--ink);margin-right:6px">' + (k === 'every' ? tn('u.cycles', c[k]) : t('u.min', { n: c[k] })) + '</span>' +
       ui.stepper(k, t('set.' + k)) + '</div>').join('') + '</div>' +
@@ -156,6 +160,8 @@ function settingsSheet() {
   ui.sheet(body, (el, sh) => {
     const changed = () => { ctx.store.save(); PO().settingsChanged(); sh.update(); };
     el.addEventListener('click', (e) => {
+      const sb = e.target.closest('[data-seg="tscene"] [data-v]');
+      if (sb) { c.scene = sb.dataset.v; ctx.store.save(); sh.update(); render(); return; }
       const st = e.target.closest('[data-sty]');
       if (st) { c.style = st.dataset.sty; ctx.store.save(); sh.update(); render(); return; }
       const b = e.target.closest('[data-step]');
