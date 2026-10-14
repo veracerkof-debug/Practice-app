@@ -1,0 +1,33 @@
+/* Диктофон */
+.voice{height:100%;overflow:auto;padding:4px 2px 16px;box-sizing:border-box}
+.voice .vc-rec{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:100%;padding:12px 0}
+.voice .vc-idle .vc-rec{min-height:auto;padding:22px 0 8px}
+.voice .vc-time{font-size:46px;font-weight:300;letter-spacing:-.02em}
+.voice .vc-rec.quarter .vc-time,.voice .vc-rec.strip .vc-time{font-size:26px}
+.voice .vc-btns{display:flex;align-items:center;gap:22px}
+.voice .vc-btn{width:56px;height:56px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--fill);color:var(--ink);cursor:pointer}
+.voice .vc-btn svg{width:24px;height:24px}
+.voice .vc-btn.main{width:84px;height:84px;background:#D2463F;color:#fff;box-shadow:0 0 0 6px color-mix(in srgb,#D2463F 18%,transparent)}
+.voice .vc-btn.main svg{width:34px;height:34px}
+.voice .vc-btn.main.stop{background:var(--ink);color:var(--bg);box-shadow:none}
+.voice .vc-rec.quarter .vc-btn.main,.voice .vc-rec.strip .vc-btn.main{width:56px;height:56px}
+.voice .vc-btn.sm{width:46px;height:46px}
+.voice .vc-state{margin:0;font-size:13px;text-align:center}
+.voice .vc-meter{position:relative;width:min(92%,420px);height:10px;border-radius:5px;background:var(--fill);overflow:hidden}
+.voice .vc-meter i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#5F8568 0 70%,#C9A23A 70% 88%,#D2463F 88%);transition:width .06s linear}
+.voice .vc-meter b{position:absolute;top:0;bottom:0;width:3px;left:0;background:var(--ink);transition:left .06s linear}
+.voice .vc-meter b.clip{background:#D2463F}
+.voice .vc-take{padding:4px 2px}
+.voice .vc-wave{display:block;width:100%;height:120px;border-radius:12px;background:var(--cell);touch-action:none}
+.voice .vc-sel{display:flex;justify-content:space-between;align-items:center;margin:6px 4px 10px;font-size:13px;color:var(--l2)}
+.voice .vc-sel b{color:var(--ink);font-size:16px}
+.voice .vc-tools{display:flex;align-items:center;gap:10px;margin:0 2px 6px}
+.voice .vc-tools .seg{flex:1}
+.voice .vc-fx{gap:6px}
+.voice .vc-fxh{display:flex;justify-content:space-between;align-items:center}
+.voice .vc-fx input[type=range]{width:100%;accent-color:var(--tint)}
+.voice .vc-dev .cell{gap:10px}
+.voice .vc-dev .vc-lbl{flex:none;min-width:64px}
+.voice .vc-dev .sortsel{flex:1;min-width:0}
+.voice .vc-note{font-size:13px}
+.voice .st{display:block;font-size:12.5px}

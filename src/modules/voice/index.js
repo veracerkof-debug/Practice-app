@@ -1,0 +1,298 @@
+// Диктофон: запись с выбранного входа (микрофон телефона, гарнитура, Bluetooth, USB — и приёмники петличек
+// Hollyland, DJI и других), воспроизведение на выбранный выход, простая обработка: обрезка, срез низа, шумоподавление,
+// гейт, компрессия, усиление и нормализация, лёгкая реверберация. Готовая запись — в медиатеку (WAV).
+// Звук не покидает устройство. Движок — ./engine.js, обработка — src/audio/voicefx.js.
+import ru from './i18n/ru.json';
+import uz from './i18n/uz.json';
+import en from './i18n/en.json';
+import el from './i18n/el.json';
+import './voice.css';
+import { engine, isLav } from './engine.js';
+import { decodeWav, encodeWav, process, peaks } from '../../audio/voicefx.js';
+
+const ICON = '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>';
+const I = {
+  rec: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></svg>',
+  stop: '<svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor" stroke="none"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.4" fill="currentColor" stroke="none"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4" fill="currentColor" stroke="none"/></svg>',
+  play: '<svg viewBox="0 0 24 24"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z" fill="currentColor" stroke="none"/></svg>',
+};
+const FX_DEF = { lowcut: true, denoise: 0, gate: -90, comp: 'off', gain: 0, normalize: true, reverb: 0 };
+
+let host = null, ctx = null, size = 'full', offs = [], onClick = null, onChange = null, onPtr = null;
+const S = { phase: 'idle', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, take: null, sel: [0, 1], playing: false, pos: 0, mode: 'proc', busy: false, devs: { inputs: [], outputs: [] }, err: null, proc: null };
+
+const st = () => { const s = ctx.store.all(); s.fx = { ...FX_DEF, ...(s.fx || {}) }; s.in ??= null; s.out ??= null; s.stereo ??= false; s.raw ??= true; return s; };
+const big = () => size === 'full' || size === 'half';
+const esc = (s) => ctx.ui.esc(s);
+const t = (k, v) => ctx.t(k, v);
+const fmt = (sec) => { sec = Math.max(0, sec || 0); const m = Math.floor(sec / 60), s = sec - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1); };
+
+/* ---------- устройства ---------- */
+
+const KIND = { builtin_mic: 'phone', speaker: 'speaker', earpiece: 'earpiece', wired_headset: 'wired', wired_headphones: 'wired', line: 'wired', bt_sco: 'bt', bt_a2dp: 'bt', ble_headset: 'bt', ble_speaker: 'bt', bt: 'bt', usb_device: 'usb', usb_headset: 'usb', usb_accessory: 'usb', hdmi: 'hdmi' };
+function devName(d) {
+  const k = KIND[d.type] || 'other', nm = d.name && d.name !== 'null' ? d.name : '';
+  const base = t('dev.' + k);
+  if (k === 'phone' || k === 'speaker' || k === 'earpiece') return base + (S.devs.inputs.filter((x) => x.type === d.type).length > 1 && nm ? ' · ' + nm : '');
+  return base + (nm ? ': ' + nm : '');
+}
+async function loadDevices() {
+  try { S.devs = await engine().devices(); } catch { S.devs = { inputs: [], outputs: [] }; }
+  // одинаковые встроенные микрофоны (низ/верх/камера) — оставить первый: выбирать между ними на практике нечего
+  const seen = new Set();
+  S.devs.inputs = S.devs.inputs.filter((d) => { const k = d.type === 'builtin_mic' ? 'b' : d.id; if (seen.has(k)) return false; seen.add(k); return true; });
+  render();
+}
+const curIn = () => S.devs.inputs.find((d) => String(d.id) === String(st().in)) || null;
+
+function devHTML() {
+  const s = st(), sel = (k, list, cur, def) => '<select class="sortsel" data-v="' + k + '" aria-label="' + esc(t(k === 'in' ? 'in' : 'out')) + '"><option value="">' + esc(def) + '</option>' +
+    list.map((d) => '<option value="' + esc(d.id) + '"' + (String(d.id) === String(cur) ? ' selected' : '') + '>' + esc(devName(d)) + (isLav(d) ? ' · ' + esc(t('lav')) : '') + '</option>').join('') + '</select>';
+  const lav = curIn() && isLav(curIn());
+  return '<div class="group vc-dev"><label class="cell"><span class="vc-lbl">' + t('in') + '</span>' + sel('in', S.devs.inputs, s.in, t('auto')) + '</label>' +
+    '<label class="cell"><span class="vc-lbl">' + t('out') + '</span>' + (S.devs.outputs.length ? sel('out', S.devs.outputs, s.out, t('auto')) : '<span class="l2 vc-note">' + t('outAuto') + '</span>') + '</label>' +
+    (big() ? '<div class="cell"><span class="grow">' + t('stereo') + '</span>' + sw('stereo', s.stereo) + '</div><div class="cell"><span class="grow"><span>' + t('raw') + '</span><span class="st l2">' + t('rawHint') + '</span></span>' + sw('raw', s.raw) + '</div>' : '') + '</div>' +
+    (lav ? '<p class="ftr">' + t('lavHint') + '</p>' : curIn() && KIND[curIn().type] === 'bt' ? '<p class="ftr">' + t('btHint') + '</p>' : '');
+}
+const sw = (k, on) => '<label class="sw"><input type="checkbox" data-v="' + k + '"' + (on ? ' checked' : '') + '><i></i></label>';
+
+/* ---------- запись ---------- */
+
+async function startRec() {
+  if (S.take && !S.take.saved && !(await ctx.ui.confirm(t('discardTitle'), t('discardText'), t('discardYes')))) return;
+  await dropTake();
+  const s = st(), dev = curIn();
+  try {
+    const r = await engine().start({ deviceId: dev ? dev.id : -1, stereo: s.stereo, raw: s.raw });
+    Object.assign(S, { phase: 'rec', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, err: null, rate: r.rate, bt: r.bt });
+    ctx.log('запись: вход ' + (dev ? dev.type : 'авто') + ', ' + r.rate + ' Гц, каналов ' + r.channels);
+  } catch (e) {
+    S.err = String(e && e.message) === 'denied' ? 'denied' : 'unavailable';
+    ctx.log('запись не началась: ' + S.err, 'w');
+  }
+  render();
+}
+async function stopRec() {
+  try {
+    const r = await engine().stop(), u8 = await engine().read(r.path), w = decodeWav(u8);
+    if (!w || !w.ch[0].length) throw new Error('empty');
+    S.take = { path: r.path, ch: w.ch, sr: w.sr, sec: w.ch[0].length / w.sr, peaks: peaks(w.ch, 600), saved: false };
+    Object.assign(S, { phase: 'take', sel: [0, 1], pos: 0, mode: 'proc', proc: null });
+    ctx.log('записано ' + S.take.sec.toFixed(1) + ' с');
+  } catch (e) { ctx.logErr(e); S.phase = 'idle'; ctx.ui.toast(t('recFail')); }
+  render();
+}
+async function dropTake() {
+  await stopPlay();
+  if (S.take) { engine().remove(S.take.path); if (S.proc) engine().remove(S.proc.path); }
+  S.take = null; S.proc = null; S.phase = 'idle';
+}
+
+/* ---------- обработка и воспроизведение ---------- */
+
+const selSec = () => [S.sel[0] * S.take.sec, S.sel[1] * S.take.sec];
+const fxKey = () => JSON.stringify([st().fx, S.sel]);
+async function processed() {
+  if (S.proc && S.proc.key === fxKey()) return S.proc;
+  S.busy = true; render();
+  await new Promise((r) => setTimeout(r, 30)); // дать экрану обновиться
+  const out = process(S.take.ch, S.take.sr, { ...st().fx, trim: selSec() }), path = 'proc-' + Date.now() + '.wav';
+  if (S.proc) engine().remove(S.proc.path);
+  await engine().write(path, encodeWav(out, S.take.sr));
+  S.proc = { path, key: fxKey(), ch: out, sec: out[0].length / S.take.sr };
+  S.busy = false;
+  return S.proc;
+}
+async function play() {
+  if (S.playing) { await stopPlay(); render(); return; }
+  try {
+    const out = st().out ? (S.devs.outputs.find((d) => String(d.id) === String(st().out)) || {}).id : -1;
+    if (S.mode === 'proc') { const p = await processed(); S.offset = selSec()[0]; await engine().play(p.path, out, 0); }
+    else { S.offset = 0; await engine().play(S.take.path, out, selSec()[0]); }
+    S.playing = true;
+  } catch (e) { ctx.logErr(e); S.busy = false; ctx.ui.toast(t('playFail')); }
+  render();
+}
+async function stopPlay() { if (S.playing) { S.playing = false; try { await engine().stopPlay(); } catch { /* уже */ } } }
+
+async function save() {
+  try {
+    const p = await processed(), wav = encodeWav(p.ch, S.take.sr), d = new Date(), pad = (n) => String(n).padStart(2, '0');
+    const name = t('fileName', { d: pad(d.getDate()) + '.' + pad(d.getMonth() + 1), t: pad(d.getHours()) + '-' + pad(d.getMinutes()) }) + '.wav';
+    const song = ctx.session && ctx.session.songId;
+    await ctx.files.add({ id: 'vc' + Date.now().toString(36), name, size: wav.length, type: 'audio/wav', kind: 'audio', songs: song ? [song] : [], created: Date.now(), blob: new Blob([wav], { type: 'audio/wav' }), dur: p.sec });
+    S.take.saved = true;
+    ctx.ui.toast(t('saved'));
+    ctx.log('сохранено в медиатеку: ' + p.sec.toFixed(1) + ' с');
+  } catch (e) { ctx.logErr(e); S.busy = false; ctx.ui.toast(t('saveFail')); }
+  render();
+}
+
+/* ---------- экран ---------- */
+
+function meterHTML() {
+  return '<div class="vc-meter" aria-hidden="true"><i id="vrms"></i><b id="vpk"></b></div>';
+}
+function fxHTML() {
+  const f = st().fx, rng = (k, min, max, step, val, label, txt) => '<label class="cellcol vc-fx"><span class="vc-fxh"><span>' + label + '</span><b class="num" id="vfx-' + k + '">' + txt + '</b></span>' +
+    '<input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" data-fx="' + k + '" aria-label="' + esc(label) + '"></label>';
+  return '<div class="hdr">' + t('fx') + '</div><div class="group">' +
+    '<div class="cell"><span class="grow"><span>' + t('fx.lowcut') + '</span><span class="st l2">' + t('fx.lowcutHint') + '</span></span><label class="sw"><input type="checkbox" data-fx="lowcut"' + (f.lowcut ? ' checked' : '') + '><i></i></label></div>' +
+    rng('denoise', 0, 1, 0.05, f.denoise, t('fx.denoise'), fxTxt('denoise', f.denoise)) +
+    rng('gate', -90, -25, 1, f.gate, t('fx.gate'), fxTxt('gate', f.gate)) +
+    '<div class="cellcol"><span>' + t('fx.comp') + '</span>' + ctx.ui.seg('vcomp', ['off', 'light', 'mid', 'strong'].map((k) => [k, t('comp.' + k)]), f.comp, t('fx.comp')) + '</div>' +
+    rng('gain', -12, 18, 1, f.gain, t('fx.gain'), fxTxt('gain', f.gain)) +
+    '<div class="cell"><span class="grow">' + t('fx.normalize') + '</span><label class="sw"><input type="checkbox" data-fx="normalize"' + (f.normalize ? ' checked' : '') + '><i></i></label></div>' +
+    rng('reverb', 0, 0.6, 0.05, f.reverb, t('fx.reverb'), fxTxt('reverb', f.reverb)) + '</div>' +
+    '<p class="ftr">' + t('fxHint') + '</p>';
+}
+function fxTxt(k, v) {
+  if (k === 'gate') return v <= -90 ? t('off') : v + ' ' + t('db');
+  if (k === 'gain') return (v > 0 ? '+' : '') + v + ' ' + t('db');
+  return v > 0 ? Math.round(v * 100) + '%' : t('off');
+}
+
+function html() {
+  const err = S.err ? '<p class="ftr" style="color:var(--red)">' + t(S.err === 'denied' ? 'micDenied' : 'micNone') + '</p>' : '';
+  if (S.phase === 'rec') {
+    return '<div class="vc-rec ' + size + '"><div class="vc-time num" id="vc-time">' + fmt(S.sec) + '</div>' + meterHTML() +
+      '<div class="vc-btns"><button class="vc-btn sec" data-x="pause" aria-label="' + t(S.paused ? 'resume' : 'pause') + '">' + (S.paused ? I.rec : I.pause) + '</button>' +
+      '<button class="vc-btn main stop" data-x="stop" aria-label="' + t('stop') + '">' + I.stop + '</button></div>' +
+      (S.paused ? '<p class="l2 vc-state">' + t('paused') + '</p>' : big() ? '<p class="l2 vc-state">' + esc(curIn() ? devName(curIn()) : t('auto')) + '</p>' : '') + '</div>';
+  }
+  if (S.phase === 'take' && S.take) {
+    const [a, b] = selSec();
+    if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-time num">' + fmt(b - a) + '</div><div class="vc-btns"><button class="vc-btn sec" data-x="play" aria-label="' + t(S.playing ? 'stop' : 'play') + '">' + (S.playing ? I.stop : I.play) + '</button><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button></div></div>';
+    return '<div class="vc-take"><canvas id="vc-wave" class="vc-wave" aria-label="' + esc(t('waveAria')) + '"></canvas>' +
+      '<div class="vc-sel num"><span>' + fmt(a) + '</span><b>' + fmt(b - a) + '</b><span>' + fmt(b) + '</span></div>' +
+      '<div class="vc-tools">' + ctx.ui.seg('vmode', [['orig', t('orig')], ['proc', t('proc')]], S.mode, t('listen')) +
+      '<button class="vc-btn sec sm" data-x="play" aria-label="' + t(S.playing ? 'stop' : 'play') + '">' + (S.busy ? '…' : S.playing ? I.stop : I.play) + '</button></div>' +
+      fxHTML() +
+      '<div class="group"><button class="cell act" data-x="save"' + (S.busy ? ' disabled' : '') + '>' + t(S.take.saved ? 'savedAgain' : 'save') + '</button>' +
+      '<button class="cell act" data-x="rec">' + t('newRec') + '</button><button class="cell act danger" data-x="drop">' + t('drop') + '</button></div>' +
+      '<div class="hdr">' + t('devices') + '</div>' + devHTML() + '</div>';
+  }
+  // ожидание
+  if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-btns"><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button></div>' + err + '</div>';
+  return '<div class="vc-idle"><div class="vc-rec full"><div class="vc-time num l2">0:00.0</div><div class="vc-btns"><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button></div><p class="l2 vc-state">' + t('tapRec') + '</p></div>' +
+    err + '<div class="hdr">' + t('devices') + '</div>' + devHTML() + '<p class="ftr">' + t(engine().native ? 'devHint' : 'devHintWeb') + '</p></div>';
+}
+
+function render() {
+  if (!host) return;
+  host.innerHTML = '<div class="voice ' + size + '">' + html() + '</div>';
+  drawWave();
+}
+
+function drawWave() {
+  const cv = host && host.querySelector('#vc-wave');
+  if (!cv || !S.take) return;
+  const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#9C7242', l3 = cs.getPropertyValue('--l3').trim() || '#ccc';
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const p = S.take.peaks, n = p.length, bw = W / n, [a, b] = S.sel;
+  for (let i = 0; i < n; i++) {
+    const x = i * bw, f = i / n, h = Math.max(1, p[i] * (H - 8));
+    g.fillStyle = f >= a && f <= b ? tint : l3;
+    g.fillRect(x, (H - h) / 2, Math.max(1, bw - 0.6), h);
+  }
+  // ручки обрезки
+  g.fillStyle = tint;
+  [a, b].forEach((f) => { const x = f * W; g.fillRect(x - 1.5, 0, 3, H); g.beginPath(); g.arc(x, H / 2, 7, 0, 2 * Math.PI); g.fill(); });
+  // где играет
+  if (S.playing) { const x = ((S.offset + S.pos) / S.take.sec) * W; g.fillStyle = cs.getPropertyValue('--ink').trim(); g.fillRect(x - 1, 0, 2, H); }
+}
+
+// Обновление без перерисовки: время и уровень при записи, позиция при воспроизведении
+function onLevel(e) {
+  if (S.phase !== 'rec' || !host) return;
+  S.sec = e.sec; S.paused = !!e.paused;
+  if (e.peak > 0.98) S.clip = performance.now();
+  const q = (s) => host.querySelector(s), db = (x) => Math.max(0, Math.min(100, ((20 * Math.log10(Math.max(1e-5, x)) + 60) / 60) * 100));
+  const tm = q('#vc-time'); if (tm) tm.textContent = fmt(e.sec);
+  const r = q('#vrms'); if (r) r.style.width = db(e.rms) + '%';
+  const pk = q('#vpk'); if (pk) { pk.style.left = db(e.peak) + '%'; pk.classList.toggle('clip', performance.now() - S.clip < 1200); }
+}
+function onPos(e) {
+  if (!S.playing || !S.take) return;
+  S.pos = S.mode === 'orig' ? e.sec - S.offset : e.sec;
+  if (S.mode === 'orig' && e.sec >= selSec()[1]) { stopPlay().then(render); return; }
+  drawWave();
+}
+function onEnd() { if (S.playing) { S.playing = false; render(); } }
+
+/* ---------- модуль ---------- */
+
+export default {
+  id: 'voice',
+  order: 96,
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
+  icon: ICON,
+  color: '#B0585C',
+  sizes: ['full', 'half', 'quarter', 'strip'],
+  record: false, // сам себе запись: общая кнопка записи не нужна
+  status: (c) => c.t(S.phase === 'rec' ? 'st.rec' : S.take && !S.take.saved ? 'st.take' : 'st.idle'),
+  mount(el, c, sz = 'full') {
+    host = el; ctx = c; size = sz;
+    const E = engine();
+    offs = [E.on('level', onLevel), E.on('pos', onPos), E.on('end', onEnd), E.on('devices', loadDevices)];
+    onClick = (e) => {
+      const sg = e.target.closest('[data-seg] [data-v]');
+      if (sg) {
+        const k = sg.closest('[data-seg]').dataset.seg;
+        if (k === 'vmode') { stopPlay(); S.mode = sg.dataset.v; render(); }
+        if (k === 'vcomp') { st().fx.comp = sg.dataset.v; ctx.store.save(); render(); }
+        return;
+      }
+      const x = e.target.closest('[data-x]');
+      if (!x || S.busy) return;
+      const a = x.dataset.x;
+      if (a === 'rec') startRec();
+      else if (a === 'stop') stopRec();
+      else if (a === 'pause') { S.paused = !S.paused; engine().pause(S.paused); render(); }
+      else if (a === 'play') play();
+      else if (a === 'save') save();
+      else if (a === 'drop') ctx.ui.confirm(t('discardTitle'), t('discardText'), t('discardYes')).then((ok) => ok && dropTake().then(render));
+    };
+    onChange = (e) => {
+      const d = e.target.dataset, s = st();
+      if (d.v === 'in' || d.v === 'out') { s[d.v] = e.target.value || null; ctx.store.save(); render(); }
+      else if (d.v === 'stereo' || d.v === 'raw') { s[d.v] = e.target.checked; ctx.store.save(); }
+      else if (d.fx) {
+        const v = e.target.type === 'checkbox' ? e.target.checked : +e.target.value;
+        s.fx[d.fx] = v; ctx.store.save();
+        const lb = host.querySelector('#vfx-' + d.fx); if (lb) lb.textContent = fxTxt(d.fx, v);
+      }
+    };
+    // ручки обрезки: перетаскивание ближайшей
+    onPtr = (e) => {
+      const cv = e.target.closest('#vc-wave');
+      if (!cv || !S.take) return;
+      stopPlay();
+      const r = cv.getBoundingClientRect(), f = (ev) => Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+      const k = Math.abs(f(e) - S.sel[0]) < Math.abs(f(e) - S.sel[1]) ? 0 : 1;
+      const move = (ev) => { const v = f(ev); S.sel[k] = k ? Math.max(v, S.sel[0] + 0.01) : Math.min(v, S.sel[1] - 0.01); drawWave(); const sel = host.querySelector('.vc-sel'); if (sel) { const [a, b] = selSec(); sel.innerHTML = '<span>' + fmt(a) + '</span><b>' + fmt(b - a) + '</b><span>' + fmt(b) + '</span>'; } };
+      const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+      move(e);
+      addEventListener('pointermove', move); addEventListener('pointerup', up);
+    };
+    host.addEventListener('click', onClick);
+    host.addEventListener('change', onChange);
+    host.addEventListener('pointerdown', onPtr);
+    render();
+    loadDevices();
+  },
+  resize(sz) { size = sz; render(); },
+  unmount() {
+    offs.forEach((f) => f()); offs = [];
+    if (host) { host.removeEventListener('click', onClick); host.removeEventListener('change', onChange); host.removeEventListener('pointerdown', onPtr); }
+    stopPlay();
+    // запись не прерывается молча: остановить и оставить дубль до следующего открытия
+    if (S.phase === 'rec') stopRec();
+    host = null;
+  },
+};
