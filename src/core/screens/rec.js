@@ -4,9 +4,11 @@
 // Во время записи кнопка красная, со временем; нажатие открывает лист: «Остановить и сохранить» и те же регулировки.
 // Запись — recorder.js.
 import { t } from '../../i18n/index.js';
-import { sheet, snav, seg, sw, toast, icb } from '../../ui/index.js';
+import { sheet, snav, seg, sw, toast, icb, esc } from '../../ui/index.js';
 import { fmtClock } from '../format.js';
 import { VOL_MAX, GATE_MIN, GATE_MAX } from '../recorder.js';
+import { devKind } from '../../audio/voiceengine.js';
+import { canPickOutput } from '../../audio/livefx.js';
 
 export const REC_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>';
 
@@ -17,9 +19,18 @@ const slider = (k, v, min, max, step, label, txt) => '<label class="recsl"><span
 // шкала уровня микрофона: −70…0 дБ, отметка — порог гейта
 const toPos = (db) => Math.max(0, Math.min(100, ((db - GATE_MIN) / -GATE_MIN) * 100));
 
+// Подпись устройства: вид (микрофон телефона, USB, Bluetooth…) и имя
+const devName = (d, list) => {
+  const k = devKind(d), nm = d.name && d.name !== 'null' ? d.name : '';
+  const many = list.filter((x) => devKind(x) === k).length > 1; // несколько одного вида — с именем, иначе не различить
+  return t('recdev.' + k) + (nm && (many || !['phone', 'speaker', 'earpiece'].includes(k)) ? ': ' + nm : '');
+};
+const devSel = (k, list, cur, label) => '<select class="sortsel" data-rdev="' + k + '" aria-label="' + esc(label) + '"><option value="">' + esc(t('rec.auto')) + '</option>' +
+  list.map((d) => '<option value="' + esc(d.id) + '"' + (String(d.id) === String(cur) ? ' selected' : '') + '>' + esc(devName(d, list)) + '</option>').join('') + '</select>';
+
 function recSheet(app, mod, host, name) {
   const R = app.rec, hasVideo = typeof mod.recordVideo === 'function';
-  let raf = 0;
+  let raf = 0, devs = { inputs: [], outputs: [], native: false };
   const body = () => {
     const p = R.prefs, on = R.active;
     return snav(t('rec.title')) +
@@ -32,11 +43,14 @@ function recSheet(app, mod, host, name) {
       '<div class="hdr">' + t('rec.mic') + '</div><div class="group"><div class="cell"><span class="grow">' + t('rec.micOn') + '</span>' + sw('rmic', p.mic, t('rec.micOn')) + '</div>' +
       (p.mic ? '<div class="cellcol">' + slider('micVol', p.micVol, 0, VOL_MAX, 0.05, t('rec.vol'), pct(p.micVol)) +
         '<div class="recmeter" aria-hidden="true"><i data-rlev></i><s style="left:' + toPos(p.gate) + '%"></s></div></div>' +
+        // вход и выход — как в диктофоне: телефон, проводная гарнитура, USB, Bluetooth
+        '<label class="cell"><span class="grow">' + t('rec.in') + '</span>' + devSel('in', devs.inputs, p.in, t('rec.in')) + '</label>' +
+        '<label class="cell"><span class="grow">' + t('rec.out') + '</span>' + (!devs.native && canPickOutput() && devs.outputs.length ? devSel('out', devs.outputs, p.out, t('rec.out')) : '<span class="l2">' + t('rec.outAuto') + '</span>') + '</label>' +
         // мониторинг через гейт
         '<div class="cell"><span class="grow">' + t('rec.mon') + '</span>' + sw('rmon', p.mon, t('rec.mon')) + '</div>' +
         (p.mon ? '<div class="cellcol">' + slider('monVol', p.monVol, 0, 1.5, 0.05, t('rec.vol'), pct(p.monVol)) +
           slider('gate', p.gate, GATE_MIN, GATE_MAX, 1, t('rec.gate'), p.gate + ' ' + t('rec.db')) + '</div>' : '') : '') +
-      '</div><p class="ftr">' + t(p.mic ? (p.mon ? 'rec.monHint' : 'rec.micHint') : 'rec.micOffHint') + '</p>' +
+      '</div><p class="ftr">' + t(p.mic ? (p.mon ? 'rec.monHint' : 'rec.micHint') : 'rec.micOffHint') + (p.mic && devKind(devs.inputs.find((d) => String(d.id) === String(p.in))) === 'bt' ? ' ' + t('rec.btHint') : '') + '</p>' +
       (hasVideo && !on ? '<div class="hdr">' + t('rec.fmt') + '</div><div class="group"><div class="cellcol">' + seg('rfmt', [['audio', t('rec.fmt.audio')], ['video', t('rec.fmt.video')]], p.video ? 'video' : 'audio', t('rec.fmt')) +
         '<div class="segcap">' + t(p.video ? 'rec.fmt.videoHint' : 'rec.fmt.audioHint') + '</div></div></div>' : '') +
       (on ? '' : '<button class="btn fill recgo" data-rgo>' + REC_ICON + '<span>' + t('rec.go') + '</span></button><p class="ftr">' + t('rec.hint') + '</p>');
@@ -45,6 +59,7 @@ function recSheet(app, mod, host, name) {
   R.meter.howl = () => toast(t('rec.howl'));
   sheet(body, (el, sh) => {
     arm().then(() => sh.update());
+    R.devices().then((d) => { devs = d; sh.update(); });
     // уровень микрофона и гейт — на шкале; время записи — на кнопке
     const loop = () => {
       raf = requestAnimationFrame(loop);
@@ -69,6 +84,14 @@ function recSheet(app, mod, host, name) {
     });
     el.addEventListener('change', async (e) => {
       if (e.target.dataset.rsl) { save(); return; }
+      const dv = e.target.dataset.rdev;
+      if (dv) {
+        R.prefs[dv] = e.target.value || null;
+        save();
+        if (dv === 'in') { const r = await R.reopen(); if (r === 'mic') toast(t('rec.micDenied')); } else R.setOut(R.prefs.out);
+        sh.update();
+        return;
+      }
       const k = e.target.dataset.sw, p = R.prefs;
       if (k === 'rapp') p.app = e.target.checked;
       else if (k === 'rmic') { p.mic = e.target.checked; if (!p.mic) p.mon = false; }

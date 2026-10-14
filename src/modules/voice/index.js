@@ -7,7 +7,7 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import './voice.css';
-import { engine, isLav } from './engine.js';
+import { engine, isLav, KIND } from '../../audio/voiceengine.js';
 import { decodeWav, encodeWav, process, peaks, spectrumDb, eqResponse, EQ_BANDS, EQ_PRESETS } from '../../audio/voicefx.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>';
@@ -32,7 +32,6 @@ const fmt = (sec) => { sec = Math.max(0, sec || 0); const m = Math.floor(sec / 6
 
 /* ---------- устройства ---------- */
 
-const KIND = { builtin_mic: 'phone', speaker: 'speaker', earpiece: 'earpiece', wired_headset: 'wired', wired_headphones: 'wired', line: 'wired', bt_sco: 'bt', bt_a2dp: 'bt', ble_headset: 'bt', ble_speaker: 'bt', bt: 'bt', usb_device: 'usb', usb_headset: 'usb', usb_accessory: 'usb', hdmi: 'hdmi' };
 function devName(d) {
   const k = KIND[d.type] || 'other', nm = d.name && d.name !== 'null' ? d.name : '';
   const base = t('dev.' + k);

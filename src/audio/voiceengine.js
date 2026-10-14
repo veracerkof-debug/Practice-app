@@ -1,8 +1,9 @@
-// Движок диктофона: входы и выходы звука, запись с выбранного входа, воспроизведение на выбранный выход.
+// Движок записи (диктофон и запись в инструментах — одна система): входы и выходы звука, запись с выбранного входа,
+// воспроизведение на выбранный выход; route — направить микрофон страницы на выбранный вход (запись в инструментах).
 // Android — плагин Voice (AudioRecord/AudioTrack с выбором устройства: телефон, гарнитура, Bluetooth, USB-приёмники
 // петличек); веб — getUserMedia с deviceId и setSinkId, где браузер умеет. Записи — WAV, только на устройстве.
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { encodeWav } from '../../audio/voicefx.js';
+import { encodeWav } from './voicefx.js';
 
 const V = Capacitor.isNativePlatform() ? registerPlugin('Voice') : null;
 const CHUNK = 768 * 1024;
@@ -12,6 +13,9 @@ const unb64 = (s) => { const b = atob(s), u8 = new Uint8Array(b.length); for (le
 // Петлички и радиосистемы — по имени устройства (настройки самих петличек — в их приложениях: протоколы закрыты)
 const LAV = /lark|hollyland|dji|wireless\s*mic|mic\s*(mini|2|se)|rode|wireless\s*go|boya|saramonic|synco|comica|lav|петлич/i;
 export const isLav = (d) => LAV.test(d.name || '');
+// Вид устройства по типу (Android AudioDeviceInfo или догадка по имени в браузере) — для подписей
+export const KIND = { builtin_mic: 'phone', speaker: 'speaker', earpiece: 'earpiece', wired_headset: 'wired', wired_headphones: 'wired', line: 'wired', bt_sco: 'bt', bt_a2dp: 'bt', ble_headset: 'bt', ble_speaker: 'bt', bt: 'bt', usb_device: 'usb', usb_headset: 'usb', usb_accessory: 'usb', hdmi: 'hdmi' };
+export const devKind = (d) => KIND[d && d.type] || 'other';
 
 /* ---------- Android ---------- */
 
@@ -37,6 +41,8 @@ function nativeEngine() {
     remove: (path) => V.remove({ path }).catch(() => {}),
     play: (path, deviceId, from = 0) => V.play({ path, deviceId: deviceId ?? -1, from }),
     stopPlay: () => V.stopPlay(),
+    route: (deviceId) => V.route({ deviceId: deviceId == null || deviceId === '' ? -1 : +deviceId }).catch(() => ({})),
+    unroute: () => V.unroute().catch(() => {}),
   };
 }
 
@@ -106,6 +112,8 @@ function webEngine() {
       await audio.play();
       return {};
     },
+    route: async () => ({}), // в браузере вход выбирается deviceId при открытии микрофона
+    unroute: async () => {},
     async stopPlay() { if (audio) { audio.pause(); audio.onended = null; emit('end', { done: false }); audio = null; } },
   };
 }

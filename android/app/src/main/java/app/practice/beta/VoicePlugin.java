@@ -125,7 +125,8 @@ public class VoicePlugin extends Plugin {
 
     private void useComm(AudioDeviceInfo in) {
         try {
-            am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            // голосовой режим — только для Bluetooth (иначе микрофон гарнитуры не открыть); USB и проводным он не нужен
+            if (isBtVoice(in)) am.setMode(AudioManager.MODE_IN_COMMUNICATION);
             if (Build.VERSION.SDK_INT >= 31) {
                 for (AudioDeviceInfo d : am.getAvailableCommunicationDevices()) {
                     if (d.getType() == in.getType() && (Build.VERSION.SDK_INT < 28 || String.valueOf(d.getAddress()).equals(String.valueOf(in.getAddress())))) {
@@ -133,13 +134,30 @@ public class VoicePlugin extends Plugin {
                         break;
                     }
                 }
-            } else {
+            } else if (isBtVoice(in)) {
                 am.startBluetoothSco();
                 am.setBluetoothScoOn(true);
                 scoOn = true;
             }
         } catch (Exception e) { /* как получится */ }
     }
+
+    /* ---------- маршрут для записи в инструментах (микрофон WebView: голосовой канал WebRTC) ----------
+       Вход выбирается как «устройство связи»: Bluetooth-гарнитура, USB-микрофон или проводная гарнитура —
+       тогда микрофон страницы берёт звук с него. Без выбора — как решит система. */
+    @PluginMethod
+    public void route(PluginCall call) {
+        int id = call.getInt("deviceId", -1);
+        releaseComm();
+        AudioDeviceInfo dev = id >= 0 ? find(AudioManager.GET_DEVICES_INPUTS, id) : null;
+        JSObject r = new JSObject();
+        if (dev != null && !recording && (isBtVoice(dev) || Build.VERSION.SDK_INT >= 31)) useComm(dev);
+        r.put("routed", commSet || scoOn);
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void unroute(PluginCall call) { if (!recording) releaseComm(); call.resolve(); }
 
     private void releaseComm() {
         try {

@@ -3,7 +3,11 @@
 // и микрофон (живой инструмент или голос). Мониторинг — микрофон в наушники, через гейт: звук проходит, только
 // когда он громче порога (тихий шум и случайные звуки не слышны), и сам выключается, если громкость резко растёт
 // и держится (обратная связь «динамик → микрофон»). Видео — от модуля (терменвокс: камера и рисунок поверх).
+// Вход (микрофон телефона, гарнитура, USB, Bluetooth) и выход мониторинга выбираются, как в диктофоне: та же
+// система (src/audio/voiceengine.js) — на Android вход направляется маршрутом, в браузере — deviceId и setSinkId.
 // Готовая запись сохраняется в медиатеку (files.js) — на устройстве, никуда не отправляется.
+import { engine } from '../audio/voiceengine.js';
+import { setOutput } from '../audio/livefx.js';
 
 const AUDIO_TYPES = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'];
 const VIDEO_TYPES = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/mp4', 'video/webm'];
@@ -12,7 +16,7 @@ export const GATE_MIN = -70, GATE_MAX = -20; // порог гейта, дБ
 const GATE_HOLD = 180;                  // гейт держится открытым после звука, мс
 const HOWL_DB = -4, HOWL_MS = 450;      // так громко и так долго — похоже на обратную связь
 
-export const DEFAULT_PREFS = { app: true, appVol: 1, mic: false, micVol: 1, mon: false, monVol: 0.8, gate: -50, video: false };
+export const DEFAULT_PREFS = { app: true, appVol: 1, mic: false, micVol: 1, mon: false, monVol: 0.8, gate: -50, video: false, in: null, out: null };
 
 export function pickType(list, can = (t) => globalThis.MediaRecorder && MediaRecorder.isTypeSupported(t)) {
   return list.find((t) => { try { return can(t); } catch { return false; } }) || '';
@@ -61,6 +65,8 @@ export function createRecorder(app) {
     const c = tap.ctx, appGain = c.createGain(), dest = c.createMediaStreamDestination(), offApp = tap.into(appGain);
     appGain.connect(dest);
     chain = { c, dest, appGain, offApp, mic: null };
+    // выход мониторинга (и всего звука приложения, пока открыта запись) — где браузер умеет выбирать
+    if (prefs().out) setOutput(c, prefs().out);
     apply();
     return chain;
   }
@@ -69,7 +75,14 @@ export function createRecorder(app) {
     if (!ch) return 'nosound';
     if (ch.mic) return 'ok';
     let stream;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); } catch { return 'mic'; }
+    const p0 = prefs(), E = engine(), want = p0.in;
+    // выбранный вход: Android — маршрут (микрофон страницы берёт звук с него), браузер — deviceId
+    if (E.native) await E.route(want);
+    const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, ...(!E.native && want ? { deviceId: { exact: want } } : {}) };
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio }); } catch {
+      // выбранного входа нет (отключили) — по умолчанию
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); } catch { if (E.native) E.unroute(); return 'mic'; }
+    }
     const c = ch.c, src = c.createMediaStreamSource(stream), micGain = c.createGain(), an = c.createAnalyser(), monGain = c.createGain(), gateGain = c.createGain();
     an.fftSize = 1024;
     src.connect(micGain).connect(ch.dest);
@@ -98,12 +111,15 @@ export function createRecorder(app) {
     [m.src, m.micGain, m.monGain, m.gateGain].forEach((n) => { try { n.disconnect(); } catch { /* ignore */ } });
     chain.mic = null;
     meter.db = -120; meter.open = false;
+    const E = engine();
+    if (E.native) E.unroute();
   }
   function teardown() {
     if (!chain) return;
     closeMic();
     chain.offApp();
     try { chain.appGain.disconnect(); } catch { /* ignore */ }
+    if (prefs().out) setOutput(chain.c, '');
     chain = null;
   }
   // Громкости — сразу, без щелчков
@@ -121,6 +137,11 @@ export function createRecorder(app) {
     meter,
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
     apply,
+    // Входы и выходы для выбора (как в диктофоне); { inputs, outputs, native }
+    async devices() { try { const d = await engine().devices(); return { ...d, native: engine().native }; } catch { return { inputs: [], outputs: [], native: engine().native }; } },
+    // Вход поменяли — микрофон открывается заново; выход — сразу
+    async reopen() { if (chain && chain.mic) { closeMic(); return openMic(); } return 'ok'; },
+    setOut(id) { if (chain) setOutput(chain.c, id || ''); },
     // Лист записи открыт: микрофон (если включён) — для уровня и мониторинга ещё до начала. → 'ok' | 'mic' | 'nosound'
     async arm() { const p = prefs(); if (!build()) return 'nosound'; if (p.mic) return openMic(); closeMic(); return 'ok'; },
     // Лист закрыт без записи — микрофон отпускается
