@@ -431,7 +431,7 @@ export function createSessionScreen(app) {
     let tag = '', readM = null;
     sheet(() => snav(t('fin.title'), { left: '<button class="link l" data-k="back">' + t('ui.back') + '</button>', right: '<button class="link b r" data-k="save">' + t('fin.save') + '</button>' }) +
       // Мелета радуется занятию (выключается вместе со словом дня)
-      (isOn(st(), 'quote') ? '<div style="display:flex;justify-content:center;margin:2px 0 -6px">' + mascotSVG(sum.dur >= 1200 ? 'happy' : 'glad', { size: 64 }) + '</div>' : '') +
+      (isOn(st(), 'quote') ? '<div style="display:flex;justify-content:center;margin:2px 0 -6px"><button type="button" class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(sum.dur >= 1200 ? 'happy' : 'glad', { size: 64, ring: st().uiStyle !== 'mono' }) + '</button></div>' : '') +
       '<div style="text-align:center;margin:4px 0 18px"><div class="num' + (a.mode === 'strict' ? ' gold' : '') + '" style="font-size:44px;font-weight:300;letter-spacing:-.03em">' + fmtDur(sum.dur) + '</div><div class="l2" style="font-size:15px">' +
       esc(titleOf(a)) + (sum.best ? t('fin.upTo', { bpm: sum.best }) : '') + '</div></div>' +
       (s ? '<div class="hdr">' + t('fin.songNow') + '</div><div class="group"><div class="cellcol">' + mInput(getPct(s), st()) + '</div><label class="cell"><span class="grow">' + t('fin.confident') +

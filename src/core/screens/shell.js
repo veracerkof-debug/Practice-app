@@ -9,7 +9,7 @@ import { TAB_ICONS, tabIds } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule } from '../modules.js';
 import { visibleTabs } from '../settings.js';
-import { homeHTML, mountStones, quickEdit, streakSheet, gemSheet, rankSheet, rankCheck, nameSheet, mascotTap } from './home.js';
+import { homeHTML, mountStones, quickEdit, streakSheet, gemSheet, rankSheet, rankCheck, nameSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { bindExt } from './ext.js';
@@ -125,7 +125,6 @@ export function createShell(app, root) {
     else if (d.act === 'gem') gemSheet(app);
     else if (d.act === 'rank') rankSheet(app);
     else if (d.act === 'name') nameSheet();
-    else if (d.act === 'mascot') { mascotTap(); render(); const tab = view.tab; setTimeout(() => { if (view.tab === tab && !app.openTool) render(); }, 1700); }
     else if (d.cat !== undefined) { view.cat = d.cat; view.genre = ''; view.tag = ''; render(); }
     else if (d.fg !== undefined) { view.genre = view.genre === d.fg ? '' : d.fg; render(); }
     else if (d.ft !== undefined) { view.tag = view.tag === d.ft ? '' : d.ft; render(); }

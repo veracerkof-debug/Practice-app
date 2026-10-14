@@ -36,7 +36,7 @@ import { bindVerses } from './screens/verses.js';
 import { createFiles } from './files.js';
 import { createRecorder } from './recorder.js';
 import { reschedule } from './reminders.js';
-import { notifyText } from './quotes.js';
+import { notifyText, setsOf } from './quotes.js';
 import { initShareIn } from './screens/share.js';
 
 export function boot(root) {
@@ -150,7 +150,7 @@ export function boot(root) {
   app.rec = createRecorder(app);
   // напоминания о практике: расписание на неделю — при запуске, смене настроек и после занятий (с задержкой)
   let remT = 0;
-  const remSync = () => { clearTimeout(remT); remT = setTimeout(() => reschedule(store.state, (i, at) => notifyText(i, at, getLang(), !!store.state.settings.church)), 1500); };
+  const remSync = () => { clearTimeout(remT); remT = setTimeout(() => reschedule(store.state, (i, at) => notifyText(i, at, getLang(), setsOf(store.state.settings))), 1500); };
   store.subscribe(remSync);
   remSync();
   // Церковный режим: чтение Библии — план, отметки, место (src/core/reading.js)

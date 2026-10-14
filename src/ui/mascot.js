@@ -1,6 +1,6 @@
-// Мелета — маскот: лицо из линий в круге. Брови — буква Μ из логотипа, нос — λ; настроение меняют нотные знаки
-// и греческие буквы (эскизы — docs/mascot/sketches.html). Цвет — currentColor, круг — цвета карточки: подходит
-// ко всем темам и к «Минималу». Без DOM-логики: только разметка SVG.
+// Мелета — маскот: лицо из линий в круге. Брови — буква Μ из логотипа, нос — камертон; настроение меняют нотные
+// знаки и греческие буквы (эскизы — docs/mascot/sketches.html). Цвет — currentColor, круг — цвета карточки: подходит
+// ко всем темам; в «Минимале» — без круга. Касание — короткая реакция (poke): другое лицо и звенящий камертон.
 
 const S = (d) => '<path class="ms" d="' + d + '"/>';
 const T = (d) => '<path class="mt" d="' + d + '"/>';
@@ -24,9 +24,10 @@ const P = {
   // очки — две восьмые с ребром (♫)
   shades: S('M28 36 q7 -4 14 -1') + '<ellipse class="md" cx="38" cy="51" rx="9.5" ry="6.8" transform="rotate(-15 38 51)"/><ellipse class="md" cx="62" cy="51" rx="9.5" ry="6.8" transform="rotate(-15 62 51)"/>' +
     S('M46.8 48 V39 M70.8 48 V39') + '<path class="md" d="M45.2 36 L72.4 36 L72.4 41 L45.2 41 Z"/>',
-  nose: S('M51 50 l-5 15 M48.5 56 l6 9'),
-  noseLow: S('M51 56 l-4 11 M49 61 l5 6'),
-  noseBob: '<g class="mbob">' + S('M51 50 l-5 15 M48.5 56 l6 9') + '</g>',
+  // нос — камертон: ветви и ножка
+  nose: '<g class="mfork">' + S('M45 51 v6 q0 5 5 5 q5 0 5 -5 v-6 M50 62 v8') + '</g>',
+  noseLow: '<g class="mfork">' + S('M45.5 56 v4.5 q0 4.5 4.5 4.5 q4.5 0 4.5 -4.5 v-4.5 M50 65 v6') + '</g>',
+  noseBob: '<g class="mbob"><g class="mfork">' + S('M45 51 v6 q0 5 5 5 q5 0 5 -5 v-6 M50 62 v8') + '</g></g>',
   mCalm: S('M43 74 q7 3 14 0'),
   mOmega: S('M38 71 q6 9 12 0 q6 9 12 0'),
   mSmile: S('M38 70 q12 12 24 0'),
@@ -58,8 +59,28 @@ export const MOODS = {
   grow: ['brM', 'eyes', 'nose', 'mCalm', 'delta'], // рост к прошлой неделе
 };
 
-export function mascotSVG(mood = 'calm', { size = 56, label = '' } = {}) {
+// ring: false — без круга («Минимал»); cls — доп. класс (mpoke — реакция на касание)
+export function mascotSVG(mood = 'calm', { size = 56, label = '', ring = true, cls = '' } = {}) {
   const parts = (MOODS[mood] || MOODS.calm).map((k) => P[k]).join('');
-  return '<svg class="mascot" viewBox="0 0 100 100" width="' + size + '" height="' + size + '"' + (label ? ' role="img" aria-label="' + label.replace(/"/g, '&quot;') + '"' : ' aria-hidden="true"') +
-    '><circle class="mf" cx="50" cy="50" r="46"/>' + parts + '</svg>';
+  return '<svg class="mascot' + (cls ? ' ' + cls : '') + '" viewBox="0 0 100 100" width="' + size + '" height="' + size + '" data-mood="' + mood + '"' + (label ? ' role="img" aria-label="' + label.replace(/"/g, '&quot;') + '"' : ' aria-hidden="true"') +
+    '>' + (ring ? '<circle class="mf" cx="50" cy="50" r="46"/>' : '') + parts + '</svg>';
+}
+
+// Реакции на касание: для каждого лица — своя (и запасные), цитата при этом не меняется
+const POKE = { calm: ['wink', 'surprised', 'sing'], glad: ['delight', 'sing'], happy: ['delight', 'cool'], cool: ['delight', 'wink'], delight: ['happy'],
+  surprised: ['glad'], sad: ['surprised', 'glad'], wait: ['surprised', 'wink'], sleep: ['surprised'], rest: ['wink', 'glad'], focus: ['sing', 'surprised'],
+  sing: ['delight'], wink: ['glad'], grow: ['delight'] };
+let pokeT = 0;
+// Любая кнопка с data-mascot (главная, конец занятия) — касание вызывает реакцию
+if (typeof document !== 'undefined') document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-mascot]'); if (b) pokeMascot(b); });
+// Касание по кнопке с маскотом: другое лицо на 1,3 с, подпрыгивание и звон камертона, потом — прежнее лицо
+export function pokeMascot(btn) {
+  const svg = btn && btn.querySelector('svg.mascot');
+  if (!svg) return;
+  const base = btn.dataset.mood || svg.dataset.mood || 'calm', size = +svg.getAttribute('width') || 56, ring = !!svg.querySelector('.mf');
+  btn.dataset.mood = base;
+  const list = POKE[base] || POKE.calm, next = list[Math.floor(Math.random() * list.length)];
+  btn.innerHTML = mascotSVG(next, { size, ring, cls: 'mpoke' });
+  clearTimeout(pokeT);
+  pokeT = setTimeout(() => { if (btn.isConnected) { btn.innerHTML = mascotSVG(base, { size, ring }); delete btn.dataset.mood; } }, 1300);
 }

@@ -24,7 +24,7 @@ import { nextEventsHTML } from './calendar.js';
 import { extWho } from '../ext.js';
 import { refText } from '../bible.js';
 import { nextOf } from '../reading.js';
-import { quoteAt, dayIndex } from '../quotes.js';
+import { quoteAt, dayIndex, setsOf } from '../quotes.js';
 import { moodOf } from '../mascot.js';
 import { mascotSVG } from '../../ui/mascot.js';
 
@@ -83,12 +83,9 @@ function readingCard(app, mono = false) {
   return '<button class="' + (mono ? 'mread' : 'hread') + '" data-act="bible" data-key="' + next + '"><span class="hrt">' + t('read.today') + ' · ' + t('read.day', { d: r.day, n: r.days }) + '</span>' +
     '<span class="hrr">' + esc(refText(r.keys)) + '</span><span class="hrs">' + (all ? t('read.done') : t('read.progress', { done: r.done, n: r.keys.length })) + '</span></button>';
 }
-// Мелета (маскот) и слово дня: история музыканта, слова людей или (в церковном режиме) стих — одно на день.
-// Лицо — по состоянию занятий (src/core/mascot.js); касание — следующее слово и подмигивание
-let qShift = 0, winkUntil = 0;
-export function mascotTap() { qShift++; winkUntil = Date.now() + 1600; }
+// Мелета (маскот) и слово дня из выбранных наборов (история музыканта, слова мастеров, стих, цитатник) — одно на день.
+// Лицо — по состоянию занятий (src/core/mascot.js); касание — реакция (src/ui/mascot.js), слово не меняется
 function moodNow(app) {
-  if (Date.now() < winkUntil) return 'wink';
   const st = app.store.state.settings, po = app.pomodoro;
   return moodOf({ active: !!app.active, pomoBreak: !!(po && po.active() && po.phase !== 'work'), weekSec: weekData(app.store.sessions()).total,
     goalSec: st.toolsOnly ? 0 : st.goalMin * 60, days: st.days, sessions: app.store.sessions() });
@@ -96,9 +93,9 @@ function moodNow(app) {
 function quoteHTML(app, mono) {
   const st = app.store.state.settings;
   if (!isOn(st, 'quote')) return '';
-  const q = quoteAt(dayIndex() + qShift, getLang(), !!st.church);
-  return '<div class="' + (mono ? 'mvo' : 'hvoice') + '"><button class="mascotb" data-act="mascot" aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56 }) + '</button>' +
-    '<p class="' + (mono ? 'mquote' : 'hquote') + '" aria-live="polite">' + esc(q.text) + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p></div>';
+  const q = quoteAt(dayIndex(), getLang(), setsOf(st));
+  return '<div class="' + (mono ? 'mvo' : 'hvoice') + '"><button class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' +
+    (q.text ? '<p class="' + (mono ? 'mquote' : 'hquote') + '">' + esc(q.text) + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p>' : '') + '</div>';
 }
 const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';
 

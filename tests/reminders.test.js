@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { plan, remindTimes, DEFAULT_REMIND } from '../src/core/reminders.js';
-import { quoteAt, notifyText, SCRIPTURE, MUSICIANS, SAYINGS } from '../src/core/quotes.js';
+import { quoteAt, notifyText, SCRIPTURE, MUSICIANS, SAYINGS, MEME, QSETS, setsOf } from '../src/core/quotes.js';
 import { readFileSync } from 'node:fs';
 
 const st = (r, days = [1, 1, 1, 1, 1, 0, 0]) => ({ days, remind: { ...DEFAULT_REMIND, on: true, ...r } });
@@ -73,5 +73,26 @@ describe('настроение Мелеты', () => {
     expect(moodOf({ now: at(12), goalSec: 300, weekSec: 0, sessions: [{ start: at(12, 1) }] })).toBe('sad');
     expect(moodOf({ now: at(19), goalSec: 300, weekSec: 0, days, sessions: [] })).toBe('wait');
     expect(moodOf({ now: at(12), goalSec: 300, weekSec: 0, days, sessions: [] })).toBe('calm');
+  });
+});
+
+describe('наборы цитат', () => {
+  it('по умолчанию и выбор', () => {
+    expect(setsOf({})).toEqual(['classic', 'rock']);
+    expect(setsOf({ church: true })).toContain('bible');
+    expect(setsOf({ qsets: ['meme', 'xx'] })).toEqual(['meme']);
+    expect(setsOf({ qsets: [] })).toEqual(['classic', 'rock']);
+  });
+  it('каждый набор не пуст и отдаёт только свои цитаты', () => {
+    for (const k of QSETS) {
+      const qs = Array.from({ length: 40 }, (_, i) => quoteAt(i, 'ru', [k]));
+      expect(qs.every((q) => q.text)).toBe(true);
+    }
+    expect(quoteAt(0, 'ru', ['meme']).ref).toBe('Цитатник Мелеты');
+    expect(Array.from({ length: 30 }, (_, i) => quoteAt(i, 'ru', ['rock'])).some((q) => /Лес Пол/.test(q.text))).toBe(true);
+    [...MUSICIANS, ...SAYINGS].forEach((x) => expect(QSETS).toContain(x.set));
+  });
+  it('цитатник — без «ты/вы» и с переводом', () => {
+    MEME.forEach(([ru, en]) => { expect(en).toBeTruthy(); expect(ru).not.toMatch(/(^|\s)(ты|вы|тебя|вас|тебе|вам)(\s|[,.!?»]|$)/i); });
   });
 });

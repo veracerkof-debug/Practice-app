@@ -291,3 +291,8 @@
 .mascot{transition:transform .15s}
 .hvoice{display:flex;gap:12px;align-items:center;margin:4px 4px 14px}
 .hvoice .hquote{margin:0;flex:1}
+/* реакция на касание: подпрыгнуть, камертон звенит */
+.mascot.mpoke{animation:mpoke .5s cubic-bezier(.3,1.6,.5,1)}
+.mascot.mpoke .mfork{animation:mfork .07s linear 12;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes mpoke{0%{transform:scale(.86)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes mfork{0%,100%{transform:translateX(0)}25%{transform:translateX(-1.2px)}75%{transform:translateX(1.2px)}}
