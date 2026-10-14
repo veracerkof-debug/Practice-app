@@ -1,5 +1,6 @@
 // Ядро: песни, сессии, статистика, цели, ударный режим, хранение.
 import { initTama } from '../ui/tama.js';
+import { webIcon, iconOf } from './appicon.js';
 import { t, initI18n, getLang } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
@@ -175,6 +176,8 @@ export function boot(root) {
   activity = app.activity = createActivity(app, { soundingAudio });
   // Мелета-тамагочи: по желанию рядом на занятии, слушает (если разрешено) и говорит, как идёт
   initTama(app);
+  // иконка приложения: значок вкладки в браузере (на Android — выбранный alias уже включён)
+  webIcon(iconOf(store.state.settings));
   app.startSession = (type, songId, tool) => session.start(type, songId, tool);
   // Язык и вид поменялись (Оформление, доступ к «Минимал»): строки и стили — на месте, без перезапуска и без ухода с экрана
   app.relang = () => {

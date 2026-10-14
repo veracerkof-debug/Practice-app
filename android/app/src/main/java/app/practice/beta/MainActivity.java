@@ -16,6 +16,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SharePlugin.class);
         registerPlugin(FolderPlugin.class);
         registerPlugin(VoicePlugin.class);
+        registerPlugin(IconPlugin.class);
         super.onCreate(savedInstanceState);
         // Масштаб интерфейса (Оформление → Размер): ширина области просмотра из meta viewport
         // и подгонка по ширине экрана (иначе раскладка шире экрана вылезает за край)

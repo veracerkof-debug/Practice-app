@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Фон иконок на выбор (build/appicons.mjs) -->
+<resources>
+    <color name="ic_bg_melete">#F5F1E8</color>
+    <color name="ic_bg_meletiy">#F5F1E8</color>
+    <color name="ic_bg_note">#9C7242</color>
+    <color name="ic_bg_clef">#23262E</color>
+    <color name="ic_bg_fork">#5F8568</color>
+    <color name="ic_bg_keys">#F5F1E8</color>
+</resources>

@@ -1173,5 +1173,16 @@
   "wel.accept": "«Boshlash» tugmasini bosish Foydalanuvchi kelishuvi va Maxfiylik siyosatiga rozilikni bildiradi.",
   "wel.go": "Boshlash",
   "wel.about": "Melete haqida",
-  "legal.about": "Melete haqida"
+  "legal.about": "Melete haqida",
+  "icon.title": "Ilova belgisi",
+  "icon.melete": "Melete",
+  "icon.meletiy": "Meletiy",
+  "icon.note": "Nota",
+  "icon.clef": "Skripka kaliti",
+  "icon.fork": "Kamerton",
+  "icon.keys": "Klavishlar",
+  "icon.classic": "Avvalgi",
+  "icon.hint": "Telefon ekranidagi belgi. Almashtirilgach, launcher uni oʻzi yangilaydi — odatda bir necha soniyada; ish stolidagi yorliqni qayta qoʻshish kerak boʻlishi mumkin.",
+  "icon.done": "Belgi bir necha soniyada almashadi",
+  "icon.fail": "Belgini almashtirib boʻlmadi"
 }

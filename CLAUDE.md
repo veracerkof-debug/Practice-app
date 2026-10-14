@@ -48,6 +48,7 @@
   `share.js` — обмен с командой: файл `.melete` (песни, табы, сет-лист; формат — `docs/share-format.md`), экраны — `screens/share.js`;
   `reminders.js` — напоминания о практике (уведомления телефона), `quotes.js` — слова маскота (стихи, истории музыкантов).
   `folder.js` — папка Melete на устройстве (Data, Media, Tabs, PDF, Lyrics; синхронизация в обе стороны), `foldersync.js` — когда синхронизировать; Android — `FolderPlugin.java`.
+  `appicon.js` — иконка приложения на выбор (рисунки — `src/ui/appicons.js`, PNG — `build/appicons.mjs`, Android — `IconPlugin.java` и activity-alias).
   `log.js` — технический журнал на устройстве (3 ч, без личного); `report.js` — отчёт о проблеме (отправляет человек через «Поделиться»).
   `mastery.js` — лиги (самоцвет по часам практики в приложении; званий нет); `tama.js` — Мелета-тамагочи на занятии (`tamatexts.js` — реплики, экран — `src/ui/tama.js`).
   `recorder.js` — запись в инструментах (звук приложения, микрофон, видео модуля → медиатека; кнопка — `screens/rec.js`);

@@ -6,9 +6,9 @@
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction"
         android:hasFragileUserData="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_launcher_melete"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_launcher_melete_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/AppTheme">
@@ -21,10 +21,7 @@
             android:launchMode="singleTask"
             android:exported="true">
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            <!-- Значок в списке приложений — у activity-alias ниже (иконка на выбор, IconPlugin.java) -->
 
             <!-- Файл .melete от команды (песни, сет-лист): открыть из Telegram, почты, файлового менеджера (src/core/share.js) -->
             <intent-filter>
@@ -46,6 +43,99 @@
             </intent-filter>
 
         </activity>
+
+        <!-- Иконка приложения на выбор («Оформление», src/ui/appicons.js): включён ровно один alias -->
+        <activity-alias
+            android:name=".IconMelete"
+            android:targetActivity=".MainActivity"
+            android:enabled="true"
+            android:exported="true"
+            android:label="@string/title_activity_main"
+            android:icon="@mipmap/ic_launcher_melete"
+            android:roundIcon="@mipmap/ic_launcher_melete_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMeletiy"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/title_activity_main"
+            android:icon="@mipmap/ic_launcher_meletiy"
+            android:roundIcon="@mipmap/ic_launcher_meletiy_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconNote"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/title_activity_main"
+            android:icon="@mipmap/ic_launcher_note"
+            android:roundIcon="@mipmap/ic_launcher_note_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconClef"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/title_activity_main"
+            android:icon="@mipmap/ic_launcher_clef"
+            android:roundIcon="@mipmap/ic_launcher_clef_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconFork"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/title_activity_main"
+            android:icon="@mipmap/ic_launcher_fork"
+            android:roundIcon="@mipmap/ic_launcher_fork_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconKeys"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/title_activity_main"
+            android:icon="@mipmap/ic_launcher_keys"
+            android:roundIcon="@mipmap/ic_launcher_keys_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconClassic"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/title_activity_main"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <provider
             android:name="androidx.core.content.FileProvider"

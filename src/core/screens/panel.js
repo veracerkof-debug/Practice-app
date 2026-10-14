@@ -28,6 +28,8 @@ import { helpOf, showHelp, resetHelp, coreHelp, coreTopic, CORE_TOPICS } from '.
 import { freeTagName, trackMode } from '../session.js';
 import { INSTRUMENTS, PRIOR_MAX, gemSec, saveProfile, newProfile } from '../profile.js';
 import { gemOf } from '../mastery.js';
+import { APP_ICON_IDS, appIconSVG } from '../../ui/appicons.js';
+import { iconOf, setAppIcon } from '../appicon.js';
 import { gemSVG } from '../../ui/gems.js';
 import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
@@ -244,6 +246,9 @@ function lookHTML(app) {
     (st.uiStyle === 'mono' && extOn(st) ? '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('mono.lang') + '</span>' + psw('monoLang', st.monoLang !== false, t('mono.lang')) + '</div></div><p class="ftr">' + t('mono.langHint') + '</p>' +
       // без текста: значки, графика и цифры на рабочих экранах; настройки и диалоги — с текстом
       '<div class="group"><div class="cell"><span class="grow">' + t('mono.bare') + '</span>' + psw('monoBare', !!st.monoBare, t('mono.bare')) + '</div></div><p class="ftr">' + t('mono.bareHint') + '</p>' : '') +
+    // иконка приложения: Мелета, Мелетий, музыкальные значки
+    '<div class="hdr">' + t('icon.title') + '</div><div class="icgrid" role="group" aria-label="' + esc(t('icon.title')) + '">' + APP_ICON_IDS.map((k) => '<button type="button" class="icopt' + (iconOf(st) === k ? ' on' : '') + '" data-appicon="' + k + '" aria-pressed="' + (iconOf(st) === k) + '" aria-label="' + esc(t('icon.' + k)) + '">' +
+      appIconSVG(k, { size: 54 }) + '<span>' + t('icon.' + k) + '</span></button>').join('') + '</div><p class="ftr">' + t('icon.hint') + '</p>' +
     // стихи разделов — в обоих видах
     '<div class="group" style="margin-top:16px"><button class="cell act" data-verses>' + t('verses.title') + '</button></div><p class="ftr">' + t('verses.hint') + '</p>' +
     (st.uiStyle === 'mono' ? '' : '<div class="hdr">' + t('look.style') + '</div><div class="skins">' + [['paper', t('look.paper'), '#F4EFE6', '#2B2620'], ['oled', 'OLED', '#000', '#fff']].map(([k, n, bg, fg]) =>
@@ -423,6 +428,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-hshow]'))) { const k = b.dataset.hshow, m = k.startsWith('core:') ? coreTopic(k.slice(5)) : moduleById(k); if (m) showHelp(app, m); return; }
       if (g('[data-brestart]')) { app.bible.setPlan(app.bible.st().plan, dayKeyOf(Date.now())); toast(t('church.restarted')); render(); onChange(); return; }
       if ((b = g('[data-goal]'))) { changeGoal(app.store, +b.dataset.goal); render(); onChange(); return; }
+      if ((b = g('[data-appicon]'))) { setAppIcon(app.store.state.settings, b.dataset.appicon).then((ok) => { app.store.settingsChanged(); render(); toast(t(ok ? 'icon.done' : 'icon.fail')); }); return; }
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-seg="uistyle"] [data-v]'))) {
         const st = app.store.state.settings, was = st.uiStyle === 'mono' && st.monoLang !== false;

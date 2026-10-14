@@ -1200,5 +1200,16 @@
   "wel.accept": "Tapping “Start” means agreement with the Terms of Use and the Privacy Policy.",
   "wel.go": "Start",
   "wel.about": "About Melete",
-  "legal.about": "About Melete"
+  "legal.about": "About Melete",
+  "icon.title": "App icon",
+  "icon.melete": "Melete",
+  "icon.meletiy": "Meletius",
+  "icon.note": "Note",
+  "icon.clef": "Treble clef",
+  "icon.fork": "Tuning fork",
+  "icon.keys": "Keys",
+  "icon.classic": "Previous",
+  "icon.hint": "The icon on the phone screen. After a change the launcher updates it by itself, usually within seconds; a home-screen shortcut may need to be added again.",
+  "icon.done": "The icon will change in a few seconds",
+  "icon.fail": "Couldn’t change the icon"
 }
