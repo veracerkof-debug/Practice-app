@@ -403,3 +403,6 @@
 /* слово дня под приветствием */
 .mono-home .mquote { margin: 12px 0 0; font-size: 14px; line-height: 1.45; color: var(--l2); max-width: 46ch; }
 .mono-home .mquote .qref { display: block; margin-top: 4px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
+/* Мелета под приветствием */
+.mono-home .mvo { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
+.mono-home .mvo .mquote { margin: 0; flex: 1; }

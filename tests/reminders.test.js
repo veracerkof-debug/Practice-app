@@ -58,3 +58,20 @@ describe('цитаты', () => {
     expect(all.some((q) => q.ref === 'Брат Лаврентий')).toBe(false);
   });
 });
+
+import { moodOf } from '../src/core/mascot.js';
+describe('настроение Мелеты', () => {
+  const at = (h, d = 14) => new Date(2026, 9, d, h, 0).getTime(); // 14.10.2026 — среда
+  const days = [1, 1, 1, 1, 1, 0, 0];
+  it('по состоянию занятий', () => {
+    expect(moodOf({ now: at(12), active: true })).toBe('focus');
+    expect(moodOf({ now: at(12), active: true, pomoBreak: true })).toBe('rest');
+    expect(moodOf({ now: at(2), sessions: [] })).toBe('sleep');
+    expect(moodOf({ now: at(12), weekSec: 400, goalSec: 300 })).toBe('cool');
+    expect(moodOf({ now: at(12), weekSec: 300, goalSec: 300 })).toBe('happy');
+    expect(moodOf({ now: at(12), goalSec: 300, weekSec: 10, sessions: [{ start: at(9) }] })).toBe('glad');
+    expect(moodOf({ now: at(12), goalSec: 300, weekSec: 0, sessions: [{ start: at(12, 1) }] })).toBe('sad');
+    expect(moodOf({ now: at(19), goalSec: 300, weekSec: 0, days, sessions: [] })).toBe('wait');
+    expect(moodOf({ now: at(12), goalSec: 300, weekSec: 0, days, sessions: [] })).toBe('calm');
+  });
+});
