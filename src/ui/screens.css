@@ -276,6 +276,7 @@
 .mascot .mf{fill:var(--cell);stroke:var(--sep);stroke-width:1.5}
 .mascot .ms{fill:none;stroke:currentColor;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
 .mascot .mt{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.mascot .mk{stroke-width:2.7}
 .mascot .md{fill:currentColor}
 .mascot .mg{fill:currentColor;font-family:"Melete Greek","GFS Didot",Georgia,serif}
 .mascot .mblink{animation:mblink 5s infinite;transform-box:fill-box;transform-origin:center}

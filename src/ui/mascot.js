@@ -4,9 +4,12 @@
 
 const S = (d) => '<path class="ms" d="' + d + '"/>';
 const T = (d) => '<path class="mt" d="' + d + '"/>';
+const K = (d) => '<path class="mt mk" d="' + d + '"/>'; // камертон
 const dot = (x, y, r = 3.2) => '<circle class="md" cx="' + x + '" cy="' + y + '" r="' + r + '"/>';
 const G = (x, y, size, ch, extra = '') => '<text class="mg" x="' + x + '" y="' + y + '" font-size="' + size + '"' + extra + '>' + ch + '</text>';
 
+const FORK = 'M47 45 v10.5 q0 3 3 3 q3 0 3 -3 v-10.5 M50 58.5 v6';
+const FORK_LOW = 'M47.5 57 v6 q0 2.5 2.5 2.5 q2.5 0 2.5 -2.5 v-6 M50 65.5 v5';
 const P = {
   brM: S('M27 41 q11 -13 22 0 q11 -13 22 0'),
   brMhi: S('M27 36 q11 -15 22 -2 q11 -15 22 -2'),
@@ -25,17 +28,18 @@ const P = {
   shades: S('M28 36 q7 -4 14 -1') + '<ellipse class="md" cx="38" cy="51" rx="9.5" ry="6.8" transform="rotate(-15 38 51)"/><ellipse class="md" cx="62" cy="51" rx="9.5" ry="6.8" transform="rotate(-15 62 51)"/>' +
     S('M46.8 48 V39 M70.8 48 V39') + '<path class="md" d="M45.2 36 L72.4 36 L72.4 41 L45.2 41 Z"/>',
   // нос — камертон: ветви и ножка
-  nose: '<g class="mfork">' + S('M45 51 v6 q0 5 5 5 q5 0 5 -5 v-6 M50 62 v8') + '</g>',
-  noseLow: '<g class="mfork">' + S('M45.5 56 v4.5 q0 4.5 4.5 4.5 q4.5 0 4.5 -4.5 v-4.5 M50 65 v6') + '</g>',
-  noseBob: '<g class="mbob"><g class="mfork">' + S('M45 51 v6 q0 5 5 5 q5 0 5 -5 v-6 M50 62 v8') + '</g></g>',
-  mCalm: S('M43 74 q7 3 14 0'),
-  mOmega: S('M38 71 q6 9 12 0 q6 9 12 0'),
-  mSmile: S('M38 70 q12 12 24 0'),
-  mDown: S('M41 77 q9 -7 18 0'),
-  mFlat: S('M43 75 h14'),
-  mO: '<ellipse class="ms" cx="50" cy="75" rx="4.5" ry="5.5"/>',
-  mSmirk: S('M42 75 q10 3 17 -4'),
-  mCoolSmirk: S('M41 76 q10 3 18 -4'),
+  // ветви длинные и узкие, ножка короткая; рот — заметно ниже, чтобы нос и рот не сливались в «мордочку»
+  nose: '<g class="mfork">' + K(FORK) + '</g>',
+  noseLow: '<g class="mfork">' + K(FORK_LOW) + '</g>',
+  noseBob: '<g class="mbob"><g class="mfork">' + K(FORK) + '</g></g>',
+  mCalm: S('M42 77 q8 3.5 16 0'),
+  mGrin: S('M40 75 q10 8 20 0'),
+  mSmile: S('M37 74 q13 12 26 0'),
+  mDown: S('M41 80 q9 -6 18 0'),
+  mFlat: S('M43 78 h14'),
+  mO: '<ellipse class="ms" cx="50" cy="78" rx="4" ry="5"/>',
+  mSmirk: S('M42 78 q10 3 17 -4'),
+  mCoolSmirk: S('M42 79 q10 3 17 -4'),
   zz: '<g class="mzz">' + G(70, 30, 15, 'ζ') + G(79, 22, 10, 'ζ') + '</g>',
   note: '<g class="mbob mfast">' + dot(70, 73) + T('M73 73 v-14 q5 2 6 7') + '</g>',
   delta: G(66, 30, 18, 'Δ'),
@@ -44,7 +48,7 @@ const P = {
 // Настроения: что показывает Мелета
 export const MOODS = {
   calm: ['brM', 'eyes', 'nose', 'mCalm'], // спокойна — по умолчанию
-  glad: ['brMhi', 'eyes', 'nose', 'mOmega'], // рада — сегодня уже занимались
+  glad: ['brMhi', 'eyes', 'nose', 'mGrin'], // рада — сегодня уже занимались
   happy: ['brMhi', 'eyesHappy', 'nose', 'mSmile'], // довольна — цель недели выполнена
   cool: ['shades', 'noseLow', 'mCoolSmirk'], // крутая — цель недели перевыполнена
   delight: ['brMhi', 'sharps', 'nose', 'mSmile'], // в восторге — новое звание, рекорд
