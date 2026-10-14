@@ -65,7 +65,7 @@ export const MOODS = {
 };
 
 // Вариант маскота (settings.mascot): 'f' — Мелета: бантик-завиток (как флажок восьмой) и ресницы;
-// 'm' — Мелетий: бородка по линии подбородка и брови чуть плотнее. Остальное лицо — общее
+// 'm' — Мелетий: прежнее лицо (нос-камертон), без украшений; у Мелеты нос — нотка
 let GENDER = 'f';
 export const setMascotLook = (g) => { GENDER = g === 'm' ? 'm' : 'f'; };
 // Ресницы — у внешних уголков открытых глаз (смещение глаз по настроению)
@@ -77,12 +77,15 @@ const lashes = (keys) => {
   return T('M' + (l - 4.5) + ' 44.5 l-3 -2.4 M' + (l - 2.5) + ' 43 l-1.6 -3') + (r != null ? T('M' + (r + 4.5) + ' 44.5 l3 -2.4 M' + (r + 2.5) + ' 43 l1.6 -3') : '');
 };
 const BOW = '<g class="mbow"><path class="md mbw" d="M68 23 L59 17.5 Q57 23 59 28.5 Z"/><path class="md mbw" d="M68 23 L77 17.5 Q79 23 77 28.5 Z"/><circle class="md" cx="68" cy="23" r="2.6"/></g>';
-const BEARD = S('M29 67 q2.5 22 21 24 q18.5 -2 21 -24') + T('M38 86 l-1 3 M50 89.5 v3 M62 86 l1 3');
+// Нос Мелеты — нотка: головка наклонным овалом, штиль вверх и флажок-штрих (вместо камертона)
+const NOTE = (dy = 0) => '<g class="mfork mnote"><ellipse class="md" cx="48" cy="' + (60 + dy) + '" rx="4.2" ry="3" transform="rotate(-22 48 ' + (60 + dy) + ')"/>' +
+  T('M51.6 ' + (59 + dy) + ' V' + (46 + dy) + ' q0.4 3.6 4.2 5.6') + '</g>';
+const NOSE_F = { nose: NOTE(0), noseLow: NOTE(6), noseBob: '<g class="mbob">' + NOTE(0) + '</g>' };
 
 // ring: false — без круга («Минимал»); cls — доп. класс (mpoke — реакция на касание); gender — вариант (по умолчанию — выбранный)
 export function mascotSVG(mood = 'calm', { size = 56, label = '', ring = true, cls = '', gender = GENDER } = {}) {
   const keys = MOODS[mood] || MOODS.calm;
-  const parts = keys.map((k) => P[k]).join('') + (gender === 'm' ? BEARD : BOW + lashes(keys));
+  const parts = keys.map((k) => (gender !== 'm' && NOSE_F[k]) || P[k]).join('') + (gender === 'm' ? '' : BOW + lashes(keys));
   return '<svg class="mascot' + (cls ? ' ' + cls : '') + '" viewBox="0 0 100 100" width="' + size + '" height="' + size + '" data-mood="' + mood + '"' + (label ? ' role="img" aria-label="' + label.replace(/"/g, '&quot;') + '"' : ' aria-hidden="true"') +
     ' data-g="' + gender + '">' + (ring ? '<circle class="mf" cx="50" cy="50" r="46"/>' : '') + parts + '</svg>';
 }

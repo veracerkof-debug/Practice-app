@@ -52,9 +52,11 @@ describe('Мелета и Мелетий', () => {
     expect(tt('a')).toBe('Мелета рада');
     expect(remindText({ slot: 'lead:60', mode: 'pushy' }, { lang: 'ru' }).body).toMatch(/Мелета уже настроила/);
   });
-  it('лицо: у Мелеты бантик, у Мелетия бородка', () => {
-    expect(mascotSVG('calm', { gender: 'f' })).toMatch(/mbow/);
-    expect(mascotSVG('calm', { gender: 'm' })).not.toMatch(/mbow/);
+  it('лицо: у Мелеты бантик и нос-нотка, у Мелетия — прежнее лицо с камертоном', () => {
+    expect(mascotSVG('calm', { gender: 'f' })).toMatch(/mbow[\s\S]*|mnote/);
+    expect(mascotSVG('calm', { gender: 'f' })).toMatch(/mnote/);
+    expect(mascotSVG('calm', { gender: 'm' })).not.toMatch(/mbow|mnote/);
+    expect(mascotSVG('focus', { gender: 'm' })).toMatch(/mk/);
     setMascotLook('m');
     expect(mascotSVG('calm')).toMatch(/data-g="m"/);
     setMascotLook('f');
