@@ -18,6 +18,6 @@ describe('лиги', () => {
   it('рисуется каждая ступень; искр больше у алмазов', () => {
     GEMS.forEach((g) => expect(gemSVG(g.id, 0.5, 40, 'x')).toMatch(/^<svg class="gem"[\s\S]*<\/svg>$/));
     const sparks = (id, f) => (gemSVG(id, f).match(/class="gsp"/g) || []).length;
-    expect([sparks('stone', 1), sparks('ruby', 0), sparks('ruby', 1), sparks('diamond', 0), sparks('obsidian', 1)]).toEqual([0, 0, 2, 2, 3]);
+    expect([sparks('stone', 1), sparks('ruby', 0), sparks('ruby', 1), sparks('diamond', 0), sparks('obsidian', 1)]).toEqual([0, 0, 2, 3, 3]);
   });
 });

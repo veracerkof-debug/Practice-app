@@ -9,7 +9,7 @@ import { TAB_ICONS, tabIds } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule } from '../modules.js';
 import { visibleTabs } from '../settings.js';
-import { homeHTML, quickEdit, toolHoldMenu, streakSheet, gemSheet, leagueCheck, nameSheet } from './home.js';
+import { homeHTML, mountStones, quickEdit, toolHoldMenu, streakSheet, gemSheet, leagueCheck, nameSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { bindExt } from './ext.js';
@@ -67,7 +67,7 @@ export function createShell(app, root) {
       if (!h) view.song = null;
       main.innerHTML = h || libraryHTML(app, view);
       coreHelp(app, 'songs');
-    } else { main.innerHTML = homeHTML(app); if (!app.store.state.settings.toolsOnly) coreHelp(app, 'start'); }
+    } else { main.innerHTML = homeHTML(app); mountStones(app, main); if (!app.store.state.settings.toolsOnly) coreHelp(app, 'start'); }
   }
 
   // Новая вкладка или экран: содержимое поднимается, блоки — по очереди (styles/motion.css). Только при переходе,
@@ -96,7 +96,7 @@ export function createShell(app, root) {
 
   // Предпросмотр масштаба в «Оформлении»: разметка главной и инструментов без обработчиков
   app.preview = {
-    home: (el) => { el.innerHTML = homeHTML(app); },
+    home: (el) => { el.innerHTML = homeHTML(app); mountStones(app, el); },
     tools: (el) => { renderTools(app, el); el.onclick = null; },
     tabs: () => tabs.innerHTML,
   };

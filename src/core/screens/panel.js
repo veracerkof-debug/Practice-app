@@ -32,6 +32,7 @@ import { gemOf } from '../mastery.js';
 import { APP_ICON_IDS, appIconSVG } from '../../ui/appicons.js';
 import { iconOf, setAppIcon } from '../appicon.js';
 import { gemSVG } from '../../ui/gems.js';
+import { mountStones } from './home.js';
 import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
@@ -376,9 +377,12 @@ function rootHTML(app) {
   // «Только инструменты»: ни лиги, ни итогов — обычный аватар, и в списке нет статистики, недели, уведомлений
   const plain = !!app.store.state.settings.toolsOnly;
   const g = gemOf(gemSec(all) / 3600), gn = t('gem.' + g.gem.id);
-  return '<div class="phero">' + (plain ? '<div class="pav">' + AVATAR + '</div>' : '<button class="prank" data-act="gem" aria-label="' + esc(t('gem.aria', { name: gn, total: fmtDur(gemSec(all)) })) + '">' + gemSVG(g.gem.id, g.frac, 88) + '</button>') +
+  // «Минимал»: лиг нет — вместо самоцвета крутящийся камень (src/ui/stone.js)
+  const mono = app.store.state.settings.uiStyle === 'mono';
+  return '<div class="phero">' + (plain ? '<div class="pav">' + AVATAR + '</div>' : mono ? '<canvas class="pstone" data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title')) + '"></canvas>'
+    : '<button class="prank" data-act="gem" aria-label="' + esc(t('gem.aria', { name: gn, total: fmtDur(gemSec(all)) })) + '">' + gemSVG(g.gem.id, g.frac, 88) + '</button>') +
     '<div class="large" style="margin:12px 0 0;text-align:center">' + esc(pr.name || t('panel.title')) + '</div>' +
-    (plain ? '' : '<button class="prname" data-act="gem">' + esc(gn) + '</button>') +
+    (plain ? '' : '<button class="prname" data-act="gem">' + esc(mono ? t('stone.title') : gn) + '</button>') +
     (sub ? '<div class="l2" style="text-align:center;font-size:15px">' + esc(sub) + '</div>' : '') + '</div>' +
     // всего — только практика в приложении: часы «до приложения» воображаемые и в итоги не идут
     (plain ? '' : '<div class="tiles num"><div class="tile"><b data-hours>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
@@ -418,6 +422,7 @@ export function createPanel(app, onChange) {
     layer.scrollTop = lastPage && lastPage !== page ? 0 : y;
     lastPage = page;
     if (page === 'look') mountSizePreview(app, layer);
+    if (page === 'root') mountStones(app, layer);
     // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»
     if (page === 'data') coreHelp(app, 'folder');
     if (page === 'mascot') coreHelp(app, 'melete');

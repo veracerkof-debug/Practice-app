@@ -425,3 +425,4 @@
 :root[data-bare] .rhead b,:root[data-bare] .rsec .rt,:root[data-bare] .sclab,:root[data-bare] .lcdn{visibility:hidden}
 :root[data-bare] .bt,:root[data-bare] .bpmlbl{display:none!important}
 :root[data-bare] .bareic svg path,:root[data-bare] .bareic svg circle{vector-effect:non-scaling-stroke}
+.pstone{width:96px;height:96px;display:block;cursor:grab;touch-action:none;border-radius:50%}
