@@ -13,6 +13,8 @@ import {
 import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { hasDemo, addDemo, removeDemo } from '../demo.js';
+import { remindOf, remindAvailable, remindPermission, remindTest, STYLES } from '../reminders.js';
+import { notifyText } from '../quotes.js';
 import { PALETTE_IDS, PALETTES, hueColor, onColor, TEXT_MODES } from '../palettes.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
@@ -175,7 +177,17 @@ function weekHTML(app) {
 function notifHTML(app) {
   const st = app.store.state.settings;
   const row = (k, on) => '<div class="group"><div class="cell"><span class="grow">' + t('notif.' + k) + '</span>' + psw(k, on, t('notif.' + k)) + '</div></div><p class="ftr">' + t('notif.' + k + '.hint') + '</p>';
-  return '<div class="large">' + t('page.notif') + '</div>' +
+  const r = remindOf(st);
+  // напоминания о практике — уведомления телефона (в браузере их нет)
+  const rem = '<div class="hdr">' + t('rem.title') + '</div>' + (remindAvailable() ?
+    '<div class="group"><div class="cell"><span class="grow">' + t('rem.on') + '</span><label class="sw"><input type="checkbox" data-rem="on"' + (r.on ? ' checked' : '') + ' aria-label="' + esc(t('rem.on')) + '"><i></i></label></div>' +
+    (r.on ? '<label class="cell"><span class="grow">' + t('rem.time') + '</span><input type="time" class="inp" data-rem="time" value="' + esc(r.time) + '" aria-label="' + esc(t('rem.time')) + '"></label>' +
+      '<div class="cellcol">' + seg('remstyle', STYLES.map((k) => [k, t('rem.' + k)]), r.style, t('rem.style')) + '<div class="segcap">' + t('rem.' + r.style + 'Hint') + '</div></div>' +
+      '<button class="cell act" data-remtest>' + t('rem.test') + '</button>' : '') + '</div>' +
+    '<p class="ftr">' + t('rem.hint', { from: r.quietFrom, to: r.quietTo }) + '</p>'
+    : '<p class="ftr">' + t('rem.webOnly') + '</p>');
+  return '<div class="large">' + t('page.notif') + '</div>' + rem +
+    '<div class="hdr">' + t('rem.inApp') + '</div>' +
     row('askIdle', st.askIdle !== false) + row('noSoundNote', st.noSoundNote !== false) + row('rankNote', st.rankNote !== false);
 }
 
@@ -398,6 +410,8 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="track"] [data-v]'))) { app.store.state.settings.trackMode = b.dataset.v; changed(); return; }
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); relang(); return; }
+      if ((b = g('[data-seg="remstyle"] [data-v]'))) { const st = app.store.state.settings; (st.remind = remindOf(st)).style = b.dataset.v; changed(); return; }
+      if (g('[data-remtest]')) { remindTest((i, at) => notifyText(i, at, getLang()), remindOf(app.store.state.settings).style).then((ok) => toast(t(ok ? 'rem.testSent' : 'rem.denied'))); return; }
       if (g('[data-act="demo"]')) {
         if (hasDemo(app.store.state)) {
           confirm(t('demo.removeTitle'), t('demo.removeText'), t('demo.removeYes')).then((ok) => {
@@ -431,6 +445,15 @@ export function createPanel(app, onChange) {
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); return; }
       if (e.target.hasAttribute('data-bplan')) { const v = e.target.value; app.bible.setPlan(v === 'none' ? null : v, dayKeyOf(Date.now())); render(); onChange(); return; }
       if (e.target.hasAttribute('data-thfind')) { const st = app.store.state.settings; (st.theory ??= {}).find = e.target.checked; app.store.settingsChanged(); return; }
+      if (d.rem) { // напоминания: включение (с разрешением), время
+        const st = app.store.state.settings, r = (st.remind = remindOf(st));
+        if (d.rem === 'on') {
+          r.on = e.target.checked;
+          if (r.on) remindPermission().then((ok) => { if (!ok) { r.on = false; toast(t('rem.denied')); } app.store.settingsChanged(); render(); });
+          else { app.store.settingsChanged(); render(); }
+        } else if (d.rem === 'time' && e.target.value) { r.time = e.target.value; app.store.settingsChanged(); }
+        return;
+      }
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });

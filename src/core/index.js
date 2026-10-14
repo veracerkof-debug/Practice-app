@@ -1,5 +1,5 @@
 // Ядро: песни, сессии, статистика, цели, ударный режим, хранение.
-import { t, initI18n } from '../i18n/index.js';
+import { t, initI18n, getLang } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
 import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.js';
@@ -35,6 +35,8 @@ import { crashOffer } from './screens/report.js';
 import { bindVerses } from './screens/verses.js';
 import { createFiles } from './files.js';
 import { createRecorder } from './recorder.js';
+import { reschedule } from './reminders.js';
+import { notifyText } from './quotes.js';
 
 export function boot(root) {
   // журнал — первым: ошибки запуска тоже попадут в него
@@ -145,6 +147,11 @@ export function boot(root) {
     set active(a) { active = a; saveActive(a); },
   };
   app.rec = createRecorder(app);
+  // напоминания о практике: расписание на неделю — при запуске, смене настроек и после занятий (с задержкой)
+  let remT = 0;
+  const remSync = () => { clearTimeout(remT); remT = setTimeout(() => reschedule(store.state, (i, at) => notifyText(i, at, getLang())), 1500); };
+  store.subscribe(remSync);
+  remSync();
   // Церковный режим: чтение Библии — план, отметки, место (src/core/reading.js)
   app.bible = createBible(store);
   // Вспышка, фонарик и вибрация в такт метронома

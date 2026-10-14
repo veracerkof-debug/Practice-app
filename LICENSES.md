@@ -28,7 +28,7 @@
 | Стихи разделов на узбекском: «Muqaddas Kitob» — © Muqaddas Kitobni tarjima qilish instituti, 2016, 2018, 2020 | 37 коротких цитат с указанием места (`src/core/verses.js`) | Цитирование; права — у правообладателя |
 | [fflate](https://github.com/101arrowz/fflate) 0.8.3 — © Arjun Barrett | Распаковка zip при импорте песен (PowerPoint, ProPresenter, архивы) | MIT |
 | [sql.js](https://github.com/sql-js/sql.js) 1.14.2 — © sql.js authors; внутри — SQLite (общественное достояние) | Чтение баз EasyWorship при импорте песен, загружается только при импорте | MIT |
-| [Capacitor](https://github.com/ionic-team/capacitor) 8.5.2 (`@capacitor/core`, `@capacitor/android`, `@capacitor/app` 8.1.2) — © Ionic и участники | Приложение для Android: оболочка WebView и мост к системе | MIT |
+| [Capacitor](https://github.com/ionic-team/capacitor) 8.5.2 (`@capacitor/core`, `@capacitor/android`, `@capacitor/app` 8.1.2, `@capacitor/local-notifications` 8.3.1 — напоминания о практике) — © Ionic и участники | Приложение для Android: оболочка WebView и мост к системе | MIT |
 | AndroidX (appcompat, coordinatorlayout, core-splashscreen, webkit и др.) — © The Android Open Source Project | Библиотеки Android, входят в APK через Capacitor | Apache-2.0 |
 
 Все остальные звуки (метроном, пианино, дрон, пэды, клики) синтезируются в реальном времени, чужих записей нет.
