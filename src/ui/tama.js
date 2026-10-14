@@ -1,7 +1,7 @@
 // Мелета-тамагочи на экране занятия (сессия или окно инструмента): маленькое лицо в углу и изредка — реплика
 // в облачке (src/core/tama.js решает, когда и что). Касание — реакция лица. Выключается в «Мелета и напоминания».
 // «Минимал» без текста — только лицо. Полный экран инструмента — Мелета не мешает и прячется.
-import { getLang, isBare, t } from '../i18n/index.js';
+import { getLang, isBare, t, hasMascot } from '../i18n/index.js';
 import { mascotSVG, pokeMascot } from './mascot.js';
 import { createTama, tamaOf } from '../core/tama.js';
 import { tamaLine } from '../core/tamatexts.js';
@@ -34,7 +34,7 @@ export function initTama(app) {
   };
   setInterval(() => {
     const st = app.store.state.settings, tm = tamaOf(st), act = app.activity || {};
-    const active = tm.on && (!!app.active || !!document.querySelector('.tview:not(.leaving)'));
+    const active = tm.on && hasMascot() && (!!app.active || !!document.querySelector('.tview:not(.leaving)'));
     const po = app.pomodoro, brk = !!(po && po.running && po.phase !== 'work');
     const r = brain.step({ now: Date.now(), active, brk, listening: tm.listen && !!act.hearing, playing: !!act.playing, db: act.level, sounding: app.soundingAudio ? app.soundingAudio() : false, chat: tm.chat });
     const vis = active && shown();

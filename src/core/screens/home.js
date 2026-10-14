@@ -1,7 +1,7 @@
 // «Сегодня»: цель недели, дни, кнопка практики, быстрый доступ к инструментам, недавние песни; ударный режим.
 // Перенесено из legacy/practice.html (homeHTML, quickList, quickEdit, streakPill, streakSheet).
 import { sandboxHours } from '../sandbox.js';
-import { t, tn, getLang } from '../../i18n/index.js';
+import { t, tn, getLang, hasMascot } from '../../i18n/index.js';
 import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
@@ -100,7 +100,8 @@ function quoteHTML(app, mono) {
   const st = app.store.state.settings;
   if (!isOn(st, 'quote')) return '';
   const q = quoteAt(dayIndex(), getLang(), setsOf(st), st.quoteBooks || []);
-  return '<div class="' + (mono ? 'mvo' : 'hvoice') + '"><button class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' +
+  // без маскота — только слово дня
+  return '<div class="' + (mono ? 'mvo' : 'hvoice') + (hasMascot() ? '' : ' nomascot') + '">' + (hasMascot() ? '<button class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' : '') +
     (q.text ? '<p class="' + (mono ? 'mquote' : 'hquote') + '">' + pleaHTML(app, 'mplea') + esc(q.text) + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p>' : '') + '</div>';
 }
 const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';

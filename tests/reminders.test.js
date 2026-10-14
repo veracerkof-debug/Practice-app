@@ -120,7 +120,7 @@ describe('наборы цитат', () => {
       const qs = Array.from({ length: 40 }, (_, i) => quoteAt(i, 'ru', [k]));
       expect(qs.every((q) => q.text)).toBe(true);
     }
-    expect(quoteAt(0, 'ru', ['meme']).ref).toBe('Цитатник Мелеты');
+    expect(quoteAt(0, 'ru', ['meme']).ref).toBe('Цитатник Мелетия'); // по умолчанию — Мелетий
     expect(Array.from({ length: 30 }, (_, i) => quoteAt(i, 'ru', ['rock'])).some((q) => /Лес Пол/.test(q.text))).toBe(true);
     [...MUSICIANS, ...SAYINGS].forEach((x) => expect(QSETS).toContain(x.set));
   });

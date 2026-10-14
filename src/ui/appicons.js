@@ -20,7 +20,7 @@ export const APP_ICONS = {
   classic: { bg: CREAM, fg: INK, body: () => '<text x="54" y="70" text-anchor="middle" font-family="Georgia,serif" font-size="46" fill="' + INK + '">M</text><path d="M40 80 h28" ' + st(TINT, 3) + '/>' },
 };
 export const APP_ICON_IDS = Object.keys(APP_ICONS);
-export const DEFAULT_ICON = 'melete';
+export const DEFAULT_ICON = 'meletiy'; // по умолчанию — Мелетий
 
 // SVG иконки: shape — 'square' (превью: скруглённый квадрат), 'full' (фон и рисунок — для PNG), 'fg' (только рисунок — передний слой Android)
 export function appIconSVG(id, { size = 56, shape = 'square' } = {}) {

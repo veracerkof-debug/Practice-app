@@ -3,8 +3,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { APP_ICON_IDS, appIconSVG, DEFAULT_ICON } from '../src/ui/appicons.js';
 
 describe('иконка приложения', () => {
-  it('каждая рисуется; по умолчанию — Мелета', () => {
-    expect(DEFAULT_ICON).toBe('melete');
+  it('каждая рисуется; по умолчанию — Мелетий', () => {
+    expect(DEFAULT_ICON).toBe('meletiy');
     APP_ICON_IDS.forEach((id) => expect(appIconSVG(id)).toMatch(/^<svg class="appic"[\s\S]*<\/svg>$/));
   });
   it('у каждой есть alias в манифесте и картинки Android', () => {

@@ -20,7 +20,7 @@ public class IconPlugin extends Plugin {
 
     @PluginMethod
     public void set(PluginCall call) {
-        String want = call.getString("id", "melete");
+        String want = call.getString("id", "meletiy");
         boolean known = false;
         for (String id : IDS) if (id.equals(want)) known = true;
         if (!known) { call.reject("unknown icon"); return; }

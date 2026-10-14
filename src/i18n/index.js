@@ -41,12 +41,17 @@ export const bareNow = () => stripping(true);
 export const stripWords = (s) => s.replace(/\{\w+\}|[\p{L}\p{M}ʻʼ'’]+/gu, (m) => (m[0] === '{' ? m : ''))
   .replace(/[.,!?;«»"“”„()…]/g, '').replace(/\s+/g, ' ').replace(/^[\s:—–\-·/]+|[\s:—–\-·/]+$/g, '').trim();
 
-// Маскот — Мелета (по умолчанию) или Мелетий (settings.mascot = 'm'): строки, где он назван или говорит о себе,
-// имеют мужской вариант — тот же ключ с «@m» (в словаре ядра или модуля). Чего нет — берётся обычная строка
-let gender = 'f';
-export const setMascotGender = (g) => { gender = g === 'm' ? 'm' : 'f'; };
+// Маскот (settings.mascot): 'm' — Мелетий (по умолчанию), 'f' — Мелета, 'none' — без маскота. Строки, где он назван
+// или говорит о себе, имеют варианты: «@m» — для Мелетия, «@n» — без маскота (нейтрально); обычная строка — Мелета
+let gender = 'm';
+export const setMascotGender = (g) => { gender = g === 'f' ? 'f' : g === 'none' ? 'none' : 'm'; };
 export const mascotGender = () => gender;
-const pickG = (d, key) => (gender === 'm' && d && d[key + '@m'] != null ? d[key + '@m'] : d && d[key]);
+export const hasMascot = () => gender !== 'none';
+const pickG = (d, key) => {
+  if (!d) return undefined;
+  const v = gender === 'm' ? d[key + '@m'] : gender === 'none' ? d[key + '@n'] : null;
+  return v != null ? v : d[key];
+};
 
 // {name} в строке заменяется значением из vars
 const fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m)) : s);

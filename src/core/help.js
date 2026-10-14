@@ -4,7 +4,8 @@
 // (не чаще раза за запуск приложения); в самый первый раз кнопка «Понятно» оживает через секунду — чтобы карточку
 // прочитали, а не смахнули не глядя. Все инструкции — в «Профиль → Инструкции», у инструмента — значок «?».
 // Тексты: у модуля — в его i18n (help.what, help.1…help.6, help.tip); у механизмов — в i18n ядра (hc.<id>.*).
-import { t, getLang, isBare } from '../i18n/index.js';
+import { t, getLang, isBare, hasMascot } from '../i18n/index.js';
+import { mascotSVG } from '../ui/mascot.js';
 import { esc, leave } from '../ui/index.js';
 import { moduleName } from './modules.js';
 
@@ -90,7 +91,8 @@ function next() {
   d.innerHTML = '<div class="alert helpcard" role="alertdialog" aria-label="' + esc(tp.name) + '"><div class="ab">' +
     '<div class="hchead"><span class="hcic" style="background:' + tp.color + ';color:' + (tp.on || '#fff') + '">' + tp.icon + '</span><h3>' + esc(tp.name) + '</h3></div>' +
     '<p class="hcwhat">' + esc(h.what) + '</p><ul class="hclist">' + h.items.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' +
-    (h.tip ? '<p class="hctip"><b>' + t('help.tip') + '</b> ' + esc(h.tip) + '</p>' : '') +
+    // совет — от лица маскота (лицо и имя); без маскота — просто «Совет»
+    (h.tip ? '<p class="hctip">' + (hasMascot() ? '<span class="hcm">' + mascotSVG('wink', { size: 28 }) + '<b>' + esc(t('mascot.says')) + '</b></span>' : '<b>' + t('help.tip') + '</b> ') + esc(h.tip) + '</p>' : '') +
     '<label class="hcnever"><input type="checkbox" data-k="never"' + (off ? ' checked' : '') + '><span>' + t('help.never') + '</span></label></div>' +
     '<div class="abtns"><button data-k="ok"' + (wait ? ' disabled' : '') + '>' + t('help.ok') + '</button></div></div>';
   document.body.appendChild(d);

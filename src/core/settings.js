@@ -71,6 +71,8 @@ export const ACCENTS = [['orange', '#9C7242'], ['red', '#A75750'], ['pink', '#A9
 // акцента нет («Бумага» показывается светлой, OLED — тёмной)
 export const UI_STYLES = ['default', 'mono'];
 export const isMono = (settings) => settings.uiStyle === 'mono';
+// Маскот: 'm' — Мелетий (по умолчанию), 'f' — Мелета, 'none' — без маскота
+export const mascotOf = (settings) => (['m', 'f', 'none'].includes(settings && settings.mascot) ? settings.mascot : 'm');
 
 /* ---------- масштаб интерфейса ---------- */
 // Размер всех элементов: 'auto' (по короткой стороне экрана) или число от SCALE_MIN до SCALE_MAX.
@@ -109,7 +111,7 @@ export function applyTheme(settings, de = document.documentElement) {
   if (isMono(settings)) de.setAttribute('data-style', 'mono');
   else de.removeAttribute('data-style');
   // Маскот: Мелета или Мелетий — строки (i18n) и лицо (ui/mascot.js)
-  setMascotGender(settings.mascot); setMascotLook(settings.mascot);
+  setMascotGender(mascotOf(settings)); setMascotLook(mascotOf(settings));
   // «Минимал» без текста: значки, графика и цифры (i18n: setBare)
   const bare = isMono(settings) && !!settings.monoBare;
   setBare(bare);

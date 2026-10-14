@@ -9,9 +9,12 @@ import { remindText, remindCtx } from '../remindtexts.js';
 import { QSETS, setsOf } from '../quotes.js';
 import { mascotSVG } from '../../ui/mascot.js';
 import { tamaOf } from '../tama.js';
+import { setAppIcon, ICON_BY_MASCOT } from '../appicon.js';
+import { mascotOf } from '../settings.js';
 
 const DEL = '<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>';
 const FACE = { classic: 'glad', pushy: 'wait', custom: 'wink', quiet: 'sleep' };
+const faceOr = (st, mood) => (mascotOf(st) === 'none' ? '' : mascotSVG(mood, { size: 52, ring: st.uiStyle !== 'mono' }));
 const offName = (m) => (m === 0 ? t('rem.offStart') : m < 0 ? leadName(-m) : t(m < 60 ? 'rem.afterM' : 'rem.afterH', { n: m < 60 ? m : m / 60 }));
 const leadName = (m) => (m < 60 ? t('rem.leadM', { n: m }) : t('rem.leadH', { n: m / 60 }));
 
@@ -30,10 +33,11 @@ export function meleteHTML(st, { sets = false, test = false } = {}) {
   const r = remindOf(st), mode = r.mode;
   const tm = '<input type="time" class="inp" data-ml="time" value="' + esc(r.time) + '" aria-label="' + esc(t('rem.time')) + '">';
   // кто: Мелета или Мелетий — лицо и то, как говорит о себе
-  const g = st.mascot === 'm' ? 'm' : 'f', ring = st.uiStyle !== 'mono';
-  let h = '<div class="mlwho" role="group" aria-label="' + esc(t('mascot.who')) + '">' + ['f', 'm'].map((k) => '<button type="button" class="mlwb' + (g === k ? ' on' : '') + '" data-mlg="' + k + '" aria-pressed="' + (g === k) + '">' +
-    mascotSVG('glad', { size: 56, ring, gender: k }) + '<b>' + t('mascot.' + k) + '</b><small>' + t('mascot.' + k + '.sub') + '</small></button>').join('') + '</div>';
-  h += '<div class="group"><div class="cellcol"><div class="mlhead">' + mascotSVG(FACE[mode], { size: 52, ring: st.uiStyle !== 'mono' }) +
+  const g = mascotOf(st), ring = st.uiStyle !== 'mono';
+  const NONE = '<svg class="mlnone" viewBox="0 0 100 100" width="56" height="56" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="6 7"/></svg>';
+  let h = '<div class="mlwho" role="group" aria-label="' + esc(t('mascot.who')) + '">' + ['m', 'f', 'none'].map((k) => '<button type="button" class="mlwb' + (g === k ? ' on' : '') + '" data-mlg="' + k + '" aria-pressed="' + (g === k) + '">' +
+    (k === 'none' ? NONE : mascotSVG('glad', { size: 56, ring, gender: k })) + '<b>' + t('mascot.' + k) + '</b><small>' + t('mascot.' + k + '.sub') + '</small></button>').join('') + '</div>';
+  h += '<div class="group"><div class="cellcol"><div class="mlhead">' + faceOr(st, FACE[mode]) +
     seg('mlmode', STYLES.map((k) => [k, t('rem.' + k)]), mode, t('rem.style')) + '</div><div class="segcap">' + t('rem.' + mode + 'Hint') + '</div>' + preview(st, mode) + '</div>';
   if (mode !== 'quiet') {
     h += '<label class="cell"><span class="grow">' + t('rem.time') + '</span>' + tm + '</label>';
@@ -58,7 +62,7 @@ export function meleteHTML(st, { sets = false, test = false } = {}) {
   // Мелета-тамагочи: рядом на занятии, по желанию слушает и говорит, как идёт (src/core/tama.js)
   const tmc = tamaOf(st), tsw = (k, on, label, hint = '') => '<div class="cell"><span class="grow"><span>' + label + '</span>' + (hint ? '<span class="st l2" style="display:block;font-size:13px;white-space:normal">' + hint + '</span>' : '') + '</span>' +
     '<label class="sw"><input type="checkbox" data-mltama="' + k + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(label) + '"><i></i></label></div>';
-  h += '<div class="hdr">' + t('tama.title') + '</div><div class="group">' + tsw('on', tmc.on, t('tama.on'), t('tama.onHint')) +
+  if (mascotOf(st) !== 'none') h += '<div class="hdr">' + t('tama.title') + '</div><div class="group">' + tsw('on', tmc.on, t('tama.on'), t('tama.onHint')) +
     (tmc.on ? tsw('listen', tmc.listen, t('tama.listen'), t('tama.listenHint')) + '<div class="cellcol"><span>' + t('tama.chat') + '</span><div style="margin-top:8px">' +
       seg('mltchat', [['normal', t('tama.chat.normal')], ['rare', t('tama.chat.rare')]], tmc.chat, t('tama.chat')) + '</div></div>' : '') +
     '</div><p class="ftr">' + t('tama.hint') + '</p>';
@@ -77,8 +81,10 @@ export function bindMelete(el, getSt, { save, rerender, ask = true }) {
     const st = S(), g = (s) => e.target.closest(s);
     let b;
     if ((b = g('[data-mlg]'))) {
-      st.mascot = b.dataset.mlg === 'm' ? 'm' : 'f';
+      st.mascot = ['m', 'f', 'none'].includes(b.dataset.mlg) ? b.dataset.mlg : 'm';
       setMascotGender(st.mascot); setMascotLook(st.mascot);
+      // иконка приложения — по маскоту, пока её не выбрали сами в «Оформлении»
+      if (!st.appIconOwn) setAppIcon(st, ICON_BY_MASCOT[st.mascot]);
       save(); rerender();
     } else if ((b = g('[data-seg="mlmode"] [data-v]'))) {
       const mode = b.dataset.v;

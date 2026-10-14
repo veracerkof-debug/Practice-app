@@ -249,7 +249,7 @@ export function quoteAt(i, lang = 'ru', sets = true, books = []) {
   if (q.s) return L === 'en' ? { text: q.s.en, ref: q.s.refEn } : L === 'uz' ? { text: q.s.uz, ref: q.s.refUz } : { text: q.s.ru, ref: q.s.ref };
   if (q.w) return { text: q.w[L], ref: L === 'en' ? q.w.whoEn : L === 'uz' ? q.w.whoUz : q.w.who };
   if (q.o) return { text: q.o.text, ref: q.o.by };
-  if (q.x) return { text: q.x[{ ru: 0, en: 1, uz: 2 }[L]], ref: (mascotGender() === 'm' ? { ru: 'Цитатник Мелетия', en: 'Meletius’s book of wisdom', uz: 'Meletiy hikmatlari' } : { ru: 'Цитатник Мелеты', en: 'Melete’s book of wisdom', uz: 'Melete hikmatlari' })[L] };
+  if (q.x) return { text: q.x[{ ru: 0, en: 1, uz: 2 }[L]], ref: (mascotGender() === 'm' ? { ru: 'Цитатник Мелетия', en: 'Meletius’s book of wisdom', uz: 'Meletiy hikmatlari' } : mascotGender() === 'none' ? { ru: 'Цитатник', en: 'Book of wisdom', uz: 'Hikmatlar' } : { ru: 'Цитатник Мелеты', en: 'Melete’s book of wisdom', uz: 'Melete hikmatlari' })[L] };
   return { text: q.m[L] };
 }
 

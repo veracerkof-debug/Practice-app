@@ -94,3 +94,7 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 .tview.pure .tvhd,.tview.pure .tvback,.tview.pure .tvhelp,.tview.pure .tvpure,.tview.pure .tvrecf{display:none!important}
 .tview.pure .tvbody{padding:0!important;max-width:none!important;margin:0!important}
 .tview.pure .tvhost{padding:0!important;border-radius:0!important;box-shadow:none!important;margin:0!important;max-width:none!important}
+
+/* совет в инструкции — от лица маскота */
+.hctip .hcm{display:inline-flex;align-items:center;gap:6px;margin-right:6px;vertical-align:middle}
+.hctip .hcm svg{flex:none}
