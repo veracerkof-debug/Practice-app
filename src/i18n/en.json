@@ -358,7 +358,7 @@
   "data.title": "Data",
   "data.export": "Save a backup",
   "data.import": "Load from file",
-  "data.hint": "Data is stored on this device only. Loading merges data and never deletes anything.",
+  "data.hint": "Data is stored only on this device. With the Melete folder a copy goes to Data/Backups; without it, it is sent via “Share” (Documents, Telegram, email). Loading a copy merges data and deletes nothing.",
   "rec.title": "Recording",
   "rec.start": "Start recording",
   "rec.stop": "Stop recording and save",
@@ -1331,5 +1331,14 @@
   "midi.kbdHint": "The keyboard plays the open instrument; its playing is recorded.",
   "midi.kbdErr": "MIDI is not available on this device",
   "midi.kbdDenied": "MIDI access was not allowed",
-  "midi.saved": "MIDI recording saved: {name}"
+  "midi.saved": "MIDI recording saved: {name}",
+  "bk.title": "Copies in the folder",
+  "bk.none": "No copies yet",
+  "bk.hint": "A copy with the name and time is saved here by “Save backup” and automatically once a day; the last 30 are kept. Tap to load: data is merged, nothing is deleted.",
+  "bk.noName": "No name",
+  "bk.savedFolder": "Copy saved to the folder: {name}",
+  "bk.fail": "Could not save the copy",
+  "bk.loadTitle": "Load this copy?",
+  "bk.loadYes": "Load",
+  "bk.from": "copy: {by}, {when}"
 }

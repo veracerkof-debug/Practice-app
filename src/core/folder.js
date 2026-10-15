@@ -10,6 +10,8 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 
 export const DIRS = { data: 'Data', media: 'Media', tabs: 'Tabs', pdf: 'PDF', lyrics: 'Lyrics' };
 export const DATA_FILE = 'Data/melete-data.json';
+// Резервные копии с подписью: «Melete 2026-10-15 14-30 — Имя.json»; при синхронизации — одна автокопия в день, хранятся последние BACKUP_KEEP
+export const BACKUP_DIR = 'Data/Backups', BACKUP_KEEP = 30;
 const CHUNK = 768 * 1024;
 
 const ext = (n) => ((/\.([^.\\/]+)$/.exec(n || '') || [])[1] || '').toLowerCase();
@@ -112,6 +114,11 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
 
   // 1. Копия данных — всегда свежая
   await writeAll(drv, DATA_FILE, new TextEncoder().encode(api.backup()), 'application/json');
+  // автокопия с подписью — одна в день (если сегодня копии ещё нет)
+  if (api.by) {
+    const today = 'Melete ' + dayOf(now);
+    if (!(await listBackups(drv)).some((x) => x.name.startsWith(today))) { await writeBackup(drv, api.backup(), api.by(), now); await pruneBackups(drv); out.backup = true; }
+  }
 
   // 2. Файлы приложения → папка (один раз на файл; удалённый человеком из папки не возвращается)
   const recs = api.files().filter((r) => r.blob && dirOfRec(r));
@@ -194,6 +201,40 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
   }
   mem.last = now;
   return out;
+}
+
+/* ---------- резервные копии с подписью ---------- */
+
+const p2 = (n) => String(n).padStart(2, '0');
+const dayOf = (at) => { const d = new Date(at); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); };
+// Имя файла копии: дата и время сохранения и кто сохранил
+export function backupName(by, at = Date.now()) {
+  const d = new Date(at), who = safeName(by || '').slice(0, 40);
+  return 'Melete ' + dayOf(at) + ' ' + p2(d.getHours()) + '-' + p2(d.getMinutes()) + (by && who !== 'file' ? ' — ' + who : '') + '.json';
+}
+const isCopy = (n) => /^Melete \d{4}-\d\d-\d\d.*\.json$/i.test(n);
+// Копии в папке, новые сверху: [{ name, size, mtime }]
+export async function listBackups(drv) {
+  try { return (await drv.list(BACKUP_DIR)).filter((x) => !x.dir && isCopy(x.name)).sort((a, b) => (a.name < b.name ? 1 : -1)); } catch { return []; }
+}
+// Сохранить копию (text — JSON с подписью) → имя файла
+export async function writeBackup(drv, text, by, at = Date.now()) {
+  await drv.mkdirs(BACKUP_DIR);
+  const name = freeName(backupName(by, at), new Set((await listBackups(drv)).map((x) => x.name)));
+  await writeAll(drv, BACKUP_DIR + '/' + name, new TextEncoder().encode(text), 'application/json');
+  return name;
+}
+// Старые копии сверх keep — удалить
+export async function pruneBackups(drv, keep = BACKUP_KEEP) {
+  const old = (await listBackups(drv)).slice(keep);
+  for (const f of old) { try { await drv.remove(BACKUP_DIR + '/' + f.name); } catch { /* уже нет */ } }
+  return old.length;
+}
+// Прочитать копию по имени → объект
+export async function readBackupFile(drv, name) {
+  const f = (await listBackups(drv)).find((x) => x.name === name);
+  if (!f) return null;
+  return JSON.parse(new TextDecoder().decode(await readAll(drv, BACKUP_DIR + '/' + name, f.size)));
 }
 
 // Прочитать копию данных из папки → объект (для «Восстановить из папки»)

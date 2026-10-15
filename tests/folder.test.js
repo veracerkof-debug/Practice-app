@@ -101,3 +101,35 @@ describe('имена файлов в папке', () => {
     expect(fileNameOf({ name: 'Запись', type: 'audio/mpeg' })).toBe('Запись.mp3');
   });
 });
+
+describe('копии с подписью', async () => {
+  const { writeBackup, listBackups, pruneBackups, readBackupFile, backupName, BACKUP_DIR } = await import('../src/core/folder.js');
+  it('имя: дата, время и кто сохранил', () => {
+    const at = new Date(2026, 9, 15, 9, 5).getTime();
+    expect(backupName('Алекс', at)).toBe('Melete 2026-10-15 09-05 — Алекс.json');
+    expect(backupName('', at)).toBe('Melete 2026-10-15 09-05.json');
+    expect(backupName('a/b:c', at)).toBe('Melete 2026-10-15 09-05 — a_b_c.json');
+  });
+  it('сохранить, найти, прочитать; старые сверх лимита удаляются', async () => {
+    const d = memDrive();
+    const at = new Date(2026, 9, 15, 9, 5).getTime();
+    const n1 = await writeBackup(d, '{"version":1,"sessions":[],"backupInfo":{"by":"Алекс"}}', 'Алекс', at);
+    const n2 = await writeBackup(d, '{"version":1,"sessions":[]}', 'Алекс', at);
+    expect(n2).not.toBe(n1); // то же время — не перезаписывает
+    expect((await readBackupFile(d, n1)).backupInfo.by).toBe('Алекс');
+    for (let i = 1; i <= 5; i++) await writeBackup(d, '{}', 'X', at + i * 86400000);
+    expect((await listBackups(d))[0].name.startsWith('Melete 2026-10-20')).toBe(true);
+    expect(await pruneBackups(d, 3)).toBe(4);
+    expect(Object.keys(d.fs).filter((p) => p.startsWith(BACKUP_DIR))).toHaveLength(3);
+  });
+  it('синхронизация: автокопия раз в день', async () => {
+    const d = memDrive(), a = memApp();
+    a.api.by = () => 'Алекс';
+    const day = new Date(2026, 9, 15, 10).getTime();
+    await syncFolder(d, {}, a.api, day);
+    await syncFolder(d, {}, a.api, day + 3600000);
+    expect((await listBackups(d))).toHaveLength(1);
+    await syncFolder(d, {}, a.api, day + 86400000);
+    expect((await listBackups(d))).toHaveLength(2);
+  });
+});

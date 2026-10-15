@@ -346,7 +346,7 @@
   "data.title": "Maʼlumotlar",
   "data.export": "Zaxira nusxani saqlash",
   "data.import": "Fayldan yuklash",
-  "data.hint": "Maʼlumotlar faqat shu qurilmada saqlanadi. Yuklash maʼlumotlarni birlashtiradi va hech narsani oʻchirmaydi.",
+  "data.hint": "Maʼlumotlar faqat shu qurilmada saqlanadi. Melete jildi bilan nusxa Data/Backups ga tushadi, jildsiz — «Ulashish» orqali yuboriladi (Hujjatlar, Telegram, pochta). Nusxani yuklash maʼlumotlarni birlashtiradi va hech narsani oʻchirmaydi.",
   "rec.title": "Yozuv",
   "rec.start": "Yozishni boshlash",
   "rec.stop": "Yozuvni to'xtatish va saqlash",
@@ -1304,5 +1304,14 @@
   "midi.kbdHint": "Klaviatura ochiq asbobda chaladi; undagi chalish yoziladi.",
   "midi.kbdErr": "Bu qurilmada MIDI mavjud emas",
   "midi.kbdDenied": "MIDI ga ruxsat berilmagan",
-  "midi.saved": "MIDI yozuvi saqlandi: {name}"
+  "midi.saved": "MIDI yozuvi saqlandi: {name}",
+  "bk.title": "Jilddagi nusxalar",
+  "bk.none": "Hozircha nusxa yoʻq",
+  "bk.hint": "Ism va vaqt bilan nusxa bu yerga «Zaxira nusxani saqlash» tugmasi bilan va oʻzi — kuniga bir marta saqlanadi; oxirgi 30 tasi qoladi. Bosish — yuklash: maʼlumotlar birlashadi, hech narsa oʻchirilmaydi.",
+  "bk.noName": "Ismsiz",
+  "bk.savedFolder": "Nusxa jildga saqlandi: {name}",
+  "bk.fail": "Nusxani saqlab boʻlmadi",
+  "bk.loadTitle": "Bu nusxa yuklansinmi?",
+  "bk.loadYes": "Yuklash",
+  "bk.from": "nusxa: {by}, {when}"
 }

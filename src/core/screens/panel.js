@@ -14,6 +14,7 @@ import {
 import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { demoLeft, addDemo, removeDemo } from '../demo.js';
+import { saveBackup, infoOf } from '../backup.js';
 import { meleteHTML, bindMelete, mountMelete } from './melete.js';
 import { setsOf, QSETS } from '../quotes.js';
 const QUOTE_IC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M10 7H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5A1.5 1.5 0 0 1 6.5 18H6v2h.5A3.5 3.5 0 0 0 10 16.5zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5a1.5 1.5 0 0 1-1.5 1.5H16v2h.5a3.5 3.5 0 0 0 3.5-3.5z"/></svg>';
@@ -289,7 +290,19 @@ function folderHTML(app) {
     (s.ok ? '<span class="st l2" style="display:block;font-size:13px">' + (F.busy ? t('fold.busy') : F.last ? t('fold.last', { t: new Date(F.last).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit' }) }) : t('fold.ready')) + '</span>' : '') + '</span></div>' +
     '<button class="cell act" data-fold="pick">' + t(s.ok ? 'fold.change' : 'fold.pick') + '</button>' +
     (s.ok ? '<button class="cell act" data-fold="sync">' + t('fold.sync') + '</button><button class="cell act" data-fold="restore">' + t('fold.restore') + '</button><button class="cell act danger" data-fold="forget">' + t('fold.forget') + '</button>' : '') +
-    '</div><p class="ftr">' + t('fold.hint') + '</p>';
+    '</div><p class="ftr">' + t('fold.hint') + '</p>' + (s.ok ? copiesHTML() : '');
+}
+
+// Копии с подписью в папке (Data/Backups): дата, время и кто сохранил; касание — загрузить (слиянием)
+let copies = null;
+const loadCopies = (app, done) => { const F = app.folder; if (!F || !F.state.ok || !F.backups) return; F.backups().then((l) => { copies = l; done(); }).catch(() => {}); };
+function copiesHTML() {
+  if (!copies) return '';
+  const row = (f) => { const m = /^Melete (\d{4})-(\d\d)-(\d\d) (\d\d)-(\d\d)(?: — (.*?))?(?: \(\d+\))?\.json$/i.exec(f.name);
+    const when = m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).toLocaleString(getLang() === 'uz' ? 'uz-Latn' : getLang(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : f.name;
+    return '<button class="cell" data-bk="' + esc(f.name) + '"><span class="grow"><span>' + esc(when) + '</span><span class="st l2" style="display:block;font-size:13px">' + esc(m && m[6] ? m[6] : t('bk.noName')) +
+      ' · ' + Math.max(1, Math.round((f.size || 0) / 1024)) + ' KB</span></span>' + icons.chev + '</button>'; };
+  return '<div class="hdr">' + t('bk.title') + '</div><div class="group">' + (copies.length ? copies.map(row).join('') : '<div class="cell"><span class="grow l2">' + t('bk.none') + '</span></div>') + '</div><p class="ftr">' + t('bk.hint') + '</p>';
 }
 
 function dataHTML(app) {
@@ -444,7 +457,7 @@ export function createPanel(app, onChange) {
     if (page === 'look') mountSizePreview(app, layer);
     if (page === 'root') mountStones(app, layer);
     // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»
-    if (page === 'data') coreHelp(app, 'folder');
+    if (page === 'data') { coreHelp(app, 'folder'); if (copies === null) loadCopies(app, () => { if (page === 'data') render(); }); }
     if (page === 'mascot') { coreHelp(app, 'melete'); mountMelete(layer); }
     // работа в фоне: отметки ✓ у выданных разрешений — после ответа системы
     const bb = page === 'feat' && layer.querySelector('[data-bgbox]');
@@ -531,7 +544,18 @@ export function createPanel(app, onChange) {
         }
         return;
       }
-      if (g('[data-act="export"]')) { exportBackup(app); return; }
+      if (g('[data-act="export"]')) {
+        saveBackup(app).then((r) => {
+          if (r.where === 'folder') { toast(t('bk.savedFolder', { name: r.name.replace(/\.json$/, '') })); copies = null; loadCopies(app, render); }
+          else if (r.where === 'saved') toast(t('data.saved'));
+        }).catch(() => toast(t('bk.fail')));
+        return;
+      }
+      if ((b = g('[data-bk]'))) {
+        const name = b.dataset.bk;
+        confirm(t('bk.loadTitle'), name.replace(/\.json$/, ''), t('bk.loadYes')).then((ok) => ok && app.folder.restoreFile(name).then((n) => { toast(n == null ? t('fold.noData') : tn('data.imported', n)); onChange(); render(); }).catch(() => toast(t('data.notBackup'))));
+        return;
+      }
       if ((b = g('[data-fold]'))) {
         const F = app.folder, a = b.dataset.fold;
         if (a === 'pick') F.pick().then((ok) => { render(); if (ok) toast(t('fold.done')); });
@@ -615,19 +639,6 @@ export function createPanel(app, onChange) {
 
 /* ---------- резервная копия ---------- */
 
-function exportBackup(app) {
-  const name = 'practice-backup-' + dayKey(Date.now()) + '.json';
-  const url = URL.createObjectURL(new Blob([app.store.exportBackup()], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast(t('data.saved'));
-}
-
 function importBackup(app, input, done) {
   const f = input.files[0];
   input.value = '';
@@ -635,9 +646,9 @@ function importBackup(app, input, done) {
   const r = new FileReader();
   r.onload = () => {
     try {
-      const n = app.store.importBackup(JSON.parse(r.result));
+      const p = JSON.parse(r.result), n = app.store.importBackup(p), inf = infoOf(p);
       done();
-      toast(tn('data.imported', n));
+      toast(tn('data.imported', n) + (inf && inf.at ? ' · ' + t('bk.from', { by: inf.by || t('bk.noName'), when: new Date(inf.at).toLocaleDateString(getLang() === 'uz' ? 'uz-Latn' : getLang()) }) : ''));
     } catch { toast(t('data.notBackup')); }
   };
   r.readAsText(f);

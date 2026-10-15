@@ -1,7 +1,8 @@
 // Папка Melete в приложении: когда синхронизировать и что делать с находками (логика — src/core/folder.js).
 // Синхронизация — при запуске, при возвращении в приложение и через несколько секунд после изменений.
 // Память о папке (какие файлы уже выгружены, тексты песен) — на этом устройстве (localStorage), не в копии данных.
-import { folderAvailable, nativeDriver, syncFolder, readBackup } from './folder.js';
+import { folderAvailable, nativeDriver, syncFolder, readBackup, listBackups, writeBackup, readBackupFile } from './folder.js';
+import { backupText, backupBy } from './backup.js';
 import { fromChordPro } from './songimport.js';
 import { saveSong, emptySong } from './library.js';
 import { normKey } from './share.js';
@@ -25,7 +26,8 @@ export function initFolder(app) {
     addSong: (p) => saveSong(app.store, null, { ...emptySong(st()), title: p.title || 'Melete', artist: p.artist || '', key: normKey(p.key), targetBpm: p.bpm || '', notes: p.notes || '' }),
     setNotes: (id, notes) => { const s = app.store.songById(id); if (!s) return; s.notes = notes; s.updatedAt = app.store.now(); app.store.save(); },
     parseText: (name, u8) => { try { return fromChordPro(new TextDecoder().decode(u8).replace(/^﻿/, ''), name); } catch { return null; } },
-    backup: () => app.store.exportBackup(),
+    backup: () => backupText(app),
+    by: () => backupBy(app),
   };
 
   async function status() {
@@ -76,6 +78,10 @@ export function initFolder(app) {
       keep(mem);
       return n;
     },
+    // копии с подписью в Data/Backups: список, сохранить сейчас, загрузить (слиянием)
+    async backups() { if (!avail || !state.ok) return []; return listBackups(nativeDriver); },
+    async saveBackup() { if (!avail || !state.ok) return null; try { return await writeBackup(nativeDriver, backupText(app), backupBy(app)); } catch (e) { logErr('folder', e); return null; } },
+    async restoreFile(name) { const p = await readBackupFile(nativeDriver, name); if (!p) return null; return app.store.importBackup(p); },
     async forget() { if (!avail) return; try { await nativeDriver.forget(); } catch { /* уже нет */ } keep({}); state = { ok: false, name: '' }; emit(); },
     // данные из папки (Data/melete-data.json) — слиянием с текущими, как «Загрузить копию»
     async restore() {

@@ -143,7 +143,8 @@ export function createStore({ storage = safeStorage(), now = Date.now, clockBad 
       store.save();
       return store.allSessions().length - before;
     },
-    exportBackup: () => JSON.stringify(state, null, 1),
+    // info — подпись копии (кто, когда, откуда): { by, at, app }; при загрузке не мешает (слияние берёт только данные)
+    exportBackup: (info) => JSON.stringify(info ? { backupInfo: info, ...state } : state, null, 1),
 
     // Удалить все данные, сохранив тему
     reset() {
