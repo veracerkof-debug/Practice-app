@@ -36,6 +36,7 @@ import { mountStones } from './home.js';
 import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
+import { planSheet } from './bibleplan.js';
 
 // Значки страниц — оттенки палитры (settings.palette)
 const iconBg = (st, hue) => { const c = hueColor(st, hue); return 'background:' + c + ';--on:' + onColor(c); };
@@ -330,8 +331,12 @@ function featHTML(app) {
     // церковный режим: Библия и чтения дня
     '<div class="group"><div class="cell"><span class="grow">' + t('church.title') + '</span>' + psw('church', !!st.church, t('church.title')) + '</div>' +
     (st.church ? '<label class="cellcol"><span>' + t('church.plan') + '</span><select class="sortsel" data-bplan style="width:100%;margin-top:8px;text-align:left" aria-label="' + esc(t('church.plan')) + '">' +
-      ['none', ...PLAN_IDS].map((k) => '<option value="' + k + '"' + (((st.bible && st.bible.plan) || 'none') === k ? ' selected' : '') + '>' + t('plan.' + k) + '</option>').join('') + '</select></label>' +
-      (st.bible && st.bible.plan ? '<button class="cell act" data-brestart>' + t('church.restart') + '</button>' : '') : '') + '</div>' +
+      ['none', ...PLAN_IDS].map((k) => '<option value="' + k + '"' + (((st.bible && st.bible.plan) || 'none') === k ? ' selected' : '') + '>' + t('plan.' + k) + '</option>').join('') +
+      // свои планы — тем же списком
+      ((st.bible && st.bible.custom) || []).map((c) => '<option value="' + esc(c.id) + '"' + (st.bible.plan === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</select></label>' +
+      (st.bible && st.bible.plan ? '<button class="cell act" data-brestart>' + t('church.restart') + '</button>' : '') +
+      (st.bible && st.bible.plan && String(st.bible.plan).startsWith('c') ? '<button class="cell act" data-bplanedit>' + t('bplan.edit') + '</button>' : '') +
+      '<button class="cell act" data-bplannew>' + t('bplan.new') + '</button>' : '') + '</div>' +
     '<p class="ftr">' + t(st.church ? 'church.hintOn' : 'church.hint') + (st.church && st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
     '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
     modules.filter((m) => !m.tab && (!CHURCH_MODULES.includes(m.id) || st.church)).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
@@ -454,6 +459,8 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
       if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); render(); return; }
       if ((b = g('[data-hshow]'))) { const k = b.dataset.hshow, m = k.startsWith('core:') ? coreTopic(k.slice(5)) : moduleById(k); if (m) showHelp(app, m); return; }
+      if (g('[data-bplannew]')) { planSheet(app, () => { render(); onChange(); }); return; }
+      if (g('[data-bplanedit]')) { planSheet(app, () => { render(); onChange(); }, app.bible.st().plan); return; }
       if (g('[data-brestart]')) { app.bible.setPlan(app.bible.st().plan, dayKeyOf(Date.now())); toast(t('church.restarted')); render(); onChange(); return; }
       if ((b = g('[data-goal]'))) { changeGoal(app.store, +b.dataset.goal); render(); onChange(); return; }
       if ((b = g('[data-appicon]'))) { app.store.state.settings.appIconOwn = true; setAppIcon(app.store.state.settings, b.dataset.appicon).then((ok) => { app.store.settingsChanged(); render(); toast(t(ok ? 'icon.done' : 'icon.fail')); }); return; }

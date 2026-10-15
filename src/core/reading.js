@@ -23,11 +23,33 @@ export const PLANS = {
 };
 export const PLAN_IDS = Object.keys(PLANS);
 
+// Свои планы (settings.bible.custom): { id: 'c…', name, books: [коды книг], days } — главы выбранных книг по порядку,
+// поровну на дни. Готовые наборы книг для быстрого выбора
+export const BOOK_SETS = {
+  all: BOOKS.map((b) => b.code), ot: BOOKS.filter((b) => !b.nt).map((b) => b.code), nt: BOOKS.filter((b) => b.nt).map((b) => b.code),
+  torah: ['GEN', 'EXO', 'LEV', 'NUM', 'DEU'], gospels: ['MAT', 'MAR', 'LUK', 'JOH'], psa: ['PSA'], pro: ['PRO'],
+  epistles: BOOKS.filter((b) => b.nt && b.i >= 44 && b.code !== 'REV').map((b) => b.code),
+};
+export const chaptersIn = (codes) => chaptersOf(codes).length;
+const CACHE = new Map();
+// План по id: готовый или свой (null — нет такого)
+export function planOf(b, id = b && b.plan) {
+  if (PLANS[id]) return PLANS[id];
+  const c = ((b && b.custom) || []).find((x) => x.id === id);
+  if (!c) return null;
+  const key = id + '|' + (c.books || []).join(',') + '|' + c.days;
+  if (!CACHE.has(key)) {
+    const list = chaptersOf(c.books || []), days = Math.max(1, Math.min(Math.round(+c.days) || 1, list.length || 1));
+    CACHE.set(key, list.length ? { days, day: join(spread(list, days)), name: c.name, custom: true } : null);
+  }
+  return CACHE.get(key);
+}
+
 // День плана для даты (0 — день начала); null — план ещё не начался или уже закончился
 const dayNum = (key) => { const [y, m, d] = key.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / 864e5); };
 export const dayKeyOf = (date) => { const d = new Date(date); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 export function planDay(b, date = Date.now()) {
-  const p = b && PLANS[b.plan];
+  const p = b && planOf(b);
   if (!p || !b.start) return null;
   const i = dayNum(dayKeyOf(date)) - dayNum(b.start);
   return i >= 0 && i < p.days ? i : null;
@@ -37,8 +59,8 @@ export function planDay(b, date = Date.now()) {
 export function readingFor(b, date = Date.now()) {
   const i = planDay(b, date);
   if (i == null) return null;
-  const keys = PLANS[b.plan].day(i), read = (b && b.read) || {};
-  return { day: i + 1, days: PLANS[b.plan].days, keys, done: keys.filter((k) => read[k]).length };
+  const p = planOf(b), keys = p.day(i), read = (b && b.read) || {};
+  return { day: i + 1, days: p.days, keys, done: keys.filter((k) => read[k]).length };
 }
 
 // Неделя (понедельник — воскресенье): сколько глав по плану и сколько из них прочитано
@@ -70,6 +92,19 @@ export function createBible(store) {
     setPos(p) { st().pos = p; store.persist(); }, // место чтения — без перерисовки приложения
     today: (date) => readingFor(st(), date),
     week: () => weekReading(st()),
-    setPlan(id, startKey) { const b = st(); b.plan = PLANS[id] ? id : null; b.start = b.plan ? startKey : null; store.settingsChanged(); },
+    setPlan(id, startKey) { const b = st(); b.plan = planOf(b, id) ? id : null; b.start = b.plan ? startKey : null; store.settingsChanged(); },
+    plan: () => planOf(st()),
+    customs: () => st().custom || [],
+    // свой план: сохранить (новый или изменённый) и сделать текущим с сегодняшнего дня → id
+    saveCustom({ id, name, books, days }, startKey) {
+      const b = st(), list = (b.custom ??= []), codes = BOOKS.map((x) => x.code).filter((c) => (books || []).includes(c));
+      const p = { id: id || 'c' + Date.now().toString(36), name: String(name || '').trim().slice(0, 60) || '—', books: codes, days: Math.max(1, Math.round(+days) || 1) };
+      const i = list.findIndex((x) => x.id === p.id);
+      if (i >= 0) list[i] = p; else list.push(p);
+      b.plan = p.id; b.start = startKey;
+      store.settingsChanged();
+      return p.id;
+    },
+    removeCustom(id) { const b = st(); b.custom = (b.custom || []).filter((x) => x.id !== id); if (b.plan === id) { b.plan = null; b.start = null; } store.settingsChanged(); },
   };
 }

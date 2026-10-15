@@ -344,3 +344,7 @@
 .owsw{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--l2)}
 .owsw .owncol{width:32px;height:32px}
 .owx{width:32px;height:32px;border-radius:50%;background:var(--fill);color:var(--l2);font-size:13px;flex:none}
+/* свой план чтения: книги кнопками-сокращениями */
+.bpbooks{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px}
+.bpb{min-height:40px;border-radius:10px;background:var(--fill);color:var(--ink);font-size:13px;font-weight:600}
+.bpb.on{background:var(--tint);color:var(--on-tint)}

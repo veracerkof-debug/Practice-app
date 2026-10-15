@@ -24,3 +24,19 @@ describe('коды убраны: уборка при запуске', () => {
     expect(JSON.parse(ls.getItem('practice.v1'))).toEqual({ sessions: [{ id: 'r' }], settings: { theme: 'dark' } });
   });
 });
+
+describe('свой план чтения', async () => {
+  const { planOf, readingFor, BOOK_SETS } = await import('../src/core/reading.js');
+  it('главы выбранных книг по порядку, поровну на дни', () => {
+    const b = { plan: 'c1', start: '2026-01-01', custom: [{ id: 'c1', name: 'Е', books: BOOK_SETS.gospels, days: 10 }] };
+    const p = planOf(b);
+    expect(p.days).toBe(10);
+    const all = Array.from({ length: 10 }, (_, i) => p.day(i)).flat();
+    expect(all.length).toBe(28 + 16 + 24 + 21);
+    expect(all[0]).toBe('MAT.1'); expect(all.at(-1)).toBe('JOH.21');
+    expect(readingFor(b, new Date(2026, 0, 2)).day).toBe(2);
+    // дней больше, чем глав, — по главе в день
+    expect(planOf({ custom: [{ id: 'c2', books: ['JUD'], days: 30 }] }, 'c2').days).toBe(1);
+    expect(planOf(b, 'nope')).toBe(null);
+  });
+});
