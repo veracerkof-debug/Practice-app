@@ -362,3 +362,8 @@
 .hbsz button{min-width:40px;min-height:36px;border-radius:8px;font-size:13px;font-weight:600;color:var(--l2)}
 .hbsz button.on{background:var(--cell);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .large.tlarge{margin-top:18px} /* вкладка «Инструменты» — без кнопки профиля */
+/* вкладки — только значки (без подписей): значок по центру, цель касания прежней высоты */
+.tab{justify-content:center;min-height:52px}
+/* заголовок только для чтения с экрана (вкладка «Инструменты» — без надписи) */
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.tgrid.tgtop{margin-top:14px}

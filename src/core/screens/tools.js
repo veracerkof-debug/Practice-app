@@ -26,7 +26,7 @@ export function toolsTab(st) {
 export function setToolsTab(st, T) { st.toolsTab = { order: T.order.slice(), off: [...T.off] }; }
 function renderToolsNow(app, root) {
   const st = app.store.state.settings, T = toolsTab(st), list = T.shown.map(moduleById); // Библия — своя вкладка
-  root.innerHTML = '<div class="large tlarge">' + t('tools.title') + '</div><div class="tgrid">' + list.map((m) => {
+  root.innerHTML = '<h1 class="vh">' + t('tools.title') + '</h1><div class="tgrid tgtop">' + list.map((m) => {
     let s2 = '';
     try { s2 = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ }
     return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +

@@ -32,7 +32,8 @@ export function createShell(app, root) {
   const renderTabs = () => {
     const list = tabsNow();
     tabs.style.gridTemplateColumns = 'repeat(' + list.length + ',1fr)';
-    tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + '>' + TAB_ICONS[k] + '<span>' + t('nav.' + k) + '</span></button>').join('');
+    // вкладки — только значки (решение автора): название — в подсказке и для чтения с экрана
+    tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + ' aria-label="' + t('nav.' + k) + '" title="' + t('nav.' + k) + '">' + TAB_ICONS[k] + '</button>').join('');
   };
 
   // Вкладка «Библия» (церковный режим): модуль на всё окно над вкладками; остаётся открытым, пока выбрана вкладка
