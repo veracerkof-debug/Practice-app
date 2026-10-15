@@ -44,7 +44,7 @@ function renderToolsNow(app, root) {
 function hiddenSheet(app, rerender) {
   const st = app.store.state.settings;
   ui.sheet(() => { const T = toolsTab(st); return ui.snav(t('tools.hiddenTitle')) + '<div class="group">' + [...T.off].map((id) => { const m = moduleById(id);
-    return '<div class="cell"><span class="ticon" style="background:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span><button class="ic sm plain" data-tback="' + id + '" aria-label="' + esc(t('tools.back')) + '" style="color:#5F8568">' + IC.plus + '</button></div>'; }).join('') + '</div>'; },
+    return '<div class="cell"><span class="ticon" style="--tc:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span><button class="ic sm plain" data-tback="' + id + '" aria-label="' + esc(t('tools.back')) + '" style="color:#5F8568">' + IC.plus + '</button></div>'; }).join('') + '</div>'; },
   (el, sh) => el.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tback]');
     if (!b) return;

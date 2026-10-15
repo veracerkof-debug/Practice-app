@@ -239,7 +239,7 @@ export function quickEdit(app, rerender) {
   const st = app.store.state.settings, sel = () => (st.quick || QUICK_DEF).slice();
   const row = (id, on, i) => {
     const m = moduleById(id);
-    return '<div class="cell"' + (on ? ' data-q-row="' + id + '"' : '') + '><span class="ticon" style="background:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
+    return '<div class="cell"' + (on ? ' data-q-row="' + id + '"' : '') + '><span class="ticon" style="--tc:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
       (on ? (i > 0 ? '<button class="ic sm plain" data-qu="' + id + '" aria-label="' + t('quick.up') + '">' + IC.up + '</button>' : '') +
         '<button class="ic sm plain" data-qr="' + id + '" aria-label="' + t('quick.remove') + '" style="color:var(--red)">' + IC.minus + '</button>'
         : '<button class="ic sm plain" data-qa="' + id + '" aria-label="' + t('quick.add') + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
