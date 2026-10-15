@@ -337,7 +337,3 @@
 .owncol::-webkit-color-swatch{border:none;border-radius:50%;box-shadow:inset 0 0 0 1px var(--sep)}
 .owncol::-moz-color-swatch{border:none;border-radius:50%}
 .gem3d{flex:none;display:block;cursor:grab;touch-action:none}
-/* главная: маскот сам приветствует — первой строкой своей речи */
-.hquote .vhello{display:block;font-style:normal;font-size:18px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:4px}
-.hquote .vrole{display:block;font-style:normal;color:var(--ink);margin-bottom:4px}
-.vhello [lang="el"],.vrole [lang="el"]{font-family:"Melete Greek","GFS Didot",Georgia,serif;font-weight:400}

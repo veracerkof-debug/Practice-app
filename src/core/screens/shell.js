@@ -12,7 +12,6 @@ import { visibleTabs } from '../settings.js';
 import { homeHTML, mountStones, quickEdit, toolHoldMenu, streakSheet, gemSheet, leagueCheck, nameSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
-import { bindExt } from './ext.js';
 import { reportSheet } from './report.js';
 import { songImportMenu } from './songimport.js';
 import { shareSheet, shareMenu } from './share.js';
@@ -101,7 +100,6 @@ export function createShell(app, root) {
     tabs: () => tabs.innerHTML,
   };
   const panel = createPanel(app, () => render());
-  bindExt(app, () => panel.open('look'));
 
   // Действия, общие для экранов и панели. Возвращает true, если нажатие обработано
   function act(e) {

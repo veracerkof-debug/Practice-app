@@ -426,7 +426,4 @@
 :root[data-bare] .bt,:root[data-bare] .bpmlbl{display:none!important}
 :root[data-bare] .bareic svg path,:root[data-bare] .bareic svg circle{vector-effect:non-scaling-stroke}
 .pstone{width:96px;height:96px;display:block;cursor:grab;touch-action:none;border-radius:50%}
-/* «Минимал»: приветствие маскота — крупно, как прежний заголовок, но внутри его речи */
 .mono-home .mvoice { margin-top: 18px; }
-.mono-home .mquote .vhello { display: block; font-size: 24px; line-height: 1.1; font-weight: 850; text-transform: uppercase; letter-spacing: -.01em; color: var(--ink); margin-bottom: 6px; }
-.mono-home .mquote .vrole { display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--l2); font-weight: 600; }

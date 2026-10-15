@@ -10,7 +10,8 @@ import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
 import { applyTheme, tabsMigrate, calmMigrate, mascotOf } from './settings.js';
 import { registerTools } from './palettes.js';
-import { extCheck } from './ext.js';
+import { dropTestMode } from './cleanup.js';
+import { removeDemoFiles } from './demo.js';
 import { createShell } from './screens/shell.js';
 import { initBack } from './back.js';
 import { createSessionScreen } from './screens/session.js';
@@ -24,8 +25,6 @@ import { initNoSound } from './nosound.js';
 import { createPulse } from './pulse.js';
 import { initBackground } from './background.js';
 import { initGuard } from './guard.js';
-import { initSandbox } from './sandbox.js';
-import { askNumber } from './screens/ext.js';
 import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
@@ -47,13 +46,11 @@ export function boot(root) {
   startLog(APP_VERSION + ' · ' + (navigator.userAgent.match(/Android [\d.]+|Chrome\/[\d.]+/g) || []).join(' · '));
   // Часы устройства: пока сбиты, новые записи о занятиях не подтверждаются
   let clock = null;
+  // коды и проверка создателем убраны: если проверка шла — настоящие данные возвращаются из копии (до чтения данных)
+  const { restored } = dropTestMode();
   const store = createStore({ clockBad: () => !!(clock && clock.bad) });
   // Язык из настроек (выбран в «Оформлении»), иначе — язык системы
   const st0 = store.state.settings;
-  if (extCheck(st0).changed) store.settingsChanged();
-  // время доступа к дополнительному оформлению вышло — вернуть обычное (строки и стили — перезапуском)
-  // (строки и стили меняются на месте, без перезапуска — см. app.relang)
-  setInterval(() => { if (extCheck(store.state.settings).changed) { store.settingsChanged(); app.relang(); } }, 15000);
   if (tabsMigrate(st0)) store.settingsChanged();
   if (calmMigrate(store.state)) store.settingsChanged(); // прежние яркие цвета меток и событий — спокойнее
   initI18n(st0.uiStyle === 'mono' && st0.monoLang !== false ? 'el' : st0.lang);
@@ -194,7 +191,8 @@ export function boot(root) {
   // Работа в фоне на Android: пока что-то идёт — служба с уведомлением, приложение не замораживается
   initBackground(app);
   initGuard(app);
-  initSandbox(app, askNumber);
+  // после возврата из копии — файлы демо-набора, которые добавила проверка, убрать (если набора не было)
+  if (restored && !store.state.settings.demo) removeDemoFiles(app).catch(() => {});
   createMixerDrawer(app);
   // Играет, но не слышно (микшер, громкость устройства) — уведомление внизу
   initNoSound(app);

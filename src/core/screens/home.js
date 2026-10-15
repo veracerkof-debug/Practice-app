@@ -1,6 +1,5 @@
 // «Сегодня»: цель недели, дни, кнопка практики, быстрый доступ к инструментам, недавние песни; ударный режим.
 // Перенесено из legacy/practice.html (homeHTML, quickList, quickEdit, streakPill, streakSheet).
-import { sandboxHours } from '../sandbox.js';
 import { t, tn, getLang, hasMascot } from '../../i18n/index.js';
 import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
@@ -19,7 +18,6 @@ import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
 import { stoneView, wear, stoneKm, stoneSeed, roundness } from '../../ui/stone.js';
 import { nextEventsHTML } from './calendar.js';
-import { extWho } from '../ext.js';
 import { refText } from '../bible.js';
 import { nextOf } from '../reading.js';
 import { quoteAt, dayIndex, setsOf } from '../quotes.js';
@@ -49,23 +47,6 @@ export function streakPill(app, extra = '') {
 
 const ARROW = '<svg viewBox="0 0 12 12" class="mtri" aria-hidden="true"><path d="M3.5 2l5 4-5 4z"/></svg>';
 const greet = (h) => t(h < 5 ? 'mono.night' : h < 12 ? 'mono.morning' : h < 18 ? 'mono.day' : h < 23 ? 'mono.evening' : 'mono.night');
-// Создателю — по роли: «Добрый вечер, создатель» и тихая строчка, своя на каждый день (без пафоса)
-const ROLE_LINES = 5;
-const roleLine = (d) => t('mono.role.' + (1 + (Math.floor(d.getTime() / 864e5) % ROLE_LINES)));
-// Личные бета-тестеры (Михаил — 'm', Парисо — 'r'): имя в разных формах и строчка о значении имени — своя на каждый день
-const PERSON = { m: 'mono.mi', r: 'mono.pa' }, PERSON_LINES = 6;
-function personHello(who, d) {
-  const day = Math.floor(d.getTime() / 864e5), names = t(PERSON[who] + '.names').split('|');
-  return { hello: greet(d.getHours()) + ', ' + names[(day + (d.getHours() >= 12 ? 1 : 0)) % names.length], line: t(PERSON[who] + '.' + (1 + (day % PERSON_LINES))) };
-}
-// Личное обращение после кода (создатель, Михаил, Парисо) — в обоих видах; null — обращения нет
-function personal(st, now) {
-  const who = extWho(st);
-  if (PERSON[who]) return personHello(who, now);
-  if (who === 'p') return { hello: t('mono.creator', { g: greet(now.getHours()) }), line: roleLine(now) };
-  return null;
-}
-const elx = (s) => esc(s).replace(/(Μελέτη|Μιχαήλ)/g, '<span lang="el">$1</span>');
 // Церковный режим: чтение дня по плану — главы, сколько прочитано, «Читать» открывает Библию на первой непрочитанной
 function readingCard(app, mono = false) {
   const st = app.store.state.settings;
@@ -90,15 +71,14 @@ function pleaHTML(app, cls) {
   if (app.store.sessions().some((x) => dayKey(x.start) === dayKey(now.getTime()))) return '';
   return '<b class="' + cls + '">' + esc(pleaLine(h, getLang())) + '</b>';
 }
-// На главной говорит только маскот: сам приветствует (по времени суток и по имени; после кода — личное обращение)
-// и говорит слово дня. Без маскота — те же слова, без лица
+// На главной говорит только маскот — одной репликой: приветствие по времени суток и имени и слово дня.
+// Без маскота — та же реплика, без лица
 function quoteHTML(app, mono) {
-  const st = app.store.state.settings, now = new Date(), p = personal(st, now), name = st.profile && st.profile.name;
-  const hello = p ? p.hello : greet(now.getHours()) + (name ? ', ' + name : '');
+  const st = app.store.state.settings, now = new Date(), name = st.profile && st.profile.name;
+  const hello = greet(now.getHours()) + (name ? ', ' + name : '');
   const q = isOn(st, 'quote') ? quoteAt(dayIndex(), getLang(), setsOf(st), st.quoteBooks || []) : {};
   return '<div class="' + (mono ? 'mvo' : 'hvoice') + (hasMascot() ? '' : ' nomascot') + '" aria-live="polite">' + (hasMascot() ? '<button class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' : '') +
-    '<p class="' + (mono ? 'mquote' : 'hquote') + '"><b class="vhello">' + elx(hello) + '</b>' + (p ? '<span class="vrole">' + elx(p.line) + '</span>' : '') + pleaHTML(app, 'mplea') +
-    (q.text ? esc(q.text) + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') : '') + '</p></div>';
+    '<p class="' + (mono ? 'mquote' : 'hquote') + '">' + pleaHTML(app, 'mplea') + esc(hello) + (q.text ? '. ' + esc(q.text) : '!') + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p></div>';
 }
 const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';
 
@@ -257,8 +237,8 @@ const hoursText = (h) => fmtDur(h * 3600);
 const fmtNum = (h) => new Intl.NumberFormat(getLang() === 'en' ? 'en' : 'ru').format(h);
 const bar = (frac, c = '') => '<div class="gbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(frac * 100) + '"' + (c ? ' style="--bc:' + c + '"' : '') + '><i style="width:' + frac * 100 + '%"></i></div>';
 
-// Часы лиги: практика в приложении; во время проверки создателем — заданные правкой числа (sandbox.js)
-const leagueHours = (app) => sandboxHours(app.store.state.settings) ?? gemSec(app.store.sessions()) / 3600;
+// Часы лиги и камня: только практика в приложении
+const leagueHours = (app) => gemSec(app.store.sessions()) / 3600;
 
 /* ---------- камень (режим «Минимал»: вместо лиг) ---------- */
 
@@ -274,8 +254,6 @@ export function mountStones(app, root) {
   mountGems(root, stoneSeed(st)); // камни лиг (обычный вид)
   root.querySelectorAll('canvas[data-stone="home"]').forEach((c) => {
     const v = stoneView(c, { seed: stoneSeed(st), hours: h, detail: 3, key: 'home', onTap: () => stoneSheet(app) });
-    const onH = (e) => { if (!c.isConnected) { removeEventListener('sandbox:hours', onH); return; } v.setHours(e.detail); };
-    addEventListener('sandbox:hours', onH);
     c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); stoneSheet(app); } });
   });
 }
@@ -287,7 +265,7 @@ export function stoneSheet(app) {
   const api = sheet(() => snav(t('stone.title')) +
     '<div class="stonefull"><canvas data-stone="full" aria-label="' + esc(t('stone.title')) + '"></canvas></div>' +
     '<div class="seg stseg" role="group" aria-label="' + esc(t('stone.title')) + '"><button data-stv="now" aria-pressed="true">' + t('stone.now') + '</button><button data-stv="then" aria-pressed="false">' + t('stone.then') + '</button></div>' +
-    '<div class="tiles num" style="margin-top:14px"><div class="tile"><b data-hours>' + fmtDur(sec) + '</b><span>' + t('stone.hours') + '</span></div><div class="tile"><b>' + pct(wr.edges) + '</b><span>' + t('stone.edges') +
+    '<div class="tiles num" style="margin-top:14px"><div class="tile"><b>' + fmtDur(sec) + '</b><span>' + t('stone.hours') + '</span></div><div class="tile"><b>' + pct(wr.edges) + '</b><span>' + t('stone.edges') +
     '</span></div><div class="tile"><b>' + pct(roundness(wr)) + '</b><span>' + t('stone.form') + '</span></div></div>' +
     '<div class="stkm"><b class="num">' + esc(kmText(hrs)) + '</b><span>' + t('stone.path') + '</span></div>' +
     '<p class="ftr">' + t('stone.text') + '</p>');
@@ -301,17 +279,6 @@ export function stoneSheet(app) {
     root.querySelectorAll('[data-stv]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     v.setHours(b.dataset.stv === 'then' ? 0 : hrs);
   });
-  // проверка создателем: часы поправили прямо здесь — камень, рёбра, форма и путь пересчитываются
-  const onH = (e) => {
-    if (!cv.isConnected) { removeEventListener('sandbox:hours', onH); return; }
-    const h = e.detail, w = wear(h), tiles = root.querySelectorAll('.tiles .tile b');
-    v.setHours(h);
-    if (tiles[1]) tiles[1].textContent = pct(w.edges);
-    if (tiles[2]) tiles[2].textContent = pct(roundness(w));
-    const km = root.querySelector('.stkm b');
-    if (km) km.textContent = kmText(h);
-  };
-  addEventListener('sandbox:hours', onH);
 }
 
 // Лига под карточкой недели: самоцвет, часы в приложении, путь до следующей лиги
