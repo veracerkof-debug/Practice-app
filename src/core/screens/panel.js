@@ -232,19 +232,18 @@ function mountSizePreview(app, root) {
 const PAL_SHOW = ['orange', 'red', 'yellow', 'green', 'mint', 'cyan', 'blue', 'indigo', 'purple', 'pink'];
 function paletteHTML(st) {
   const cur = st.palette === 'own' ? 'own' : PALETTES[st.palette] ? st.palette : 'classic';
-  const tile = (k, P, name, wide) => '<button class="pal' + (wide ? ' wide' : '') + (cur === k ? ' on' : '') + '" data-pal="' + k + '" aria-pressed="' + (cur === k) + '"><span class="palrow">' +
-    PAL_SHOW.map((h) => '<i style="background:' + P[h] + '"></i>').join('') + '</span><span class="paln">' + esc(name) + '</span></button>';
+  const sw = (P) => '<span class="palrow">' + PAL_SHOW.map((h) => '<i style="background:' + P[h] + '"></i>').join('') + '</span>';
+  const tile = (k, P, name) => '<button class="pal' + (cur === k ? ' on' : '') + '" data-pal="' + k + '" aria-pressed="' + (cur === k) + '">' + sw(P) + '<span class="paln">' + esc(name) + '</span></button>';
   const main = isHex(st.ownMain) ? st.ownMain : OWN_DEFAULT, bg = isHex(st.ownBg) ? st.ownBg : null;
+  // все палитры — одной сеткой (и «Лунный свет»); свой цвет — широкая плитка с двумя кружками: основной и фон
   return '<div class="hdr">' + t('pal.title') + '</div><div class="pals" role="group" aria-label="' + esc(t('pal.title')) + '">' +
-    PALETTE_IDS.map((k) => tile(k, PALETTES[k], t('pal.' + k))).join('') + tile('own', ownPalette(main), t('pal.own')) +
-    '</div><p class="ftr">' + t('pal.hint') + '</p>' +
-    // свои цвета: основной (все оттенки — из него) и фон (вся поверхность — из него)
-    '<div class="hdr">' + t('own.title') + '</div><div class="group">' +
-    '<label class="cell"><span class="grow">' + t('own.main') + '</span><input type="color" class="owncol" data-owncolor="main" value="' + main.toLowerCase() + '" aria-label="' + esc(t('own.main')) + '"></label>' +
-    '<label class="cell"><span class="grow">' + t('own.bg') + (bg ? '' : '<span class="psub">' + t('own.bgNone') + '</span>') + '</span><input type="color" class="owncol" data-owncolor="bg" value="' + (bg || '#f3f2ee').toLowerCase() + '" aria-label="' + esc(t('own.bg')) + '"></label>' +
-    (bg ? '<button class="cell act" data-ownbgreset>' + t('own.bgReset') + '</button>' : '') + '</div><p class="ftr">' + t('own.hint') + '</p>' +
-    // «Лунный свет» — отдельно, для любителей оттенков серого
-    '<div class="hdr">' + t('pal.lunarTitle') + '</div><div class="pals">' + SPECIAL_PALETTES.map((k) => tile(k, PALETTES[k], t('pal.' + k), true)).join('') + '</div><p class="ftr">' + t('pal.lunarHint') + '</p>' +
+    [...PALETTE_IDS, ...SPECIAL_PALETTES].map((k) => tile(k, PALETTES[k], t('pal.' + k))).join('') +
+    '<div class="pal wide ownp' + (cur === 'own' ? ' on' : '') + '" data-pal="own" role="button" tabindex="0" aria-pressed="' + (cur === 'own') + '">' + sw(ownPalette(main)) +
+    '<span class="ownrow"><span class="paln">' + t('pal.own') + '</span>' +
+    '<label class="owsw"><input type="color" class="owncol" data-owncolor="main" value="' + main.toLowerCase() + '" aria-label="' + esc(t('own.main')) + '"><span>' + t('own.main') + '</span></label>' +
+    '<label class="owsw"><input type="color" class="owncol" data-owncolor="bg" value="' + (bg || '#f3f2ee').toLowerCase() + '" aria-label="' + esc(t('own.bg')) + '"><span>' + t('own.bg') + '</span></label>' +
+    (bg ? '<button class="owx" data-ownbgreset aria-label="' + esc(t('own.bgReset')) + '">✕</button>' : '') + '</span></div>' +
+    '</div><p class="ftr">' + t('own.hint') + '</p>' +
     // цвет текста и значков на цветных кнопках, метках, событиях
     '<div class="hdr">' + t('ontext.title') + '</div><div class="group"><div class="cellcol">' +
     seg('ontext', TEXT_MODES.map((k) => [k, t('ontext.' + k)]), TEXT_MODES.includes(st.onText) ? st.onText : 'auto', t('ontext.title')) +
@@ -476,6 +475,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
       if ((b = g('[data-seg="ontext"] [data-v]'))) { app.store.state.settings.onText = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if (g('[data-ownbgreset]')) { delete app.store.state.settings.ownBg; applyTheme(app.store.state.settings); changed(); return; }
+      if (g('.owsw')) return; // кружок своего цвета — открывает выбор цвета, а не палитру
       if ((b = g('[data-pal]'))) { app.store.state.settings.palette = b.dataset.pal; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-acc]'))) { app.store.state.settings.accent = b.dataset.acc; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-meinst]'))) {
