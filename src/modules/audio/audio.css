@@ -140,3 +140,7 @@
 @keyframes vabflash{0%{stroke:color-mix(in srgb,var(--tint) 35%,transparent)}30%{stroke:color-mix(in srgb,var(--tint) 65%,transparent)}100%{stroke:color-mix(in srgb,var(--tint) 35%,transparent)}}
 /* Половина окна: пластинка сбоку, иначе кнопки не помещаются по высоте */
 .vwrap.half .vbody{flex-direction:row}.vwrap.half .vside{flex:1;min-width:0}.vwrap.half .vdisc{width:min(44cqw,62cqh)}.vwrap.half .vctl .ic{white-space:nowrap}
+/* записи MIDI: значок инструмента контуром в его цвете */
+.mlmh2{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--l2);margin:18px 8px 6px}
+.mlart.midi{background:color-mix(in srgb,var(--mc) 14%,var(--cell));color:var(--mc)}
+.mlart.midi svg{width:58%;height:58%;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}

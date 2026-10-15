@@ -111,5 +111,8 @@
   "help.1": "«+» — fayl qoʻshish; faqat qurilmada saqlanadi.",
   "help.2": "Tezlik balandlik oʻzgarmagan holda oʻzgaradi.",
   "help.3": "A–B — parchani takrorlash; belgilar — kerakli joylarga.",
-  "help.tip": "Qiyin joy — 70–80 % tezlikda, keyin tezroq."
+  "help.tip": "Qiyin joy — 70–80 % tezlikda, keyin tezroq.",
+  "midiShare": ".mid faylini ulashish",
+  "midiFail": "Yuborib boʻlmadi",
+  "midiDelTitle": "MIDI yozuvi oʻchirilsinmi?"
 }

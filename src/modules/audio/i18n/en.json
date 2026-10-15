@@ -112,5 +112,8 @@
   "help.1": "“+” adds files; they stay on this device.",
   "help.2": "Speed changes without changing pitch.",
   "help.3": "A–B loops a passage; markers jump to key spots.",
-  "help.tip": "Take a hard passage at 70–80 % speed, then raise it."
+  "help.tip": "Take a hard passage at 70–80 % speed, then raise it.",
+  "midiShare": "Share .mid file",
+  "midiFail": "Could not send",
+  "midiDelTitle": "Delete MIDI recording?"
 }

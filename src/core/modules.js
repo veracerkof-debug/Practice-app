@@ -91,7 +91,24 @@ export function makeCtx(app, mod) {
     // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
     files: app.files,
     // MIDI: событие игры (src/music/midi.js) — в запись, если идёт MIDI-запись этого инструмента
-    midi: { ev: (e) => app.rec && app.rec.midiEv(mod.id, e) },
+    midi: {
+      ev: (e) => app.rec && app.rec.midiEv(mod.id, e),
+      // запись MIDI (медиатека): открыть её инструмент и проиграть в нём
+      play(rec) {
+        if (!app.midi || !rec) return;
+        if (app.openTool) app.openTool(rec.tool);
+        let n = 0;
+        const go = () => { if (!app.midi.play(rec, { speed: app.store.state.settings.midiSpeed || 1 }) && ++n < 40) setTimeout(go, 100); };
+        setTimeout(go, 150);
+      },
+      // отправить файлом .mid
+      share: async (rec) => {
+        const { sendFile } = await import('./screens/share.js'), name = /\.midi?$/i.test(rec.name) ? rec.name : rec.name + '.mid';
+        return sendFile(new Uint8Array(await rec.blob.arrayBuffer()), name, name, 'audio/midi');
+      },
+      // инструмент записи: название, значок, цвет
+      tool: (id) => { const m = (app.modules || []).find((x) => x.id === id); return m ? { name: moduleName(m), icon: m.icon, color: m.color } : null; },
+    },
     confirmUpload: () => app.confirmUpload(),
     // Песни библиотеки — только чтение: [{ id, title, artist, key, text }] (text — есть ли текст с аккордами)
     songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title, artist: s.artist || '', key: s.key || null, text: !!String(s.notes || '').trim() })),

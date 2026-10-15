@@ -249,7 +249,16 @@ function libHTML() {
     '<div class="mlbar"><div class="mlfil" role="group">' + [['all', t('f.all')], ['songs', t('f.songs')], ['free', t('f.free')]].map(([k, n]) => '<button class="' + (ML.f === k ? 'on' : '') +
       '" data-x="mlf" data-v="' + k + '" aria-pressed="' + (ML.f === k) + '">' + n + '</button>').join('') + '</div><select class="sortsel" data-mls aria-label="' + t('sort') + '">' +
     [['date', t('s.date')], ['name', t('s.name')], ['dur', t('s.dur')], ['size', t('s.size')]].map(([v, l]) => '<option value="' + v + '"' + (ML.sort === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div>';
-  if (!all.length) h += '<div class="aempty"><div class="aeico">' + ICON + '</div><div class="aet">' + t('emptyLib') + '</div><div class="ael">' + t('emptyLibText') + '</div><div class="group aeg"><button class="cell act" data-x="aadd">' + t('upload') + '</button></div></div>';
+  // записи MIDI (игра в пианино, глайдере, терменвоксе): касание — открыть инструмент и проиграть
+  const midis = ML.f === 'songs' ? [] : ctx.files.list('midi').filter((x) => !ML.q || x.name.toLowerCase().includes(ML.q.toLowerCase())).sort((a, b) => (b.created || 0) - (a.created || 0));
+  const midiHTML = midis.length && !sel ? '<div class="mlmh2">MIDI</div><div class="mlist">' + midis.map((x) => {
+    const tl = ctx.midi.tool(x.tool), nm = x.name.replace(/\.midi?$/i, '');
+    return '<div class="mlrow"><button class="mlmain" data-x="mmplay" data-id="' + x.id + '" aria-label="' + esc(t('playX', { name: nm })) + '"><span class="mlart midi" style="--mc:' + (tl ? tl.color : 'var(--tint)') + '">' + (tl ? tl.icon : ICON) + '</span>' +
+      '<span class="mltxt"><b>' + esc(nm) + '</b><small>' + [tl ? esc(tl.name) : '', x.dur ? fmtT(x.dur) : ''].filter(Boolean).join(' · ') + '</small></span></button>' +
+      '<button class="ic sm plain mlmore" data-x="mmmenu" data-id="' + x.id + '" aria-label="' + esc(t('fileActions', { name: nm })) + '">' + I.more + '</button></div>';
+  }).join('') + '</div>' : '';
+  if (!all.length && midiHTML) h += midiHTML;
+  else if (!all.length) h += '<div class="aempty"><div class="aeico">' + ICON + '</div><div class="aet">' + t('emptyLib') + '</div><div class="ael">' + t('emptyLibText') + '</div><div class="group aeg"><button class="cell act" data-x="aadd">' + t('upload') + '</button></div></div>';
   else if (!list.length) h += '<div class="aempty"><div class="ael">' + t('notFound') + '</div></div>';
   else {
     h += '<div class="mlist">' + list.map((x) => {
@@ -264,6 +273,7 @@ function libHTML() {
         '">' + artHTML(x) + '<span class="mltxt"><b>' + esc(x.name) + '</b><small>' + info +
         '</small></span></button><button class="ic sm plain mlmore" data-x="mlmenu" data-id="' + x.id + '" aria-label="' + t('fileActions', { name: x.name }) + '">' + I.more + '</button></div>';
     }).join('') + '</div>';
+    h += midiHTML;
   }
   if (all.length) h += '<p class="ftr" style="text-align:center">' + tn('files', all.length) + (totd ? ' · ' + fmtDur(totd) : '') + ' · ' + t('onDevice', { mb: ctx.num(tot / MB, 1) }) + '</p>';
   h += '</div>';
@@ -546,6 +556,27 @@ function menuSheet(id) {
   }));
 }
 
+// Запись MIDI: проиграть в инструменте, отправить файлом .mid, переименовать, удалить
+function midiMenu(id) {
+  const { t, ui } = ctx, x = ctx.files.get(id);
+  if (!x) return;
+  const nm = () => x.name.replace(/\.midi?$/i, '');
+  ui.sheet(() => ui.snav(nm()) + '<div class="group"><button class="cell act" data-m="play">' + t('play') + '</button><button class="cell act" data-m="share">' + t('midiShare') + '</button>' +
+    '<button class="cell act" data-m="ren">' + t('rename') + '</button></div><div class="group" style="margin-top:16px"><button class="cell danger center" data-m="del">' + t('delFromLib') + '</button></div>',
+  (el, sh) => el.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-m]');
+    if (!b) return;
+    const m = b.dataset.m;
+    if (m === 'play') { sh.close(); ctx.midi.play(x); }
+    else if (m === 'share') { try { await ctx.midi.share(x); } catch { ui.toast(t('midiFail')); } }
+    else if (m === 'ren') renameSheet(x, () => { if (!/\.midi?$/i.test(x.name)) { x.name += '.mid'; ctx.files.save(x); } sh.update(); render(); });
+    else if (m === 'del') {
+      sh.close();
+      if (await ui.confirm(t('midiDelTitle'), nm(), t('delFromLib'))) { await ctx.files.remove(x.id); render(); }
+    }
+  }));
+}
+
 // Тайм-коды текущего файла: добавить на текущее место, перейти, назвать, повторять отрезок до следующей, удалить
 function marksSheet() {
   const { t, ui } = ctx, x = AU.cur;
@@ -744,6 +775,8 @@ function act(a, el) {
     case 'mlopen': ML.view = 'player'; render(); break;
     case 'mllib': ML.view = 'lib'; render(); break;
     case 'mlmenu': menuSheet(el.dataset.id); break;
+    case 'mmplay': { const x = ctx.files.get(el.dataset.id); if (x) ctx.midi.play(x); break; }
+    case 'mmmenu': midiMenu(el.dataset.id); break;
     case 'mlf': ML.f = el.dataset.v; render(); break;
     case 'mlselon': ML.sel = new Set(); render(); break;
     case 'mlseloff': ML.sel = null; render(); break;
