@@ -363,7 +363,9 @@ function render() {
   if (lastSec === sec) host.querySelectorAll('.hscroll').forEach((x, i) => {
     if (hs[i]) x.scrollLeft = hs[i];
     const on = x.querySelector('[aria-pressed="true"]');
-    if (on && (on.offsetLeft < x.scrollLeft || on.offsetLeft + on.offsetWidth > x.scrollLeft + x.clientWidth)) x.scrollLeft = on.offsetLeft - (x.clientWidth - on.offsetWidth) / 2;
+    if (!on) return;
+    const l = on.getBoundingClientRect().left - x.getBoundingClientRect().left; // от края полосы (offsetLeft считается от другого предка)
+    if (l < 0 || l + on.offsetWidth > x.clientWidth) x.scrollLeft += l - (x.clientWidth - on.offsetWidth) / 2;
   });
   lastSec = sec;
   const nb = host.querySelector('.swrap, .cwrap.f');

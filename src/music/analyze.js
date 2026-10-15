@@ -164,6 +164,32 @@ export function keyFromChroma(ch) {
 
 export const detectKey = (x, sr = SR) => keyFromChroma(chroma(x, sr));
 
+/* ---------- строй: отклонение записи от ля = 440 Гц ---------- */
+
+// Вершины спектра (выше местного фона на 10 дБ, 90–2000 Гц), их отклонение от ближайшей ноты в центах; среднее —
+// по кругу (−50 и +50 — соседи), с весом по силе вершины. → { cents (−50…+50), conf 0…1 } или null
+const U_N = 8192, U_HOP = 4096;
+export function detectTuning(x, sr = SR) {
+  let sx = 0, sy = 0, w = 0;
+  const hz = sr / U_N, k0 = Math.ceil(90 / hz), k1 = Math.min(U_N / 2 - 8, Math.floor(2000 / hz));
+  frames(x, U_N, U_HOP, (mag) => {
+    for (let k = k0; k <= k1; k++) {
+      const v = mag[k];
+      if (!(v > mag[k - 1] && v >= mag[k + 1])) continue;
+      let bg = 0;
+      for (let j = k - 6; j <= k + 6; j++) if (Math.abs(j - k) > 2) bg += mag[j];
+      bg /= 10;
+      if (v < bg * 3.16) continue; // +10 дБ над фоном
+      const a = Math.log(mag[k - 1] + 1e-12), b = Math.log(v + 1e-12), c = Math.log(mag[k + 1] + 1e-12), den = a - 2 * b + c;
+      const f = (k + (den < 0 ? (0.5 * (a - c)) / den : 0)) * hz, midi = 69 + 12 * Math.log2(f / 440);
+      const th = 2 * Math.PI * (midi - Math.round(midi)), wt = Math.sqrt(v);
+      sx += Math.cos(th) * wt; sy += Math.sin(th) * wt; w += wt;
+    }
+  });
+  if (!w) return null;
+  return { cents: Math.round((Math.atan2(sy, sx) / (2 * Math.PI)) * 100), conf: Math.min(1, Math.hypot(sx, sy) / w) };
+}
+
 // Кусок для анализа: до maxSec из середины записи (начало и конец часто без ритма)
 export function middle(x, sr = SR, maxSec = 75) {
   const n = Math.floor(maxSec * sr);
@@ -174,5 +200,5 @@ export function middle(x, sr = SR, maxSec = 75) {
 
 export function analyze(x, sr = SR) {
   const m = middle(x, sr);
-  return { tempo: detectTempo(m, sr), key: detectKey(m, sr) };
+  return { tempo: detectTempo(m, sr), key: detectKey(m, sr), tuning: detectTuning(m, sr) };
 }

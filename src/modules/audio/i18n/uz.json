@@ -122,5 +122,13 @@
   "key.reset": "Siljitishsiz",
   "key.hint": "Balandlik oʻzgaradi, tezlik — yoʻq. ±3 yarim tongacha deyarli sezilmaydi; katta siljishda ovoz biroz boshqacha eshitiladi.",
   "key.down": "Yarim ton pastga",
-  "key.up": "Yarim ton yuqoriga"
+  "key.up": "Yarim ton yuqoriga",
+  "key.centsDown": "Bir sent pastga",
+  "key.centsUp": "Bir sent yuqoriga",
+  "key.byRec": "Yozuv boʻyicha",
+  "key.orig": "Tonallik:",
+  "key.tuning": "Sozlama:",
+  "key.tuneTo": "440 ga moslash ({n}¢)",
+  "key.detecting": "Tonallik va sozlama aniqlanmoqda…",
+  "key.detectFail": "Bu yozuvdan aniqlab boʻlmadi"
 }

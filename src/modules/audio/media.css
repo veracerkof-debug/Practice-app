@@ -41,3 +41,12 @@
 .vidstrip .vst{font-size:12px;white-space:nowrap}
 .vidstrip .vidbox.s{height:clamp(40px,70cqh,72px)}
 .vidh .aname{text-align:left}
+/* Тональность записи: линейка полутонов, ползунок центов, определённая тональность и строй */
+.kruler{margin-top:8px;padding-bottom:2px}
+.kruler .pill{min-width:46px;justify-content:center}
+.kruler .pill.k0{font-weight:700}
+.kruler .pill[aria-pressed="true"]{background:var(--tint);color:var(--on-tint,#fff)}
+.kcents{display:flex;align-items:center;gap:8px;margin-top:8px}
+.kcents input[type=range]{flex:1;accent-color:var(--tint)}
+.kcents b{min-width:48px;text-align:right}
+.kdet{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:15px}

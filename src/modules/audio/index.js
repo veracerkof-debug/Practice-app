@@ -59,31 +59,64 @@ async function applyPitch() {
 function setPitch(p, c) {
   if (!AU.cur) return;
   const all = st().pitch || (st().pitch = {});
-  p = Math.max(-12, Math.min(12, Math.round(p))); c = Math.max(-50, Math.min(50, Math.round(c / 10) * 10));
+  p = Math.max(-12, Math.min(12, Math.round(p))); c = Math.max(-50, Math.min(50, Math.round(c)));
   if (p || c) all[AU.cur.id] = [p, c]; else delete all[AU.cur.id];
   ctx.store.save();
   applyPitch().catch((e) => ctx.logErr(e));
   const kv = host && host.querySelector('#keyv'); if (kv) kv.textContent = keyTxt();
 }
-// Шторка тональности: полутоны, центы, «как в тексте песни», сброс
+// Шторка тональности: линейка полутонов (−12…+12, текущий — по центру), центы ползунком (по 1), тональность и строй
+// записи (определяются по самой записи на устройстве, запоминаются), «как в тексте песни», сброс
+const NOTE_M = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'], NOTE_m = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'B♭', 'B'];
+const keyName = (pc, minor) => (minor ? NOTE_m : NOTE_M)[((pc % 12) + 12) % 12] + (minor ? 'm' : '');
+const sgn = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v);
 function keySheet() {
-  const { t, ui } = ctx, song = ctx.song(curSong());
-  const chip = (attr, v, on) => '<button type="button" class="lchip pick num' + (on ? ' on' : '') + '" ' + attr + '="' + v + '" aria-pressed="' + on + '" style="--c:var(--tint);--t:var(--on-tint)">' + (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) + '</button>';
-  ui.sheet(() => { const [p, c] = pitchOf(AU.cur);
-    return ui.snav(t('key.title')) + '<div class="group"><div class="cellcol"><span>' + t('key.semi') + '</span><div class="pickrow" style="margin-top:8px">' +
-      Array.from({ length: 25 }, (_, i) => i - 12).map((v) => chip('data-ks', v, v === p)).join('') + '</div></div><div class="cellcol"><span>' + t('key.cents') + '</span><div class="pickrow" style="margin-top:8px">' +
-      [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50].map((v) => chip('data-kc', v, v === c)).join('') + '</div></div>' +
-      (song && song.tr ? '<button class="cell act" data-ktr>' + t('key.fromSong', { n: (song.tr > 0 ? '+' : '−') + Math.abs(song.tr) }) + '</button>' : '') +
-      '<button class="cell act" data-k0>' + t('key.reset') + '</button></div><p class="ftr">' + t('key.hint') + '</p>'; },
-  (el, sh) => el.addEventListener('click', (e) => {
-    const [p, c] = pitchOf(AU.cur), b = e.target.closest('[data-ks], [data-kc], [data-ktr], [data-k0]');
-    if (!b) return;
-    if (b.dataset.ks != null) setPitch(+b.dataset.ks, c);
-    else if (b.dataset.kc != null) setPitch(p, +b.dataset.kc);
-    else if (b.hasAttribute('data-ktr')) setPitch(song.tr, 0);
-    else setPitch(0, 0);
-    sh.update();
-  }));
+  const { t, ui } = ctx, song = ctx.song(curSong()), tr = AU.cur;
+  const ana = () => (st().pana || {})[tr.id];
+  const body = () => {
+    const [p, c] = pitchOf(tr), a = ana();
+    const ruler = '<div class="hscroll kruler" id="kruler">' + Array.from({ length: 25 }, (_, i) => i - 12).map((v) =>
+      '<button type="button" class="pill num' + (v ? '' : ' k0') + '" data-ks="' + v + '" aria-pressed="' + (v === p) + '">' + sgn(v) + '</button>').join('') + '</div>';
+    const cents = '<div class="kcents">' + ui.icb('data-kcs="-1"', '−', t('key.centsDown'), 'sm txt') +
+      '<input type="range" min="-50" max="50" step="1" value="' + c + '" data-kc aria-label="' + t('key.cents') + '"><b class="num" id="kcv">' + sgn(c) + '¢</b>' + ui.icb('data-kcs="1"', '+', t('key.centsUp'), 'sm txt') + '</div>';
+    const det = a ? '<div class="kdet"><span>' + t('key.orig') + ' <b>' + keyName(a.pc, a.minor) + '</b>' + (p ? ' → <b>' + keyName(a.pc + p, a.minor) + '</b>' : '') + '</span>' +
+      (a.cents != null ? '<span>' + t('key.tuning') + ' <b class="num">' + sgn(a.cents) + '¢</b></span>' : '') + '</div>' +
+      (Math.abs(a.cents || 0) >= 3 ? '<button class="cell act" data-ktune>' + t('key.tuneTo', { n: sgn(-a.cents) }) + '</button>' : '')
+      : '<div class="kdet l2" id="kdet">' + t('key.detecting') + '</div>';
+    return ui.snav(t('key.title')) + '<div class="group"><div class="cellcol"><span>' + t('key.semi') + '</span>' + ruler + '</div>' +
+      '<div class="cellcol"><span>' + t('key.cents') + '</span>' + cents + '</div></div>' +
+      '<div class="hdr">' + t('key.byRec') + '</div><div class="group"><div class="cellcol">' + det + '</div>' +
+      (song && song.tr ? '<button class="cell act" data-ktr>' + t('key.fromSong', { n: sgn(song.tr) }) + '</button>' : '') +
+      '<button class="cell act" data-k0>' + t('key.reset') + '</button></div><p class="ftr">' + t('key.hint') + '</p>';
+  };
+  const center = (el) => { const r = el.querySelector('#kruler'), on = r && r.querySelector('[aria-pressed="true"]'); if (on) r.scrollLeft += on.getBoundingClientRect().left - r.getBoundingClientRect().left - (r.clientWidth - on.offsetWidth) / 2; };
+  ui.sheet(body, (el, sh) => {
+    requestAnimationFrame(() => center(el)); setTimeout(() => center(el), 320); // и после того, как шторка выехала
+    const upd = () => { sh.update(); requestAnimationFrame(() => center(el)); };
+    // тональность и строй записи — один раз на запись
+    if (!ana()) import('../../core/songanalyze.js').then((m) => m.analyzeAudio(tr.blob)).then((r) => {
+      const all = st().pana || (st().pana = {});
+      all[tr.id] = { pc: r.key ? r.key.pc : 0, minor: !!(r.key && r.key.minor), cents: r.tuning ? r.tuning.cents : null };
+      ctx.store.save();
+      if (el.isConnected) upd();
+    }).catch(() => { const d = el.querySelector('#kdet'); if (d) d.textContent = t('key.detectFail'); });
+    el.addEventListener('input', (e) => {
+      if (!e.target.matches('[data-kc]')) return;
+      const [p] = pitchOf(tr), v = +e.target.value;
+      setPitch(p, v);
+      const kv = el.querySelector('#kcv'); if (kv) kv.textContent = sgn(v) + '¢';
+    });
+    el.addEventListener('click', (e) => {
+      const [p, c] = pitchOf(tr), b = e.target.closest('[data-ks], [data-kcs], [data-ktr], [data-k0], [data-ktune]');
+      if (!b) return;
+      if (b.dataset.ks != null) setPitch(+b.dataset.ks, c);
+      else if (b.dataset.kcs != null) setPitch(p, c + +b.dataset.kcs);
+      else if (b.hasAttribute('data-ktr')) setPitch(song.tr, c);
+      else if (b.hasAttribute('data-ktune')) setPitch(p, -ana().cents);
+      else setPitch(0, 0);
+      upd();
+    });
+  });
 }
 
 const rateTxt = () => ctx.num(AU.rate, AU.rate * 100 % 10 ? 2 : AU.rate % 1 ? 1 : 0) + '×';
