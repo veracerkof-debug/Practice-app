@@ -1297,5 +1297,11 @@
   "hb.reset": "Asl holatiga",
   "read.title": "Bibliya oʻqish",
   "read.noPlan": "Oʻqish rejasi tanlanmagan",
-  "read.pick": "Tayyorini tanlash yoki oʻzinikini tuzish ›"
+  "read.pick": "Tayyorini tanlash yoki oʻzinikini tuzish ›",
+  "tools.hidden": "Roʻyxatdan olib tashlanganlar: {n}",
+  "tools.hiddenTitle": "Olib tashlangan cholgʻular",
+  "tools.back": "Roʻyxatga qaytarish",
+  "tools.hide": "Roʻyxatdan olib tashlash",
+  "tools.hiddenToast": "Olib tashlandi — yorliq pastida qaytarish mumkin",
+  "tools.holdHint": "Cholgʻuni bosib turish — menyu: koʻchirish, roʻyxatdan olib tashlash, bosh ekranga. Olib tashlanganlar tez kirishda va sessiyada ishlaydi."
 }

@@ -1324,5 +1324,11 @@
   "hb.reset": "Back to default",
   "read.title": "Bible reading",
   "read.noPlan": "No reading plan chosen",
-  "read.pick": "Choose a ready one or make your own ›"
+  "read.pick": "Choose a ready one or make your own ›",
+  "tools.hidden": "Removed from the list: {n}",
+  "tools.hiddenTitle": "Removed tools",
+  "tools.back": "Return to the list",
+  "tools.hide": "Remove from the list",
+  "tools.hiddenToast": "Removed — it can be returned at the bottom of the tab",
+  "tools.holdHint": "Hold a tool for a menu: move, remove from the list, add to home. Removed tools still work in quick access and sessions."
 }

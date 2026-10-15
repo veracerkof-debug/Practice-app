@@ -26,6 +26,7 @@ import { remindOf } from '../reminders.js';
 import { moodOf } from '../mascot.js';
 import { mascotSVG } from '../../ui/mascot.js';
 import { holdMenu, sortable } from '../../ui/hold.js';
+import { toolsTab, setToolsTab } from './tools.js';
 import { showHelp } from '../help.js';
 
 // Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
@@ -196,6 +197,14 @@ export function toolHoldMenu(app, btn, rerender, open) {
   if (inQuick) items.push({ icon: HI.minus, label: t('hold.unquick'), danger: onHome, run: () => save((st.quick || QUICK_DEF).filter((x) => x !== id)) });
   else items.push({ icon: HI.plus, label: t('hold.quick'), run: () => { if (vis.length >= QUICK_MAX) { toast(t('quick.max', { max: QUICK_MAX })); return; } save((st.quick || QUICK_DEF).concat(id)); toast(t('hold.added')); } });
   if (onHome) items.push({ icon: HI.edit, label: t('hold.edit'), run: () => quickEdit(app, rerender) });
+  // вкладка «Инструменты»: левее, правее, убрать из вкладки
+  if (!onHome) {
+    const T = toolsTab(st), j = T.shown.indexOf(id);
+    const tmove = (d) => { const a = T.order.indexOf(id), b = T.order.indexOf(T.shown[j + d]); [T.order[a], T.order[b]] = [T.order[b], T.order[a]]; setToolsTab(st, T); app.store.settingsChanged(); rerender(); };
+    if (j > 0) items.splice(1, 0, { icon: HI.left, label: t('hold.left'), run: () => tmove(-1) });
+    if (j >= 0 && j < T.shown.length - 1) items.splice(j > 0 ? 2 : 1, 0, { icon: HI.right, label: t('hold.right'), run: () => tmove(1) });
+    items.push({ icon: HI.minus, label: t('tools.hide'), danger: true, run: () => { T.off.add(id); setToolsTab(st, T); app.store.settingsChanged(); rerender(); toast(t('tools.hiddenToast')); } });
+  }
   items.push({ icon: HI.help, label: t('hold.help'), run: () => showHelp(app, m) });
   holdMenu(btn, items, moduleName(m));
 }

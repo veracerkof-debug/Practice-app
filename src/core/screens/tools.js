@@ -6,7 +6,7 @@ import { ui, esc, icons } from '../../ui/index.js';
 import { isOn } from '../settings.js';
 import { mountModule, makeCtx, moduleName, trackToolTime, fmtDur } from '../modules.js';
 import { modules, moduleById } from '../../modules/index.js';
-import { topbar } from './common.js';
+import { topbar, IC } from './common.js';
 import { showHelp } from '../help.js';
 import { recButtonHTML, bindRec } from './rec.js';
 import { canRecord } from '../recorder.js';
@@ -14,18 +14,43 @@ import { pureEnter, pureLeave } from '../pure.js';
 import { bareScope } from '../../i18n/index.js';
 
 export const renderTools = (app, root) => bareScope(() => renderToolsNow(app, root));
+// Порядок и убранные во вкладке (settings.toolsTab: { order, off }): удержание карточки — меню (левее, правее, убрать);
+// убранные остаются включёнными (быстрый доступ, сессия) — вернуть кнопкой внизу вкладки
+export function toolsTab(st) {
+  const all = modules.filter((m) => !m.tab && isOn(st, m.id)).map((m) => m.id), tt = st.toolsTab || {};
+  const order = (tt.order || []).filter((id) => all.includes(id));
+  all.forEach((id) => { if (!order.includes(id)) order.push(id); });
+  const off = new Set((tt.off || []).filter((id) => all.includes(id)));
+  return { order, off, shown: order.filter((id) => !off.has(id)) };
+}
+export function setToolsTab(st, T) { st.toolsTab = { order: T.order.slice(), off: [...T.off] }; }
 function renderToolsNow(app, root) {
-  const list = modules.filter((m) => !m.tab && isOn(app.store.state.settings, m.id)); // Библия — своя вкладка
+  const st = app.store.state.settings, T = toolsTab(st), list = T.shown.map(moduleById); // Библия — своя вкладка
   root.innerHTML = topbar() + '<div class="large">' + t('tools.title') + '</div><div class="tgrid">' + list.map((m) => {
-    let st = '';
-    try { st = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ }
+    let s2 = '';
+    try { s2 = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ }
     return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +
-      esc(moduleName(m)) + '</span><span class="tcs2">' + esc(st) + '</span></span></button>';
-  }).join('') + '</div>';
+      esc(moduleName(m)) + '</span><span class="tcs2">' + esc(s2) + '</span></span></button>';
+  }).join('') + '</div>' +
+    (T.off.size ? '<div class="group" style="margin-top:16px"><button class="cell act" data-tools-hidden>' + esc(t('tools.hidden', { n: T.off.size })) + '</button></div>' : '') +
+    '<p class="ftr">' + t('tools.holdHint') + '</p>';
   root.onclick = (e) => {
     const b = e.target.closest('[data-open-tool]');
     if (b) openToolView(app, b.dataset.openTool, () => renderTools(app, root));
+    if (e.target.closest('[data-tools-hidden]')) hiddenSheet(app, () => renderTools(app, root));
   };
+}
+// Убранные из вкладки — вернуть
+function hiddenSheet(app, rerender) {
+  const st = app.store.state.settings;
+  ui.sheet(() => { const T = toolsTab(st); return ui.snav(t('tools.hiddenTitle')) + '<div class="group">' + [...T.off].map((id) => { const m = moduleById(id);
+    return '<div class="cell"><span class="ticon" style="background:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span><button class="ic sm plain" data-tback="' + id + '" aria-label="' + esc(t('tools.back')) + '" style="color:#5F8568">' + IC.plus + '</button></div>'; }).join('') + '</div>'; },
+  (el, sh) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tback]');
+    if (!b) return;
+    const T = toolsTab(st); T.off.delete(b.dataset.tback); setToolsTab(st, T); app.store.settingsChanged(); rerender();
+    if (!T.off.size) sh.close(); else sh.update();
+  }));
 }
 
 const EXPAND = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
