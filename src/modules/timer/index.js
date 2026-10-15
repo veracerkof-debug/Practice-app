@@ -21,7 +21,7 @@ const I = {
 const R = 98, C = 2 * Math.PI * R;
 
 let host = null, ctx = null, size = 'full', timer = 0, unsub = () => {}, onClick = null, scene = null;
-// Сцена под часами (scene.js): струны, вода или песочные часы — по выбору в настройках
+// Сцена под часами (scene.js): струны или вода — по выбору в настройках (было «песок» — теперь струны)
 const sceneKind = () => (SCENES.includes(cfg().scene) ? cfg().scene : 'strings');
 const sceneHTML = () => (sceneKind() === 'off' ? '' : '<div class="tscene ' + sceneKind() + '" aria-hidden="true"><canvas></canvas></div>');
 
@@ -112,7 +112,7 @@ function render() {
 function tick() {
   if (!host) return;
   const v = view();
-  if (scene) scene.kick(); // ход интервала — на сцене (уровень воды, песок, сыгранная часть струн)
+  if (scene) scene.kick(); // ход интервала — на сцене (уровень воды, сыгранная часть струн)
   const pt = host.querySelector('#ptime');
   if (pt) pt.textContent = fmtClock(v.shown);
   const arc = host.querySelector('#parc');
