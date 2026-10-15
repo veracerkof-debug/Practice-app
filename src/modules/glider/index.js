@@ -15,8 +15,9 @@ import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { PRESETS as SYN } from '../../audio/synth.js';
 import { mName, SH } from '../../music/notes.js';
-import { SCALE_TYPES } from '../../music/theory.js';
-import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, clampLo } from './scale.js';
+import { scaleSelectHTML, folkInfoHTML, folkAct } from '../../ui/scalepick.js';
+import { microLabel } from '../../music/folk.js';
+import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, clampLo, notesIn } from './scale.js';
 import { createGlideVoice, createFxBus, FX, CURVES } from './voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, axisFx, PRESETS } from './fx.js';
 import { melodyById, createFollower, fitRange } from '../../music/melodies.js';
@@ -56,12 +57,16 @@ function padHTML(s, over) {
   const pcs = allowedPcs(s), W = s.width + 1;
   let cols = '', lines = '';
   // без разметки — сплошное одноцветное поле: ни полос клавиш, ни линий, ни названий нот
+  // полосы клавиш — по полутонам; линии нот — по ступеням лада (у народных ладов — и между клавишами)
+  const near = (m) => !pcs || pcs.some((p) => { const d = (((m - p) % 12) + 12) % 12; return Math.min(d, 12 - d) < 0.5; });
   for (let m = s.lo; s.keys && m <= s.lo + s.width; m++) {
-    const pc = ((m % 12) + 12) % 12, inSc = !pcs || pcs.includes(pc), root = pcs ? pc === s.root : pc === 0;
-    cols += '<i class="glk' + (BLACK.includes(pc) ? ' b' : '') + (inSc ? '' : ' off') + '" style="left:' + ((m - s.lo) / W) * 100 + '%;width:' + 100 / W + '%"></i>';
-    const x = midiToPos(m, s.lo, s.width);
-    if (inSc) lines += '<i class="gll' + (root ? ' root' : '') + (pc === 0 ? ' c' : '') + (x < 0.04 ? ' el' : x > 0.96 ? ' er' : '') + '" style="left:' + x * 100 + '%">' + (s.labels ? '<b>' + mName(m) + '</b>' : '') + '</i>';
+    const pc = ((m % 12) + 12) % 12;
+    cols += '<i class="glk' + (BLACK.includes(pc) ? ' b' : '') + (near(m) ? '' : ' off') + '" style="left:' + ((m - s.lo) / W) * 100 + '%;width:' + 100 / W + '%"></i>';
   }
+  if (s.keys) notesIn(s.lo, s.width, pcs).forEach((m) => {
+    const pc = ((m % 12) + 12) % 12, root = pcs ? Math.abs(pc - s.root) < 1e-6 : pc === 0, x = midiToPos(m, s.lo, s.width);
+    lines += '<i class="gll' + (root ? ' root' : '') + (pc === 0 ? ' c' : '') + (x < 0.04 ? ' el' : x > 0.96 ? ' er' : '') + '" style="left:' + x * 100 + '%">' + (s.labels ? '<b>' + microLabel(m, mName) + '</b>' : '') + '</i>';
+  });
   const ax = axisTxt(s);
   return '<div class="glpad' + (s.keys ? '' : ' plain') + '" id="glpad" role="application" aria-roledescription="' + ctx.t('padRole') + '" aria-label="' + ctx.t('padAria', { range: rangeTxt(s), fx: ax.replace('↑ ', '') || ctx.t('fxNone') }) + '">' +
     cols + lines + melOver(s) + (ax ? '<span class="glaxis" aria-hidden="true">' + ax + '</span>' : '') + '<div id="gltouch"></div>' + over + '</div>';
@@ -354,8 +359,7 @@ function setSheet() {
       '<div class="hdr">' + t('snap') + '</div><div class="group"><div class="cellcol">' + ui.seg('gsnap', SNAPS.map((k) => [k, t('snap.' + k)]), s.snap, t('snap')) +
       '<div class="segcap">' + t('snapHint.' + s.snap) + '</div></div>' +
       (s.snap === 'note' ? '<div class="cellcol"><div class="glsub">' + t('port') + '</div>' + ui.seg('gport', [[0, t('port0')], [60, '60 ' + t('ms')], [150, '150 ' + t('ms')], [300, '300 ' + t('ms')]], s.port, t('port')) + '</div>' : '') + '</div>' +
-      '<div class="hdr">' + t('notes') + '</div><div class="group"><div class="cellcol"><select class="sortsel glsel" data-gsc aria-label="' + t('notes') + '"><option value="chrom"' + (chrom ? ' selected' : '') + '>' + t('chrom') + '</option>' +
-      SCALE_TYPES.map((k) => '<option value="' + k + '"' + (s.scale === k ? ' selected' : '') + '>' + t('scale.' + k) + '</option>').join('') + '</select>' +
+      '<div class="hdr">' + t('notes') + '</div><div class="group"><div class="cellcol">' + scaleSelectHTML(t, s, 'data-gsc') + folkInfoHTML(t, s, ui) +
       (chrom ? '' : '<div class="glsub" style="margin-top:10px">' + t('root') + '</div><div class="glroots">' + SH.map((n, i) => '<button class="lchip pick glck' + (s.root === i ? ' on' : '') + '" data-gr="' + i + '" aria-pressed="' + (s.root === i) + '" style="--c:var(--tint);--t:var(--on-tint)">' + n + '</button>').join('') + '</div>') +
       '</div></div>' +
       '<div class="hdr">' + t('range') + '</div><div class="group"><div class="cell"><span class="grow">' + t('from') + '</span>' + ui.icb('data-glo2="-1"', I.left, t('lower'), 'sm') + '<b class="num glv">' + mName(s.lo) + '</b>' + ui.icb('data-glo2="1"', I.right, t('higher'), 'sm') + '</div>' +
@@ -368,6 +372,7 @@ function setSheet() {
     el.addEventListener('click', (e) => {
       const s = cfg(), g = (q) => e.target.closest(q);
       let b;
+      if (folkAct(e, s)) { done(); return; } // свой лад: ступени в центах
       if ((b = g('[data-gpre]'))) { const keep = s.fx.echo.time; s.fx = applyPreset(b.dataset.gpre); if (!PRESETS[b.dataset.gpre].echo) s.fx.echo.time = keep; ctx.ui.toast(t('presetOn', { name: t('preset.' + b.dataset.gpre) })); }
       else if ((b = g('[data-gs]'))) s.sound = b.dataset.gs;
       else if ((b = g('[data-gr]'))) s.root = +b.dataset.gr;
@@ -396,6 +401,7 @@ function setSheet() {
     el.addEventListener('change', (e) => {
       const s = cfg(), sw = e.target.dataset.sw || '';
       if (e.target.dataset.gamt) { save(); render(); return; }
+      if (folkAct(e, s)) { done(); return; }
       if (sw === 'ghold') s.hold = e.target.checked;
       else if (sw === 'glab') s.labels = e.target.checked;
       else if (sw === 'gkeys') s.keys = e.target.checked;

@@ -90,3 +90,10 @@
 /* Полный экран (src/core/pure.js): только доска — без кнопок, ноты крупно и подписи эффектов */
 :is(.tview.pure,.pfull) .glov,:is(.tview.pure,.pfull) .glnote,:is(.tview.pure,.pfull) .glaxis,:is(.tview.pure,.pfull) .mlbtn{display:none!important}
 :is(.tview.pure,.pfull) .glpad{border-radius:0}
+/* Свой лад: ступени в центах (src/ui/scalepick.js) */
+.fclist{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.fcrow{display:flex;align-items:center;gap:6px;min-height:40px}
+.fcrow .grow{color:var(--l2);font-size:13px;min-width:20px}
+.fcinp{width:76px;text-align:center;font-size:16px;padding:6px 4px;border-radius:10px;border:1px solid var(--sep);background:var(--fill);color:var(--ink)}
+b.fcinp{border-color:transparent;display:inline-block}
+.fcacts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
