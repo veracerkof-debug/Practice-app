@@ -37,7 +37,8 @@ import { bindVerses } from './screens/verses.js';
 import { createFiles } from './files.js';
 import { createRecorder } from './recorder.js';
 import { createMidi } from './midi.js';
-import { reschedule } from './reminders.js';
+import { reschedule, rescheduleEvents } from './reminders.js';
+import { ensureCal, eventReminders, liveEvents, kindOf } from './calendar.js';
 import { remindText, remindCtx } from './remindtexts.js';
 import { initShareIn } from './screens/share.js';
 import { initFolder } from './foldersync.js';
@@ -158,6 +159,25 @@ export function boot(root) {
   const remSync = () => { clearTimeout(remT); remT = setTimeout(() => reschedule(store.state, (x) => remindText(x, remindCtx(store.state.settings))), 1500); };
   store.subscribe(remSync);
   remSync();
+  // напоминания о событиях календаря (у события — «Напомнить»): ближайшие две недели, пересчёт при изменениях
+  let evT = 0, evSig = '';
+  const evSync = () => {
+    clearTimeout(evT);
+    evT = setTimeout(() => {
+      const c = ensureCal(store.state, t), lang = getLang() === 'uz' ? 'uz-Latn' : getLang();
+      const list = eventReminders(liveEvents(store.state), Date.now()).map(({ ts, ev, start }) => {
+        const m = +ev.remind || 0, hm = new Date(start).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
+        const lead = ev.allDay || m >= 1440 ? t(m >= 1440 ? 'cal.rem.tomorrow' : 'cal.rem.today') : !m ? t('cal.rem.now') : m < 60 ? t('cal.rem.inMin', { n: m }) : t('cal.rem.inH', { n: m / 60 });
+        return { ts, title: ev.title || (kindOf(c, ev.kind) || {}).name || t('cal.event'), body: [lead, ev.allDay ? '' : hm, ev.place || ''].filter(Boolean).join(' · ') };
+      });
+      const sig = JSON.stringify(list);
+      if (sig === evSig) return; // ничего не поменялось — не трогать расписание
+      evSig = sig;
+      rescheduleEvents(list);
+    }, 2000);
+  };
+  store.subscribe(evSync);
+  evSync();
   // Церковный режим: чтение Библии — план, отметки, место (src/core/reading.js)
   app.bible = createBible(store);
   // Вспышка, фонарик и вибрация в такт метронома

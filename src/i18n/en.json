@@ -1340,5 +1340,21 @@
   "bk.fail": "Could not save the copy",
   "bk.loadTitle": "Load this copy?",
   "bk.loadYes": "Load",
-  "bk.from": "copy: {by}, {when}"
+  "bk.from": "copy: {by}, {when}",
+  "cal.remind": "Remind",
+  "cal.rem.none": "None",
+  "cal.rem.atStart": "At start",
+  "cal.rem.10": "10 min before",
+  "cal.rem.30": "30 min before",
+  "cal.rem.60": "1 hour before",
+  "cal.rem.120": "2 hours before",
+  "cal.rem.1440": "1 day before",
+  "cal.rem.morning": "In the morning",
+  "cal.rem.dayBefore": "The day before",
+  "cal.rem.now": "Starting now",
+  "cal.rem.today": "Today",
+  "cal.rem.tomorrow": "Tomorrow",
+  "cal.remDenied": "Notifications are not allowed — enable them in phone settings",
+  "cal.rem.inMin": "In {n} min",
+  "cal.rem.inH": "In {n} h"
 }

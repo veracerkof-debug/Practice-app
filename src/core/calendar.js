@@ -29,7 +29,7 @@ export function newEvent(day, now = Date.now(), patch = {}) {
   let start = d0 + 18 * 3600000;
   if (d0 === dayStart(now)) { const h = new Date(now).getHours() + 1; start = d0 + Math.min(23, h) * 3600000; }
   return { id: 'e' + uid(), title: '', kind: 'rehearsal', start, end: start + 3600000, allDay: false, repeat: 'none', days: null, until: null,
-    songs: [], place: '', note: '', color: null, skip: [], done: [], ...patch };
+    songs: [], place: '', note: '', color: null, skip: [], done: [], remind: null, ...patch };
 }
 
 export function saveEvent(store, ev) {
@@ -133,6 +133,21 @@ export function occurrences(events, from, to) {
 }
 
 export const onDay = (events, day) => occurrences(events, dayStart(day), dayStart(day) + DAY);
+
+// Напоминание о событии: ev.remind — за сколько минут до начала (0 — в момент начала; null — без напоминания).
+// У события на весь день отсчёт — от 9:00 этого дня (за день — накануне в 9:00)
+export const REMIND_MIN = [0, 10, 30, 60, 120, 1440];
+export const remindAt = (ev, start) => (ev.allDay ? dayStart(start) + 9 * 3600000 : start) - (+ev.remind || 0) * 60000;
+// Ближайшие напоминания (на days дней вперёд, не больше max): [{ ts, ev, start }] по времени
+export function eventReminders(events, now = Date.now(), days = 14, max = 60) {
+  const withR = events.filter((e) => !e.deleted && e.remind != null && REMIND_MIN.includes(+e.remind));
+  if (!withR.length) return [];
+  return occurrences(withR, now - DAY, now + (days + 1) * DAY)
+    .map((o) => ({ ts: remindAt(o.ev, o.start), ev: o.ev, start: o.start }))
+    .filter((x) => x.ts > now && x.ts < now + days * DAY && !isDone(x.ev, x.start))
+    .sort((a, b) => a.ts - b.ts)
+    .slice(0, max);
+}
 
 // Раскладка событий дня по колонкам (пересекающиеся — рядом): [{ o, col, cols }]
 export function layoutDay(occ) {

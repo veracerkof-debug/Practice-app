@@ -1313,5 +1313,21 @@
   "bk.fail": "Nusxani saqlab boʻlmadi",
   "bk.loadTitle": "Bu nusxa yuklansinmi?",
   "bk.loadYes": "Yuklash",
-  "bk.from": "nusxa: {by}, {when}"
+  "bk.from": "nusxa: {by}, {when}",
+  "cal.remind": "Eslatish",
+  "cal.rem.none": "Yoʻq",
+  "cal.rem.atStart": "Boshlanishida",
+  "cal.rem.10": "10 daqiqa oldin",
+  "cal.rem.30": "30 daqiqa oldin",
+  "cal.rem.60": "1 soat oldin",
+  "cal.rem.120": "2 soat oldin",
+  "cal.rem.1440": "1 kun oldin",
+  "cal.rem.morning": "Ertalab",
+  "cal.rem.dayBefore": "Bir kun oldin",
+  "cal.rem.now": "Boshlanmoqda",
+  "cal.rem.today": "Bugun",
+  "cal.rem.tomorrow": "Ertaga",
+  "cal.remDenied": "Bildirishnomalarga ruxsat yoʻq — telefon sozlamalarida yoqish kerak",
+  "cal.rem.inMin": "{n} daqiqadan keyin",
+  "cal.rem.inH": "{n} soatdan keyin"
 }

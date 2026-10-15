@@ -11,7 +11,7 @@ import { DAY, dayStart, dayKey, weekStart, monthStart, weekday, pad2, uid } from
 import { PALETTE, autoText } from '../library.js';
 import {
   ensureCal, liveEvents, kindOf, colorOf, occurrences, onDay, layoutDay, upcoming, newEvent, saveEvent, deleteEvent,
-  skipOccurrence, toggleDone, isDone, toICS, REPEATS,
+  skipOccurrence, toggleDone, isDone, toICS, REPEATS, REMIND_MIN,
 } from '../calendar.js';
 import { topbar, IC, weekdays, TAB_ICONS } from './common.js';
 
@@ -348,6 +348,10 @@ export function eventForm(app, ex, opts = {}, after = () => {}) {
         const on = f.songs.includes(s.id);
         return '<button type="button" class="lchip pick ck' + (on ? ' on' : '') + '" data-csg="' + s.id + '" aria-pressed="' + on + '" style="--c:var(--tint);--t:var(--on-tint)">' + esc(s.title) + '</button>';
       }).join('') + '</div></div></div>' : '') +
+      // напомнить: за сколько до начала (уведомление телефона)
+      '<div class="hdr">' + t('cal.remind') + '</div><div class="group"><div class="cellcol"><div class="pickrow">' +
+      (f.allDay ? [null, 0, 1440] : [null, ...REMIND_MIN]).map((m) => { const on = (f.remind ?? null) === m; return '<button type="button" class="lchip pick ck' + (on ? ' on' : '') + '" data-crem="' + (m ?? '') + '" aria-pressed="' + on + '" style="--c:var(--tint);--t:var(--on-tint)">' +
+        t(m == null ? 'cal.rem.none' : f.allDay ? (m >= 1440 ? 'cal.rem.dayBefore' : 'cal.rem.morning') : m ? 'cal.rem.' + m : 'cal.rem.atStart') + '</button>'; }).join('') + '</div></div></div>' +
       '<div class="group" style="margin-top:16px"><label class="cell"><input class="inp left" name="place" maxlength="80" placeholder="' + t('cal.place') + '" aria-label="' + t('cal.place') + '" value="' + esc(f.place || '') + '"></label></div>' +
       '<div class="hdr">' + t('cal.note') + '</div><div class="group"><textarea class="ta" name="note" aria-label="' + t('cal.note') + '">' + esc(f.note || '') + '</textarea></div>' +
       '<div class="hdr">' + t('cal.color') + '</div><div class="group"><div class="cellcol"><div class="swgrid"><button type="button" class="swc cauto' + (!f.color ? ' on' : '') + '" data-ccol="" style="background:' + (k ? k.color : '#8E8E93') +
@@ -372,6 +376,12 @@ export function eventForm(app, ex, opts = {}, after = () => {}) {
         re();
       } else if ((b = g('[data-csg]'))) { const id = b.dataset.csg; f.songs = f.songs.includes(id) ? f.songs.filter((x) => x !== id) : [...f.songs, id]; re(); }
       else if ((b = g('[data-ccol]'))) { f.color = b.dataset.ccol || null; re(); }
+      else if ((b = g('[data-crem]'))) {
+        f.remind = b.dataset.crem === '' ? null : +b.dataset.crem;
+        re();
+        // напоминание выбрано — разрешение на уведомления (Android 13+ спрашивает один раз)
+        if (f.remind != null) import('../reminders.js').then(async (m) => { if (m.remindAvailable() && !(await m.remindPermission())) toast(t('cal.remDenied')); });
+      }
       else if (g('[data-cuntil]')) { f.until = null; re(); }
       else if (g('[data-cdel]')) {
         if (!(await confirm(t('cal.delTitle', { title: titleOf(c, f) }), t('cal.delText'), t('cal.delete')))) return;
@@ -382,7 +392,7 @@ export function eventForm(app, ex, opts = {}, after = () => {}) {
       const n = e.target.name, E = form().elements;
       if (e.target.dataset.sw === 'callday') {
         f.allDay = e.target.checked;
-        if (f.allDay) { f.start = dayStart(f.start); f.end = dayStart(f.end || f.start); }
+        if (f.allDay) { f.start = dayStart(f.start); f.end = dayStart(f.end || f.start); if (f.remind != null && f.remind !== 1440) f.remind = 0; }
         else { f.start = dayStart(f.start) + 18 * HOUR; f.end = Math.max(dayStart(f.end) + 19 * HOUR, f.start + HOUR); }
         re();
         return;

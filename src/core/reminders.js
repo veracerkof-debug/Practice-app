@@ -159,6 +159,25 @@ export async function reschedule(state, texts, now = Date.now()) {
   } catch (e) { log('remind', 'не запланировалось: ' + errText(e), 'e'); return 0; }
 }
 
+// Напоминания о событиях календаря — свой канал и свои номера (7100…7159), не зависят от характера маскота:
+// напоминание у события человек ставит сам. list — [{ ts, title, body }] (calendar.js: eventReminders + тексты)
+const EV_CH = 'melete-events', EV0 = 7100, EV_N = 60;
+export async function rescheduleEvents(list) {
+  const P = await plugin();
+  if (!P) return 0;
+  try {
+    await P.cancel({ notifications: Array.from({ length: EV_N }, (_, i) => ({ id: EV0 + i })) });
+    if (!list.length) return 0;
+    if (!(await P.checkPermissions().then((p) => p.display === 'granted').catch(() => false))) { log('remind', 'события: уведомления не разрешены', 'w'); return 0; }
+    if (Capacitor.getPlatform() === 'android') await P.createChannel({ id: EV_CH, name: 'Melete · календарь', importance: 4, visibility: 1, vibration: true }).catch(() => {});
+    const exact = await exactAllowed();
+    await P.schedule({ notifications: list.slice(0, EV_N).map((x, i) => ({ id: EV0 + i, title: x.title, body: x.body, schedule: { at: new Date(x.ts), allowWhileIdle: true },
+      channelId: EV_CH, autoCancel: true, isExactNotification: exact })) });
+    log('remind', 'события: запланировано ' + Math.min(EV_N, list.length));
+    return list.length;
+  } catch (e) { log('remind', 'события не запланировались: ' + errText(e), 'e'); return 0; }
+}
+
 // Проверка: напоминание сразу (как оно будет выглядеть). → 'ok' | 'denied' | 'off' | 'fail'
 export async function remindTest(texts, mode = 'classic', slot = 'lead:60', tone) {
   const P = await plugin();

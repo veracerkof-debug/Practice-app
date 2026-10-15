@@ -126,3 +126,26 @@ describe('экспорт .ics', () => {
 });
 
 it('DAY — сутки', () => expect(DAY).toBe(86400000));
+
+describe('напоминания о событиях', async () => {
+  const { eventReminders, remindAt, newEvent } = await import('../src/core/calendar.js');
+  const H = 3600000, D = 24 * H;
+  const now = new Date(2026, 9, 15, 12, 0).getTime();
+  it('за полчаса до начала; без напоминания — нет; прошедшее — нет', () => {
+    const a = newEvent(now, now, { start: now + 3 * H, end: now + 4 * H, remind: 30 });
+    const b = newEvent(now, now, { start: now + 5 * H, end: now + 6 * H, remind: null });
+    const c = newEvent(now, now, { start: now + 10 * 60000, end: now + H, remind: 30 });
+    const r = eventReminders([a, b, c], now);
+    expect(r).toHaveLength(1);
+    expect(r[0].ts).toBe(now + 3 * H - 30 * 60000);
+  });
+  it('повторяющееся — каждое повторение в окне двух недель', () => {
+    const w = newEvent(now, now, { start: now + D, end: now + D + H, repeat: 'weekly', remind: 60 });
+    expect(eventReminders([w], now)).toHaveLength(2);
+  });
+  it('на весь день: утром в 9:00 или накануне', () => {
+    const d0 = new Date(2026, 9, 17).getTime(), ev = newEvent(d0, now, { allDay: true, start: d0, end: d0, remind: 0 });
+    expect(new Date(remindAt(ev, d0)).getHours()).toBe(9);
+    expect(remindAt({ ...ev, remind: 1440 }, d0)).toBe(d0 + 9 * H - D);
+  });
+});

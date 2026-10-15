@@ -1355,5 +1355,21 @@
   "bk.fail": "Копию сохранить не удалось",
   "bk.loadTitle": "Загрузить эту копию?",
   "bk.loadYes": "Загрузить",
-  "bk.from": "копия: {by}, {when}"
+  "bk.from": "копия: {by}, {when}",
+  "cal.remind": "Напомнить",
+  "cal.rem.none": "Нет",
+  "cal.rem.atStart": "В начале",
+  "cal.rem.10": "За 10 мин",
+  "cal.rem.30": "За 30 мин",
+  "cal.rem.60": "За час",
+  "cal.rem.120": "За 2 часа",
+  "cal.rem.1440": "За день",
+  "cal.rem.morning": "Утром",
+  "cal.rem.dayBefore": "Накануне",
+  "cal.rem.now": "Начинается",
+  "cal.rem.today": "Сегодня",
+  "cal.rem.tomorrow": "Завтра",
+  "cal.remDenied": "Уведомления не разрешены — включить в настройках телефона",
+  "cal.rem.inMin": "Через {n} мин",
+  "cal.rem.inH": "Через {n} ч"
 }
