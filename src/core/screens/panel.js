@@ -20,7 +20,7 @@ const QUOTE_IC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentC
 import { PALETTE_IDS, PALETTES, SPECIAL_PALETTES, ownPalette, OWN_DEFAULT, isHex, hueColor, onColor, TEXT_MODES } from '../palettes.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
-import { AVATAR, CHEV, BACK, IC, tabIds, TAB_ICONS, weekdays, mBadge } from './common.js';
+import { AVATAR, CHEV, IC, tabIds, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
 import { bgAvailable, bgStatus, bgRows, bindBg } from '../background.js';
 import { guardAvailable } from '../guard.js';
@@ -435,7 +435,7 @@ export function createPanel(app, onChange) {
     }
     const sub = page !== 'root', y = layer.scrollTop;
     const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, feat: featHTML, homes: homesHTML, tabs: tabsHTML, help: helpHTML }[page](app);
-    layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="link" data-pp="root">' + BACK + t('panel.back') + '</button>' : '<span></span>') +
+    layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="ic sm plain" data-pp="root" aria-label="' + esc(t('panel.back')) + '">' + icons.back + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
     // переход между страницами: вперёд — справа, назад в корень — слева; перерисовка той же страницы — без движения
     if (lastPage && lastPage !== page) layer.firstChild.classList.add(page === 'root' ? 'pback' : 'pfwd');

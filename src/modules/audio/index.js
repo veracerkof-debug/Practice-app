@@ -508,7 +508,7 @@ function pickSheet(sid) {
   const { t, ui } = ctx;
   const body = () => {
     const rest = tracks().filter((x) => !inSong(x, sid));
-    return ui.snav(t('fromLib'), { left: '<button class="link l" data-back>' + t('back') + '</button>', right: '<span></span>' }) + '<div class="group">' +
+    return ui.snav(t('fromLib'), { left: '<button class="ic sm plain" data-back aria-label="' + t('back') + '">' + ui.icons.back + '</button>', right: '<span></span>' }) + '<div class="group">' +
       (rest.length ? rest.map((x) => trackRow(x, sid, 'pick')).join('') : '<div class="cell l2">' + t('allInSong') + '</div>') + '</div>';
   };
   ui.sheet(body, (el, sh) => el.addEventListener('click', (e) => {

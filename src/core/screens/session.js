@@ -3,10 +3,9 @@
 // завершение сессии, вопрос «Ты ещё играешь?», экран не гаснет.
 // Перенесено из legacy/practice.html (startSession, openSession, sessionClick, renderWS, classify, paneMenu, layoutSheet,
 // жесты DRG, finish, checkIdle, pchipHTML, pomoPanel, rotCheck).
-import { mascotSVG } from '../../ui/mascot.js';
 import '../../ui/session.css';
 import { t } from '../../i18n/index.js';
-import { esc, icb, sheet, snav, toast, leave } from '../../ui/index.js';
+import { esc, icb, sheet, snav, toast, leave, icons } from '../../ui/index.js';
 import { fmtDur, fmtClock } from '../format.js';
 import { getPct, ensureLib } from '../library.js';
 import { isOn } from '../settings.js';
@@ -437,16 +436,16 @@ export function createSessionScreen(app) {
       return;
     }
     let tag = '', readM = null;
-    sheet(() => snav(t('fin.title'), { left: '<button class="link l" data-k="back">' + t('ui.back') + '</button>', right: '<button class="link b r" data-k="save">' + t('fin.save') + '</button>' }) +
-      // Мелета радуется занятию (выключается вместе со словом дня)
-      (isOn(st(), 'quote') ? '<div style="display:flex;justify-content:center;margin:2px 0 -6px"><button type="button" class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(sum.dur >= 1200 ? 'happy' : 'glad', { size: 64, ring: st().uiStyle !== 'mono' }) + '</button></div>' : '') +
+    // «Назад» — значком (как везде), «Сохранить» — внизу, под большим пальцем
+    sheet(() => snav(t('fin.title'), { left: '<button class="ic sm plain" data-k="back" aria-label="' + esc(t('ui.back')) + '">' + icons.back + '</button>', right: '<span></span>' }) +
       '<div style="text-align:center;margin:4px 0 18px"><div class="num' + (a.mode === 'strict' ? ' gold' : '') + '" style="font-size:44px;font-weight:300;letter-spacing:-.03em">' + fmtDur(sum.dur) + '</div><div class="l2" style="font-size:15px">' +
       esc(titleOf(a)) + (sum.best ? t('fin.upTo', { bpm: sum.best }) : '') + '</div></div>' +
       (s ? '<div class="hdr">' + t('fin.songNow') + '</div><div class="group"><div class="cellcol">' + mInput(getPct(s), st()) + '</div><label class="cell"><span class="grow">' + t('fin.confident') +
         '</span><input class="inp num" id="cb" type="number" inputmode="numeric" min="20" max="300" placeholder="bpm" aria-label="' + t('fin.confident') + '" value="' + (sum.best || s.currentBpm || '') + '"></label></div>'
         : a.type === 'tool' ? '' : '<div class="hdr">' + t('fin.what') + '</div><div class="group"><div class="cellcol"><div class="hscroll" style="padding:0;flex-wrap:wrap" id="tg">' +
           FREE_TAGS.map((x) => '<button type="button" class="pill" aria-pressed="false" data-t="' + x + '">' + esc(freeTagName(x)) + '</button>').join('') + '</div></div></div>') +
-      '<div class="hdr">' + t('fin.note') + '</div><div class="group"><textarea class="ta" id="nt" style="min-height:80px;font-family:var(--font);font-size:16px" aria-label="' + t('fin.note') + '" placeholder="' + t('fin.notePh') + '"></textarea></div>',
+      '<div class="hdr">' + t('fin.note') + '</div><div class="group"><textarea class="ta" id="nt" style="min-height:80px;font-family:var(--font);font-size:16px" aria-label="' + t('fin.note') + '" placeholder="' + t('fin.notePh') + '"></textarea></div>' +
+      '<div class="sheetfoot"><button class="btn fill block" data-k="save">' + t('fin.save') + '</button></div>',
     (el, sh) => {
       if (s) readM = bindM(el, st());
       el.addEventListener('click', (e) => {

@@ -1,7 +1,7 @@
 // «Песни»: список с категориями, поиском, фильтрами и сортировкой; карточка песни; форма песни; метки.
 // Перенесено из legacy/practice.html (libraryHTML, songHTML, tempoChart, songForm, libManager, itemEditor, pickHTML).
 import { t, tn, getLang } from '../../i18n/index.js';
-import { esc, icb, seg, sheet, snav, toast } from '../../ui/index.js';
+import { esc, icb, seg, sheet, snav, toast, icons } from '../../ui/index.js';
 import { fmtDur } from '../format.js';
 import { songStats } from '../stats.js';
 import {
@@ -246,7 +246,7 @@ export function itemEditor(app, kind, id, back) {
     '<label class="swc custom" aria-label="' + t('libm.customColor') + '"><input type="color" ' + attr + '-in value="' + (cur && cur[0] === '#' ? cur : '#9C7242') + '"></label></div>';
   const preview = () => '<div class="lprevw">' + chipHTML({ ...it, name: it.name || t('libm.name') }, 'big') +
     (kind === 'genres' ? '<div class="stile3 demo" style="--g:' + it.color + '"><div class="grow"><div class="ttl">' + t('libm.demoTitle') + '</div><div class="st">' + t('libm.demoSub') + '</div></div></div>' : '') + '</div>';
-  const body = () => snav(t(ex ? 'libm.one.' + kind : 'libm.new.' + kind), { left: '<button class="link l" data-k="back">' + t('ui.back') + '</button>', right: '<button class="link b r" data-k="save">' + t('libm.save') + '</button>' }) +
+  const body = () => snav(t(ex ? 'libm.one.' + kind : 'libm.new.' + kind), { left: '<button class="ic sm plain" data-k="back" aria-label="' + esc(t('ui.back')) + '">' + icons.back + '</button>', right: '<button class="link b r" data-k="save">' + t('libm.save') + '</button>' }) +
     preview() + '<div class="group"><label class="cell"><input class="inp left" id="iname" maxlength="32" placeholder="' + t('libm.name') + '" aria-label="' + t('libm.name') + '" value="' + esc(it.name) + '"></label></div>' +
     '<div class="hdr">' + t('libm.color') + '</div><div class="group"><div class="cellcol">' + swatches('data-col', it.color, PALETTE) + '</div></div>' +
     '<div class="hdr">' + t('libm.textColor') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" style="margin-bottom:10px">' +

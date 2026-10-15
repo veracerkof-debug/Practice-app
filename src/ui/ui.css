@@ -120,3 +120,5 @@ button.cell:active{background:var(--fill)}
 .rank .rkcrown{stroke:var(--cell);stroke-width:2;paint-order:stroke}
 .rank .rkp{fill:color-mix(in srgb,var(--rk) 25%,transparent)}
 .rank .rkp.on{fill:var(--rk)}
+/* главная кнопка листа — внизу, под пальцем (сохранение занятия и т. п.) */
+.sheetfoot{position:sticky;bottom:0;margin:16px -4px 0;padding:10px 4px calc(6px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent,var(--bg) 30%);z-index:2}

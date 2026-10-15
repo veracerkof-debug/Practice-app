@@ -414,7 +414,7 @@ export function eventForm(app, ex, opts = {}, after = () => {}) {
 
 function kindsSheet(app, back) {
   const c = cal(app);
-  const body = () => snav(t('cal.kinds'), { left: '<button class="link l" data-kb>' + t('ui.back') + '</button>', right: '<span></span>' }) + '<div class="group">' +
+  const body = () => snav(t('cal.kinds'), { left: '<button class="ic sm plain" data-kb aria-label="' + esc(t('ui.back')) + '">' + icons.back + '</button>', right: '<span></span>' }) + '<div class="group">' +
     c.kinds.map((k) => '<button class="cell" data-ked="' + k.id + '"><span class="lchip" style="--c:' + k.color + ';--t:' + autoText(k.color) + '">' + esc(k.name) + '</span><span class="grow"></span>' +
       (k.task ? '<span class="l2" style="font-size:13px">' + t('cal.taskShort') + '</span>' : '') + icons.chev + '</button>').join('') +
     '<button class="cell act" data-ked="">' + t('cal.kindAdd') + '</button></div><p class="ftr">' + t('cal.kindsHint') + '</p>';
@@ -428,7 +428,7 @@ function kindsSheet(app, back) {
 function kindEditor(app, id, back) {
   const c = cal(app), ex = id ? kindOf(c, id) : null, k = ex ? { ...ex } : { id: 'k' + uid(), name: '', color: PALETTE[(c.kinds.length * 5) % 12] };
   const used = id ? (app.store.state.events || []).filter((e) => !e.deleted && e.kind === id).length : 0;
-  const body = () => snav(t(ex ? 'cal.kind' : 'cal.kindAdd'), { left: '<button class="link l" data-kk="back">' + t('ui.back') + '</button>', right: '<button class="link b r" data-kk="save">' + t('libm.save') + '</button>' }) +
+  const body = () => snav(t(ex ? 'cal.kind' : 'cal.kindAdd'), { left: '<button class="ic sm plain" data-kk="back" aria-label="' + esc(t('ui.back')) + '">' + icons.back + '</button>', right: '<button class="link b r" data-kk="save">' + t('libm.save') + '</button>' }) +
     '<div class="group"><label class="cell"><input class="inp left" id="kname" maxlength="32" placeholder="' + t('libm.name') + '" aria-label="' + t('libm.name') + '" value="' + esc(k.name) + '"></label></div>' +
     '<div class="hdr">' + t('libm.color') + '</div><div class="group"><div class="cellcol"><div class="swgrid">' + PALETTE.slice(0, 12).map((x) => '<button type="button" class="swc' + (k.color === x ? ' on' : '') + '" data-kc="' + x + '" style="background:' + x + '" aria-pressed="' + (k.color === x) + '" aria-label="' + esc(t('libm.colorAria', { c: x })) + '"></button>').join('') +
     '<label class="swc custom" aria-label="' + t('libm.customColor') + '"><input type="color" data-kc-in value="' + k.color + '"></label></div></div></div>' +
