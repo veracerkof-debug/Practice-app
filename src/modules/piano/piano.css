@@ -124,6 +124,6 @@
   .psyn .kl,.psyn .kx{font-size:clamp(8.5px,6cqh,10px)}
 }
 /* Полный экран (src/core/pure.js): клавиатура на весь экран — без панели, последней ноты и эффектов */
-.tview.pure .pbar,.tview.pure .lastnote,.tview.pure .psyn,.tview.pure .hlp{display:none!important}
-.tview.pure .pwrap{justify-content:stretch}
-.tview.pure .kbs{flex:1!important;gap:0}
+:is(.tview.pure,.pfull) .pbar,:is(.tview.pure,.pfull) .lastnote,:is(.tview.pure,.pfull) .psyn,:is(.tview.pure,.pfull) .hlp{display:none!important}
+:is(.tview.pure,.pfull) .pwrap{justify-content:stretch}
+:is(.tview.pure,.pfull) .kbs{flex:1!important;gap:0}

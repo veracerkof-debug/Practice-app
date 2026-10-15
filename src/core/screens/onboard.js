@@ -52,7 +52,7 @@ export function onboarding(app, done = () => {}) {
   document.body.appendChild(layer);
 
   const hours = () => wheelHours(f);
-  const toolsRow = (lvl) => toolsFor(lvl, p.instruments, allIds).map(moduleById).filter((m) => m && !m.tab)
+  const toolsRow = (lvl) => toolsFor(lvl, p.instruments, allIds).map(moduleById).filter((m) => m && !m.tab && !m.inner)
     .map((m) => '<span class="whtool" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '" title="' + esc(m.name && (m.name[getLang()] || m.name.ru) || m.id) + '">' + m.icon + '</span>').join('');
   const live = () => {
     const h = hours(), lvl = levelByHours(h);

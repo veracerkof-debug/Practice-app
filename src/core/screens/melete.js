@@ -1,10 +1,11 @@
 // Характер Мелеты: режим (классика / навязчивая / без уведомлений), время занятий, «напомнить за», обращение по имени,
 // наборы слов. Один и тот же блок — при регистрации (src/core/screens/onboard.js) и в «Уведомлениях» (panel.js).
-import { t } from '../../i18n/index.js';
+import { t, getLang } from '../../i18n/index.js';
 import { esc, seg, toast } from '../../ui/index.js';
 import { setMascotGender } from '../../i18n/index.js';
 import { setMascotLook } from '../../ui/mascot.js';
-import { STYLES, LEADS, OFFSETS, TONES, CUSTOM_MAX, remindOf, setRemind, remindAvailable, remindPermission, remindTest, exactAllowed, openExactSettings } from '../reminders.js';
+import { STYLES, LEADS, OFFSETS, TONES, CUSTOM_MAX, remindOf, setRemind, remindAvailable, remindPermission, remindTest, exactAllowed, openExactSettings, remindNext } from '../reminders.js';
+import { bgAsk } from '../background.js';
 import { remindText, remindCtx } from '../remindtexts.js';
 import { QSETS, setsOf } from '../quotes.js';
 import { mascotSVG } from '../../ui/mascot.js';
@@ -58,7 +59,10 @@ export function meleteHTML(st, { sets = false, test = false } = {}) {
       '<label class="sw"><input type="checkbox" data-ml="byName"' + (r.byName ? ' checked' : '') + ' aria-label="' + esc(t('rem.byName')) + '"><i></i></label></div>';
     if (test && remindAvailable()) h += '<button class="cell act" data-mltest>' + t('rem.test') + '</button>' +
       // точные будильники не разрешены — строка видна (её открывает проверка после отрисовки: mountMelete)
-      '<button class="cell act" data-mlexact hidden><span class="grow">' + t('rem.exact') + '<span class="psub">' + t('rem.exactHint') + '</span></span></button>';
+      '<button class="cell act" data-mlexact hidden><span class="grow">' + t('rem.exact') + '<span class="psub">' + t('rem.exactHint') + '</span></span></button>' +
+      // Honor, Huawei, Xiaomi и другие без «Автозапуска» снимают будильники закрытого приложения
+      '<button class="cell act" data-mlauto><span class="grow">' + t('rem.auto') + '<span class="psub">' + t('rem.autoHint') + '</span></span></button>' +
+      '<div class="cell l2" data-mlnext hidden style="font-size:13.5px"></div>';
   }
   h += '</div><p class="ftr">' + (mode === 'quiet' ? t('rem.quietHint') : t('rem.hint', { from: r.quietFrom, to: r.quietTo })) + (remindAvailable() || mode === 'quiet' ? '' : ' ' + t('rem.webOnly')) + '</p>';
   // Мелета-тамагочи: рядом на занятии, по желанию слушает и говорит, как идёт (src/core/tama.js)
@@ -101,6 +105,8 @@ export function bindMelete(el, getSt, { save, rerender, ask = true }) {
       if (s.has(m) && s.size > 1) s.delete(m); else s.add(m);
       setRemind(st, { leads: LEADS.filter((x) => s.has(x)) });
       save(); rerender();
+    } else if (g('[data-mlauto]')) {
+      bgAsk.autostart();
     } else if (g('[data-mlexact]')) {
       openExactSettings();
     } else if (g('[data-mltest]')) {
@@ -140,4 +146,11 @@ export function bindMelete(el, getSt, { save, rerender, ask = true }) {
 export function mountMelete(root) {
   const b = root.querySelector('[data-mlexact]');
   if (b) exactAllowed().then((ok) => { if (!ok && b.isConnected) b.hidden = false; });
+  // когда придёт ближайшее напоминание — видно, что расписание есть (пусто — подсказка про автозапуск)
+  const nx = root.querySelector('[data-mlnext]');
+  if (nx) remindNext().then((ts) => {
+    if (!nx.isConnected) return;
+    nx.hidden = false;
+    nx.textContent = ts ? t('rem.next', { when: new Date(ts).toLocaleString(getLang() === 'uz' ? 'uz-Latn' : getLang(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }) : t('rem.nextNone');
+  });
 }

@@ -21,6 +21,8 @@ export function backStep(app) {
   const tv = document.querySelector('.tview.pure:not(.leaving)');
   if (tv && tv.parentElement.pureExit && tv.parentElement.pureExit()) return true; // полный экран инструмента — сначала из него
   if (click('.tview:not(.leaving) [data-tv="close"]')) return true;
+  const ses = document.querySelector('.session.pure');
+  if (ses && ses.parentElement.pureExit && ses.parentElement.pureExit()) return true; // окно сессии во весь экран — сначала из него
   if (click('.session [data-s="hide"]')) return true;
   return app.shellBack ? app.shellBack() : false;
 }

@@ -907,6 +907,7 @@ export default {
   icon: ICON,
   color: '#A95E72',
   sizes: ['full', 'half', 'quarter', 'strip'],
+  pure: true, // полный экран: плеер и видео без шапки приложения (src/core/pure.js)
   status(c) {
     const list = c.files.list('audio'), td = list.reduce((s, x) => s + (x.dur || 0), 0);
     return list.length ? c.tn('files', list.length) + (td ? ' · ' + fmtDur(td) : '') : c.t('empty');

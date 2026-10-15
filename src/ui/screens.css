@@ -367,3 +367,11 @@
 /* заголовок только для чтения с экрана (вкладка «Инструменты» — без надписи) */
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .tgrid.tgtop{margin-top:14px}
+/* Открытая вкладка видна сразу: значок в цветной «капсуле», остальные приглушены */
+.tab{position:relative;color:var(--l3)}
+.tab svg{position:relative;z-index:1;transition:color .2s,stroke-width .2s}
+.tab::before{content:"";position:absolute;top:50%;left:50%;width:58px;height:36px;margin:-18px 0 0 -29px;border-radius:18px;background:color-mix(in srgb,var(--tint) 16%,transparent);opacity:0;transform:scale(.6);transition:opacity .2s,transform .25s cubic-bezier(.3,1.4,.5,1)}
+.tab[aria-current="page"]{color:var(--tint)}
+.tab[aria-current="page"]::before{opacity:1;transform:none}
+.tab[aria-current="page"] svg{stroke-width:2.1}
+:root[data-style="mono"] .tab::before{display:none}

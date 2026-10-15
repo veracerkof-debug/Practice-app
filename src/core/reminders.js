@@ -178,6 +178,17 @@ export async function rescheduleEvents(list) {
   } catch (e) { log('remind', 'события не запланировались: ' + errText(e), 'e'); return 0; }
 }
 
+// Ближайшее запланированное напоминание о практике (для строки в настройках): время или null
+export async function remindNext() {
+  const P = await plugin();
+  if (!P || !P.getPending) return null;
+  try {
+    const r = await P.getPending(), ts = (r.notifications || []).filter((x) => x.id >= ID0 && x.id < ID0 + ID_N)
+      .map((x) => new Date(x.schedule && x.schedule.at).getTime()).filter((x) => x > Date.now());
+    return ts.length ? Math.min(...ts) : null;
+  } catch { return null; }
+}
+
 // Проверка: напоминание сразу (как оно будет выглядеть). → 'ok' | 'denied' | 'off' | 'fail'
 export async function remindTest(texts, mode = 'classic', slot = 'lead:60', tone) {
   const P = await plugin();

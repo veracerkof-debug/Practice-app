@@ -33,6 +33,7 @@
 .voice .st{display:block;font-size:12.5px}
 /* окно уровня: дБ, шкала, лампочка перегруза, спектр */
 .voice .vc-mon{width:100%;max-width:560px;margin:0 auto 12px;background:var(--cell);border-radius:16px;padding:10px 12px 12px;box-sizing:border-box}
+.voice .vc-mon{cursor:pointer}
 .voice .vc-rec .vc-mon{width:min(100%,560px)}
 .voice .vc-monh{display:flex;align-items:center;gap:10px}
 .voice .vc-dbs{flex:1;min-width:0;display:grid;grid-template-columns:auto 1fr;column-gap:6px;align-items:baseline;white-space:nowrap}

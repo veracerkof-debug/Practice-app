@@ -67,7 +67,7 @@ function layout() {
   if (!kbs.length) return;
   const n = parseInt(kbs[0].style.getPropertyValue('--n'), 10) || 8, bar = host.querySelector('.pbar'), hl = host.querySelector('.hlp');
   // полный экран: клавиши — на всю высоту (две клавиатуры — пополам), без панели и полей
-  if (host.closest('.tview.pure')) { kbs.forEach((k) => (k.style.height = Math.floor(H / kbs.length) + 'px')); markHeld(); return; }
+  if (host.closest('.tview.pure, .pfull')) { kbs.forEach((k) => (k.style.height = Math.floor(H / kbs.length) + 'px')); markHeld(); return; }
   const used = (bar ? bar.offsetHeight + 8 : 0) + (hl ? hl.offsetHeight + 6 : 0) + 24, avail = (H - used) / kbs.length - (kbs.length > 1 ? 8 : 0);
   const ps = host.querySelector('.psyn');
   let kh = Math.round(Math.max(96, Math.min((W / n) * 5.2, avail, 340)));

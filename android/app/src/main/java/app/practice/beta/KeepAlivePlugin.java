@@ -79,6 +79,38 @@ public class KeepAlivePlugin extends Plugin {
         call.resolve();
     }
 
+    // «Автозапуск» / «Запуск приложений» у оболочек, которые без него снимают будильники закрытого приложения
+    // (напоминания не приходят): Honor, Huawei, Xiaomi, Oppo/Realme, Vivo, Samsung. Не нашлось — настройки приложения
+    private static final String[][] AUTOSTART = {
+        { "com.hihonor.systemmanager", "com.hihonor.systemmanager.startupmgr.ui.StartupNormalAppListActivity" },
+        { "com.hihonor.systemmanager", "com.hihonor.systemmanager.optimize.process.ProtectActivity" },
+        { "com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity" },
+        { "com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity" },
+        { "com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity" },
+        { "com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity" },
+        { "com.oplus.safecenter", "com.oplus.safecenter.permission.startup.StartupAppListActivity" },
+        { "com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity" },
+        { "com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity" },
+    };
+
+    @PluginMethod
+    public void autostart(PluginCall call) {
+        Context c = getContext();
+        for (String[] a : AUTOSTART) {
+            try {
+                Intent i = new Intent().setComponent(new android.content.ComponentName(a[0], a[1]));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                c.startActivity(i);
+                JSObject r = new JSObject();
+                r.put("opened", a[0]);
+                call.resolve(r);
+                return;
+            } catch (Exception ignored) { }
+        }
+        openAppSettings();
+        call.resolve(new JSObject());
+    }
+
     // Настройки приложения в системе (там — батарея, «Автозапуск», «Работа в фоне» у оболочек вроде Honor и Xiaomi)
     @PluginMethod
     public void openSettings(PluginCall call) { openAppSettings(); call.resolve(); }

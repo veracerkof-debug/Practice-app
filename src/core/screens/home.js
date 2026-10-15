@@ -33,7 +33,7 @@ import { showHelp } from '../help.js';
 export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
 const QUICK_MAX = 8;
 
-const quickList = (st) => (st.quick || QUICK_DEF).filter((id) => isOn(st, id) && moduleById(id) && !moduleById(id).tab);
+const quickList = (st) => (st.quick || QUICK_DEF).filter((id) => isOn(st, id) && moduleById(id) && !moduleById(id).tab && !moduleById(id).inner);
 
 export function streakPill(app, extra = '') {
   const st = app.store.state.settings;
@@ -245,7 +245,7 @@ export function quickEdit(app, rerender) {
         : '<button class="ic sm plain" data-qa="' + id + '" aria-label="' + t('quick.add') + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
   };
   const body = () => {
-    const q = sel().filter((id) => isOn(st, id) && moduleById(id) && !moduleById(id).tab), rest = modules.filter((m) => !m.tab).map((m) => m.id).filter((id) => isOn(st, id) && !q.includes(id));
+    const q = sel().filter((id) => isOn(st, id) && moduleById(id) && !moduleById(id).tab && !moduleById(id).inner), rest = modules.filter((m) => !m.tab && !m.inner).map((m) => m.id).filter((id) => isOn(st, id) && !q.includes(id));
     return snav(t('home.quick')) + '<div class="hdr" style="margin-top:4px">' + t('quick.onHome', { n: q.length, max: QUICK_MAX }) + '</div><div class="group">' +
       (q.length ? q.map((id, i) => row(id, true, i)).join('') : '<div class="cell l2">' + t('quick.empty') + '</div>') + '</div>' +
       (rest.length ? '<div class="hdr">' + t('quick.canAdd') + '</div><div class="group">' + rest.map((id) => row(id, false)).join('') + '</div>' : '') +

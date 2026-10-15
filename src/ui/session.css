@@ -144,3 +144,13 @@
 .mxm .mxi{padding:0;background:transparent;overflow:visible}
 .mxm .mxi svg{width:34px;height:34px;fill:revert-layer;stroke:revert-layer;stroke-width:revert-layer}
 .mxm.mu .mxi{background:transparent;opacity:.55}
+/* Значки окон сессии: открытый в окне — цветной, в фокусе — в цветной капсуле; остальные приглушены */
+.sdock .tb{color:var(--l3);position:relative}
+.sdock .tb.used{color:var(--tint);background:color-mix(in srgb,var(--tint) 9%,transparent)}
+.sdock .tb[aria-selected="true"]{color:var(--tint);background:color-mix(in srgb,var(--tint) 20%,transparent)}
+.sdock .tb[aria-selected="true"] svg,.sdock .tb.used svg{stroke-width:2.1}
+.sdock .tb[aria-selected="true"]::after{content:"";position:absolute;bottom:4px;left:50%;width:16px;height:3px;margin-left:-8px;border-radius:2px;background:var(--tint)}
+/* Окно во весь экран (меню окна → «Полный экран»): поверх заголовка, панели и других окон */
+.session .ws>.pane.toolhost.pfull{position:fixed;inset:0;z-index:80;margin:0;padding:0!important;border-radius:0;box-shadow:none;background:var(--bg);padding-top:env(safe-area-inset-top,0px)!important;padding-bottom:env(safe-area-inset-bottom,0px)!important}
+.pane.pfull>.grip,.pane.pfull>.comp>.csw{display:none!important}
+body:has(.tview.pure,.session.pure) .mxh{display:none!important} /* полный экран — без язычка микшера */

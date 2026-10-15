@@ -12,7 +12,7 @@ import { log } from './log.js';
 const KA = Capacitor.isNativePlatform() ? registerPlugin('KeepAlive') : null;
 export const bgAvailable = () => !!KA;
 export const bgStatus = () => (KA ? KA.status().catch(() => null) : Promise.resolve(null));
-export const bgAsk = { battery: () => KA && KA.askBattery(), notify: () => KA && KA.askNotify(), settings: () => KA && KA.openSettings() };
+export const bgAsk = { battery: () => KA && KA.askBattery(), notify: () => KA && KA.askNotify(), settings: () => KA && KA.openSettings(), autostart: () => KA && KA.autostart().catch(() => KA.openSettings()) };
 
 // Что сейчас идёт — строка для уведомления; null — ничего
 export function busyText(app) {

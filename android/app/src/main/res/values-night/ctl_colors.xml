@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Значки управления звуком в уведомлении: светлые на тёмной шторке -->
+<resources>
+    <color name="ctl_icon">#FFE8E4DE</color>
+</resources>

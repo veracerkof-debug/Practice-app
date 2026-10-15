@@ -42,7 +42,7 @@ const big = () => size === 'full' || size === 'half';
 /* ---------- alphaTab: один экземпляр на приложение ---------- */
 
 const AT = { lib: null, api: null, el: null, cur: null, score: null, track: 0, state: 'idle' };
-const ATP = { on: false, sf: false, playing: false, speed: 1, metro: false, err: false, timer: 0 };
+const ATP = { on: false, sf: false, playing: false, want: false, speed: 1, metro: false, err: false, timer: 0 };
 
 // Библиотека грузится только при открытии табулатуры (отдельный кусок сборки)
 const loadLib = () => AT.lib || (AT.lib = import('@coderline/alphatab').catch((e) => { AT.lib = null; throw e; }));
@@ -183,11 +183,14 @@ async function openTab(rec) {
     AT.el.className = 'atsurf';
     attach();
     AT.api = new at.AlphaTabApi(AT.el, {
-      core: { smuflFontSources: new Map([[at.FontFileFormat.Woff2, BRAVURA]]) },
+      core: { smuflFontSources: new Map([[at.FontFileFormat.Woff2, BRAVURA]]), includeNoteBounds: true }, // границы цифр — для подсветки играемого места
       player: { enablePlayer: false },
       display: { scale: st().scale, layoutMode: at.LayoutMode.Page, staveProfile: prof(at) },
     });
-    AT.api.scoreLoaded.on((sc) => { AT.score = sc; AT.track = 0; AT.state = 'ready'; render(); });
+    AT.api.scoreLoaded.on((sc) => { AT.score = sc; AT.track = 0; AT.state = 'ready'; hlHide(); render(); });
+    // подсветка играемого места — заново после каждой отрисовки (масштаб, вид, дорожка)
+    AT.api.renderFinished.on(() => { if (AT.beat) hlPlace(AT.beat, false); });
+    playerSetup(); // звуковой банк грузится сразу: нажатие на такт переводит туда, «Играть» — без ожидания
     AT.api.error.on((e) => { if (ctx) ctx.log('alphaTab: ' + ((e && (e.message || e.type)) || 'ошибка'), 'e'); AT.state = 'error'; render(); if (ctx) ctx.ui.toast(ctx.t('openFail')); });
   }
   try { AT.api.load(new Uint8Array(await rec.blob.arrayBuffer())); } catch { AT.state = 'error'; render(); }
@@ -213,6 +216,8 @@ function setTrack(i) {
 function attach() {
   const slot = host && host.querySelector('#atSlot');
   if (slot && AT.el && AT.el.parentNode !== slot) slot.appendChild(AT.el);
+  // прокрутка за играемым местом — в текущем окне (разметка окна пересоздаётся при каждой перерисовке)
+  if (slot && AT.api && ATP.on && AT.api.settings.player.scrollElement !== slot) { AT.api.settings.player.scrollElement = slot; AT.api.updateSettings(); }
   const ps = host && host.querySelector('#pdfSlot');
   if (ps && PDF.view && !PDF.full) PDF.view.moveTo(ps);
 }
@@ -230,35 +235,76 @@ function playerSetup() {
     api.soundFontLoaded.on(() => {
       ATP.sf = true;
       clearTimeout(ATP.timer);
-      api.masterVolume = vol();
+      api.masterVolume = ctx ? vol() : 1;
       api.playbackSpeed = ATP.speed;
       api.metronomeVolume = ATP.metro ? 1 : 0;
-      api.play();
+      if (ATP.want) { ATP.want = false; api.play(); }
       render();
     });
     api.playerStateChanged.on((e) => {
       ATP.playing = e.state === 1;
       const b = host && host.querySelector('#atplay');
       if (b) b.innerHTML = ATP.playing ? I.pause : I.play;
+      if (AT.hl) AT.hl.classList.toggle('play', ATP.playing);
     });
+    // играемое место: рамка вокруг цифр текущего удара; нажатие на ноту — переход туда
+    api.playedBeatChanged.on((beat) => hlPlace(beat, true));
+    api.beatMouseDown.on((beat) => hlPlace(beat, false));
     const s = api.settings;
     s.player.enablePlayer = true;
-    s.player.enableCursor = true;
-    s.player.enableAnimatedBeatCursor = true;
+    s.player.enableCursor = true; // свои полосы alphaTab скрыты (notes.css), нужны для перехода по нажатию
+    s.player.enableAnimatedBeatCursor = false;
     s.player.enableUserInteraction = true;
     s.player.soundFont = SONIVOX;
     const sc = host && host.querySelector('#atSlot');
     if (sc) s.player.scrollElement = sc;
     api.updateSettings();
-    api.render();
   } catch { ATP.err = true; }
-  ATP.timer = setTimeout(() => { if (!ATP.sf) { ATP.err = true; render(); if (ctx) ctx.ui.toast(ctx.t('sfFail')); } }, 15000);
+  ATP.timer = setTimeout(() => { if (!ATP.sf) { ATP.err = true; render(); if (ctx && ATP.want) ctx.ui.toast(ctx.t('sfFail')); } }, 15000);
+}
+
+/* ---------- подсветка играемого места (как в Songsterr): полупрозрачная рамка только вокруг цифр удара ---------- */
+
+function hlHide() { AT.beat = null; if (AT.hl) AT.hl.style.opacity = '0'; }
+
+function hlPlace(beat, anim) {
+  const api = AT.api, lk = api && api.renderer && api.renderer.boundsLookup;
+  if (!beat || !lk || !AT.el) return;
+  AT.beat = beat;
+  const all = (lk.findBeats && lk.findBeats(beat)) || [lk.findBeat(beat)].filter(Boolean);
+  if (!all.length) return;
+  // с нотами и табом — нижний нотоносец (таб); рамка — по цифрам, у паузы — узкая полоса по высоте такта
+  const bb = all[all.length - 1], notes = (bb.notes || []).map((n) => n.noteHeadBounds).filter(Boolean);
+  let x, y, w, h;
+  if (notes.length) {
+    const x0 = Math.min(...notes.map((r) => r.x)), x1 = Math.max(...notes.map((r) => r.x + r.w));
+    const y0 = Math.min(...notes.map((r) => r.y)), y1 = Math.max(...notes.map((r) => r.y + r.h));
+    const p = 4;
+    x = x0 - p; y = y0 - p; w = Math.max(x1 - x0 + 2 * p, 16); h = y1 - y0 + 2 * p;
+    if (w === 16) x = (x0 + x1) / 2 - 8;
+  } else {
+    const r = bb.barBounds.visualBounds, cx = bb.onNotesX || bb.visualBounds.x + bb.visualBounds.w / 2;
+    x = cx - 3; y = r.y; w = 6; h = r.h;
+  }
+  if (!AT.hl || AT.hl.parentNode !== AT.el) {
+    AT.hl = document.createElement('i');
+    AT.hl.className = 'athl';
+    AT.el.appendChild(AT.hl);
+  }
+  const el = AT.hl, jump = !anim || Math.abs((+el.dataset.y || 0) - y) > 30; // новая строка — без скольжения
+  el.style.transition = jump ? 'none' : '';
+  el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+  el.style.width = w + 'px';
+  el.style.height = h + 'px';
+  el.style.opacity = '1';
+  el.dataset.y = y;
+  el.classList.toggle('play', ATP.playing);
 }
 
 function togglePlay() {
   if (!AT.api || !AT.score) return;
-  if (!ATP.on) { playerSetup(); ctx.ui.toast(ctx.t('sfLoading')); render(); return; }
-  if (!ATP.sf) return;
+  if (!ATP.on) playerSetup();
+  if (!ATP.sf) { ATP.want = true; ctx.ui.toast(ctx.t('sfLoading')); render(); return; }
   AT.api.masterVolume = vol();
   AT.api.playPause();
 }
@@ -274,7 +320,7 @@ function tabRow(x) {
 
 function barHTML() {
   const { t } = ctx;
-  const note = ATP.err ? '<span class="l2" style="font-size:12px">' + t('playNA') + '</span>' : ATP.on && !ATP.sf ? '<span class="l2" style="font-size:12px">' + t('sfLoadingShort') + '</span>' : '';
+  const note = ATP.err ? '<span class="l2" style="font-size:12px">' + t('playNA') + '</span>' : ATP.want && !ATP.sf ? '<span class="l2" style="font-size:12px">' + t('sfLoadingShort') + '</span>' : '';
   return '<div class="atbar"><button class="bigplay atpl" id="atplay" data-x="atplay" aria-label="' + t('playTab') + '">' + (ATP.playing ? I.pause : I.play) + '</button>' +
     icb('data-x="atstop"', I.stop, t('stop'), 'sm') +
     '<div class="vrow tight">' + icb('data-x="atspd" data-d="-1"', I.minus, t('slower'), 'sm') + '<button class="ratev num" data-x="atspd" data-d="0" aria-label="' + t('speed') + '">' +
@@ -366,7 +412,7 @@ function html() {
   }
   const sw = '<div class="tsw" role="tablist">' + [['tabs', t('sec.tabs')], ['text', t('sec.text')]].map(([k, n]) =>
     '<button class="tswb' + (k === sec ? ' on' : '') + '" data-x="nsec" data-v="' + k + '" role="tab" aria-selected="' + (k === sec) + '">' + n + '</button>').join('') + '</div>';
-  return '<div class="comp ' + size + '">' + (big() ? sw : '<div class="csw"><button class="cswb on txt" data-x="nsec" data-v="tabs" aria-label="' + t('toTabs') + '">' + t('textShort') + ' ›</button></div>') +
+  return '<div class="comp notes-root ' + size + '">' + (big() ? sw : '<div class="csw"><button class="cswb on txt" data-x="nsec" data-v="tabs" aria-label="' + t('toTabs') + '">' + t('textShort') + ' ›</button></div>') +
     '<div class="cbody">' + (sec === 'text' ? textBody() : tabsBody()) + '</div></div>';
 }
 
@@ -538,7 +584,7 @@ function act(a, el) {
     case 'tzoom': st().scale = Math.max(0.5, Math.min(2, Math.round((st().scale + +el.dataset.d * 0.1) * 10) / 10)); ctx.store.save(); restyle(); break;
     case 'tprof': st().prof = st().prof === 'both' ? 'tab' : 'both'; ctx.store.save(); restyle(); render(); break;
     case 'atplay': togglePlay(); break;
-    case 'atstop': if (AT.api && ATP.sf) AT.api.stop(); break;
+    case 'atstop': if (AT.api && ATP.sf) AT.api.stop(); ATP.want = false; break;
     case 'atspd': {
       const d = +el.dataset.d;
       ATP.speed = d === 0 ? 1 : Math.max(0.25, Math.min(1.5, Math.round((ATP.speed + d * 0.1) * 100) / 100));
@@ -560,6 +606,8 @@ export default {
   icon: ICON,
   color: '#A2845E',
   sizes: ['full', 'half', 'quarter', 'strip'],
+  pure: true, // полный экран: только табы, ноты или текст (src/core/pure.js)
+  onPure() { requestAnimationFrame(() => { render(); if (AT.beat) hlPlace(AT.beat, false); }); },
   status(c) {
     const n = c.files.list('tab').length;
     return n ? c.tn('tabs', n) : c.t('statusIdle');

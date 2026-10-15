@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.widget.RemoteViews;
 import androidx.core.app.NotificationCompat;
 
 // Работа в фоне: пока в приложении что-то идёт (сессия, метроном, пэды, медиа, помодоро, секундомер), Android не
@@ -46,13 +47,21 @@ public class KeepAliveService extends Service {
             .setShowWhen(false)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(pi);
-        // пока что-то звучит — «Пауза / Продолжить», «Тише», «Громче»
+        // пока что-то звучит — значки «Тише», «Пауза / Продолжить», «Громче» (своя разметка: обычные кнопки
+        // уведомления на Android 7+ показывают только слова)
         if (PlayerPlugin.notifyCtl && PlayerPlugin.sounding()) {
             boolean playing = PlayerPlugin.playing();
-            b.addAction(playing ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
-                playing ? PlayerPlugin.label("pause", "Pause") : PlayerPlugin.label("play", "Play"), action(c, A_TOGGLE, 1));
-            b.addAction(0, PlayerPlugin.label("down", "−"), action(c, A_DOWN, 2));
-            b.addAction(0, PlayerPlugin.label("up", "+"), action(c, A_UP, 3));
+            RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.note_ctl);
+            v.setTextViewText(R.id.nc_title, title);
+            v.setTextViewText(R.id.nc_text, text);
+            v.setImageViewResource(R.id.nc_toggle, playing ? R.drawable.ic_ctl_pause : R.drawable.ic_ctl_play);
+            v.setOnClickPendingIntent(R.id.nc_toggle, action(c, A_TOGGLE, 1));
+            v.setOnClickPendingIntent(R.id.nc_down, action(c, A_DOWN, 2));
+            v.setOnClickPendingIntent(R.id.nc_up, action(c, A_UP, 3));
+            v.setContentDescription(R.id.nc_toggle, playing ? PlayerPlugin.label("pause", "Pause") : PlayerPlugin.label("play", "Play"));
+            v.setContentDescription(R.id.nc_down, PlayerPlugin.label("down", "Quieter"));
+            v.setContentDescription(R.id.nc_up, PlayerPlugin.label("up", "Louder"));
+            b.setStyle(new NotificationCompat.DecoratedCustomViewStyle()).setCustomContentView(v).setCustomBigContentView(v);
         }
         return b.build();
     }

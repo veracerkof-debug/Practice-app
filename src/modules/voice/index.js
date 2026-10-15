@@ -471,6 +471,8 @@ export default {
     const E = engine();
     offs = [E.on('level', onLevel), E.on('pos', onPos), E.on('end', onEnd), E.on('devices', loadDevices)];
     onClick = (e) => {
+      // нажатие на окно уровня (не на его кнопки) — полное окно спектра и шумомера
+      if (S.phase === 'idle' && e.target.closest('.vc-mon') && !e.target.closest('button, input, select, [data-x]')) { stopPlay(); ctx.openTool('spectrum'); return; }
       const sg = e.target.closest('[data-seg] [data-v]');
       if (sg) {
         const k = sg.closest('[data-seg]').dataset.seg;

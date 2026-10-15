@@ -23,6 +23,7 @@ import { freeTagName } from './panel.js';
 import { clockNotice } from './clock.js';
 import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
+import { pureEnter, pureLeave } from '../pure.js';
 
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -32,15 +33,21 @@ const IC = {
 
 /* ---------- группы окон ---------- */
 
-const inSession = (st, m) => m.session !== false && isOn(st, m.id);
+const inSession = (st, m) => m.session !== false && !m.tab && isOn(st, m.id); // Библия — только своя вкладка
 const groupOf = (m) => m.group || m.id;
+// Самые нужные на занятии — первыми на нижней панели; остальные — правее, по прокрутке
+const FIRST = ['metro', 'notes', 'drone', 'voice'];
+const rank = (g) => { const i = FIRST.indexOf(g); return i < 0 ? FIRST.length : i; };
 
-// Окна сессии по порядку модулей: rhythm, keys, theory, audio, notes
+// Окна сессии: сначала FIRST, затем по порядку модулей
 export function sessionGroups(st) {
   const out = [];
   modules.forEach((m) => { if (inSession(st, m) && !out.includes(groupOf(m))) out.push(groupOf(m)); });
-  return out.length ? out : ['rhythm'];
+  out.sort((a, b) => rank(a) - rank(b));
+  return out.length ? out : ['metro'];
 }
+// Значки нижней панели: без «внутренних» модулей (спектр открывается из диктофона)
+const dockGroups = (st) => sessionGroups(st).filter((g) => !(moduleById(g) || {}).inner);
 
 // Модули группы (окно старой «сессии с инструментом» — сам модуль)
 function members(st, g) {
@@ -72,7 +79,7 @@ export function createSessionScreen(app) {
   const { store, device, audio } = app;
   const st = () => store.state.settings;
   let layer = null, wsEl = null, panes = [], w = null, tickT = 0, ro = null, wake = null, prevOpenTool = null;
-  let DRG = null, dragSup = false;
+  let DRG = null, dragSup = false, pureI = -1;
 
   const song = () => (app.active && app.active.songId ? store.songById(app.active.songId) : null);
   const titleOf = (a) => (a.songId && song() ? song().title : a.type === 'tool' ? (moduleById(a.tool) ? moduleName(moduleById(a.tool)) : a.tool) : t('ses.free'));
@@ -121,9 +128,10 @@ export function createSessionScreen(app) {
       '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + icb('data-s="finish"', IC.check, t(st().toolsOnly ? 'ses.close' : 'ses.finish'), 'sm done') + '</div>' +
       '<div class="ws"></div></div>' +
       (tm ? '' : '<div class="sdock"><div class="tbar" id="tpills" role="tablist" aria-label="' + esc(t('ses.tools')) + '">' +
-        sessionGroups(st()).map((g) => '<button class="tb" data-pill="' + g + '" role="tab" aria-label="' + esc(groupName(st(), g)) + '" title="' + esc(groupName(st(), g)) + '">' + groupIcon(g) + '</button>').join('') +
+        dockGroups(st()).map((g) => '<button class="tb" data-pill="' + g + '" role="tab" aria-label="' + esc(groupName(st(), g)) + '" title="' + esc(groupName(st(), g)) + '">' + groupIcon(g) + '</button>').join('') +
         '</div></div>') + '</div>';
     document.body.appendChild(layer);
+    layer.pureExit = () => (pureI >= 0 ? (setPanePure(-1), true) : false);
     wsEl = layer.querySelector('.ws');
     if (!tm) coreHelp(app, 'session'); // сессия с окнами (у инструмента вне сессии — своя инструкция)
     const ses = layer.querySelector('.session');
@@ -150,6 +158,7 @@ export function createSessionScreen(app) {
 
   function hide() {
     if (!layer) return;
+    setPanePure(-1);
     unmountAll();
     if (ro) ro.disconnect();
     clearInterval(tickT);
@@ -195,6 +204,7 @@ export function createSessionScreen(app) {
   function renderWS(animIdx) { return bareScope(() => renderWSNow(animIdx)); }
   function renderWSNow(animIdx) {
     if (!wsEl) return;
+    setPanePure(-1);
     fixWS(w, sessionGroups(st()), app.active);
     unmountAll();
     if (w.layout === 'F') wsEl.innerHTML = paneHTML(0);
@@ -219,7 +229,7 @@ export function createSessionScreen(app) {
 
   // Размер окна — по его пикселям: при смене — модуль перерисовывается в новом размере
   function classify() {
-    if (!wsEl) return;
+    if (!wsEl || pureI >= 0) return; // окно во весь экран — размеры остальных не пересчитываются
     panes.forEach((p, i) => {
       if (!p) return;
       const s = measure(p.frame);
@@ -308,10 +318,41 @@ export function createSessionScreen(app) {
   }
 
   /* ---------- шторки окон ---------- */
+  // Окно во весь экран (глайдер, терменвокс, пианино, медиатека, табы и текст — manifest.pure): только рабочая поверхность,
+  // без заголовка сессии, панели и других окон; выход — «Назад», Esc, выход браузера из полного экрана
+  function setPanePure(i) {
+    if (i === pureI || !layer) return;
+    const ses = layer.querySelector('.session'), was = pureI >= 0 ? panes[pureI] : null;
+    if (was) {
+      was.frame.classList.remove('pfull');
+      ses.classList.remove('pure');
+      pureI = -1;
+      document.removeEventListener('keydown', pureKey);
+      pureLeave();
+      if (was.mod && was.mod.onPure) { try { was.mod.onPure(false, was.inst.ctx); } catch { /* перерисуется по размеру */ } }
+      requestAnimationFrame(() => { classify(); rotCheck(); });
+    }
+    const p = i >= 0 ? panes[i] : null;
+    if (!p || !p.inst) return;
+    pureI = i;
+    ses.classList.add('pure');
+    p.frame.classList.add('pfull');
+    document.addEventListener('keydown', pureKey);
+    pureEnter(() => setPanePure(-1));
+    toast(t('tools.pureHint'));
+    requestAnimationFrame(() => {
+      if (p.size !== 'full') { p.size = 'full'; p.inst.resize('full'); }
+      if (p.mod.onPure) { try { p.mod.onPure(true, p.inst.ctx); } catch { /* перерисуется по размеру */ } }
+    });
+  }
+  function pureKey(e) { if (e.key === 'Escape' && !document.querySelector('#sheetLayer .scrim')) setPanePure(-1); }
+
   function paneMenu(i) {
     const sz = lsizes(w.layout)[i], id = w.panes[i], multi = w.layout !== 'F';
     const it = (k, n, cls) => '<button class="cell' + (cls ? ' ' + cls : '') + '" data-pm="' + k + '"><span class="grow">' + n + '</span></button>';
+    const canPure = !!(panes[i] && panes[i].mod && panes[i].mod.pure);
     sheet(() => snav(groupName(st(), id)) + '<div class="group">' +
+      (canPure ? it('pure', t('pm.pure')) : '') +
       (multi ? it('full', t('pm.full')) : '') +
       (sz === 'full' || sz === 'half' ? it('addb', t('pm.addBottom')) + (sz === 'half' ? it('addr', t('pm.addRight')) : '') : '') +
       (multi ? it('swap', t('pm.swap')) : '') + it('schemes', t('pm.schemes')) + (multi ? it('close', t('pm.close'), 'danger') : '') + '</div>' +
@@ -321,7 +362,8 @@ export function createSessionScreen(app) {
       if (!b) return;
       const k = b.dataset.pm;
       sh.close();
-      if (k === 'full') relayout(setLayout, 'F', [id]);
+      if (k === 'pure') setPanePure(i);
+      else if (k === 'full') relayout(setLayout, 'F', [id]);
       else if (k === 'addb' || k === 'addr') {
         const r = addPane(w, i, k === 'addb' ? 'bottom' : 'right');
         if (r === null) toast(t('pm.allShown'));

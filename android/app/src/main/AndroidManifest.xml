@@ -48,7 +48,8 @@
 
         <!-- Иконка приложения на выбор («Оформление», src/ui/appicons.js): у каждой — своя маленькая activity-ярлык
              (IconActivities.java), включена ровно одна; она сразу открывает MainActivity. Не activity-alias: некоторые
-             установщики отвергают пакет, где значок запуска есть только у alias -->
+             установщики отвергают пакет, где значок запуска есть только у alias. Ярлык живёт в своей задаче
+             (taskAffinity=""): иначе его excludeFromRecents прятал из «Недавних» всё приложение -->
         <activity
             android:name=".IconMelete"
             android:enabled="false"
@@ -58,6 +59,7 @@
             android:roundIcon="@mipmap/ic_launcher_melete_round"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -73,6 +75,7 @@
             android:roundIcon="@mipmap/ic_launcher_meletiy_round"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -88,6 +91,7 @@
             android:roundIcon="@mipmap/ic_launcher_note_round"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -103,6 +107,7 @@
             android:roundIcon="@mipmap/ic_launcher_clef_round"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -118,6 +123,7 @@
             android:roundIcon="@mipmap/ic_launcher_fork_round"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -133,6 +139,7 @@
             android:roundIcon="@mipmap/ic_launcher_keys_round"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -148,6 +155,7 @@
             android:roundIcon="@mipmap/ic_launcher_round"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

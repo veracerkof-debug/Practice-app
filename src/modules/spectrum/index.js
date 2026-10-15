@@ -226,6 +226,7 @@ function micStop() {
 export default {
   id: 'spectrum',
   order: 100,
+  inner: true, // не отдельный инструмент: открывается нажатием на окно уровня в диктофоне
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },
   icon: ICON,

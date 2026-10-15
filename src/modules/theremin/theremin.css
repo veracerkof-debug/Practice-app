@@ -72,5 +72,5 @@
 /* задняя камера — картинка без зеркала (как и точки рук, hands.js) */
 .tm.back .tmcam{transform:none}
 /* Полный экран (src/core/pure.js): только картинка и руки — без кнопок и надписей; камера выключена — кнопка «Старт» остаётся */
-.tview.pure .tmbar,.tview.pure .tmnote,.tview.pure .tmlost,.tview.pure .tmhint,.tview.pure .tmpriv,.tview.pure .mlbtn{display:none!important}
-.tview.pure .tm{border-radius:0}
+:is(.tview.pure,.pfull) .tmbar,:is(.tview.pure,.pfull) .tmnote,:is(.tview.pure,.pfull) .tmlost,:is(.tview.pure,.pfull) .tmhint,:is(.tview.pure,.pfull) .tmpriv,:is(.tview.pure,.pfull) .mlbtn{display:none!important}
+:is(.tview.pure,.pfull) .tm{border-radius:0}
