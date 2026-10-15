@@ -14,3 +14,8 @@
 @media (prefers-reduced-motion:reduce){.hmenu{animation:none}}
 :root[data-style="mono"] .hmenu{box-shadow:none;border:1px solid var(--line,var(--sep))}
 :root[data-style="mono"] .lifted{box-shadow:none;outline:1px solid var(--ink)}
+/* перетаскивание, как значков на главном экране (dragSort) */
+.dragging{position:relative;z-index:30;transition:none!important;box-shadow:0 14px 34px rgba(0,0,0,.24);opacity:.96;touch-action:none}
+.sorting,.sorting *{user-select:none;-webkit-user-select:none}
+:root[data-style="mono"] .dragging{box-shadow:none;outline:1px solid var(--ink)}
+.draghost{position:relative}

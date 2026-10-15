@@ -9,9 +9,9 @@ import { TAB_ICONS, tabIds } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule } from '../modules.js';
 import { visibleTabs } from '../settings.js';
-import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeBlockMenu, streakSheet, gemSheet, leagueCheck, nameSheet } from './home.js';
+import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeBlockMenu, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
-import { renderTools, openToolView } from './tools.js';
+import { renderTools, openToolView, toolsTab, setToolsTab } from './tools.js';
 import { reportSheet } from './report.js';
 import { songImportMenu } from './songimport.js';
 import { shareSheet, shareMenu } from './share.js';
@@ -21,7 +21,7 @@ import { onboarding, langGate, askName } from './onboard.js';
 import { logoHTML } from '../../ui/logo.js';
 import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
-import { onHold } from '../../ui/hold.js';
+import { dragSort } from '../../ui/hold.js';
 
 export function createShell(app, root) {
   const tabsNow = () => visibleTabs(app.store.state.settings, tabIds(app.store.state.settings));
@@ -151,10 +151,23 @@ export function createShell(app, root) {
     return true;
   }
 
-  // Долгое нажатие на инструмент (главная, вкладка «Инструменты») — меню: открыть, переместить, убрать, добавить
-  onHold(root, '[data-open-tool]', (b) => toolHoldMenu(app, b, render, (id) => openToolView(app, id, render)));
-  // Долгое нажатие на блок главной (мимо инструментов и вращаемых камней) — меньше, больше, выше, ниже, убрать
-  onHold(root, '[data-hb]', (b, e) => { if (e.target.closest('[data-open-tool], canvas')) return; homeBlockMenu(app, b, render, () => panel.open('homes')); });
+  // Инструменты (быстрый доступ на главной, вкладка «Инструменты») и блоки главной переставляются, как значки на
+  // главном экране телефона: удержать — поднять, перенести, отпустить. Удержание без движения — меню
+  dragSort(root, '[data-open-tool]', 'data-open-tool', {
+    onStill: (b) => toolHoldMenu(app, b, render, (id) => openToolView(app, id, render)),
+    onDrop: (ids, el) => {
+      const st = app.store.state.settings;
+      if (el.closest('.tgrid')) { const T = toolsTab(st); T.order = [...ids, ...T.order.filter((x) => !ids.includes(x))]; setToolsTab(st, T); }
+      else { const full = (st.quick || QUICK_DEF).slice(); st.quick = [...ids, ...full.filter((x) => !ids.includes(x))]; }
+      app.store.settingsChanged(); render();
+    },
+  });
+  // блоки главной (мимо инструментов и вращаемых камней)
+  dragSort(root, '[data-hb]', 'data-hb', {
+    skip: (e) => !!e.target.closest('[data-open-tool], canvas'),
+    onStill: (b) => homeBlockMenu(app, b, render, () => panel.open('homes')),
+    onDrop: (ids) => { const st = app.store.state.settings, L = homeLayout(st); L.order = [...ids, ...L.order.filter((k) => !ids.includes(k))]; setHomeLayout(st, L); app.store.settingsChanged(); render(); },
+  });
   // Вкладка «Инструменты» обрабатывает свои карточки сама
   root.addEventListener('click', (e) => { if (!e.target.closest('[data-open-tool]') || view.tab !== 'tools') act(e); });
   root.addEventListener('input', (e) => {

@@ -1304,7 +1304,7 @@
   "tools.back": "Return to the list",
   "tools.hide": "Remove from the list",
   "tools.hiddenToast": "Removed — it can be returned at the bottom of the tab",
-  "tools.holdHint": "Hold a tool for a menu: move, remove from the list, add to home. Removed tools still work in quick access and sessions.",
+  "tools.holdHint": "Hold and drag to reorder; hold and release for a menu.",
   "wel.tag": "A companion app for practice",
   "ob.wheelTitle": "How many hours already played?",
   "ob.hoursUnit": "hours",

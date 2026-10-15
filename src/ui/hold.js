@@ -91,3 +91,103 @@ export function sortable(list, rowSel, key, onDrop) {
   // touchmove не должен прокручивать страницу, пока строка поднята
   list.addEventListener('touchmove', (e) => { if (drag) e.preventDefault(); }, { passive: false });
 }
+
+// Перестановка, как значков на главном экране телефона: удержать элемент — он приподнимается и идёт за пальцем,
+// соседи расступаются (сетка или список — неважно, меняются местами элементы одного родителя); отпустить —
+// элемент встаёт на новое место, onDrop(ids, el) — новый порядок (значения атрибута key). Удержание без движения —
+// onStill(el, e) (меню). skip(e) — не начинать (например, касание пришлось на вложенный элемент). У края экрана —
+// прокрутка. Пока элемент поднят, страница не прокручивается пальцем.
+export function dragSort(root, sel, key, { onDrop, onStill, skip } = {}) {
+  let D = null, last = null;
+  root.addEventListener('pointermove', (e) => { last = e; }, { passive: true });
+  onHold(root, sel, (el, e) => {
+    if (skip && skip(e)) return;
+    const p = last && last.pointerId === e.pointerId ? last : e;
+    D = { el, id: e.pointerId, x0: p.clientX, y0: p.clientY, x: p.clientX, y: p.clientY, moved: false, e, raf: 0, scroller: scrollerOf(el) };
+    el.classList.add('dragging');
+    el.parentElement.classList.add('draghost');
+    document.documentElement.classList.add('sorting');
+    document.addEventListener('pointermove', move, { passive: false });
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', up);
+    D.raf = requestAnimationFrame(edge);
+  });
+  const siblings = (el) => [...el.parentElement.children].filter((x) => x.matches(sel));
+  const place = () => { const { el, x, y, x0, y0 } = D; el.style.transform = 'translate(' + (x - x0) + 'px,' + (y - y0) + 'px) scale(1.04)'; };
+  function move(e) {
+    if (!D || e.pointerId !== D.id) return;
+    e.preventDefault();
+    D.x = e.clientX; D.y = e.clientY;
+    if (!D.el.isConnected) { end(); return; }
+    if (Math.hypot(D.x - D.x0, D.y - D.y0) > 6) D.moved = true;
+    place();
+    // элемент под пальцем — по раскладке, без учёта анимации соседей (offset*), — меняемся местами;
+    // соседи переезжают плавно (FLIP)
+    const all = siblings(D.el), host = D.el.parentElement, hb = host.getBoundingClientRect();
+    const tg = all.find((x) => {
+      if (x === D.el) return false;
+      const l = hb.left + host.clientLeft + x.offsetLeft, t = hb.top + host.clientTop + x.offsetTop;
+      return D.x >= l && D.x <= l + x.offsetWidth && D.y >= t && D.y <= t + x.offsetHeight;
+    });
+    if (!tg) return;
+    const before = new Map(all.map((x) => [x, x.getBoundingClientRect()]));
+    const r0 = before.get(D.el), dx0 = D.x - D.x0, dy0 = D.y - D.y0;
+    if (all.indexOf(D.el) < all.indexOf(tg)) tg.after(D.el); else tg.before(D.el);
+    D.el.style.transform = '';
+    const r1 = D.el.getBoundingClientRect();
+    // палец остаётся на том же месте элемента
+    D.x0 += r1.left - (r0.left - dx0); D.y0 += r1.top - (r0.top - dy0);
+    place();
+    all.forEach((x) => {
+      if (x === D.el) return;
+      const a = before.get(x), b = x.getBoundingClientRect();
+      if (!a || (a.left === b.left && a.top === b.top)) return;
+      x.style.transition = 'none';
+      x.style.transform = 'translate(' + (a.left - b.left) + 'px,' + (a.top - b.top) + 'px)';
+      requestAnimationFrame(() => { x.style.transition = 'transform .18s ease'; x.style.transform = ''; });
+    });
+  }
+  // у верхнего и нижнего края — прокрутка (элемент остаётся под пальцем)
+  function edge() {
+    if (!D) return;
+    const s = D.scroller, h = innerHeight, v = D.y < 90 ? -Math.ceil((90 - D.y) / 6) : D.y > h - 110 ? Math.ceil((D.y - (h - 110)) / 6) : 0;
+    if (v && s) {
+      const before = s === document.scrollingElement ? scrollY : s.scrollTop;
+      if (s === document.scrollingElement) scrollBy(0, v); else s.scrollTop += v;
+      const moved = (s === document.scrollingElement ? scrollY : s.scrollTop) - before;
+      if (moved) { D.y0 -= moved; place(); }
+    }
+    D.raf = requestAnimationFrame(edge);
+  }
+  function end() {
+    if (!D) return null;
+    const d = D;
+    D = null;
+    cancelAnimationFrame(d.raf);
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', up);
+    document.removeEventListener('pointercancel', up);
+    document.documentElement.classList.remove('sorting');
+    d.el.classList.remove('dragging');
+    if (d.el.parentElement) d.el.parentElement.classList.remove('draghost');
+    d.el.style.transform = ''; d.el.style.pointerEvents = '';
+    return d;
+  }
+  function up(e) {
+    if (!D || e.pointerId !== D.id) return;
+    const d = end();
+    if (!d.el.isConnected) return;
+    if (d.moved) onDrop && onDrop(siblings(d.el).map((x) => x.getAttribute(key)), d.el);
+    else onStill && onStill(d.el, d.e);
+  }
+  // пока элемент поднят, страница пальцем не прокручивается
+  document.addEventListener('touchmove', (e) => { if (D) e.preventDefault(); }, { passive: false });
+}
+
+function scrollerOf(el) {
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const o = getComputedStyle(p).overflowY;
+    if ((o === 'auto' || o === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+  }
+  return document.scrollingElement;
+}
