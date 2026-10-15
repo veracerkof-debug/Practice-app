@@ -67,5 +67,31 @@ export function sendToReverb(node, level) {
   return s;
 }
 
+// Длинный зал для пэдов (поклонение): отдельная реверберация ~7 с с мягкими верхами и медленным нарастанием —
+// звук «растворяется» в пространстве, не мешая общей реверберации остальных инструментов. Создаётся при первом посыле
+let hall = null;
+function hallNode() {
+  if (hall || !ctx) return hall;
+  try {
+    const cv = ctx.createConvolver(), lp = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter(), g = ctx.createGain();
+    cv.buffer = makeIR(ctx, 7, { damp: 0.86, pre: 0.035 });
+    hp.type = 'highpass'; hp.frequency.value = 140;
+    lp.type = 'lowpass'; lp.frequency.value = 5200;
+    g.gain.value = 0.62;
+    hall = ctx.createGain();
+    hall.connect(hp).connect(cv).connect(lp).connect(g).connect(comp);
+  } catch { hall = null; }
+  return hall;
+}
+// Посыл в длинный зал (уровень 0…1); возвращает узел посыла или null
+export function sendToHall(node, level) {
+  const h = hallNode();
+  if (!h) return null;
+  const s = ctx.createGain();
+  s.gain.value = level;
+  node.connect(s).connect(h);
+  return s;
+}
+
 // MIDI → Гц при заданном строе A4
 export const midiFreq = (m, a4 = 440) => a4 * Math.pow(2, (m - 69) / 12);

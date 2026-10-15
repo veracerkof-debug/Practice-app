@@ -42,7 +42,9 @@ function tapped(v, x) {
   };
 }
 const createGlideVoice = (c, d, p, opt) => tapped(glideVoice(c, d, p, opt), { kind: 'glide', p, hold: !!(opt && opt.hold) });
-const createPadVoice = (c, d, sound, opt) => tapped(padVoice(c, d, sound, opt), { kind: 'pad', sound });
+// пэды терменвокса — с длинным залом из настроек «Пэдов» (поклонение)
+const padHall = () => { try { return +(ctx.peek('drone').hall) || 0; } catch { return 0; } };
+const createPadVoice = (c, d, sound, opt) => tapped(padVoice(c, d, sound, { ...opt, hall: padHall() }), { kind: 'pad', sound });
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M7 21V11.5a1.5 1.5 0 0 1 3 0V9a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5z"/><path d="M3 7c1.5-2 3-2 4.5 0S10.5 9 12 7s3-2 4.5 0"/></svg>';
 const I = {
@@ -325,7 +327,7 @@ function midiIn(e) {
     // из записи — тот же голос и звук; с клавиатуры и из чужого файла — текущий звук терменвокса
     const pad = x.kind === 'pad' ? x.sound : x.kind ? null : padOf(s.sound), p = pad ? null : x.p || patch(s);
     ctx.audio.mixer.setReverb('glider', pad ? 0.6 : (p.rev || 0) * 0.9);
-    const v = pad ? padVoice(dest.context, S.bus.input, pad, a4) : glideVoice(dest.context, S.bus.input, p, { hold: x.kind ? !!x.hold : true, ...a4 });
+    const v = pad ? padVoice(dest.context, S.bus.input, pad, { ...a4, hall: padHall() }) : glideVoice(dest.context, S.bus.input, p, { hold: x.kind ? !!x.hold : true, ...a4 });
     v.start(e.m, x.o || voiceFx(s.fx, e.y ?? 0.3));
     rv.set(e.id, v);
     showNote(e.m);

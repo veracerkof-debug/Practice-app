@@ -117,7 +117,8 @@ describe('звук: синтезатор, пэды, микшер, настрой
   });
   it('пэды: значения по умолчанию, ноты, тампура', () => {
     const d = loadDevice(memStorage({ [LS_T]: JSON.stringify(stored) }));
-    expect(normalizeDrone(d.drone)).toEqual(clone(L.DC()));
+    // поверх прототипа — новые настройки поклонения (длинный зал и «Air»), по умолчанию выключены
+    expect(normalizeDrone(d.drone)).toEqual({ ...clone(L.DC()), hall: 0, air: 0 });
     d.drone.layers = { 2: true, 3: true, 4: true };
     for (const chord of ['root', 'fifth', 'maj', 'min', 'sus4']) {
       d.drone.chord = chord;

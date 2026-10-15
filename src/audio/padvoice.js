@@ -3,6 +3,7 @@
 // (glider/voice.js: start, pitch, fx, release), — терменвокс играет им аккорды.
 import { wave } from './waves.js';
 import { SOUNDS } from './drone.js';
+import { sendToHall } from './context.js';
 
 // тампура — щипок по рисунку, не созвучие. «Шиммер» — пэд для поклонения: тёплая основа, медленное вступление
 // и мерцающий хвост из октавы и квинты сверху (как отражения большого зала), только у голоса пэда
@@ -11,7 +12,8 @@ export const PAD_SOUNDS = ['shimmer', ...Object.keys(SOUNDS).filter((k) => k !==
 // как голосом соло (замер: среднеквадратичный уровень четырёх голосов ≈ 0,09)
 const LVL = { soft: 0.152, pad: 0.205, bow: 0.224, choir: 0.5, glass: 0.147, shimmer: 0.15 };
 
-export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5, move = 0.5 } = {}) {
+// hall — посыл в длинный зал (поклонение, src/audio/context.js), 0…1
+export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5, move = 0.5, hall = 0 } = {}) {
   const snd = PAD_SOUNDS.includes(sound) ? sound : 'soft', bright0 = snd === 'shimmer' ? 0.62 : SOUNDS[snd], t0 = c.currentTime + 0.003;
   const freq = (m) => a4 * Math.pow(2, (m - 69) / 12);
   const lp = c.createBiquadFilter(), amp = c.createGain(), vol = c.createGain(), out = c.createGain();
@@ -19,6 +21,7 @@ export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5,
   lp.Q.value = snd === 'pad' ? 1.3 : 0.5;
   amp.gain.value = 0;
   lp.connect(vol).connect(out).connect(dest);
+  if (hall > 0) sendToHall(out, hall);
   // «хор» — форманты гласной «а», как в пэдах
   if (snd === 'choir') {
     const mix = c.createGain();

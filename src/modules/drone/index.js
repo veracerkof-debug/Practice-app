@@ -12,7 +12,7 @@ const ICON = '<svg viewBox="0 0 24 24"><path d="M3 12h3l2-5 3 10 3-8 2 5 2-2h3"/
 const NOTE_ICON = '<svg viewBox="0 0 24 24"><path d="M9 18V6l11-2.5V15.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="15.5" r="2.5"/></svg>';
 const SH = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 // Что сохраняется в пресет пэдов
-const PRESET_KEYS = ['sound', 'chord', 'bright', 'move', 'width', 'fade', 'rev', 'vol', 'layers', 'xfade'];
+const PRESET_KEYS = ['sound', 'chord', 'bright', 'move', 'width', 'fade', 'rev', 'hall', 'air', 'vol', 'layers', 'xfade'];
 
 let host = null, ctx = null, size = 'full';
 let onClick = null;
@@ -56,6 +56,8 @@ function droneSheet() {
     '</div></div><p class="ftr">' + t('chord.ftr') + '</p>' +
     '<div class="hdr">' + t('character') + '</div><div class="group sgroup">' + sl('bright', 0, 1, 0.01, P) + sl('move', 0, 1, 0.01, P) + sl('width', 0, 1, 0.01, P) + '</div>' +
     '<div class="hdr">' + t('space') + '</div><div class="group sgroup">' + sl('fade', 0.2, 6, 0.1, SF) + sl('rev', 0, 1, 0.01, P) + sl('vol', 0, 1, 0.01, P) + '</div>' +
+    // поклонение: длинный зал (отдельная реверберация ~7 с) и «Air» — тихий шум, настроенный по нотам созвучия
+    '<div class="hdr">' + t('worship') + '</div><div class="group sgroup">' + sl('hall', 0, 1, 0.01, P) + sl('air', 0, 1, 0.01, P) + '</div><p class="ftr">' + t('worship.ftr') + '</p>' +
     '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('xfade') + '</span>' + ui.sw('dxf', d.xfade, t('xfade')) + '</div></div>';
   ui.sheet(body, (el, sh) => {
     let rt = 0;
@@ -92,6 +94,7 @@ function droneSheet() {
       ctx.store.save();
       if (k === 'vol') DR().vol();
       else if (k === 'rev') DR().setReverb(d.rev);
+      else if (k === 'hall') DR().setHall(d.hall);
       else if (k !== 'fade') later();
     });
     el.addEventListener('change', (e) => { if (e.target.dataset.sw === 'dxf') { d.xfade = e.target.checked; ctx.store.save(); } });

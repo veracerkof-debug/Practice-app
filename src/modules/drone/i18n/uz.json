@@ -58,5 +58,9 @@
   "help.what": "Choʻziluvchi nota yoki uygʻunlik — intonatsiya tayanchi.",
   "help.1": "Notaga bosish — dron; qayta bosish — toʻxtatish.",
   "help.2": "Qatlam, uygʻunlik va tembr — tugmalarda; oʻz presetlari — sozlamalarda.",
-  "help.tip": "Dron ustida gammalar notoʻgʻri intonatsiyani darhol koʻrsatadi."
+  "help.tip": "Dron ustida gammalar notoʻgʻri intonatsiyani darhol koʻrsatadi.",
+  "worship": "Hamdu sano",
+  "k.hall": "Katta zal",
+  "k.air": "Air",
+  "worship.ftr": "Katta zal — alohida uzun reverberatsiya, tovush makonda eriydi. Air — uygʻunlik notalaridagi sokin «nafas»."
 }

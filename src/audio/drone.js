@@ -1,6 +1,6 @@
 // Пэды и дрон: тёплый, пэд, смычок, хор, стекло, тампура. Слои по октавам, созвучия, плавная смена нот.
 // Настройки — объект device.drone (как в прототипе).
-import { getContext, masterNode, sendToReverb, midiFreq } from './context.js';
+import { getContext, masterNode, sendToReverb, sendToHall, midiFreq } from './context.js';
 import { wave } from './waves.js';
 
 // Тембры: id → яркость по умолчанию. Названия — ключи i18n drone.sound.<id>
@@ -18,6 +18,8 @@ export function normalizeDrone(d) {
   if (d.fade == null) d.fade = 1.8;
   if (d.rev == null) d.rev = 0.45;
   if (d.xfade == null) d.xfade = true;
+  if (d.hall == null) d.hall = 0;   // длинный зал (поклонение), 0…1
+  if (d.air == null) d.air = 0;     // «Air» — тихая шумовая подложка по нотам созвучия, 0…1
   return d;
 }
 
@@ -86,11 +88,11 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
       if (!c) return;
       const d = normalizeDrone(getSettings()), t = c.currentTime, master = c.createGain();
       master.connect(masterNode());
-      const send = sendToReverb(master, d.rev);
+      const send = sendToReverb(master, d.rev), hallS = d.hall > 0 ? sendToHall(master, d.hall) : null;
       master.gain.setValueAtTime(0, t);
       master.gain.linearRampToValueAtTime(level(), t + Math.max(0.15, d.fade));
       const os = [];
-      nodes = { g: master, os, send };
+      nodes = { g: master, os, send, hallS };
       if (d.sound === 'tanpura') {
         step = 0;
         next = t + 0.1;
@@ -159,6 +161,8 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
           os.push(o);
         }
       });
+      // «Air»: розовый шум через узкие полосы на нотах созвучия (и октавой выше) — дыхание пространства, очень тихо
+      if (d.air > 0.01) addAir(c, master, droneNotes(d).map(([m, lvl]) => [mf(m), lvl]), d.air, t, os);
       if (d.move > 0.02 && d.sound !== 'glass') { // движение фильтра
         const l = c.createOscillator(), lg = c.createGain();
         l.frequency.value = 0.05 + d.move * 0.1;
@@ -200,7 +204,48 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
     // Громкость (настройка пэдов × микшер)
     vol() { if (nodes) nodes.g.gain.setTargetAtTime(level(), nodes.g.context.currentTime, 0.05); },
     setReverb(v) { if (nodes && nodes.send) nodes.send.gain.setTargetAtTime(v, nodes.send.context.currentTime, 0.05); },
+    // длинный зал: если посыла ещё нет — пэд перезапускается плавно (swap)
+    setHall(v) { if (!nodes) return; if (nodes.hallS) nodes.hallS.gain.setTargetAtTime(v, nodes.hallS.context.currentTime, 0.1); else if (v > 0) dr.swap(); },
   };
   mixer.subscribe(() => dr.vol());
   return dr;
+}
+
+// Розовый шум (буфер на 4 с, по кругу) → полосы на частотах нот (Q ~ 18) → тихий уровень. Узлы-источники — в os (остановка)
+const pinkCache = new WeakMap();
+function pinkBuffer(c) {
+  if (pinkCache.has(c)) return pinkCache.get(c);
+  const n = c.sampleRate * 4, b = c.createBuffer(2, n, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = b.getChannelData(ch);
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
+    for (let i = 0; i < n; i++) {
+      const w = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+      b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+      d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + w * 0.5362) * 0.11;
+    }
+  }
+  pinkCache.set(c, b);
+  return b;
+}
+export function addAir(c, dest, notes, amount, t, os) {
+  const src = c.createBufferSource(), g = c.createGain(), sway = c.createOscillator(), sg = c.createGain();
+  src.buffer = pinkBuffer(c); src.loop = true;
+  g.gain.value = 0;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(amount * 0.9, t + 3); // вступает медленно
+  // медленное «дыхание» громкости
+  sway.frequency.value = 0.07; sg.gain.value = amount * 0.25;
+  sway.connect(sg).connect(g.gain);
+  g.connect(dest);
+  notes.forEach(([f, lvl]) => [[f, 1], [f * 2, 0.55]].forEach(([fq, k]) => {
+    if (fq > 9000) return;
+    const bp = c.createBiquadFilter(), bg = c.createGain();
+    bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = 18;
+    bg.gain.value = lvl * k * 1.6;
+    src.connect(bp).connect(bg).connect(g);
+  }));
+  src.start(t); sway.start(t);
+  os.push(src, sway);
 }

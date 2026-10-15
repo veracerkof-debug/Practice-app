@@ -46,15 +46,18 @@ export function noiseBuf(c) {
 }
 
 // Стерео-импульс зала длиной sec
-export function makeIR(c, sec) {
-  const len = Math.floor(c.sampleRate * sec), ir = c.createBuffer(2, len, c.sampleRate);
+// damp — насколько шум сглажен (выше — темнее хвост), pre — задержка до отражений, с (длинный зал — src/audio/context.js)
+export function makeIR(c, sec, { damp = 0.6, pre = 0 } = {}) {
+  const len = Math.floor(c.sampleRate * sec), ir = c.createBuffer(2, len, c.sampleRate), p0 = Math.floor(c.sampleRate * pre);
   for (let ch = 0; ch < 2; ch++) {
     const d = ir.getChannelData(ch);
     let lp = 0;
-    for (let i = 0; i < len; i++) {
-      const t = i / len;
-      lp = lp * 0.6 + (Math.random() * 2 - 1) * 0.4;
-      d[i] = lp * Math.pow(1 - t, 2.4) * (i < c.sampleRate * 0.012 ? i / (c.sampleRate * 0.012) : 1);
+    for (let i = p0; i < len; i++) {
+      const t = (i - p0) / (len - p0);
+      lp = lp * damp + (Math.random() * 2 - 1) * (1 - damp);
+      // у длинного зала — мягкое нарастание (~80 мс), у обычной реверберации — 12 мс
+      const att = pre ? 0.08 : 0.012, k = i - p0 < c.sampleRate * att ? (i - p0) / (c.sampleRate * att) : 1;
+      d[i] = lp * Math.pow(1 - t, pre ? 1.8 : 2.4) * k * (pre ? 1.6 : 1);
     }
   }
   return ir;
