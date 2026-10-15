@@ -18,16 +18,31 @@ import { PRESETS as SYN } from '../../audio/synth.js';
 import { mName, SH } from '../../music/notes.js';
 import { SCALE_TYPES } from '../../music/theory.js';
 import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, clampLo, notesIn } from '../glider/scale.js';
-import { createGlideVoice, createFxBus } from '../glider/voice.js';
+import { createGlideVoice as glideVoice, createFxBus } from '../glider/voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, PRESETS } from '../glider/fx.js';
 import { twoHandSign, assign, palm, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, RICH_MAP, PINCH_ON, PINCH_OFF } from './map.js';
 import { startHands } from './hands.js';
 import { readSign, chordOf, chordName, voicing, shapeOf, harmOf, harmOffsets, HARM_IDS, keySign, keyName, ACC_GESTURES } from './chords.js';
-import { createPadVoice, PAD_SOUNDS } from '../../audio/padvoice.js';
+import { createPadVoice as padVoice, PAD_SOUNDS } from '../../audio/padvoice.js';
 import { notesOf } from '../../music/guitarchords.js';
 import { createGuitar } from './guitar.js';
 import { melodyById, createFollower, fitRange } from '../../music/melodies.js';
 import { melStrip, melSheet } from '../glider/melody.js';
+
+// Голоса с записью игры (MIDI): каждое действие голоса уходит в запись (ctx.midi.ev), если она идёт.
+// В x — всё для точного повтора в самом терменвоксе (вид голоса, звук, эффекты); в файл .mid идут высота и время.
+let vid = 0;
+function tapped(v, x) {
+  const id = 't' + ++vid;
+  return {
+    start(m, o) { v.start(m, o); if (ctx) ctx.midi.ev({ k: 'on', id, m, x: { ...x, o } }); },
+    pitch(m, tau) { v.pitch(m, tau); if (ctx) ctx.midi.ev({ k: 'mv', id, m }); },
+    fx(o) { v.fx(o); if (ctx) ctx.midi.ev({ k: 'mv', id, x: { o } }); },
+    release() { v.release(); if (ctx) ctx.midi.ev({ k: 'off', id }); },
+  };
+}
+const createGlideVoice = (c, d, p, opt) => tapped(glideVoice(c, d, p, opt), { kind: 'glide', p, hold: !!(opt && opt.hold) });
+const createPadVoice = (c, d, sound, opt) => tapped(padVoice(c, d, sound, opt), { kind: 'pad', sound });
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M7 21V11.5a1.5 1.5 0 0 1 3 0V9a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5z"/><path d="M3 7c1.5-2 3-2 4.5 0S10.5 9 12 7s3-2 4.5 0"/></svg>';
 const I = {
@@ -293,6 +308,45 @@ function showNote(m) {
   n.textContent = mName(k);
   n.parentNode.classList.add('on');
   if (c) c.textContent = cfg().snap === 'note' ? '' : (cents > 0 ? '+' : cents < 0 ? '−' : '±') + Math.abs(cents) + '¢';
+}
+
+/* ---------- MIDI: клавиатура и воспроизведение записи ---------- */
+
+const rv = new Map(); // id → голос (без записи: воспроизведение не пишется заново)
+function midiIn(e) {
+  if (!ctx) return;
+  if (e.k === 'on') {
+    if (!ctx.audio.unlock()) return;
+    const dest = ctx.audio.bus('glider');
+    if (!dest) return;
+    if (!S.bus || S.bus.ctx !== dest.context) { S.bus = createFxBus(dest.context, dest); S.bus.ctx = dest.context; }
+    if (rv.has(e.id)) rv.get(e.id).release();
+    const s = cfg(), x = e.x || {}, a4 = { a4: ctx.audio.mf(69) };
+    // из записи — тот же голос и звук; с клавиатуры и из чужого файла — текущий звук терменвокса
+    const pad = x.kind === 'pad' ? x.sound : x.kind ? null : padOf(s.sound), p = pad ? null : x.p || patch(s);
+    ctx.audio.mixer.setReverb('glider', pad ? 0.6 : (p.rev || 0) * 0.9);
+    const v = pad ? padVoice(dest.context, S.bus.input, pad, a4) : glideVoice(dest.context, S.bus.input, p, { hold: x.kind ? !!x.hold : true, ...a4 });
+    v.start(e.m, x.o || voiceFx(s.fx, e.y ?? 0.3));
+    rv.set(e.id, v);
+    showNote(e.m);
+  } else if (e.k === 'mv') {
+    const v = rv.get(e.id);
+    if (!v) return;
+    if (e.m != null) { v.pitch(e.m, 0.02); showNote(e.m); }
+    if (e.x && e.x.o) v.fx(e.x.o);
+    else if (e.y != null) v.fx(voiceFx(cfg().fx, e.y));
+  } else if (e.k === 'off') {
+    const v = rv.get(e.id);
+    if (!v) return;
+    v.release();
+    rv.delete(e.id);
+    if (!rv.size && !S.voice && !S.cv) showNote(null);
+  }
+}
+function midiStop() {
+  rv.forEach((v) => v.release());
+  rv.clear();
+  if (!S.voice && !S.cv) showNote(null);
 }
 
 function releaseChord() {
@@ -876,6 +930,8 @@ export default {
   i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#866B9D',
+  // MIDI: запись игры (голоса — MPE), воспроизведение без камеры, MIDI-клавиатура (src/core/midi.js)
+  midiIn, midiStop,
   sizes: ['full', 'half', 'quarter', 'strip'],
   immersive: true, // в отдельном окне — на весь экран, без шапки
   pure: true, // и полный экран: только поверхность, без кнопок (src/core/pure.js)
@@ -923,6 +979,7 @@ export default {
     return { stream, stop() { cancelAnimationFrame(raf); stream.getTracks().forEach((tr) => tr.stop()); } };
   },
   unmount() {
+    midiStop();
     ro && ro.disconnect();
     offs.splice(0).forEach((f) => f());
     camOff();

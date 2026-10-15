@@ -50,6 +50,8 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 .tview.imm .tvpure ~ .tvrecf{top:calc(164px + env(safe-area-inset-top,0px))}
 .tview.imm .tvrecf{position:absolute;z-index:5;top:calc(112px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--cell) 80%,transparent)!important}
 .tvrec svg{fill:none;stroke:currentColor;stroke-width:1.8}
+.tvrec.play{background:var(--tint)!important;color:var(--on-tint,#fff)}
+.tvrec.play svg{fill:currentColor;stroke:none}
 .tvrec.on{background:var(--red)!important;color:#fff;width:auto!important;padding:0 12px 0 8px;gap:6px;border-radius:999px}
 .tvrec.on svg circle:last-child{animation:recblink 1.2s ease-in-out infinite}
 .tvrec .rectm{font-size:13px;font-weight:700}

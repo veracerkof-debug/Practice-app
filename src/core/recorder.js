@@ -6,8 +6,11 @@
 // Вход (микрофон телефона, гарнитура, USB, Bluetooth) и выход мониторинга выбираются, как в диктофоне: та же
 // система (src/audio/voiceengine.js) — на Android вход направляется маршрутом, в браузере — deviceId и setSinkId.
 // Готовая запись сохраняется в медиатеку (files.js) — на устройстве, никуда не отправляется.
+// MIDI (пианино, глайдер, терменвокс): не звук, а сама игра — события модуля (src/music/midi.js); сохраняется
+// файлом .mid (kind: 'midi', tool — модуль) вместе с точной записью для воспроизведения в самом инструменте (take).
 import { engine } from '../audio/voiceengine.js';
 import { setOutput } from '../audio/livefx.js';
+import { writeMidi, takeDur } from '../music/midi.js';
 
 const AUDIO_TYPES = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'];
 const VIDEO_TYPES = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/mp4', 'video/webm'];
@@ -130,9 +133,36 @@ export function createRecorder(app) {
     if (chain.mic) { set(chain.mic.micGain, p.mic ? p.micVol : 0); set(chain.mic.monGain, p.mon ? p.monVol : 0); }
   }
 
+  // MIDI-запись → медиатека: файл .mid и точная запись (take) для воспроизведения в инструменте
+  async function saveMidi(r) {
+    const ev = r.midi;
+    if (!ev.some((e) => e.k === 'on')) return null;
+    const blob = new Blob([writeMidi(ev, { name: r.tool })], { type: 'audio/midi' });
+    const rec = { id: 'm' + Date.now().toString(36), name: recName(r.tool, r.t0) + '.mid', size: blob.size, type: 'audio/midi', songs: r.songs,
+      created: Date.now(), blob, kind: 'midi', tool: r.mod, take: { v: 1, ev }, dur: takeDur(ev) };
+    try { await app.files.add(rec); return rec; } catch { return null; }
+  }
+
   return {
     get active() { return !!cur; },
-    get state() { return cur && { tool: cur.tool, t0: cur.t0, video: !!cur.video }; },
+    get state() { return cur && { tool: cur.tool, t0: cur.t0, video: !!cur.video, midi: cur.midi ? cur.mod : null }; },
+    // Событие игры модуля mod (во время MIDI-записи этого модуля — в запись; иначе ничего)
+    midiEv(mod, e) {
+      if (!cur || !cur.midi || cur.mod !== mod) return;
+      const t = (performance.now() - cur.p0) / 1000, L = cur.midi;
+      // движение голоса — не чаще ~40 раз в секунду: частые соседние движения сливаются в одно (последние значения)
+      if (e.k === 'mv') {
+        const j = cur.mvAt.get(e.id), o = j != null && L[j];
+        if (o && o.k === 'mv' && t - o.t < 0.025) {
+          if (e.m != null) o.m = e.m;
+          if (e.y != null) o.y = e.y;
+          if (e.x) o.x = { ...o.x, ...e.x };
+          return;
+        }
+        cur.mvAt.set(e.id, L.length);
+      }
+      L.push({ ...e, t });
+    },
     get prefs() { return prefs(); },
     meter,
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
@@ -149,8 +179,9 @@ export function createRecorder(app) {
 
     // opts: { tool (название), songs ([id]), video ({ stream, stop } от модуля или null) }
     // → 'ok' | 'nosound' | 'unsupported' | 'empty' (оба источника выключены) | 'mic' (микрофон не дали — без него)
-    async start({ tool, songs = [], video = null } = {}) {
+    async start({ tool, songs = [], video = null, midi = null } = {}) {
       if (cur) return 'ok';
+      if (midi) { cur = { midi: [], mod: midi, mvAt: new Map(), tool, songs, t0: Date.now(), p0: performance.now() }; emit(); return 'ok'; }
       if (!canRecord()) return 'unsupported';
       const p = prefs();
       if (!p.app && !p.mic) return 'empty';
@@ -179,6 +210,7 @@ export function createRecorder(app) {
       if (!r) return Promise.resolve(null);
       cur = null;
       emit();
+      if (r.midi) return saveMidi(r);
       return new Promise((done) => {
         r.mr.onstop = async () => {
           teardown();

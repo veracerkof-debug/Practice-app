@@ -18,7 +18,7 @@ const when = (ts) => new Date(ts).toLocaleString(getLang() === 'uz' ? 'uz-Latn' 
 const chk = (attrs, on) => '<input type="checkbox" ' + attrs + (on ? ' checked' : '') + ' style="width:22px;height:22px;margin-right:12px;flex:none">';
 
 // Отправить готовый файл: Android — выбор приложения; веб — «Поделиться» браузера или сохранение
-async function sendFile(u8, name, title, type = 'application/octet-stream') {
+export async function sendFile(u8, name, title, type = 'application/octet-stream') {
   if (Share) { await Share.send({ name, data: b64(u8), title, text: title, mime: type }); return 'shared'; }
   const file = new File([u8], name, { type });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {

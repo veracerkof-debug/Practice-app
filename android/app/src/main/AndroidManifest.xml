@@ -191,5 +191,7 @@
          Разрешение спрашивается при включении камеры в терменвоксе; без камеры приложение ставится и работает -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- MIDI-клавиатура (USB, Bluetooth) — по желанию; без MIDI приложение ставится как обычно -->
+    <uses-feature android:name="android.software.midi" android:required="false" />
     <uses-feature android:name="android.hardware.camera.front" android:required="false" />
 </manifest>

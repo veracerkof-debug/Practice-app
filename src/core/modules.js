@@ -90,6 +90,8 @@ export function makeCtx(app, mod) {
     logErr: (e) => logErr(mod.id, e),
     // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
     files: app.files,
+    // MIDI: событие игры (src/music/midi.js) — в запись, если идёт MIDI-запись этого инструмента
+    midi: { ev: (e) => app.rec && app.rec.midiEv(mod.id, e) },
     confirmUpload: () => app.confirmUpload(),
     // Песни библиотеки — только чтение: [{ id, title, artist, key, text }] (text — есть ли текст с аккордами)
     songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title, artist: s.artist || '', key: s.key || null, text: !!String(s.notes || '').trim() })),
@@ -160,6 +162,8 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
   const guarded = !!mod.multitouch;
   if (guarded) guardOpen();
   firstHelp(app, mod); // при первом открытии — инструкция
+  // понимает MIDI — слушает клавиатуру и воспроизводит свои записи, пока открыт
+  const midiOff = mod.midiIn && app.midi ? app.midi.attach(mod.id, mod) : () => {};
   return {
     ctx,
     resize(next) {
@@ -171,6 +175,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
     },
     unmount() {
       log('mod', 'закрыт ' + mod.id);
+      midiOff(); // воспроизведение останавливается, пока инструмент ещё на месте
       try { mod.unmount(host); } catch (e) { logErr('mod', e); } // host — какое из мест закрывается (модуль может быть открыт в двух)
       host.replaceChildren();
       if (guarded) guardClose();

@@ -26,6 +26,8 @@ let host = null, ctx = null, size = 'full', ro = null, unbindSyn = () => {}, uns
 // педаль: 0 — выкл, 1 — Sustain (отпущенная нота звучит долгим хвостом, как с педалью пианино), 2 — Hold (нота держится)
 const PEDAL = ['off', 'sus', 'hold'];
 const offs = [], ptr = new Map(), hold = { mode: 0, k: new Map() };
+// MIDI: ноты с клавиатуры и из записи (id → { key, m }) и сколько раз подсвечена клавиша
+const mi = new Map(), lit = new Map();
 
 const P = () => ctx.store.all();
 const rotated = () => false; // поворачивается весь экран (rotate ниже), клавиатура внутри окна — нет
@@ -76,7 +78,7 @@ function layout() {
 }
 
 function markHeld() {
-  host.querySelectorAll('.kb [data-m]').forEach((k) => k.classList.toggle('held', hold.k.has(+k.dataset.m)));
+  host.querySelectorAll('.kb [data-m]').forEach((k) => { k.classList.toggle('held', hold.k.has(+k.dataset.m)); if (lit.has(+k.dataset.m)) k.classList.add('down'); });
 }
 
 function render() {
@@ -101,18 +103,54 @@ function noteOn(k, pid) {
   k.classList.add('down');
   ctx.audio.synth.on(m, key, { bus: 'piano' });
   showNote(m);
+  ctx.midi.ev({ k: 'on', id: key, m, v: 0.8 });
   return key;
 }
 
 function noteOff(p) {
   p.el.classList.remove('down');
   ctx.audio.synth.off(p.key);
+  ctx.midi.ev({ k: 'off', id: p.key });
+}
+
+/* ---------- MIDI: клавиатура и воспроизведение записи ---------- */
+
+function light(m, d) {
+  const n = Math.max(0, (lit.get(m) || 0) + d);
+  if (n) lit.set(m, n); else lit.delete(m);
+  const k = host && host.querySelector('.kb [data-m="' + m + '"]');
+  if (k) k.classList.toggle('down', n > 0);
+}
+function midiIn(e) {
+  if (!ctx) return;
+  const syn = ctx.audio.synth;
+  if (e.k === 'on') {
+    if (!ctx.audio.unlock()) return;
+    const m = Math.max(0, Math.min(127, Math.round(e.m))), key = 'mi' + e.id;
+    if (mi.has(e.id)) { syn.off(mi.get(e.id).key, true); light(mi.get(e.id).m, -1); }
+    syn.on(m, key, { bus: 'piano', vel: e.v });
+    mi.set(e.id, { key, m });
+    light(m, 1);
+    showNote(m);
+  } else if (e.k === 'off') {
+    const v = mi.get(e.id);
+    if (!v) return;
+    mi.delete(e.id);
+    if (e.r) syn.release(v.key); else syn.off(v.key);
+    light(v.m, -1);
+  }
+}
+function midiStop() {
+  if (!ctx) return;
+  mi.forEach((v) => { ctx.audio.synth.off(v.key); light(v.m, -1); });
+  mi.clear();
 }
 
 // Sustain → Hold → выкл. Из Hold — удержанные ноты отпускаются долгим хвостом
 function holdToggle() {
   hold.mode = (hold.mode + 1) % PEDAL.length;
-  if (hold.mode !== 2) { hold.k.forEach((key) => ctx.audio.synth.release(key)); hold.k.clear(); }
+  if (hold.mode !== 2) { hold.k.forEach((key) => { ctx.audio.synth.release(key); ctx.midi.ev({ k: 'off', id: key, r: true }); }); hold.k.clear(); }
+  ctx.midi.ev({ k: 'ped', v: hold.mode === 1 ? 1 : 0 });
   ctx.ui.toast(ctx.t('pedal.' + PEDAL[hold.mode]));
 }
 
@@ -127,8 +165,8 @@ function bind() {
     if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('noAudio')); return; }
     if (hold.mode === 2) { // Hold: нажатие включает ноту, повторное — выключает
       const m = +k.dataset.m;
-      if (hold.k.has(m)) { syn.off(hold.k.get(m)); hold.k.delete(m); k.classList.remove('held'); }
-      else { const key = 'ph' + m + '_' + Date.now(); syn.on(m, key, { hold: true, bus: 'piano' }); hold.k.set(m, key); k.classList.add('held'); showNote(m); }
+      if (hold.k.has(m)) { syn.off(hold.k.get(m)); ctx.midi.ev({ k: 'off', id: hold.k.get(m) }); hold.k.delete(m); k.classList.remove('held'); }
+      else { const key = 'ph' + m + '_' + Date.now(); syn.on(m, key, { hold: true, bus: 'piano' }); hold.k.set(m, key); k.classList.add('held'); showNote(m); ctx.midi.ev({ k: 'on', id: key, m, v: 0.8 }); }
       return;
     }
     ptr.set(e.pointerId, { el: k, key: noteOn(k, e.pointerId) });
@@ -141,7 +179,7 @@ function bind() {
     if (k && k !== p.el && host.contains(k)) { noteOff(p); ptr.set(e.pointerId, { el: k, key: noteOn(k, e.pointerId) }); }
   });
   // Sustain: отпущенная клавиша не глушится — звук уходит долгим хвостом
-  const up = (e) => { const p = ptr.get(e.pointerId); if (!p) return; if (hold.mode === 1) { p.el.classList.remove('down'); syn.release(p.key); } else noteOff(p); ptr.delete(e.pointerId); };
+  const up = (e) => { const p = ptr.get(e.pointerId); if (!p) return; if (hold.mode === 1) { p.el.classList.remove('down'); syn.release(p.key); ctx.midi.ev({ k: 'off', id: p.key, r: true }); } else noteOff(p); ptr.delete(e.pointerId); };
   on(window, 'pointerup', up);
   on(window, 'pointercancel', up);
 
@@ -179,6 +217,8 @@ export default {
   i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#646493',
+  // MIDI: запись игры, воспроизведение в самом пианино, MIDI-клавиатура (src/core/midi.js)
+  midiIn, midiStop,
   multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами
   sizes: ['full', 'half', 'quarter', 'strip'],
   // Поворот: весь экран инструмента (и сессии) поворачивается, пока пианино в окне; если экран уже
@@ -207,6 +247,7 @@ export default {
     offs.splice(0).forEach((f) => f());
     ptr.forEach((p) => ctx.audio.synth.off(p.key));
     ptr.clear();
+    midiStop(); // ноты с MIDI-клавиатуры не остаются звучать
     // Hold переживает закрытие окна: удержанные ноты звучат, пока занимаются другим инструментом
     // (выключить — кнопкой Hold, когда пианино снова открыто, или звуком пианино в микшере)
     host = null;

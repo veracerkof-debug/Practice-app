@@ -36,6 +36,7 @@ import { crashOffer } from './screens/report.js';
 import { bindVerses } from './screens/verses.js';
 import { createFiles } from './files.js';
 import { createRecorder } from './recorder.js';
+import { createMidi } from './midi.js';
 import { reschedule } from './reminders.js';
 import { remindText, remindCtx } from './remindtexts.js';
 import { initShareIn } from './screens/share.js';
@@ -112,7 +113,9 @@ export function boot(root) {
   // Звучит ли приложение (метроном, пианино, пэды, медиа, теория) с ненулевой громкостью в микшере.
   // В обычном режиме учёта время при погасшем экране или в фоне идёт только тогда: помодоро и секундомер без звука
   // не считаются — в фоне без звука никто не занимается
-  const soundingAudio = () => BUSES.some((b) => audio.mixer.isActive(b) && audio.mixer.value(b) > 0);
+  // звучит ли приложение (игра продлевает учёт); воспроизведение своей MIDI-записи игрой не считается
+  let midiRef = null;
+  const soundingAudio = () => !(midiRef && midiRef.playing) && BUSES.some((b) => audio.mixer.isActive(b) && audio.mixer.value(b) > 0);
 
   // Экран погас или вкладка скрыта: по режиму учёта сессии время «вдали» засчитывается или нет.
   // Если звук затих, пока приложение было в фоне, — «вдали» с момента, когда звук слышали последний раз
@@ -148,6 +151,8 @@ export function boot(root) {
     set active(a) { active = a; saveActive(a); },
   };
   app.rec = createRecorder(app);
+  app.midi = midiRef = createMidi(app);
+  app.midi.input.resume();
   // напоминания о практике: расписание на неделю — при запуске, смене настроек и после занятий (с задержкой)
   let remT = 0;
   const remSync = () => { clearTimeout(remT); remT = setTimeout(() => reschedule(store.state, (x) => remindText(x, remindCtx(store.state.settings))), 1500); };

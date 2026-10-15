@@ -92,7 +92,7 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
       const cut = Math.max(200, Math.min(16000, f * (1.2 + s.bright * 22)));
       // у пианино низкие ноты звучат дольше
       const pitchK = kind === 'piano' ? Math.max(0.35, Math.min(2.2, (5.2 - (m - 36) * 0.07) / 3.4)) : 1;
-      const dec = Math.max(0.05, s.dec * 3 * pitchK), att = Math.max(0.002, s.att / 1000), peak = (kind === 'saw' ? 0.16 : 0.34) * (s.gain || 1);
+      const dec = Math.max(0.05, s.dec * 3 * pitchK), att = Math.max(0.002, s.att / 1000), peak = (kind === 'saw' ? 0.16 : 0.34) * (s.gain || 1) * (opts.vel != null ? 0.25 + 0.75 * opts.vel : 1); // vel — сила нажатия MIDI-клавиатуры, 0…1
       if (kind === 'piano') {
         lp.frequency.setValueAtTime(cut, t);
         lp.frequency.setTargetAtTime(Math.max(500, f * (1.5 + s.bright * 3)), t + 0.02, dec * 0.3);

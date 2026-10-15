@@ -249,11 +249,12 @@ function down(e) {
   const el = document.createElement('i');
   el.className = 'gltc';
   host.querySelector('#gltouch').appendChild(el);
-  const tc = { voice, el, m: a.m, y: a.y };
+  const tc = { voice, el, m: a.m, y: a.y, id: 'g' + e.pointerId + '.' + Date.now() };
   touches.set(e.pointerId, tc);
   place(tc, a.x, a.y);
   show(a.m);
   updateBus();
+  ctx.midi.ev({ k: 'on', id: tc.id, m: a.m, y: a.y });
   melOnset(e.pointerId);
 }
 
@@ -261,6 +262,7 @@ function move(e) {
   const tc = touches.get(e.pointerId), pad = host && host.querySelector('#glpad');
   if (!tc || !pad) return;
   const s = cfg(), a = at(e, pad);
+  if (a.m !== tc.m || a.y !== tc.y) ctx.midi.ev({ k: 'mv', id: tc.id, m: a.m, y: a.y });
   if (a.m !== tc.m) { tc.voice.pitch(a.m, tau(s)); tc.m = a.m; show(a.m); }
   tc.y = a.y;
   tc.voice.fx(voiceFx(s.fx, a.y));
@@ -272,11 +274,50 @@ function up(e) {
   const tc = touches.get(e.pointerId);
   if (!tc) return;
   tc.voice.release();
+  if (tc.id) ctx.midi.ev({ k: 'off', id: tc.id });
   tc.el.classList.add('out');
   setTimeout(() => tc.el.remove(), 260);
   touches.delete(e.pointerId);
   if (!touches.size) { const n = host && host.querySelector('.glnote'); if (n) n.classList.remove('on'); }
   // хвосты эха и реверберации доигрывают с последней силой
+}
+
+/* ---------- MIDI: клавиатура и воспроизведение записи ---------- */
+
+// Голос MIDI живёт рядом с касаниями (в touches под своим id): так его слышно в микшере, видно точкой на доске
+// и он участвует в общей шине эффектов. y — выразительность (CC74; в записи — высота пальца), без неё — 0.3
+function midiIn(e) {
+  if (!host) return;
+  const s = cfg(), key = 'mi' + e.id, pos = (m) => Math.max(0, Math.min(1, midiToPos(m, s.lo, s.width)));
+  if (e.k === 'on') {
+    if (!ctx.audio.unlock()) return;
+    const dest = ctx.audio.bus('glider');
+    if (!dest) return;
+    const p = patch(s);
+    ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
+    if (!bus || bus.ctx !== dest.context) { bus = createFxBus(dest.context, dest); bus.ctx = dest.context; }
+    if (touches.has(key)) midiIn({ k: 'off', id: e.id });
+    const y = e.y ?? 0.3, voice = createGlideVoice(dest.context, bus.input, p, { hold: false, a4: ctx.audio.mf(69) });
+    voice.start(e.m, voiceFx(s.fx, y));
+    const el = document.createElement('i');
+    el.className = 'gltc';
+    host.querySelector('#gltouch').appendChild(el);
+    const tc = { voice, el, m: e.m, y };
+    touches.set(key, tc);
+    place(tc, pos(e.m), y);
+    show(e.m);
+    updateBus();
+  } else if (e.k === 'mv') {
+    const tc = touches.get(key);
+    if (!tc) return;
+    if (e.m != null && e.m !== tc.m) { tc.voice.pitch(e.m, 0.012); tc.m = e.m; show(e.m); }
+    if (e.y != null) { tc.y = e.y; tc.voice.fx(voiceFx(s.fx, e.y)); }
+    place(tc, pos(tc.m), tc.y);
+    updateBus();
+  } else if (e.k === 'off') up({ pointerId: key, midi: true });
+}
+function midiStop() {
+  [...touches.keys()].filter((k) => typeof k === 'string').forEach((k) => up({ pointerId: k, midi: true }));
 }
 
 function releaseAll() {
@@ -398,6 +439,8 @@ export default {
   icon: ICON,
   color: '#866B9D',
   multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами
+  // MIDI: запись игры (скольжение — MPE), воспроизведение на доске, MIDI-клавиатура (src/core/midi.js)
+  midiIn, midiStop,
   sizes: ['full', 'half', 'quarter', 'strip'],
   immersive: true, // в отдельном окне — на весь экран, без шапки
   pure: true, // и полный экран: только поверхность, без кнопок (src/core/pure.js)
