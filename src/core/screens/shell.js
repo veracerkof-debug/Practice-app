@@ -160,7 +160,7 @@ export function createShell(app, root) {
     else if (d.act === 'share') { if (d.sid) shareSheet(app, { songIds: [d.sid] }); else shareMenu(app); }
     else if (d.act === 'songImport') songImportMenu(app, () => go('library'));
     else if (d.act === 'demoDel') {
-      confirm(t('demo.removeTitle'), t('demo.removeText'), t('demo.removeYes')).then((ok) => { if (ok) removeDemo(app).then(() => { render(); toast(t('demo.removed')); }); });
+      removeDemo(app).then(() => { render(); toast(t('demo.removed')); }); // одним нажатием: занятия по демо-песням остаются в статистике
     }
     else if (d.act === 'demoAdd') { toast(t('demo.adding')); addDemo(app, t).then(() => { render(); toast(t('demo.added')); }); }
     else if (calAct(app, b, view.tab === 'calendar' ? view.cal : null, render)) { /* календарь и строки событий */ }

@@ -375,3 +375,6 @@
 .tab[aria-current="page"]::before{opacity:1;transform:none}
 .tab[aria-current="page"] svg{stroke-width:2.1}
 :root[data-style="mono"] .tab::before{display:none}
+/* Демо-набор в «Песнях»: строка сверху, убрать одним нажатием */
+.demobar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-4px 4px 12px;padding:8px 8px 8px 14px;border-radius:14px;background:color-mix(in srgb,var(--tint) 10%,var(--cell));font-size:14px}
+.demobar .btn{color:var(--red,#c0392b);flex:none}

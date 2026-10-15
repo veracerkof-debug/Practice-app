@@ -35,6 +35,9 @@ export function libraryHTML(app, view) {
     // церковный режим: импорт песен из программ для вывода текста и Holyrics
     (st.church ? '<button class="addbtn" style="margin:0" data-act="songImport" aria-label="' + t('songs.import') + '">' + IMPORT_IC + '</button>' : '') +
     '<button class="addbtn" style="margin:0" data-act="addSong" aria-label="' + t('songs.add') + '">' + ADD_IC + '</button></div>') + '<div class="large">' + t('songs.title') + '</div>';
+  // демо-набор — сверху, убрать одним нажатием (песни с занятиями остаются в статистике)
+  const nDemo = songs.filter((x) => isDemo(x.id)).length;
+  if (nDemo) h += '<div class="demobar"><span>' + tn('demo.bar', nDemo) + '</span><button class="btn sm" data-act="demoDel">' + t('demo.removeShort') + '</button></div>';
   if (!songs.length) return h + '<div class="empty"><b>' + t('songs.emptyTitle') + '</b>' + t('songs.emptyText') + '<br><button class="btn fill" data-act="addSong"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" style="stroke:currentColor;stroke-width:2.4;fill:none"/></svg></i>' + t('songs.add') + '</button>' +
     (st.church ? '<br><button class="btn" style="margin-top:10px" data-act="songImport">' + t('songs.import') + '</button>' : '') +
     // посмотреть, как всё устроено: демо-набор (убирается в «Данных и копиях»)
@@ -60,9 +63,7 @@ export function libraryHTML(app, view) {
       esc([s.artist, g ? g.name : s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + '</div>' +
       (tags.length ? '<div class="tagrow">' + tags.map((x) => chipHTML(x, 'sm')).join('') + '</div>' : '') +
       '</div><div class="val"><div>' + mBadge(getPct(s), st) + '</div>' + (st.toolsOnly ? '' : '<div class="num" style="font-size:12px;margin-top:3px">' + fmtDur(ss.total) + '</div>') + '</div></button>';
-  }).join('') + '</div>' +
-    // демо-набор в библиотеке — убрать одной кнопкой прямо здесь (и в «Данных и копиях»)
-    (songs.some((x) => isDemo(x.id)) ? '<div class="group" style="margin-top:18px"><button class="cell act danger center" data-act="demoDel">' + t('demo.remove') + '</button></div>' : '');
+  }).join('') + '</div>';
 }
 
 /* ---------- карточка песни ---------- */

@@ -357,7 +357,14 @@ function render() {
   if (!host) return;
   // в том же разделе прокрутка остаётся на месте (переключение лада, тоники, вида — без прыжка наверх)
   const sec = curSec(), box = host.querySelector('.swrap, .cwrap.f'), y = box && lastSec === sec ? box.scrollTop : 0, hy = lastSec === sec ? host.scrollTop : 0;
+  // горизонтальные полосы выбора (подразделы «Джаза», тональности, семьи…) не прыгают в начало
+  const hs = [...host.querySelectorAll('.hscroll')].map((x) => x.scrollLeft);
   host.innerHTML = view();
+  if (lastSec === sec) host.querySelectorAll('.hscroll').forEach((x, i) => {
+    if (hs[i]) x.scrollLeft = hs[i];
+    const on = x.querySelector('[aria-pressed="true"]');
+    if (on && (on.offsetLeft < x.scrollLeft || on.offsetLeft + on.offsetWidth > x.scrollLeft + x.clientWidth)) x.scrollLeft = on.offsetLeft - (x.clientWidth - on.offsetWidth) / 2;
+  });
   lastSec = sec;
   const nb = host.querySelector('.swrap, .cwrap.f');
   if (nb && y) nb.scrollTop = y;
