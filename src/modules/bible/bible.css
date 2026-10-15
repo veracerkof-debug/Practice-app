@@ -22,7 +22,7 @@
 /* шторка выбора: книги с долей прочитанного (заливка снизу), главы — прочитанные отмечены */
 .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;margin-bottom:6px}
 .bgrid.ch{grid-template-columns:repeat(auto-fill,minmax(48px,1fr))}
-.bbook,.bch{min-height:44px;border-radius:12px;font-weight:600;font-size:14px;color:var(--ink);
+.bbook,.bch{min-height:48px;border-radius:12px;font-weight:600;font-size:16px;color:var(--ink);
   background:linear-gradient(to top,color-mix(in srgb,var(--tint) 22%,transparent) var(--r,0%),var(--fill) var(--r,0%))}
 .bbook.cur,.bch.cur{box-shadow:inset 0 0 0 2px var(--tint)}
 .bch.read{background:color-mix(in srgb,var(--tint) 22%,var(--fill))}
@@ -57,3 +57,4 @@
 .bext{color:inherit}
 .fc1{color:var(--red)}.fc2{color:#2E8B57}.fc3{color:#3B6FD8}.fc4{color:#8A4FBF}.fc5{color:var(--l2)}
 .bmtext{font-family:Georgia,"Noto Serif",serif;font-size:16px;line-height:1.5;margin:0 0 12px}
+[data-seg="btest"]{margin:2px 0 14px}

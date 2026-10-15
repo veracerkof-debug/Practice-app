@@ -44,9 +44,10 @@ export function verseListSheet() {
 // В обычном виде — на языке интерфейса
 export function epigraphHTML() {
   const v = verseByKey(EPIGRAPH);
-  if (!isMono()) { const x = verseIn(v, lang()); return '<p class="mverse" lang="' + lang() + '" data-verse="' + EPIGRAPH + '" role="button" tabindex="0">' + esc(x.text) + '<span>' + esc(x.ref) + '</span></p>'; }
+  // сам стих — по нажатию на ссылку (меньше текста на экране)
+  if (!isMono()) { const x = verseIn(v, lang()); return '<p class="mverse vref" lang="' + lang() + '" data-verse="' + EPIGRAPH + '" role="button" tabindex="0" aria-label="' + esc(x.ref) + '"><span>' + esc(x.ref) + '</span></p>'; }
   const ref = getLang() === MONO_LANG ? 'Ψαλμὸς πθʹ, ιβʹ' : v.ref;
-  return '<p class="mverse" lang="el" data-verse="' + EPIGRAPH + '" role="button" tabindex="0">' + esc(v.gr) + '<span lang="ru">' + esc(ref) + '</span></p>';
+  return '<p class="mverse vref" lang="el" data-verse="' + EPIGRAPH + '" role="button" tabindex="0"><span lang="ru">' + esc(ref) + '</span></p>';
 }
 
 const SEL = '.large, .stitle2, .snav b, .snav h2, .hdr, .mhd h2, [data-verse], [data-verses]';

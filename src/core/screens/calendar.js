@@ -53,7 +53,8 @@ export function relDate(ts, now = Date.now()) {
 function dayLabel(day, now = Date.now()) {
   const n = Math.round((dayStart(day) - dayStart(now)) / DAY);
   if (bareNow()) { const d = new Date(day); return d.getDate() + '.' + NUMS[d.getMonth()]; } // без текста — 14.10
-  return n === 0 || n === 1 ? t(n ? 'cal.tomorrowCap' : 'cal.todayCap') + ', ' + dayFmt(day, false) : dayFmt(day);
+  // сегодня отмечен в сетке — слово «Сегодня» не нужно; «Завтра» — остаётся
+  return n === 1 ? t('cal.tomorrowCap') + ', ' + dayFmt(day, false) : dayFmt(day);
 }
 
 export function timeTxt(o) {
@@ -84,10 +85,11 @@ export function evRow(app, o, { date = false } = {}) {
 export function calendarHTML(app, cv) {
   cv.view ??= app.device.calView || 'month';
   cv.sel ??= dayStart(Date.now());
-  const head = '<div class="calhd"><div class="calmt">' + esc(cv.view === 'list' ? t('cal.upcoming') : cv.view === 'week' ? weekTitle(cv.sel) : monthTitle(cv.sel)) + '</div>' +
+  const head = '<div class="calhd"><button class="calmt" data-cnav="0" aria-label="' + esc(t('cal.todayBtn')) + '">' + esc(cv.view === 'list' ? t('cal.upcoming') : cv.view === 'week' ? weekTitle(cv.sel) : monthTitle(cv.sel)) + '</button>' +
     (cv.view === 'list' ? '' : icb('data-cnav="-1"', I.left, t(cv.view === 'week' ? 'cal.prevWeek' : 'cal.prevMonth'), 'sm') + icb('data-cnav="1"', I.right, t(cv.view === 'week' ? 'cal.nextWeek' : 'cal.nextMonth'), 'sm')) +
-    '<button class="link ctoday" data-cnav="0">' + t('cal.todayBtn') + '</button></div>';
-  const right = '<span class="ctop">' + icb('data-cics', I.share, t('cal.export'), 'plain') + icb('data-cnew', IC.plus, t('cal.new'), 'plain') + '</span>';
+    '</div>';
+  // в месяце «+» — круглой кнопкой у выбранного дня; сверху — только в неделе и списке
+  const right = '<span class="ctop">' + icb('data-cics', I.share, t('cal.export'), 'plain') + (cv.view === 'month' ? '' : icb('data-cnew', IC.plus, t('cal.new'), 'plain')) + '</span>';
   // стих эпиграфом — Пс 89:12 (src/core/verses.js)
   let h = topbar(right) + '<div class="large">' + t('cal.title') + '</div>' + epigraphHTML() + '<div class="calw">' + head +
     seg('cview', bareNow() ? CVIEW_IC : [['month', t('cal.v.month')], ['week', t('cal.v.week')], ['list', t('cal.v.list')]], cv.view, withText(() => t('cal.view')));
@@ -150,7 +152,7 @@ function readingRow(app, day) {
 function dayHTML(app, day, prac) {
   const list = onDay(events(app), day);
   return '<div class="cday-h"><b>' + esc(dayLabel(day)) + '</b>' +
-    '<button class="link" data-cnew="' + day + '">' + t('cal.add') + '</button></div><div class="clist">' +
+    '<button class="cadd" data-cnew="' + day + '" aria-label="' + esc(t('cal.new')) + '">' + IC.plus + '</button></div><div class="clist">' +
     (list.length ? list.map((o) => evRow(app, o)).join('') : '<div class="cempty l2">' + t('cal.noEvents') + '</div>') +
     readingRow(app, day) +
     (prac ? '<button class="cpracrow" data-pp="stats"><span class="cbar"></span><span>' + t('cal.practiced', { d: fmtDur(prac) }) + '</span></button>' : '') + '</div>';

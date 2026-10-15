@@ -162,15 +162,19 @@ function open(code, ch, y = 0, go = null) {
 // Шторка выбора: книги (с долей прочитанного) → главы (прочитанные отмечены)
 function pickSheet() {
   const { t, ui } = ctx;
-  let book = null;
-  const books = (nt) => '<div class="hdr">' + t(nt ? 'nt' : 'ot') + '</div><div class="bgrid">' + BOOKS.filter((b) => b.nt === nt).map((b) => {
+  let book = null, part = !!(bookOf(cur.code) || {}).nt; // вкладка — Завет текущей книги
+  // Заветы — вкладками: одна сетка без прокрутки
+  const tabs = () => ui.seg('btest', [['ot', t('ot')], ['nt', t('nt')]], part ? 'nt' : 'ot', t('pick'));
+  const books = (nt) => '<div class="bgrid">' + BOOKS.filter((b) => b.nt === nt).map((b) => {
     const r = ctx.bible.readIn(b.code) / b.chapters, has = P.has(b.code);
     return '<button class="bbook' + (b.code === cur.code ? ' cur' : '') + '" data-bk="' + b.code + '" style="--r:' + (r * 100).toFixed(1) + '%" aria-label="' + ui.esc(P.name(b.code)) + '"' + (has ? '' : ' disabled') + '>' + ui.esc(P.abbr(b.code)) + '</button>';
   }).join('') + '</div>';
   const chapters = (b) => '<div class="hdr">' + ui.esc(P.name(b.code)) + '</div><div class="bgrid ch">' + Array.from({ length: P.chapters(b.code) }, (_, k) => k + 1).map((c) =>
     '<button class="bch' + (ctx.bible.isRead(chKey(b.code, c)) ? ' read' : '') + (b.code === cur.code && c === cur.ch ? ' cur' : '') + '" data-ch="' + c + '" aria-label="' + ui.esc(t('chOf', { n: c })) + '">' + c + '</button>').join('') + '</div>';
-  const api = ui.sheet(() => ui.snav(book ? P.name(book) : t('pick')) + (book ? chapters(bookOf(book)) : books(false) + books(true)), (el) => {
+  const api = ui.sheet(() => ui.snav(book ? P.name(book) : t('pick')) + (book ? chapters(bookOf(book)) : tabs() + books(part)), (el) => {
     el.addEventListener('click', (e) => {
+      const sg = e.target.closest('[data-seg="btest"] [data-v]');
+      if (sg) { part = sg.dataset.v === 'nt'; api.update(); return; }
       const bk = e.target.closest('[data-bk]'), c = e.target.closest('[data-ch]');
       if (bk) { const b = bookOf(bk.dataset.bk); if (P.chapters(b.code) === 1) { api.close(); open(b.code, 1); } else { book = b.code; api.update(); } }
       else if (c) { api.close(); open(book, +c.dataset.ch); }

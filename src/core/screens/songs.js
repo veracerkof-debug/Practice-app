@@ -50,7 +50,7 @@ export function libraryHTML(app, view) {
   }
   h += '<div style="display:flex;justify-content:space-between;align-items:center;margin:0 6px 8px"><span class="l2" style="font-size:13px">' + tn('songs.count', list.length) +
     (view.genre || view.tag ? ' · <button class="link" data-fclear style="font-size:13px;min-height:0">' + t('songs.clearFilter') + '</button>' : '') +
-    '</span><select class="sortsel" data-input="sort" aria-label="' + t('songs.sort') + '">' + SORTS.map((v) => '<option value="' + v + '"' + (view.sort === v ? ' selected' : '') + '>' + t('sort.' + v) + '</option>').join('') + '</select></div>';
+    '</span><select class="sortsel sortr" data-input="sort" aria-label="' + t('songs.sort') + '">' + SORTS.map((v) => '<option value="' + v + '"' + (view.sort === v ? ' selected' : '') + '>' + t('sort.' + v) + '</option>').join('') + '</select></div>';
   if (!list.length) return h + '<div class="empty">' + t('songs.notFound') + '</div>';
   return h + '<div class="slist">' + list.map(({ s, st: ss }) => {
     const g = genreOf(L, s.genre), c = catOf(L, s.cat), tags = (s.tags || []).map((id) => tagOf(L, id)).filter(Boolean);
