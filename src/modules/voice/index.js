@@ -271,11 +271,12 @@ function fxHTML(pre = false) {
     '<input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" data-fx="' + k + '" aria-label="' + esc(label) + '"></label>';
   return '<div class="hdr">' + t(pre ? 'live.title' : 'fx') + '</div><div class="group">' +
     '<div class="cell"><span class="grow"><span>' + t('fx.lowcut') + '</span><span class="st l2">' + t('fx.lowcutHint') + '</span></span><label class="sw"><input type="checkbox" data-fx="lowcut"' + (f.lowcut ? ' checked' : '') + '><i></i></label></div>' +
-    // эквалайзер: пресеты, кривая и 5 полос
-    '<div class="cellcol vc-eq"><span class="vc-fxh"><span>' + t('fx.eq') + '</span></span><div class="pickrow" style="margin:6px 0 2px">' + Object.keys(EQ_PRESETS).map((k) =>
-      '<button type="button" class="lchip pick' + (JSON.stringify(EQ_PRESETS[k]) === JSON.stringify(f.eq) ? ' on' : '') + '" data-eqp="' + k + '" style="--c:var(--tint);--t:var(--on-tint)">' + t('eq.' + k) + '</button>').join('') + '</div>' +
-      '<canvas id="vc-eqc" class="vc-eqc" aria-hidden="true"></canvas><div class="vc-eqb">' + EQ_BANDS.map((b, i) => '<label><b class="num" id="veq-' + i + '">' + eqTxt(f.eq[i]) + '</b>' +
-      '<input type="range" min="-12" max="12" step="0.5" value="' + f.eq[i] + '" data-eq="' + i + '" aria-label="' + esc(t('fx.eq') + ' ' + hz(b.f)) + '"><span class="num">' + hz(b.f) + '</span></label>').join('') + '</div></div>' +
+    // эквалайзер: режимы — строкой слов; полосы — точки на кривой, тянутся пальцем вверх-вниз (полосы-ползунки —
+    // для чтения с экрана, невидимы). Касание точки дважды — полоса в ноль
+    '<div class="cellcol vc-eq"><div class="vc-eqh"><span>' + t('fx.eq') + '</span><div class="vc-eqp" role="group" aria-label="' + esc(t('fx.eq')) + '">' + Object.keys(EQ_PRESETS).map((k) =>
+      '<button type="button"' + (JSON.stringify(EQ_PRESETS[k]) === JSON.stringify(f.eq) ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + ' data-eqp="' + k + '">' + t('eq.' + k) + '</button>').join('') + '</div></div>' +
+      '<canvas id="vc-eqc" class="vc-eqc" aria-hidden="true"></canvas><div class="vc-sr">' + EQ_BANDS.map((b, i) =>
+      '<input type="range" min="-12" max="12" step="0.5" value="' + f.eq[i] + '" data-eq="' + i + '" aria-label="' + esc(t('fx.eq') + ' ' + hz(b.f)) + '">').join('') + '</div></div>' +
     rng('denoise', 0, 1, 0.05, f.denoise, t('fx.denoise'), fxTxt('denoise', f.denoise)) +
     rng('gate', -90, -25, 1, f.gate, t('fx.gate'), fxTxt('gate', f.gate)) +
     '<div class="cellcol"><span>' + t('fx.comp') + '</span>' + ctx.ui.seg('vcomp', ['off', 'light', 'mid', 'strong'].map((k) => [k, t('comp.' + k)]), f.comp, t('fx.comp')) + '</div>' +
@@ -286,22 +287,84 @@ function fxHTML(pre = false) {
 }
 const hz = (f) => (f >= 1000 ? f / 1000 + 'k' : String(f));
 const eqTxt = (v) => (v > 0 ? '+' : '') + (+v).toFixed(v % 1 ? 1 : 0);
+// Кривая эквалайзера и точки полос; eqHot — полоса, которую сейчас тянут (с подписью значения)
+let eqHot = -1;
+const EQ_LO = Math.log10(30), EQ_HI = Math.log10(18000), EQ_MAX = 12, EQ_PAD = 18;
+const eqX = (f, W) => ((Math.log10(f) - EQ_LO) / (EQ_HI - EQ_LO)) * W;
+const eqY = (d, H) => H / 2 - (d / EQ_MAX) * (H / 2 - EQ_PAD);
 function drawEq() {
   const cv = host && host.querySelector('#vc-eqc');
   if (!cv) return;
   const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
   if (!W || !H) return;
-  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#9C7242', l3 = cs.getPropertyValue('--l3').trim() || '#ccc', gains = st().fx.eq;
+  if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#9C7242', l3 = cs.getPropertyValue('--l3').trim() || '#ccc',
+    l2 = cs.getPropertyValue('--l2').trim() || '#888', ink = cs.getPropertyValue('--ink').trim() || '#222', cell = cs.getPropertyValue('--cell').trim() || '#fff', gains = st().fx.eq;
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const lo = Math.log10(30), hi = Math.log10(18000), y = (d) => H / 2 - (d / 15) * (H / 2 - 4);
-  g.fillStyle = l3; g.fillRect(0, H / 2, W, 1);
-  [100, 1000, 10000].forEach((f) => g.fillRect(((Math.log10(f) - lo) / (hi - lo)) * W, 0, 1, H));
+  g.clearRect(0, 0, W, H);
+  // ноль и деления ±6 дБ — тонко
+  g.fillStyle = l3;
+  g.fillRect(0, Math.round(eqY(0, H)), W, 1);
+  g.globalAlpha = 0.45;
+  [6, -6].forEach((d) => g.fillRect(0, Math.round(eqY(d, H)), W, 1));
+  g.globalAlpha = 1;
+  // кривая и заливка до нуля
   g.beginPath();
-  for (let i = 0; i <= 120; i++) { const f = Math.pow(10, lo + ((hi - lo) * i) / 120), d = eqResponse(gains, f); i ? g.lineTo((i / 120) * W, y(d)) : g.moveTo(0, y(d)); }
-  g.strokeStyle = tint; g.lineWidth = 2; g.stroke();
-  g.lineTo(W, H / 2); g.lineTo(0, H / 2); g.closePath(); g.globalAlpha = 0.15; g.fillStyle = tint; g.fill(); g.globalAlpha = 1;
+  for (let i = 0; i <= 160; i++) { const f = Math.pow(10, EQ_LO + ((EQ_HI - EQ_LO) * i) / 160), y = eqY(Math.max(-EQ_MAX - 3, Math.min(EQ_MAX + 3, eqResponse(gains, f))), H); i ? g.lineTo((i / 160) * W, y) : g.moveTo(0, y); }
+  g.strokeStyle = tint; g.lineWidth = 2.5; g.lineJoin = 'round'; g.stroke();
+  g.lineTo(W, eqY(0, H)); g.lineTo(0, eqY(0, H)); g.closePath(); g.globalAlpha = 0.14; g.fillStyle = tint; g.fill(); g.globalAlpha = 1;
+  // точки полос и частоты
+  g.font = '600 11px system-ui, sans-serif'; g.textAlign = 'center';
+  EQ_BANDS.forEach((b, i) => {
+    const x = Math.max(12, Math.min(W - 12, eqX(b.f, W))), y = eqY(gains[i], H), hot = i === eqHot;
+    g.beginPath(); g.arc(x, y, hot ? 11 : 8, 0, Math.PI * 2);
+    g.fillStyle = hot ? tint : cell; g.fill();
+    g.lineWidth = 2.5; g.strokeStyle = tint; g.stroke();
+    g.fillStyle = l2; g.textBaseline = 'bottom'; g.fillText(hz(b.f), x, H - 2);
+    if (hot) { g.fillStyle = ink; g.textBaseline = 'bottom'; g.fillText(eqTxt(gains[i]) + ' ' + t('db'), x, Math.max(14, y - 14)); }
+  });
 }
+// Режим эквалайзера подсвечен, если кривая совпадает с ним
+function markEqPreset() {
+  const cur = JSON.stringify(st().fx.eq);
+  host && host.querySelectorAll('[data-eqp]').forEach((b) => { const on = JSON.stringify(EQ_PRESETS[b.dataset.eqp]) === cur; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+}
+// Перетаскивание точки полосы: ближайшая по горизонтали; страница при этом не прокручивается (touch-action: none)
+function eqDrag(e, cv) {
+  e.preventDefault();
+  const r = cv.getBoundingClientRect(), W = r.width, H = r.height;
+  let best = 0;
+  EQ_BANDS.forEach((b, i) => { if (Math.abs(eqX(b.f, W) - (e.clientX - r.left)) < Math.abs(eqX(EQ_BANDS[best].f, W) - (e.clientX - r.left))) best = i; });
+  const now = Date.now();
+  // двойное касание той же точки — в ноль
+  if (S.eqTap && S.eqTap.i === best && now - S.eqTap.t < 320) {
+    st().fx.eq = st().fx.eq.slice(); st().fx.eq[best] = 0; S.eqTap = null; eqHot = -1;
+    ctx.store.save(); liveFx(); drawEq(); markEqPreset(); syncEqInputs();
+    return;
+  }
+  S.eqTap = { i: best, t: now };
+  eqHot = best;
+  st().fx.eq = st().fx.eq.slice();
+  let raf = 0;
+  const set = (ev) => {
+    const d = Math.round(((H / 2 - (ev.clientY - r.top)) / (H / 2 - EQ_PAD)) * EQ_MAX * 2) / 2;
+    const v = Math.max(-EQ_MAX, Math.min(EQ_MAX, d));
+    if (st().fx.eq[best] === v) return;
+    st().fx.eq[best] = v;
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; liveFx(); drawEq(); });
+  };
+  const id = e.pointerId;
+  try { cv.setPointerCapture(id); } catch { /* ignore */ }
+  const move = (ev) => { if (ev.pointerId === id) set(ev); };
+  const up = (ev) => {
+    if (ev.pointerId !== id) return;
+    cv.removeEventListener('pointermove', move); cv.removeEventListener('pointerup', up); cv.removeEventListener('pointercancel', up);
+    eqHot = -1; ctx.store.save(); liveFx(); drawEq(); markEqPreset(); syncEqInputs();
+  };
+  cv.addEventListener('pointermove', move); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  drawEq();
+}
+function syncEqInputs() { host && host.querySelectorAll('[data-eq]').forEach((inp) => { inp.value = st().fx.eq[+inp.dataset.eq]; }); }
 function fxTxt(k, v) {
   if (k === 'gate') return v <= -90 ? t('off') : v + ' ' + t('db');
   if (k === 'gain') return (v > 0 ? '+' : '') + v + ' ' + t('db');
@@ -416,7 +479,7 @@ export default {
         return;
       }
       const ep = e.target.closest('[data-eqp]');
-      if (ep) { st().fx.eq = EQ_PRESETS[ep.dataset.eqp].slice(); ctx.store.save(); liveFx(); render(); return; }
+      if (ep) { st().fx.eq = EQ_PRESETS[ep.dataset.eqp].slice(); ctx.store.save(); liveFx(); drawEq(); markEqPreset(); syncEqInputs(); return; }
       const x = e.target.closest('[data-x]');
       if (!x || S.busy) return;
       const a = x.dataset.x;
@@ -435,7 +498,7 @@ export default {
       const d = e.target.dataset, s = st();
       if (d.v === 'in' || d.v === 'out') { s[d.v] = e.target.value || null; ctx.store.save(); render(); if (S.phase === 'idle') { S.err = null; liveRestart(); } }
       else if (d.v === 'stereo' || d.v === 'raw') { s[d.v] = e.target.checked; ctx.store.save(); }
-      else if (d.eq != null) { s.fx.eq[+d.eq] = +e.target.value; s.fx.eq = s.fx.eq.slice(); ctx.store.save(); liveFx(); render(); }
+      else if (d.eq != null) { s.fx.eq = s.fx.eq.slice(); s.fx.eq[+d.eq] = +e.target.value; ctx.store.save(); liveFx(); drawEq(); markEqPreset(); }
       else if (d.fx) {
         const v = e.target.type === 'checkbox' ? e.target.checked : +e.target.value;
         s.fx[d.fx] = v; ctx.store.save(); liveFx();
@@ -444,6 +507,8 @@ export default {
     };
     // ручки обрезки: перетаскивание ближайшей
     onPtr = (e) => {
+      const eq = e.target.closest('#vc-eqc');
+      if (eq) { eqDrag(e, eq); return; }
       const cv = e.target.closest('#vc-wave');
       if (!cv || !S.take) return;
       stopPlay();
@@ -463,7 +528,7 @@ export default {
       const d = e.target.dataset;
       if (d.fx && e.target.type === 'range') { st().fx[d.fx] = +e.target.value; liveFx(); const lb = host.querySelector('#vfx-' + d.fx); if (lb) lb.textContent = fxTxt(d.fx, +e.target.value); return; }
       const i = d.eq; if (i == null) return;
-      st().fx.eq[+i] = +e.target.value; liveFx(); const l = host.querySelector('#veq-' + i); if (l) l.textContent = eqTxt(+e.target.value); drawEq();
+      st().fx.eq[+i] = +e.target.value; liveFx(); drawEq();
     };
     host.addEventListener('input', onInput);
     render();
