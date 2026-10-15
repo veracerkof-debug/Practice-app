@@ -24,6 +24,7 @@ import { createActivity } from './activity.js';
 import { initNoSound } from './nosound.js';
 import { createPulse } from './pulse.js';
 import { initBackground } from './background.js';
+import { initPlayer } from './player.js';
 import { initGuard } from './guard.js';
 import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
@@ -215,6 +216,7 @@ export function boot(root) {
   createShell(app, root);
   // Работа в фоне на Android: пока что-то идёт — служба с уведомлением, приложение не замораживается
   initBackground(app);
+  initPlayer(app); // шторка, плавающая кнопка, всплывающее окно (Android)
   initGuard(app);
   // после возврата из копии — файлы демо-набора, которые добавила проверка, убрать (если набора не было)
   if (restored && !store.state.settings.demo) removeDemoFiles(app).catch(() => {});

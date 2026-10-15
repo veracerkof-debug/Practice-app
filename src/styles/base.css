@@ -100,3 +100,6 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 /* совет в инструкции — от лица маскота */
 .hctip .hcm{display:inline-flex;align-items:center;gap:6px;margin-right:6px;vertical-align:middle}
 .hctip .hcm svg{flex:none}
+/* всплывающее окно («картинка в картинке», src/core/player.js): только рабочая поверхность — без вкладок, шапок и кнопок края */
+html.pip .tabbar, html.pip .tvhd, html.pip .tvback, html.pip .tvrecf, html.pip .mxh, html.pip .toast, html.pip .tama { display: none !important; }
+html.pip .tview, html.pip .session { inset: 0 !important; border-radius: 0 !important; }

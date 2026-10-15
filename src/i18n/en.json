@@ -1356,5 +1356,21 @@
   "cal.rem.tomorrow": "Tomorrow",
   "cal.remDenied": "Notifications are not allowed — enable them in phone settings",
   "cal.rem.inMin": "In {n} min",
-  "cal.rem.inH": "In {n} h"
+  "cal.rem.inH": "In {n} h",
+  "pl.hdr": "Control outside the app",
+  "pl.notify": "Notification buttons",
+  "pl.notify.about": "Pause, quieter and louder in the notification shade",
+  "pl.float": "Floating button",
+  "pl.float.about": "Over other apps: pause and volume of each source",
+  "pl.pip": "Pop-up window",
+  "pl.pip.about": "The tool stays as a small window when going to the home screen",
+  "pl.hint": "All of this works only while something is playing. The floating button needs the “Display over other apps” permission.",
+  "pl.askOverlay": "Allow Melete to display over other apps",
+  "pl.pause": "Pause",
+  "pl.play": "Resume",
+  "pl.down": "Quieter",
+  "pl.up": "Louder",
+  "pl.open": "Open",
+  "pl.title": "Melete — sound",
+  "pl.none": "Nothing is playing now"
 }

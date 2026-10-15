@@ -1329,5 +1329,21 @@
   "cal.rem.tomorrow": "Ertaga",
   "cal.remDenied": "Bildirishnomalarga ruxsat yoʻq — telefon sozlamalarida yoqish kerak",
   "cal.rem.inMin": "{n} daqiqadan keyin",
-  "cal.rem.inH": "{n} soatdan keyin"
+  "cal.rem.inH": "{n} soatdan keyin",
+  "pl.hdr": "Ilovadan tashqari boshqaruv",
+  "pl.notify": "Bildirishnomadagi tugmalar",
+  "pl.notify.about": "Pauza, pastroq va balandroq — bildirishnomalar pardasida",
+  "pl.float": "Suzuvchi tugma",
+  "pl.float.about": "Boshqa ilovalar ustida: pauza va har bir manba balandligi",
+  "pl.pip": "Qalqib chiquvchi oyna",
+  "pl.pip.about": "Ish stoliga chiqilganda asbob kichik oyna boʻlib qoladi",
+  "pl.hint": "Hammasi faqat biror narsa yangrayotganda ishlaydi. Suzuvchi tugmaga «Boshqa ilovalar ustida» ruxsati kerak.",
+  "pl.askOverlay": "Melete’ga boshqa ilovalar ustida koʻrinishga ruxsat berish",
+  "pl.pause": "Pauza",
+  "pl.play": "Davom etish",
+  "pl.down": "Pastroq",
+  "pl.up": "Balandroq",
+  "pl.open": "Ochish",
+  "pl.title": "Melete — tovush",
+  "pl.none": "Hozir hech narsa yangramayapti"
 }
