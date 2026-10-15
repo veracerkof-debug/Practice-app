@@ -4,6 +4,7 @@
 // Лицо можно перетащить в любое место (запоминается: tama.pos — доли окна); убрать с экрана и вернуть —
 // кнопкой с лицом в шторке микшера (tama.hide).
 import { getLang, isBare, t, hasMascot } from '../i18n/index.js';
+import { toast } from './index.js';
 import { mascotSVG, pokeMascot } from './mascot.js';
 import { createTama, tamaOf } from '../core/tama.js';
 import { tamaLine } from '../core/tamatexts.js';
@@ -29,7 +30,8 @@ export function initTama(app) {
   const place = () => {
     const p = tamaOf(st()).pos;
     if (!el || !p) return;
-    const x = Math.max(4, Math.min(innerWidth - FACE - 4, p.x * innerWidth)), y = Math.max(4, Math.min(innerHeight - FACE - 4, p.y * innerHeight));
+    // во время перетаскивания — можно до самого края (за край — убрать)
+    const m = drag && drag.moved ? 0 : 4, x = Math.max(m, Math.min(innerWidth - FACE - m, p.x * innerWidth)), y = Math.max(m, Math.min(innerHeight - FACE - m, p.y * innerHeight));
     const flip = x + FACE / 2 > innerWidth / 2;
     el.classList.add('moved');
     el.classList.toggle('flip', flip);
@@ -85,6 +87,19 @@ export function initTama(app) {
   }, { passive: false });
   document.addEventListener('pointerup', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
+    // смахнули за край экрана — маскот уходит (вернуть — в шторке микшера)
+    if (drag.moved && el) {
+      const r = el.querySelector('.tamab').getBoundingClientRect();
+      if (r.left < 6 || r.right > innerWidth - 6 || r.top < 6 || r.bottom > innerHeight - 6) {
+        const tm = st().tama || (st().tama = {});
+        tm.hide = true; delete tm.pos;
+        el.remove(); el = null; face = '';
+        app.store.settingsChanged();
+        toast(t('tama.gone'));
+        drag = null;
+        return;
+      }
+    }
     if (drag.moved) { app.store.settingsChanged(); el && el.classList.add('nopoke'); setTimeout(() => el && el.classList.remove('nopoke'), 80); }
     drag = null;
   });

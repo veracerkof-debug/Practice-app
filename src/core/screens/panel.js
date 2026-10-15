@@ -1,7 +1,7 @@
 // Профиль и настройки (полноэкранная панель): статистика, неделя и цель, оформление, данные, функции;
 // поддержать разработчика, правовые тексты, соглашение при первом запуске.
 // Перенесено из legacy/practice.html (panelRoot, renderPanel, PPAGES, weekHTML, lookHTML, dataHTML, featHTML, statsHTML,
-// barsSVG, hbars, legalSheet, tosGate, donateSheet, doExport, импорт копии).
+// barsSVG, hbars, legalSheet, donateSheet, doExport, импорт копии).
 import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
 import { sortable } from '../../ui/hold.js';
@@ -682,22 +682,4 @@ export function legalSheet(kind) {
   sheet(() => body);
 }
 
-// Соглашение при первом запуске (и при смене редакции)
-// then() — после согласия (или сразу, если оно уже дано): дальше регистрация
-export function tosGate(app, then = () => {}) {
-  const st = app.store.state.settings;
-  if (document.getElementById('tosGate')) return;
-  if (st.tosOk === TOS_VER) { then(); return; }
-  const l = document.createElement('div');
-  l.id = 'tosGate';
-  l.className = 'ask';
-  l.style.zIndex = '39';
-  l.innerHTML = '<div class="askbox tosbox" role="dialog" aria-modal="true" aria-label="' + esc(t('legal.tos')) + '"><h2>' + t('tos.title') + '</h2><p>' + t('tos.p1') + '</p><p>' + t('tos.p2') + '</p>' +
-    '<button class="link" data-tos-read style="font-size:15px">' + t('tos.read') + '</button><button class="btn fill block" data-tos-ok style="margin-top:12px">' + t('tos.ok') + '</button></div>';
-  document.body.appendChild(l);
-  l.addEventListener('click', (e) => {
-    if (e.target.closest('[data-tos-read]')) legalSheet('tos');
-    else if (e.target.closest('[data-tos-ok]')) { st.tosOk = TOS_VER; app.store.settingsChanged(); l.remove(); then(); }
-  });
-}
 

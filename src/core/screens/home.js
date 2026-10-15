@@ -52,7 +52,8 @@ export function homeLayout(st) {
   const h = st.home || {}, order = (h.order || []).filter((k) => HOME_BLOCKS.includes(k));
   // новые блоки — на своё место по умолчанию
   HOME_BLOCKS.forEach((k, i) => { if (!order.includes(k)) order.splice(Math.min(i, order.length), 0, k); });
-  return { order, off: new Set((h.off || []).filter((k) => HOME_BLOCKS.includes(k))), size: h.size || {} };
+  // по умолчанию маскот на главной молчит: он — в уведомлениях (решение автора); включить — «Главный экран»
+  return { order, off: new Set((h.off || ['voice']).filter((k) => HOME_BLOCKS.includes(k))), size: h.size || {} };
 }
 export function setHomeLayout(st, L) {
   st.home = { order: L.order.slice(), off: [...L.off], size: Object.fromEntries(Object.entries(L.size).filter(([k, v]) => HOME_BLOCKS.includes(k) && v !== 'm')) };

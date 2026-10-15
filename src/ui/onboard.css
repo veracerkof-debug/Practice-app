@@ -56,3 +56,43 @@
 .wldocs{display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:center}
 .wldocs .link{font-size:15px;min-height:40px}
 .wlaccept{margin:4px 0 0;font-size:13px;line-height:1.4;color:var(--l2);text-align:center}
+
+/* Стартовый экран (2026-10): Melete, стих, язык — коротко */
+.wlstart{min-height:100%;justify-content:center;gap:22px;text-align:center}
+.wlstart .wllogo{transform:scale(1.6);margin:18px 0 10px}
+.wlstart .wlh{font-size:20px;font-weight:600;color:var(--l2)}
+.wlverse{margin:0;padding:0 8px;display:flex;flex-direction:column;gap:6px}
+.wlgr{margin:0;font-family:"Melete Greek","GFS Didot",Georgia,serif;font-size:19px;color:var(--l2)}
+.wlverse blockquote{margin:0;font-family:Georgia,"Noto Serif",serif;font-size:17px;line-height:1.45;font-style:italic}
+.wlverse figcaption{font-size:13px;color:var(--l2);letter-spacing:.04em}
+
+/* Регистрация — колесо часов */
+.obwheel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+.obwheel .obh{font-size:24px;margin:8px 0 4px}
+.whwrap{position:relative;width:min(84vw,320px);aspect-ratio:1;touch-action:none;cursor:grab;outline:none}
+.whsvg{width:100%;height:100%;display:block}
+.whticks line{stroke:var(--l3);stroke-width:1.4;stroke-linecap:round}
+.whtrack{fill:none;stroke:var(--fill2);stroke-width:18;stroke-linecap:round}
+.whfill{fill:none;stroke:var(--tint);stroke-width:18;stroke-linecap:round}
+.whknob{fill:var(--cell);stroke:var(--tint);stroke-width:4;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))}
+.whwrap:focus-visible .whknob{stroke-width:6}
+.whmid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;gap:2px}
+.whmid b{font-size:46px;font-weight:300;letter-spacing:-.02em;line-height:1}
+.whmid span{font-size:14px;color:var(--l2)}
+.whmid em{margin-top:8px;font-style:normal;font-size:15px;font-weight:600;color:var(--tint-text);padding:4px 12px;border-radius:999px;background:color-mix(in srgb,var(--tint) 12%,transparent)}
+.whtools{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:320px;min-height:44px}
+.whtool{width:36px;height:36px;border-radius:10px;background:var(--c);color:var(--on);display:flex;align-items:center;justify-content:center;animation:whin .25s ease-out}
+.whtool svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@keyframes whin{from{transform:scale(.6);opacity:0}}
+.obimp{display:block;margin:10px auto 0;min-height:44px;font-size:15px}
+
+/* Мелетий спрашивает имя (после регистрации) */
+.askname{position:fixed;left:0;right:0;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;justify-content:center;padding:0 12px;animation:anin .3s cubic-bezier(.2,.9,.3,1.1)}
+.askname.leaving{opacity:0;transform:translateY(12px);transition:.2s}
+.anbox{display:flex;gap:12px;align-items:flex-start;width:min(100%,440px);padding:14px;border-radius:20px;background:var(--cell);box-shadow:0 12px 40px rgba(0,0,0,.22)}
+.anface{flex:none}
+.anmain{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+.anmain b{font-size:17px}
+.anbtns{display:flex;justify-content:flex-end;gap:12px;align-items:center}
+@keyframes anin{from{opacity:0;transform:translateY(16px)}}
+.anmain .inp{width:100%;box-sizing:border-box;min-height:44px;padding:8px 12px;border-radius:12px;border:1px solid var(--sep);background:var(--fill);color:var(--ink);font-size:17px}

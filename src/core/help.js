@@ -10,6 +10,7 @@ import { esc, leave } from '../ui/index.js';
 import { moduleName } from './modules.js';
 
 const WAIT_MS = 1000;
+const AUTO = false; // карточка при первом открытии — выключена
 const queue = [];
 const thisRun = new Set(); // показанные за этот запуск
 let showing = false;
@@ -52,6 +53,8 @@ const once = (st) => st.helpOnce || (st.helpOnce = {}); // хоть раз по�
 
 // Инструмент или механизм открыт: карточка, если её не просили больше не показывать (раз за запуск)
 export function firstHelp(app, x) {
+  // сами больше не всплывают (решение автора, 2026-10: меньше текста) — только по «?» и из «Профиль → Инструкции»
+  if (!app || !AUTO) return;
   const st = app.store.state.settings, tp = x.core ? x : modTopic(x);
   if (isBare()) return; // «Минимал» без текста: инструкции — только по «?» и из профиля
   if (!st.configured || never(st)[tp.id] || thisRun.has(tp.id) || !helpOf(tp) || queue.some((q) => q.tp.id === tp.id)) return;

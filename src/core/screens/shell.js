@@ -15,9 +15,9 @@ import { renderTools, openToolView } from './tools.js';
 import { reportSheet } from './report.js';
 import { songImportMenu } from './songimport.js';
 import { shareSheet, shareMenu } from './share.js';
-import { createPanel, donateSheet, legalSheet, tosGate, unverifiedSheet } from './panel.js';
+import { createPanel, donateSheet, legalSheet, unverifiedSheet } from './panel.js';
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
-import { onboarding, langGate } from './onboard.js';
+import { onboarding, langGate, askName } from './onboard.js';
 import { logoHTML } from '../../ui/logo.js';
 import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
@@ -181,13 +181,14 @@ export function createShell(app, root) {
   if (!app.store.state.settings.profile) {
     root.classList.add('starting');
     main.innerHTML = '<div class="splash" aria-hidden="true">' + logoHTML() + '</div>';
-    langGate(app, () => tosGate(app, () => onboarding(app, () => { root.classList.remove('starting'); render(); enter(); })));
+    langGate(app, () => onboarding(app, () => { root.classList.remove('starting'); render(); enter(); }));
     return { render, go, panel };
   }
   render();
   enter(); // первый экран тоже появляется плавно
-  // Соглашение (новая редакция) — поверх главной; перезапуск из настроек (язык, вид) — обратно на ту же страницу настроек
+  // перезапуск из настроек (язык, вид) — обратно на ту же страницу настроек
   const reopened = panel.reopen();
-  if (!reopened) setTimeout(() => tosGate(app, () => { if (!app.store.state.settings.profile) onboarding(app, render); }), 400);
+  // соглашение — только в настройках («О Melete»); имя — если его ещё не спрашивали
+  if (!reopened) setTimeout(() => askName(app), 600);
   return { render, go, panel };
 }

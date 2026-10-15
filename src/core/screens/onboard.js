@@ -1,44 +1,48 @@
-// Регистрация при первом запуске: язык и имя, инструменты, уровень, набор инструментов приложения, опыт до приложения,
-// цель недели и дни практики.
-// Аккаунта нет: всё хранится на устройстве (settings.profile) и меняется потом в профиле.
+// Первый запуск (решение автора, 2026-10 — меньше текста): стартовый экран (Melete, стих, язык) и регистрация одним
+// экраном — колесо часов: сколько уже сыграно. По часам — уровень, цель недели и набор инструментов; там же — загрузка
+// своих данных. Всё остальное — по умолчанию (Мелетий, классические напоминания, церковный режим, демо-набор);
+// имя Мелетий спрашивает уже на главной (askName). Соглашение — в настройках («О Melete»).
 import '../../ui/onboard.css';
 import { t, getLang, LANGS, LANG_NAMES, initI18n } from '../../i18n/index.js';
 import { esc, toast } from '../../ui/index.js';
-import { fmtDur } from '../format.js';
-import { GOAL_MIN, GOAL_MAX } from '../settings.js';
-import { INSTRUMENTS, LEVELS, GOAL_BY_LEVEL, PRIOR_MAX, newProfile, saveProfile, applyLevelDefaults, estimateHours, toolsFor } from '../profile.js';
-import { modules } from '../../modules/index.js';
-import { moduleName } from '../modules.js';
+import { PRIOR_MAX, GOAL_BY_LEVEL, newProfile, saveProfile, applyLevelDefaults, toolsFor, levelByHours } from '../profile.js';
+import { modules, moduleById } from '../../modules/index.js';
 import { logoHTML } from '../../ui/logo.js';
-import { meleteHTML, bindMelete } from './melete.js';
-import { remindOf, setRemind, remindAvailable, remindPermission } from '../reminders.js';
-import { gemSVG } from '../../ui/gems.js';
+import { setRemind, remindOf, remindAvailable, remindPermission } from '../reminders.js';
 import { mascotSVG } from '../../ui/mascot.js';
+import { hasMascot } from '../../i18n/index.js';
 import { TOS_VER } from '../legal.js';
-import { legalSheet } from './panel.js';
-import { weekdays } from './common.js';
 
-// Регистрация — коротко (решение автора): маскот и характер, имя, инструменты, уровень. Остальное — по умолчанию
-// (цель и набор инструментов — по уровню, церковный режим, демо-набор) и меняется потом в настройках
-const STEPS = ['melete', 'name', 'inst', 'level'];
-
-// Карточки для выбора (инструменты, уровень)
-const card = (attr, on, title, sub = '') => '<button type="button" class="obcard' + (on ? ' on' : '') + '" ' + attr + ' aria-pressed="' + on + '"><b>' + esc(title) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</button>';
-
-// Лига на старте — всегда «Камень»: опыт до приложения в лигу и статистику не идёт (решение автора)
-const leagueBox = () => gemSVG('stone', 0, 64, t('gem.stone')) + '<div><b>' + esc(t('gem.stone')) + '</b><small>' + t('ob.leagueNote') + '</small></div>';
+/* ---------- колесо часов ---------- */
+// Положение на круге 0…1 → часы: сначала мелко (первые сотни часов важнее), к концу — крупно, до 20 000
+const HMAX = 20000;
+const snap = (h) => (h < 100 ? Math.round(h / 5) * 5 : h < 1000 ? Math.round(h / 25) * 25 : h < 5000 ? Math.round(h / 100) * 100 : Math.round(h / 500) * 500);
+export const wheelHours = (f) => snap(Math.pow(Math.max(0, Math.min(1, f)), 2.6) * HMAX);
+const wheelFrac = (h) => Math.pow(Math.max(0, Math.min(HMAX, h)) / HMAX, 1 / 2.6);
+const ARC = 0.86; // колесо — не полный круг: внизу просвет
+const fmtH = (h) => new Intl.NumberFormat(getLang() === 'en' ? 'en' : 'ru').format(h);
+function wheelSVG(f) {
+  const R = 118, C = 140, a0 = Math.PI / 2 + Math.PI * (1 - ARC), span = 2 * Math.PI * ARC;
+  const pt = (x, r = R) => [C + r * Math.cos(a0 + span * x), C + r * Math.sin(a0 + span * x)];
+  const arc = (x) => { const [sx, sy] = pt(0), [ex, ey] = pt(x); return 'M' + sx.toFixed(1) + ' ' + sy.toFixed(1) + 'A' + R + ' ' + R + ' 0 ' + (span * x > Math.PI ? 1 : 0) + ' 1 ' + ex.toFixed(1) + ' ' + ey.toFixed(1); };
+  // деления: по часам 10, 100, 1000, 5000, 10 000 — подписи; мелкие — между
+  const ticks = Array.from({ length: 49 }, (_, i) => { const x = i / 48, [x1, y1] = pt(x, R + 14), [x2, y2] = pt(x, R + (i % 6 ? 18 : 22)); return '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '"/>'; }).join('');
+  const [kx, ky] = pt(f);
+  return '<svg class="whsvg" viewBox="0 0 280 280" aria-hidden="true"><g class="whticks">' + ticks + '</g>' +
+    '<path class="whtrack" d="' + arc(1) + '"/>' + (f > 0.002 ? '<path class="whfill" d="' + arc(f) + '"/>' : '') +
+    '<circle class="whknob" cx="' + kx.toFixed(1) + '" cy="' + ky.toFixed(1) + '" r="15"/></svg>';
+}
 
 export function onboarding(app, done = () => {}) {
   if (document.getElementById('onboard')) return;
   const st = app.store.state.settings;
   const p = { ...newProfile(), ...(st.profile || {}) };
-  // новому человеку — классические напоминания, Мелетий, церковный режим (наборы слов — классика, рок и джаз, Библия, христианские авторы)
+  // по умолчанию: классические напоминания, Мелетий, церковный режим
   if (!st.remind) setRemind(st, { mode: 'classic' });
   if (!st.mascot) st.mascot = 'm';
   if (st.church == null) st.church = true;
-  const f = { step: 0, years: 0, perWeek: 0, goalMin: st.goalMin, days: st.days.slice(), goalTouched: false, tools: null, toolsTouched: false };
   const allIds = modules.map((m) => m.id);
-  const aboutOf = (m) => { const l = getLang(); return m.i18n?.[l]?.about ?? m.i18n?.ru?.about ?? ''; };
+  let f = wheelFrac(+p.priorHours || 0);
   const layer = document.createElement('div');
   layer.id = 'onboard';
   layer.className = 'onb';
@@ -47,175 +51,153 @@ export function onboarding(app, done = () => {}) {
   layer.setAttribute('aria-label', t('ob.aria'));
   document.body.appendChild(layer);
 
-  const stepHTML = () => {
-    const s = STEPS[f.step];
-    if (s === 'name') {
-      return '<h1 class="obh">' + t('ob.hello') + '</h1><p class="obp">' + t('ob.intro') + '</p>' +
-        '<div class="hdr">' + t('ob.name') + '</div><div class="group"><label class="cell"><input class="inp left" id="obname" maxlength="40" autocomplete="given-name" placeholder="' + t('ob.namePh') + '" aria-label="' + t('ob.name') + '" value="' + esc(p.name) + '"></label></div>' +
-        '<p class="ftr">' + t('ob.private') + '</p>' +
-        // уже есть свои данные (файл от команды или собранный нейросетью) — сразу загрузить
-        '<div class="hdr">' + t('ob.import') + '</div><div class="group"><button type="button" class="cell act" data-obimp="file">' + t('ai.load') + '</button>' +
-        '<button type="button" class="cell act" data-obimp="ai">' + t('ai.title') + '</button></div><p class="ftr">' + t('ob.importHint') + '</p>';
-    }
-    if (s === 'inst') {
-      return '<h1 class="obh">' + t('ob.instTitle') + '</h1><p class="obp">' + t('ob.instText') + '</p><div class="obgrid">' +
-        INSTRUMENTS.map((k) => card('data-obinst="' + k + '"', p.instruments.includes(k), t('inst.' + k))).join('') + '</div>';
-    }
-    if (s === 'level') {
-      return '<h1 class="obh">' + t('ob.levelTitle') + '</h1><p class="obp">' + t('ob.levelText') + '</p><div class="oblist">' +
-        LEVELS.map((k) => card('data-oblevel="' + k + '"', p.level === k, t('level.' + k), t('level.' + k + '.text'))).join('') + '</div>';
-    }
-    // Мелета: характер напоминаний и маскота, время занятий, обращение, наборы слов
-    if (s === 'melete') return '<h1 class="obh">' + t('ob.mascotTitle') + '</h1><p class="obp">' + t('ob.mascotText') + '</p>' + meleteHTML(st);
-    return '';
+  const hours = () => wheelHours(f);
+  const toolsRow = (lvl) => toolsFor(lvl, p.instruments, allIds).map(moduleById).filter((m) => m && !m.tab)
+    .map((m) => '<span class="whtool" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '" title="' + esc(m.name && (m.name[getLang()] || m.name.ru) || m.id) + '">' + m.icon + '</span>').join('');
+  const live = () => {
+    const h = hours(), lvl = levelByHours(h);
+    layer.querySelector('.whwrap').innerHTML = wheelSVG(f) + '<div class="whmid"><b class="num">' + fmtH(h) + '</b><span>' + t('ob.hoursUnit') + '</span><em>' + t('level.' + lvl) + '</em></div>';
+    layer.querySelector('.whtools').innerHTML = toolsRow(lvl);
+    const s = layer.querySelector('[role="slider"]');
+    s.setAttribute('aria-valuenow', h); s.setAttribute('aria-valuetext', fmtH(h) + ' ' + t('ob.hoursUnit') + ', ' + t('level.' + lvl));
   };
+  layer.innerHTML = '<div class="obbody obwheel"><h1 class="obh">' + t('ob.wheelTitle') + '</h1>' +
+    '<div class="whwrap" role="slider" tabindex="0" aria-label="' + esc(t('ob.wheelTitle')) + '" aria-valuemin="0" aria-valuemax="' + HMAX + '"></div>' +
+    '<div class="whtools" aria-hidden="true"></div></div>' +
+    '<div class="obfoot"><button type="button" class="btn fill block" data-obgo>' + t('ob.finish') + '</button>' +
+    '<button type="button" class="link obimp" data-obimp>' + t('ob.import') + '</button></div>';
+  live();
 
-  const render = () => {
-    const last = f.step === STEPS.length - 1;
-    layer.innerHTML = '<div class="obtop">' + (f.step ? '<button type="button" class="link" data-obback>' + t('ui.back') + '</button>' : '<span></span>') +
-      '<div class="obdots" role="progressbar" aria-valuemin="1" aria-valuemax="' + STEPS.length + '" aria-valuenow="' + (f.step + 1) + '" aria-label="' + t('ob.step', { n: f.step + 1, of: STEPS.length }) + '">' +
-      STEPS.map((_, i) => '<i class="' + (i <= f.step ? 'on' : '') + '"></i>').join('') + '</div><span></span></div>' +
-      '<div class="obbody">' + stepHTML() + '</div>' +
-      '<div class="obfoot"><button type="button" class="btn fill block" data-obnext>' + t(last ? 'ob.finish' : 'ob.next') + '</button></div>';
-    layer.querySelector('.obbody').scrollTop = 0;
+  // вращение пальцем: угол точки касания → положение на колесе
+  const wrap = layer.querySelector('.whwrap');
+  const fromPoint = (e) => {
+    const r = wrap.getBoundingClientRect(), x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+    const a0 = Math.PI / 2 + Math.PI * (1 - ARC), span = 2 * Math.PI * ARC;
+    let a = Math.atan2(y, x) - a0;
+    while (a < 0) a += 2 * Math.PI;
+    let nf = a / span;
+    if (nf > 1) nf = nf - 1 > (2 * Math.PI / span - 1) / 2 ? 0 : 1; // просвет внизу — к ближайшему краю
+    // без перескока через просвет с конца на начало и обратно
+    if (Math.abs(nf - f) > 0.5) nf = f > 0.5 ? 1 : 0;
+    const before = hours();
+    f = nf;
+    if (hours() !== before && navigator.vibrate && (hours() % 1000 === 0 || hours() < 100)) { try { navigator.vibrate(4); } catch { /* */ } }
+    live();
   };
-
-  // Поля ввода — в черновик (перед перерисовкой и переходом)
-  const read = () => {
-    const q = (id) => layer.querySelector('#' + id);
-    if (q('obname')) p.name = q('obname').value;
-    if (q('obhours')) p.priorHours = Math.max(0, Math.min(PRIOR_MAX, Math.round(+q('obhours').value || 0)));
-    if (q('obyears')) f.years = Math.max(0, +q('obyears').value || 0);
-    if (q('obweek')) f.perWeek = Math.max(0, +q('obweek').value || 0);
-  };
+  let drag = false;
+  wrap.addEventListener('pointerdown', (e) => { drag = true; wrap.setPointerCapture(e.pointerId); fromPoint(e); });
+  wrap.addEventListener('pointermove', (e) => { if (drag) fromPoint(e); });
+  wrap.addEventListener('pointerup', () => { drag = false; });
+  wrap.addEventListener('pointercancel', () => { drag = false; });
+  wrap.addEventListener('keydown', (e) => {
+    const d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 0.01 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -0.01 : 0;
+    if (!d) return;
+    e.preventDefault(); f = Math.max(0, Math.min(1, f + d)); live();
+  });
 
   const finish = () => {
-    // по уровню — набор инструментов и цель недели; дни — как есть (будни)
-    f.tools = toolsFor(p.level, p.instruments, allIds);
-    f.goalMin = GOAL_BY_LEVEL[p.level];
+    const h = hours();
+    p.priorHours = Math.min(PRIOR_MAX, h);
+    p.level = levelByHours(h);
     saveProfile(app.store, p, { done: true });
-    // не отмеченные инструменты выключаются (как в «Настройки → Функции»); функции ядра в st.off не трогаются
-    const off = st.off || (st.off = {});
-    allIds.forEach((id) => { if (f.tools.includes(id)) delete off[id]; else off[id] = true; });
-    st.goalMin = f.goalMin;
-    st.days = f.days;
+    // по уровню — набор инструментов и цель недели
+    const tools = toolsFor(p.level, p.instruments, allIds), off = st.off || (st.off = {});
+    allIds.forEach((id) => { if (tools.includes(id)) delete off[id]; else off[id] = true; });
+    st.goalMin = GOAL_BY_LEVEL[p.level];
+    st.tosOk = TOS_VER; // соглашение — в настройках («О Melete»)
     app.store.settingsChanged();
     if (remindOf(st).mode !== 'quiet' && remindAvailable()) remindPermission().then((ok) => { if (!ok) toast(t('rem.denied')); });
     applyLevelDefaults(app.device, app.store.state.settings.profile);
     app.saveDevice();
     layer.remove();
-    toast(t('ob.welcome', { name: p.name.trim() || t('ob.musician') }));
     // демо-набор — сразу (песни, табы, ноты, записи, события); убрать — «Данные и копии»
     import('../demo.js').then((m) => m.addDemo(app, t)).then(() => app.render && app.render()).catch(() => {});
     done();
+    setTimeout(() => askName(app), 700);
   };
 
   layer.addEventListener('click', (e) => {
-    const g = (s) => e.target.closest(s);
-    let b;
-    read();
-    if (g('[data-obnext]')) {
-      if (STEPS[f.step] === 'inst' && !p.instruments.length) { toast(t('ob.pickInst')); return; }
-      // у всех, кроме новичка, опыт обязателен: иначе уровень и звание не с чего посчитать
-      // цель по уровню подставляется, пока её не меняли вручную
-      if (STEPS[f.step] === 'level' && !f.goalTouched) f.goalMin = GOAL_BY_LEVEL[p.level];
-      // набор инструментов по уровню — пока его не меняли вручную
-      if (STEPS[f.step] === 'level' && !f.toolsTouched) f.tools = toolsFor(p.level, p.instruments, allIds);
-      if (STEPS[f.step] === 'tools' && !f.tools.length) { toast(t('ob.pickTool')); return; }
-      if (f.step === STEPS.length - 1) { finish(); return; }
-      // перед шагом «Мелета»: имя (для обращения), дни и цель — уже в настройках, чтобы образец был настоящим
-      if (STEPS[f.step + 1] === 'melete') { saveProfile(app.store, p); st.goalMin = f.goalMin; st.days = f.days.slice(); }
-      f.step++;
-      render();
-    } else if (g('[data-obback]')) { f.step = Math.max(0, f.step - 1); render(); }
-    else if ((b = g('[data-obinst]'))) {
-      const k = b.dataset.obinst;
-      p.instruments = p.instruments.includes(k) ? p.instruments.filter((x) => x !== k) : [...p.instruments, k];
-      b.classList.toggle('on');
-      b.setAttribute('aria-pressed', p.instruments.includes(k));
-    } else if ((b = g('[data-oblevel]'))) { p.level = b.dataset.oblevel; render(); }
-    else if ((b = g('[data-obtool]'))) {
-      const id = b.dataset.obtool;
-      f.tools = f.tools.includes(id) ? f.tools.filter((x) => x !== id) : allIds.filter((x) => x === id || f.tools.includes(x));
-      f.toolsTouched = true;
-      b.classList.toggle('on');
-      b.setAttribute('aria-pressed', f.tools.includes(id));
-    }
-    else if ((b = g('[data-obimp]'))) {
-      // после приёма: профиль, дни и цель из файла — в шаги регистрации (их можно проверить и поменять)
-      const after = (r) => {
-        const S = app.store.state.settings, q = S.profile || {};
-        if (r.profile) {
-          if (q.name) p.name = q.name;
-          if (q.instruments && q.instruments.length) p.instruments = q.instruments.slice();
-          if (q.level) p.level = q.level;
-          f.days = S.days.slice(); f.goalMin = S.goalMin; f.goalTouched = true;
-        }
-        render();
-      };
+    if (e.target.closest('[data-obgo]')) { finish(); return; }
+    if (e.target.closest('[data-obimp]')) {
+      // свои данные (файл от команды или собранный нейросетью): профиль из файла — сразу регистрация готова
       saveProfile(app.store, p);
-      import('./share.js').then((m) => (b.dataset.obimp === 'ai' ? m.aiDocSheet(app, after) : m.pickFile(app, after)));
-    }
-    else if (g('[data-obcalc]')) { p.priorHours = Math.min(PRIOR_MAX, estimateHours(f.years, f.perWeek)); render(); }
-    else if ((b = g('[data-obgoal]'))) { f.goalMin = Math.max(GOAL_MIN, Math.min(GOAL_MAX, f.goalMin + +b.dataset.obgoal)); f.goalTouched = true; render(); }
-    else if ((b = g('[data-obday]'))) { const i = +b.dataset.obday; f.days[i] = f.days[i] ? 0 : 1; render(); }
-    else if ((b = g('[data-oblang]'))) {
-      if (b.dataset.oblang === getLang()) return;
-      // язык — сразу, без перезапуска: регистрация перерисовывается на новом языке
-      st.lang = b.dataset.oblang;
-      app.store.settingsChanged();
-      initI18n(st.lang);
-      render();
+      import('./share.js').then((m) => m.pickFile(app, () => {
+        const q = app.store.state.settings.profile || {};
+        if (q.priorHours != null) f = wheelFrac(+q.priorHours || 0);
+        if (q.name) p.name = q.name;
+        if (q.instruments) p.instruments = q.instruments.slice();
+        live();
+      }));
     }
   });
-  // Опыт и подсчёт: значок и подпись кнопки обновляются по мере ввода
-  layer.addEventListener('input', (e) => {
-    if (!['obhours', 'obyears', 'obweek'].includes(e.target.id)) return;
-    read();
-    const btn = layer.querySelector('[data-obcalc]');
-    if (btn) btn.textContent = t('ob.calcUse', { h: estimateHours(f.years, f.perWeek) });
-  });
-  // характер Мелеты: перерисовка без прокрутки наверх
-  bindMelete(layer, st, { save: () => app.store.settingsChanged(), ask: false, rerender: () => { const b = layer.querySelector('.obbody'), y = b ? b.scrollTop : 0; render(); const nb = layer.querySelector('.obbody'); if (nb) nb.scrollTop = y; } });
-  layer.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); layer.querySelector('[data-obnext]').click(); } });
-  render();
 }
 
-// Самый первый экран — знакомство (решение автора): маскот, видение и философия Melete, выбор языка,
-// согласие с пользовательским соглашением и политикой, ссылка на лицензии. Язык меняется сразу, на месте.
-// Уже выбран язык и принято соглашение (или есть профиль) — экран пропускается; позже тот же текст — «О Melete»
-export function welcomeHTML({ gate = false } = {}) {
+// После регистрации: маскот спрашивает, как обращаться (один раз; пропустить — тоже ответ)
+export function askName(app) {
+  const st = app.store.state.settings;
+  if (!st.profile || st.profile.name || st.nameAsked || document.querySelector('.askname')) return;
+  const d = document.createElement('div');
+  d.className = 'askname';
+  d.setAttribute('role', 'dialog');
+  d.setAttribute('aria-label', t('ob.askName'));
+  d.innerHTML = '<div class="anbox">' + (hasMascot() ? '<span class="anface">' + mascotSVG('glad', { size: 56 }) + '</span>' : '') +
+    '<div class="anmain"><b>' + t('ob.askName') + '</b><input class="inp" maxlength="40" autocomplete="given-name" aria-label="' + esc(t('ob.askName')) + '">' +
+    '<div class="anbtns"><button type="button" class="link" data-an="skip">' + t('ob.skip') + '</button><button type="button" class="btn fill" data-an="ok">' + t('ui.done') + '</button></div></div></div>';
+  document.body.appendChild(d);
+  const inp = d.querySelector('input');
+  setTimeout(() => inp.focus(), 250);
+  const close = (save) => {
+    if (save && inp.value.trim()) saveProfile(app.store, { ...st.profile, name: inp.value.trim() });
+    st.nameAsked = true;
+    app.store.settingsChanged();
+    d.classList.add('leaving');
+    setTimeout(() => d.remove(), 220);
+    if (save && inp.value.trim()) toast(t('ob.welcome', { name: inp.value.trim() }));
+    app.render && app.render();
+  };
+  d.addEventListener('click', (e) => { const b = e.target.closest('[data-an]'); if (b) close(b.dataset.an === 'ok'); });
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') close(true); if (e.key === 'Escape') close(false); });
+}
+
+// Стартовый экран: Melete — компаньон в практике, стих, где встречается это слово, и выбор языка.
+// Уже выбран язык (или есть профиль) — пропускается. Подробнее о приложении — «О Melete» в настройках
+const VERSE_GR = 'Ταῦτα <b>μελέτα</b>, ἐν τούτοις ἴσθι';
+const bold = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+export function startHTML() {
   const lang = getLang();
-  return '<div class="wlbox">' + (gate ? '<div class="wllang" role="group" aria-label="' + esc(t('look.lang')) + '">' + LANGS.map((k) => '<button type="button" class="wllb' + (lang === k ? ' on' : '') + '" data-lg="' + k + '" lang="' + k + '" aria-pressed="' + (lang === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div>' : '') +
-    '<div class="wlhero">' + mascotSVG('glad', { size: 96 }) + '<div class="wllogo">' + logoHTML() + '</div><h1 class="wlh">' + t('wel.title') + '</h1></div>' +
+  return '<div class="wlbox wlstart"><div class="wllang" role="group" aria-label="' + esc(t('look.lang')) + '">' + LANGS.map((k) => '<button type="button" class="wllb' + (lang === k ? ' on' : '') + '" data-lg="' + k + '" lang="' + k + '" aria-pressed="' + (lang === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div>' +
+    '<div class="wlhero"><div class="wllogo">' + logoHTML() + '</div><h1 class="wlh">' + t('wel.tag') + '</h1></div>' +
+    '<figure class="wlverse"><p class="wlgr" lang="grc">' + VERSE_GR + '</p><blockquote>' + bold(t('name.verse')) + '</blockquote><figcaption>' + esc(t('name.ref')) + '</figcaption></figure>' +
+    '<button type="button" class="btn fill block" data-wlgo>' + t('wel.go') + '</button></div>';
+}
+
+// Подробно о Melete (настройки → «О Melete»): видение, бесплатность, ответственность, документы
+export function welcomeHTML() {
+  return '<div class="wlbox"><div class="wlhero">' + mascotSVG('glad', { size: 96 }) + '<div class="wllogo">' + logoHTML() + '</div><h1 class="wlh">' + t('wel.title') + '</h1></div>' +
     '<p class="wlp">' + t('wel.p1') + '</p><p class="wlp">' + t('wel.p2') + '</p><p class="wlp wlgood">' + t('wel.p3') + '</p>' +
     '<p class="wlp wllegal">' + t('wel.legal') + '</p>' +
-    '<div class="wldocs">' + ['tos', 'priv', 'lic'].map((k) => '<button type="button" class="link" data-wldoc="' + k + '">' + t('legal.' + k) + '</button>').join('') + '</div>' +
-    (gate ? '<p class="wlaccept">' + t('wel.accept') + '</p><button type="button" class="btn fill block" data-wlgo>' + t('wel.go') + '</button>' : '') + '</div>';
+    '<div class="wldocs">' + ['tos', 'priv', 'lic'].map((k) => '<button type="button" class="link" data-wldoc="' + k + '">' + t('legal.' + k) + '</button>').join('') + '</div></div>';
 }
 
 export function langGate(app, then = () => {}) {
   const st = app.store.state.settings;
-  if (st.profile || (st.lang && st.tosOk === TOS_VER)) { then(); return; }
-  if (!st.lang) initI18n(st.lang || undefined); // язык системы — до выбора
+  if (st.profile || st.lang) { then(); return; }
+  initI18n(undefined); // язык системы — до выбора
   const l = document.createElement('div');
   l.className = 'onb langgate';
   l.setAttribute('role', 'dialog');
   l.setAttribute('aria-modal', 'true');
-  const render = () => { l.innerHTML = welcomeHTML({ gate: true }); l.setAttribute('aria-label', t('wel.title')); };
+  const render = () => { l.innerHTML = startHTML(); l.setAttribute('aria-label', t('wel.tag')); };
   render();
   document.body.appendChild(l);
   l.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-lg]'), d = e.target.closest('[data-wldoc]');
-    if (b) { st.lang = b.dataset.lg; app.store.settingsChanged(); initI18n(st.lang); const y = l.scrollTop; render(); l.scrollTop = y; return; }
-    if (d) { legalSheet(d.dataset.wldoc); return; }
+    const b = e.target.closest('[data-lg]');
+    if (b) { st.lang = b.dataset.lg; initI18n(st.lang); render(); return; }
     if (!e.target.closest('[data-wlgo]')) return;
     st.lang = st.lang || getLang();
-    st.tosOk = TOS_VER; // согласие принято на этом экране — отдельное окно соглашения не нужно
     app.store.settingsChanged();
     initI18n(st.lang);
     l.remove();
     then();
   });
 }
-

@@ -10,6 +10,9 @@ export const LEVELS = ['beginner', 'amateur', 'advanced', 'pro'];
 // Цель недели по уровню (минуты) — подсказка на шаге «Цель», её можно поменять
 export const GOAL_BY_LEVEL = { beginner: 180, amateur: 300, advanced: 600, pro: 900 };
 export const PRIOR_MAX = 100000;
+// Уровень по часам, сыгранным до приложения (колесо часов при регистрации)
+export const LEVEL_FROM = [[5000, 'pro'], [1000, 'advanced'], [150, 'amateur'], [0, 'beginner']];
+export const levelByHours = (h) => (LEVEL_FROM.find(([min]) => (+h || 0) >= min) || [0, 'beginner'])[1];
 
 // Инструменты (модули) при регистрации — по уровню и инструментам (решение автора). Новичку — самое нужное,
 // остальное включается потом в «Настройки → Функции». all — id всех модулей; возвращает id включённых

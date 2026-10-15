@@ -790,7 +790,7 @@
   "ob.aria": "Ilovani sozlash",
   "ob.hello": "Xush kelibsiz",
   "ob.intro": "Ilovani sozlash uchun bir necha qadam: cholgʻular, daraja, tajriba va haftalik maqsad.",
-  "ob.import": "O‘z ma’lumotlaringiz bormi?",
+  "ob.import": "Oʻz maʼlumotlarini yuklash",
   "ob.importHint": "Qo‘shiqlar, iqtiboslar to‘plamlari va profil — jamoadan olingan yoki yo‘riqnoma bo‘yicha neyrotarmoq yig‘gan fayl bilan. Yuklagandan keyin keyingi qadamlar to‘ldirilgan bo‘ladi.",
   "ob.name": "Ism",
   "ob.namePh": "Masalan, Aleksandr",
@@ -1303,5 +1303,11 @@
   "tools.back": "Roʻyxatga qaytarish",
   "tools.hide": "Roʻyxatdan olib tashlash",
   "tools.hiddenToast": "Olib tashlandi — yorliq pastida qaytarish mumkin",
-  "tools.holdHint": "Cholgʻuni bosib turish — menyu: koʻchirish, roʻyxatdan olib tashlash, bosh ekranga. Olib tashlanganlar tez kirishda va sessiyada ishlaydi."
+  "tools.holdHint": "Cholgʻuni bosib turish — menyu: koʻchirish, roʻyxatdan olib tashlash, bosh ekranga. Olib tashlanganlar tez kirishda va sessiyada ishlaydi.",
+  "wel.tag": "Mashqda hamroh ilova",
+  "ob.wheelTitle": "Necha soat chalingan?",
+  "ob.hoursUnit": "soat",
+  "ob.askName": "Qanday murojaat qilinsin?",
+  "ob.skip": "Oʻtkazib yuborish",
+  "tama.gone": "Maskot ketdi — mikser pardasida qaytarish mumkin"
 }

@@ -811,7 +811,7 @@
   "ob.aria": "App setup",
   "ob.hello": "Welcome",
   "ob.intro": "A few steps to set up the app: instruments, level, experience and a weekly goal.",
-  "ob.import": "Already have data?",
+  "ob.import": "Load own data",
   "ob.importHint": "Songs, quote collections and a profile — from a team file or one built by an AI using the instructions. After loading, the next steps are already filled in.",
   "ob.name": "Name",
   "ob.namePh": "For example, Alex",
@@ -1330,5 +1330,11 @@
   "tools.back": "Return to the list",
   "tools.hide": "Remove from the list",
   "tools.hiddenToast": "Removed — it can be returned at the bottom of the tab",
-  "tools.holdHint": "Hold a tool for a menu: move, remove from the list, add to home. Removed tools still work in quick access and sessions."
+  "tools.holdHint": "Hold a tool for a menu: move, remove from the list, add to home. Removed tools still work in quick access and sessions.",
+  "wel.tag": "A companion app for practice",
+  "ob.wheelTitle": "How many hours already played?",
+  "ob.hoursUnit": "hours",
+  "ob.askName": "What name to use?",
+  "ob.skip": "Skip",
+  "tama.gone": "The mascot left — bring it back in the mixer drawer"
 }
