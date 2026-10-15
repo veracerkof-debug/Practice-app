@@ -35,10 +35,8 @@
   "set.hold": "Hold peaks on the spectrum",
   "micRetry": "Try again",
   "privacy": "Sound is processed on the device only and never recorded. Time in this module isn’t counted in statistics.",
-  "help.what": "Sound frequencies from the microphone and loudness in decibels.",
-  "help.1": "Spectrum — which frequencies sound; a tap freezes the picture.",
-  "help.2": "Sound meter — dB(A), dB(C) or dB(Z), minimum, maximum, average.",
-  "help.3": "Calibration — an offset, if a reference meter is available.",
-  "help.4": "Time here does not count as practice.",
+  "help.what": "Microphone frequencies and loudness in decibels.",
+  "help.1": "Spectrum — tap to freeze.",
+  "help.2": "Sound meter — dB(A/C/Z), min, max, average; calibrate with an offset.",
   "help.tip": "Long exposure above 85 dB(A) needs hearing protection."
 }

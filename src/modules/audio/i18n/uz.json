@@ -107,10 +107,9 @@
   "notMedia": "Bu audio ham, video ham emas",
   "addedN": "Qoʻshildi: {files}",
   "monoFixed": "Bu bezakda koʻrinish qotirilgan: {v}.",
-  "help.what": "Tahlil qilish va jo‘r bo‘lib chalish uchun yozuvlar va video.",
-  "help.1": "«+» — fayllarni yuklash; ular faqat shu qurilmada saqlanadi.",
-  "help.2": "Tezlik tovush balandligini oʻzgartirmay oʻzgaradi.",
-  "help.3": "A–B takrori — boʻlakni aylantiradi, har takrorda 5 % tezlashtirish mumkin.",
-  "help.4": "Vaqt belgilari — trekdagi kerakli joylarga; fayllarni qoʻshiqlarga bogʻlash mumkin.",
-  "help.tip": "Qiyin boʻlakni 70–80 % tezlikda, soʻng tezroq."
+  "help.what": "Tahlil va joʻr chalish uchun yozuvlar va videolar.",
+  "help.1": "«+» — fayl qoʻshish; faqat qurilmada saqlanadi.",
+  "help.2": "Tezlik balandlik oʻzgarmagan holda oʻzgaradi.",
+  "help.3": "A–B — parchani takrorlash; belgilar — kerakli joylarga.",
+  "help.tip": "Qiyin joy — 70–80 % tezlikda, keyin tezroq."
 }

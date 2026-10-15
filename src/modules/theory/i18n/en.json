@@ -111,10 +111,8 @@
   "ivs.12": "P8",
   "about": "Circle, scales, chords, intervals",
   "help.what": "A harmony reference that sounds.",
-  "help.1": "Circle — keys, key signatures, relatives; tap to choose a key.",
-  "help.2": "Scales, chords, intervals — with playback.",
-  "help.3": "Everything is shown on keys or on a fretboard.",
-  "help.4": "A drone on the tonic or note highlights on the piano can be turned on.",
+  "help.1": "Circle of fifths — tap to pick a key.",
+  "help.2": "Scales, chords, intervals — on keys or fretboard, with audio.",
   "help.tip": "Listen to a scale first, then play it.",
   "sec.find": "Finder",
   "find.listen": "Listen",
@@ -127,12 +125,18 @@
   "find.fam.major": "major family: 7 modes",
   "find.fam.harm": "harmonic minor family: 7 modes",
   "find.fam.mel": "melodic minor family: 7 modes",
-  "find.extra": ["{n} more note", "{n} more notes"],
+  "find.extra": [
+    "{n} more note",
+    "{n} more notes"
+  ],
   "find.same": "{mode} uses the same notes as {parent}, only centred on degree {deg}.",
   "find.hint": "Notes — by tapping (names above or keys) or “Listen”: play a chord or a bit of melody and the notes are found by ear. The first note is the tonic; it can be changed.",
   "find.tonic": "Tonic",
   "find.scales": "Scales and modes",
-  "find.more": ["and {n} more family", "and {n} more families"],
+  "find.more": [
+    "and {n} more family",
+    "and {n} more families"
+  ],
   "find.noScale": "These notes fit neither major nor harmonic or melodic minor.",
   "find.ladder": "Modes on {note}: from bright to dark",
   "find.color.major": "major with {notes}",

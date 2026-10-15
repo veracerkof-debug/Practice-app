@@ -55,10 +55,8 @@
   "pre.new": "Yangi ped preseti",
   "pre.default": "Mening pedim",
   "about": "Intonatsiya uchun choʻziluvchi nota va pedlar",
-  "help.what": "Choʻziluvchi nota yoki akkord — intonatsiya uchun tayanch.",
+  "help.what": "Choʻziluvchi nota yoki uygʻunlik — intonatsiya tayanchi.",
   "help.1": "Notaga bosish — dron; qayta bosish — toʻxtatish.",
-  "help.2": "Qatlamlar — past, oʻrta, yuqori; akkord — tonika, kvinta, major, minor.",
-  "help.3": "Tembrlar: iliq, ped, kamon, xor, shisha, tampura.",
-  "help.4": "Oʻz presetlari — sozlamalarda.",
-  "help.tip": "Dron ustida gammalar va choʻziq notalar notoʻgʻri intonatsiyani darhol koʻrsatadi."
+  "help.2": "Qatlam, uygʻunlik va tembr — tugmalarda; oʻz presetlari — sozlamalarda.",
+  "help.tip": "Dron ustida gammalar notoʻgʻri intonatsiyani darhol koʻrsatadi."
 }
