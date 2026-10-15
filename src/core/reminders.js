@@ -11,6 +11,7 @@
 // Тихие часы — без напоминаний. Тексты — src/core/remindtexts.js.
 import { Capacitor } from '@capacitor/core';
 import { dayKey, weekday } from './time.js';
+import { log, errText } from './log.js';
 
 export const STYLES = ['classic', 'pushy', 'custom', 'quiet'];
 export const LEADS = [5, 60, 120, 180]; // минуты до времени занятий
@@ -28,7 +29,8 @@ export function cleanItem(x) {
   const m = Math.round(+x.min);
   return Number.isFinite(m) && m >= -720 && m <= 720 ? { min: m, tone } : null;
 }
-const CHANNELS = { classic: 'remind', pushy: 'remind-loud' };
+// Каналы — новые имена: у прежних («remind», «remind-loud») могла остаться неудачная настройка (каналы Android не меняются)
+const CHANNELS = { classic: 'melete-remind', pushy: 'melete-remind-loud' };
 const ID0 = 7000, ID_N = 60, ID_TEST = 7099; // свои номера уведомлений: 7000…7059, проверка — 7099
 const DAY = 86400000, MIN = 60000, PUSHY_MAX = 8;
 // Навязчивая: точки дня (кроме привязанных к занятию)
@@ -114,13 +116,25 @@ export async function remindPermission() {
   } catch { return false; }
 }
 
-let channelsDone = false;
+// Каналы создаются каждый раз (это дёшево и не сбрасывает выбор человека): если прошлый раз не вышло — выйдет сейчас
 async function channels(P) {
-  if (channelsDone || Capacitor.getPlatform() !== 'android') return;
-  channelsDone = true;
-  const mk = (id, name, importance, sound, vibration) => P.createChannel({ id, name, importance, visibility: 1, vibration, ...(sound ? {} : { sound: null }) }).catch(() => {});
-  await mk(CHANNELS.classic, 'Melete', 3, true, false);
-  await mk(CHANNELS.pushy, 'Melete · навязчиво', 4, true, true);
+  if (Capacitor.getPlatform() !== 'android') return;
+  const mk = (id, name, importance, vibration) => P.createChannel({ id, name, importance, visibility: 1, vibration }).catch((e) => log('remind', 'канал ' + id + ': ' + errText(e), 'w'));
+  ['remind', 'remind-loud'].forEach((id) => P.deleteChannel({ id }).catch(() => {})); // прежние каналы
+  await mk(CHANNELS.classic, 'Melete', 4, false);
+  await mk(CHANNELS.pushy, 'Melete · навязчиво', 4, true);
+}
+
+// Точные будильники (Android 12+): разрешены — напоминания приходят минута в минуту; нет — обычным способом
+// (система может сдвинуть на несколько минут). Экран настроек сам не открывается — только по кнопке
+export async function exactAllowed() {
+  const P = await plugin();
+  if (!P || !P.checkExactNotificationSetting) return true;
+  try { const r = await P.checkExactNotificationSetting(); return r.exact_alarm === 'granted'; } catch { return true; }
+}
+export async function openExactSettings() {
+  const P = await plugin();
+  if (P && P.changeExactNotificationSetting) { try { await P.changeExactNotificationSetting(); } catch { /* нет экрана */ } }
 }
 
 // Пересчитать расписание. texts({ i, ts, n, slot, mode }) → { title, body } — текст напоминания (маскот, цитаты)
@@ -132,24 +146,29 @@ export async function reschedule(state, texts, now = Date.now()) {
     const st = state.settings, today = dayKey(now);
     const practiced = (state.sessions || []).some((x) => !x.deleted && dayKey(x.start) === today);
     const list = plan(st, practiced, now);
-    if (!list.length) return 0;
-    if (!(await P.checkPermissions().then((p) => p.display === 'granted').catch(() => false))) return 0;
+    if (!list.length) { log('remind', 'расписание пустое (режим ' + remindOf(st).mode + ')'); return 0; }
+    if (!(await P.checkPermissions().then((p) => p.display === 'granted').catch(() => false))) { log('remind', 'уведомления не разрешены', 'w'); return 0; }
     await channels(P);
-    const mode = remindOf(st).mode;
+    const mode = remindOf(st).mode, exact = await exactAllowed();
     await P.schedule({
-      notifications: list.map((x, i) => ({ id: ID0 + i, ...texts({ i, ts: x.ts, n: x.n, slot: x.slot, mode, tone: x.tone }), schedule: { at: new Date(x.ts), allowWhileIdle: true }, channelId: CHANNELS[x.tone || mode] || CHANNELS.classic, autoCancel: true })),
+      notifications: list.map((x, i) => ({ id: ID0 + i, ...texts({ i, ts: x.ts, n: x.n, slot: x.slot, mode, tone: x.tone }), schedule: { at: new Date(x.ts), allowWhileIdle: true },
+        channelId: CHANNELS[x.tone || mode] || CHANNELS.classic, autoCancel: true, isExactNotification: exact })),
     });
+    log('remind', 'запланировано ' + list.length + (exact ? ', точно' : ', приблизительно') + ', первое — ' + new Date(list[0].ts).toLocaleString());
     return list.length;
-  } catch { return 0; }
+  } catch (e) { log('remind', 'не запланировалось: ' + errText(e), 'e'); return 0; }
 }
 
-// Проверка: напоминание через 5 секунд (slot — какое именно показать)
+// Проверка: напоминание сразу (как оно будет выглядеть). → 'ok' | 'denied' | 'off' | 'fail'
 export async function remindTest(texts, mode = 'classic', slot = 'lead:60', tone) {
   const P = await plugin();
-  if (!P || mode === 'quiet' || !(await remindPermission())) return false;
+  if (!P) return 'fail';
+  if (mode === 'quiet') return 'off';
+  if (!(await remindPermission())) return 'denied';
   await channels(P);
   try {
-    await P.schedule({ notifications: [{ id: ID_TEST, ...texts({ i: 0, ts: Date.now(), n: 0, slot, mode, tone }), schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true }, channelId: CHANNELS[tone || mode] || CHANNELS.classic, autoCancel: true }] });
-    return true;
-  } catch { return false; }
+    await P.schedule({ notifications: [{ id: ID_TEST, ...texts({ i: 0, ts: Date.now(), n: 0, slot, mode, tone }), channelId: CHANNELS[tone || mode] || CHANNELS.classic, autoCancel: true, isExactNotification: false }] });
+    log('remind', 'проверка показана');
+    return 'ok';
+  } catch (e) { log('remind', 'проверка не показалась: ' + errText(e), 'e'); return 'fail'; }
 }

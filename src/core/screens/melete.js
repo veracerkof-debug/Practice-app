@@ -4,7 +4,7 @@ import { t } from '../../i18n/index.js';
 import { esc, seg, toast } from '../../ui/index.js';
 import { setMascotGender } from '../../i18n/index.js';
 import { setMascotLook } from '../../ui/mascot.js';
-import { STYLES, LEADS, OFFSETS, TONES, CUSTOM_MAX, remindOf, setRemind, remindAvailable, remindPermission, remindTest } from '../reminders.js';
+import { STYLES, LEADS, OFFSETS, TONES, CUSTOM_MAX, remindOf, setRemind, remindAvailable, remindPermission, remindTest, exactAllowed, openExactSettings } from '../reminders.js';
 import { remindText, remindCtx } from '../remindtexts.js';
 import { QSETS, setsOf } from '../quotes.js';
 import { mascotSVG } from '../../ui/mascot.js';
@@ -56,7 +56,9 @@ export function meleteHTML(st, { sets = false, test = false } = {}) {
       '<button type="button" class="lchip pick' + (r.leads.includes(m) ? ' on' : '') + '" data-mllead="' + m + '" aria-pressed="' + r.leads.includes(m) + '" style="--c:var(--tint);--t:var(--on-tint)">' + leadName(m) + '</button>').join('') + '</div></div>';
     h += '<div class="cell"><span class="grow"><span>' + t('rem.byName') + '</span><span class="st l2" style="display:block;font-size:13px">' + t('rem.byNameHint') + '</span></span>' +
       '<label class="sw"><input type="checkbox" data-ml="byName"' + (r.byName ? ' checked' : '') + ' aria-label="' + esc(t('rem.byName')) + '"><i></i></label></div>';
-    if (test && remindAvailable()) h += '<button class="cell act" data-mltest>' + t('rem.test') + '</button>';
+    if (test && remindAvailable()) h += '<button class="cell act" data-mltest>' + t('rem.test') + '</button>' +
+      // точные будильники не разрешены — строка видна (её открывает проверка после отрисовки: mountMelete)
+      '<button class="cell act" data-mlexact hidden><span class="grow">' + t('rem.exact') + '<span class="psub">' + t('rem.exactHint') + '</span></span></button>';
   }
   h += '</div><p class="ftr">' + (mode === 'quiet' ? t('rem.quietHint') : t('rem.hint', { from: r.quietFrom, to: r.quietTo })) + (remindAvailable() || mode === 'quiet' ? '' : ' ' + t('rem.webOnly')) + '</p>';
   // Мелета-тамагочи: рядом на занятии, по желанию слушает и говорит, как идёт (src/core/tama.js)
@@ -99,9 +101,11 @@ export function bindMelete(el, getSt, { save, rerender, ask = true }) {
       if (s.has(m) && s.size > 1) s.delete(m); else s.add(m);
       setRemind(st, { leads: LEADS.filter((x) => s.has(x)) });
       save(); rerender();
+    } else if (g('[data-mlexact]')) {
+      openExactSettings();
     } else if (g('[data-mltest]')) {
       const r = remindOf(st), c = r.custom[0] || { min: -60, tone: 'classic' };
-      remindTest((x) => remindText(x, remindCtx(st)), r.mode, r.mode === 'pushy' ? 'morning' : r.mode === 'custom' ? (c.at ? 'abs' : 'rel:' + c.min) : 'lead:' + r.leads[0], c.tone).then((ok) => toast(t(ok ? 'rem.testSent' : 'rem.denied')));
+      remindTest((x) => remindText(x, remindCtx(st)), r.mode, r.mode === 'pushy' ? 'morning' : r.mode === 'custom' ? (c.at ? 'abs' : 'rel:' + c.min) : 'lead:' + r.leads[0], c.tone).then((r) => toast(t(r === 'ok' ? 'rem.testSent' : r === 'denied' ? 'rem.denied' : r === 'off' ? 'rem.testOff' : 'rem.testFail')));
     } else if (g('[data-mladd]')) {
       const r = remindOf(st);
       setRemind(st, { custom: [...r.custom, { min: -30, tone: 'classic' }] }); save(); rerender();
@@ -130,4 +134,10 @@ export function bindMelete(el, getSt, { save, rerender, ask = true }) {
       save();
     }
   });
+}
+
+// После отрисовки: строка «Точно по времени» — только если точные будильники не разрешены
+export function mountMelete(root) {
+  const b = root.querySelector('[data-mlexact]');
+  if (b) exactAllowed().then((ok) => { if (!ok && b.isConnected) b.hidden = false; });
 }
