@@ -348,3 +348,15 @@
 .bpbooks{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px}
 .bpb{min-height:40px;border-radius:10px;background:var(--fill);color:var(--ink);font-size:13px;font-weight:600}
 .bpb.on{background:var(--tint);color:var(--on-tint)}
+/* блоки главной: размер — масштабом блока (меньше, обычно, больше); на широком экране — в две колонки */
+.hblk.hb-s{zoom:.86}
+.hblk.hb-l{zoom:1.16}
+.hblk.held{transform:none;outline:2px solid var(--tint);outline-offset:4px;border-radius:18px}
+@media (min-width:900px){.hlist{columns:2;column-gap:20px}.hlist .hblk{break-inside:avoid}}
+.hrbar{display:block;width:100%;height:4px;margin-top:6px;border-radius:2px;background:var(--fill);overflow:hidden}
+.hrbar i{display:block;height:100%;background:var(--tint);border-radius:2px}
+/* «Главный экран» в профиле: размер блока — три кнопки */
+.hbrow{gap:8px}
+.hbsz{display:flex;background:var(--fill);border-radius:10px;padding:2px;flex:none}
+.hbsz button{min-width:40px;min-height:36px;border-radius:8px;font-size:13px;font-weight:600;color:var(--l2)}
+.hbsz button.on{background:var(--cell);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}

@@ -9,7 +9,7 @@ import { TAB_ICONS, tabIds } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule } from '../modules.js';
 import { visibleTabs } from '../settings.js';
-import { homeHTML, mountStones, quickEdit, toolHoldMenu, streakSheet, gemSheet, leagueCheck, nameSheet } from './home.js';
+import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeBlockMenu, streakSheet, gemSheet, leagueCheck, nameSheet } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView } from './tools.js';
 import { reportSheet } from './report.js';
@@ -150,6 +150,8 @@ export function createShell(app, root) {
 
   // Долгое нажатие на инструмент (главная, вкладка «Инструменты») — меню: открыть, переместить, убрать, добавить
   onHold(root, '[data-open-tool]', (b) => toolHoldMenu(app, b, render, (id) => openToolView(app, id, render)));
+  // Долгое нажатие на блок главной (мимо инструментов и вращаемых камней) — меньше, больше, выше, ниже, убрать
+  onHold(root, '[data-hb]', (b, e) => { if (e.target.closest('[data-open-tool], canvas')) return; homeBlockMenu(app, b, render, () => panel.open('homes')); });
   // Вкладка «Инструменты» обрабатывает свои карточки сама
   root.addEventListener('click', (e) => { if (!e.target.closest('[data-open-tool]') || view.tab !== 'tools') act(e); });
   root.addEventListener('input', (e) => {

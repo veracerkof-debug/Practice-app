@@ -32,7 +32,7 @@ import { APP_ICON_IDS, appIconSVG } from '../../ui/appicons.js';
 import { iconOf, setAppIcon } from '../appicon.js';
 import { gemSVG } from '../../ui/gems.js';
 import { gemCanvas } from '../../ui/gem3d.js';
-import { mountStones } from './home.js';
+import { mountStones, homeLayout, setHomeLayout, HOME_SIZES } from './home.js';
 import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
@@ -43,6 +43,7 @@ const iconBg = (st, hue) => { const c = hueColor(st, hue); return 'background:' 
 const PAGES = {
   me: ['orange', '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M5 19.5c1.4-3.2 4-4.6 7-4.6s5.6 1.4 7 4.6"/></svg>'],
   feat: ['green', '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="15" cy="12" r="3.5"/></svg>'],
+  homes: ['teal', '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="5" rx="1.6"/><rect x="4" y="11" width="7" height="9" rx="1.6"/><rect x="13" y="11" width="7" height="9" rx="1.6"/></svg>'],
   tabs: ['graphite', '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 15.5h17M9.2 15.5v4M14.8 15.5v4"/></svg>'],
   stats: ['blue', '<svg viewBox="0 0 24 24"><path d="M5 20v-6M10 20V9M15 20v-8M20 20V5"/></svg>'],
   week: ['orange', '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></svg>'],
@@ -362,6 +363,21 @@ function featHTML(app) {
 }
 
 // Вкладки внизу: порядок и состав
+// Главный экран: блоки — порядок (удержать и вести), размер (меньше, обычно, больше), показывать или нет
+function homesHTML(app) {
+  const st = app.store.state.settings, L = homeLayout(st);
+  const sz = (k) => (HOME_SIZES.includes(L.size[k]) ? L.size[k] : 'm');
+  const row = (k, on) => '<div class="cell hbrow"' + (on ? ' data-hbrow="' + k + '"' : '') + '><span class="grow">' + t('hb.' + k) + '</span>' +
+    (on ? '<span class="hbsz" role="group" aria-label="' + esc(t('hb.size')) + '">' + HOME_SIZES.map((x) => '<button class="' + (sz(k) === x ? 'on' : '') + '" data-hbsz="' + k + ':' + x + '" aria-pressed="' + (sz(k) === x) + '" aria-label="' + esc(t('hb.size.' + x)) + '">' + { s: 'A−', m: 'A', l: 'A+' }[x] + '</button>').join('') + '</span>' +
+      '<button class="ic sm plain" data-hboff="' + k + '" aria-label="' + esc(t('hb.hide') + ': ' + t('hb.' + k)) + '" style="color:var(--red)">' + IC.minus + '</button>'
+      : '<button class="ic sm plain" data-hbon="' + k + '" aria-label="' + esc(t('hb.show') + ': ' + t('hb.' + k)) + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
+  const vis = L.order.filter((k) => !L.off.has(k)), hid = L.order.filter((k) => L.off.has(k));
+  return '<div class="large">' + t('page.homes') + '</div>' +
+    '<div class="hdr">' + t('hb.shown') + '</div><div class="group">' + vis.map((k) => row(k, true)).join('') + '</div>' +
+    (hid.length ? '<div class="hdr">' + t('hb.hiddenList') + '</div><div class="group">' + hid.map((k) => row(k, false)).join('') + '</div>' : '') +
+    '<p class="ftr">' + t('hb.hint') + '</p><div class="group"><button class="cell act center" data-hbreset>' + t('hb.reset') + '</button></div>';
+}
+
 function tabsHTML(app) {
   const st = app.store.state.settings, vis = visibleTabs(st, tabIds(st)), hid = hiddenTabs(st, tabIds(st));
   const row = (k, on, i) => '<div class="cell"' + (on ? ' data-tab-row="' + k + '"' : '') + '><span class="ticon" style="background:var(--tint);--on:var(--on-tint)">' + TAB_ICONS[k] + '</span><span class="grow">' + t('nav.' + k) + '</span>' +
@@ -418,7 +434,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML }[page](app);
+    const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, feat: featHTML, homes: homesHTML, tabs: tabsHTML, help: helpHTML }[page](app);
     layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="link" data-pp="root">' + BACK + t('panel.back') + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
     // переход между страницами: вперёд — справа, назад в корень — слева; перерисовка той же страницы — без движения
@@ -447,6 +463,8 @@ export function createPanel(app, onChange) {
     const ownSet = (el) => { const st = app.store.state.settings, v = el.value.toUpperCase(); if (el.dataset.owncolor === 'main') { st.ownMain = v; st.palette = 'own'; } else st.ownBg = v; applyTheme(st); };
     layer.addEventListener('input', (e) => { if (e.target.dataset && e.target.dataset.owncolor) ownSet(e.target); });
     layer.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.owncolor) { ownSet(e.target); changed(); } });
+    // «Главный экран»: удержать блок и вести — новый порядок
+    sortable(layer, '[data-hbrow]', 'data-hbrow', (ids) => { const st = app.store.state.settings, L = homeLayout(st); L.order = [...ids, ...L.order.filter((k) => !ids.includes(k))]; setHomeLayout(st, L); changed(); });
     // «Вкладки»: удержать вкладку и вести вверх-вниз — новый порядок
     sortable(layer, '[data-tab-row]', 'data-tab-row', (ids) => { if (orderTabs(app.store, tabIds(app.store.state.settings), ids)) { render(); onChange(); } });
     layer.addEventListener('click', (e) => {
@@ -459,6 +477,14 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
       if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); render(); return; }
       if ((b = g('[data-hshow]'))) { const k = b.dataset.hshow, m = k.startsWith('core:') ? coreTopic(k.slice(5)) : moduleById(k); if (m) showHelp(app, m); return; }
+      if ((b = g('[data-hbsz], [data-hboff], [data-hbon], [data-hbreset]'))) {
+        const st = app.store.state.settings, L = homeLayout(st), d = b.dataset;
+        if (d.hbsz) { const [k, x] = d.hbsz.split(':'); L.size[k] = x; }
+        else if (d.hboff) L.off.add(d.hboff);
+        else if (d.hbon) L.off.delete(d.hbon);
+        else { delete st.home; changed(); return; }
+        setHomeLayout(st, L); changed(); return;
+      }
       if (g('[data-bplannew]')) { planSheet(app, () => { render(); onChange(); }); return; }
       if (g('[data-bplanedit]')) { planSheet(app, () => { render(); onChange(); }, app.bible.st().plan); return; }
       if (g('[data-brestart]')) { app.bible.setPlan(app.bible.st().plan, dayKeyOf(Date.now())); toast(t('church.restarted')); render(); onChange(); return; }

@@ -43,6 +43,24 @@ export function streakPill(app, extra = '') {
     FLAME + '<b class="num">' + s.weeks + '</b><span>' + esc(tn('streak.weeksWord', s.weeks) + extra) + '</span></button>';
 }
 
+/* ---------- блоки главной: порядок, размер, что показывать (settings.home) ---------- */
+// Долгое нажатие на блок — меню у блока (меньше, больше, выше, ниже, убрать); всё вместе — «Профиль → Главный экран»
+export const HOME_BLOCKS = ['voice', 'week', 'league', 'reading', 'start', 'quick', 'events', 'songs'];
+export const HOME_SIZES = ['s', 'm', 'l'];
+export function homeLayout(st) {
+  const h = st.home || {}, order = (h.order || []).filter((k) => HOME_BLOCKS.includes(k));
+  // новые блоки — на своё место по умолчанию
+  HOME_BLOCKS.forEach((k, i) => { if (!order.includes(k)) order.splice(Math.min(i, order.length), 0, k); });
+  return { order, off: new Set((h.off || []).filter((k) => HOME_BLOCKS.includes(k))), size: h.size || {} };
+}
+export function setHomeLayout(st, L) {
+  st.home = { order: L.order.slice(), off: [...L.off], size: Object.fromEntries(Object.entries(L.size).filter(([k, v]) => HOME_BLOCKS.includes(k) && v !== 'm')) };
+}
+const blocks = (st, parts) => {
+  const L = homeLayout(st);
+  return L.order.filter((k) => !L.off.has(k) && parts[k]).map((k) => '<section class="hblk hb-' + (HOME_SIZES.includes(L.size[k]) ? L.size[k] : 'm') + '" data-hb="' + k + '">' + parts[k] + '</section>').join('');
+};
+
 /* ---------- «Минимал» (эксперимент): та же главная, но только текст, линии и оттенки серого ---------- */
 
 const ARROW = '<svg viewBox="0 0 12 12" class="mtri" aria-hidden="true"><path d="M3.5 2l5 4-5 4z"/></svg>';
@@ -52,10 +70,12 @@ function readingCard(app, mono = false) {
   const st = app.store.state.settings;
   if (!st.church || !app.bible) return '';
   const r = app.bible.today();
-  if (!r) return '';
+  // план не выбран (или закончился) — приглашение выбрать готовый или свой
+  if (!r) return '<button class="' + (mono ? 'mread' : 'hread') + '" data-pp="feat"><span class="hrt">' + t('read.title') + '</span><span class="hrr">' + t('read.noPlan') + '</span><span class="hrs">' + t('read.pick') + '</span></button>';
   const all = r.done === r.keys.length, next = nextOf(app.bible.st(), r);
   return '<button class="' + (mono ? 'mread' : 'hread') + '" data-act="bible" data-key="' + next + '"><span class="hrt">' + t('read.today') + ' · ' + t('read.day', { d: r.day, n: r.days }) + '</span>' +
-    '<span class="hrr">' + esc(refText(r.keys)) + '</span><span class="hrs">' + (all ? t('read.done') : t('read.progress', { done: r.done, n: r.keys.length })) + '</span></button>';
+    '<span class="hrr">' + esc(refText(r.keys)) + '</span><span class="hrs">' + (all ? t('read.done') : t('read.progress', { done: r.done, n: r.keys.length })) + '</span>' +
+    '<span class="hrbar"><i style="width:' + Math.round((r.done / r.keys.length) * 100) + '%"></i></span></button>';
 }
 // Мелета (маскот) и слово дня из выбранных наборов (история музыканта, слова мастеров, стих, цитатник) — одно на день.
 // Лицо — по состоянию занятий (src/core/mascot.js); касание — реакция (src/ui/mascot.js), слово не меняется
@@ -83,77 +103,73 @@ function quoteHTML(app, mono) {
 const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';
 
 function homeMonoHTML(app) {
-  const st = app.store.state.settings, plain = !!st.toolsOnly, now = new Date();
-  // (имя приложения в строчке — с lang="el": прописными по-гречески, без ударения)
-  // Приветствие — место, где приложение потом будет говорить: спрашивать, предлагать, напоминать (без даты: это не календарь)
-  let h = '<div class="mono-home">' + topbar(logoHTML()) + '<div class="mvoice">' + quoteHTML(app, true) + '</div>';
+  const st = app.store.state.settings, plain = !!st.toolsOnly, P = {};
+  P.voice = '<div class="mvoice">' + quoteHTML(app, true) + '</div>';
   if (!plain) {
     const w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st), today = weekday(Date.now()), WD = weekdays();
-    h += mhead(t('home.week'), '<button class="mbtn" data-pp="' + (st.configured ? 'stats' : 'week') + '" aria-label="' + esc(t('home.stats')) + '">' + ARROW + '</button>') +
+    P.week = mhead(t('home.week'), '<button class="mbtn" data-pp="' + (st.configured ? 'stats' : 'week') + '" aria-label="' + esc(t('home.stats')) + '">' + ARROW + '</button>') +
       '<button class="mweek" data-pp="' + (st.configured ? 'stats' : 'week') + '"><span class="mbig num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</span>' +
       '<span class="mof num">/ ' + fmtDur(goal) + '</span></button><div class="mline"><i style="width:' + Math.min(100, p * 100) + '%"></i></div>' +
       '<div class="mdays">' + WD.map((d, i) => '<span class="' + (w.per[i] > 0 ? 'done' : st.days[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '">' + d + '</span>').join('') + '</div>';
     if (isOn(st, 'mastery')) {
       // «Минимал»: лиг нет — только камень с дороги, который с часами занятий круглеет (src/ui/stone.js)
       const all = app.store.sessions(), sec = leagueHours(app) * 3600, wr = wear(sec / 3600);
-      h += '<div class="mstone"><canvas data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title') + ', ' + fmtDur(sec)) + '"></canvas>' +
+      P.league = '<div class="mstone"><canvas data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title') + ', ' + fmtDur(sec)) + '"></canvas>' +
         '<div class="mstxt"><span class="mslbl">' + t('stone.title') + '</span><span class="msval num">' + fmtDur(sec) + '</span><span class="mslbl">' + esc(t('stone.round', { p: Math.round(roundness(wr) * 100) })) + '</span>' +
-        '<span class="mslbl num">' + esc(kmText(sec / 3600)) + '</span></div></div>';
-      if (isOn(st, 'streak') && streakInfo(all, st).weeks) h += '<div class="mtags"><button data-act="streak">' + esc(tn('streak.weeks', streakInfo(all, st).weeks)) + '</button></div>';
+        '<span class="mslbl num">' + esc(kmText(sec / 3600)) + '</span></div></div>' +
+        (isOn(st, 'streak') && streakInfo(all, st).weeks ? '<div class="mtags"><button data-act="streak">' + esc(tn('streak.weeks', streakInfo(all, st).weeks)) + '</button></div>' : '');
     }
   }
-  h += readingCard(app, true);
-  h += '<button class="mcta" data-act="free"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
+  P.reading = readingCard(app, true);
+  P.start = '<button class="mcta" data-act="free"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
   const q = quickList(st);
-  h += mhead(t('home.quick'), '<button class="mbtn" data-act="quickedit" aria-label="' + esc(t('home.edit')) + '">' + IC.plus + '</button>') +
+  P.quick = mhead(t('home.quick'), '<button class="mbtn" data-act="quickedit" aria-label="' + esc(t('home.edit')) + '">' + IC.plus + '</button>') +
     '<div class="mtools">' + q.map((id) => { const m = moduleById(id); return '<button data-open-tool="' + id + '"><span class="mcirc">' + m.icon + '</span><span class="mlbl">' + esc(moduleName(m)) + '</span></button>'; }).join('') + '</div>';
-  h += nextEventsHTML(app);
+  P.events = nextEventsHTML(app);
   const songs = app.store.songs();
   const rec = songs.map((s) => ({ s, st: songStats(app.store.sessions(), s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 6);
-  h += mhead(t('home.continue'), '<button class="mbtn" data-act="addSong" aria-label="' + esc(t('home.firstSong')) + '">' + IC.plus + '</button><button class="mbtn" data-tab="library" aria-label="' + esc(t('home.allSongs')) + '">' + ARROW + '</button>');
-  h += rec.length ? '<div class="mlist">' + rec.map(({ s, st: ss }) => '<div class="mrow"><button data-song="' + s.id + '"><span class="mt">' + esc(s.title) + '</span>' +
+  P.songs = mhead(t('home.continue'), '<button class="mbtn" data-act="addSong" aria-label="' + esc(t('home.firstSong')) + '">' + IC.plus + '</button><button class="mbtn" data-tab="library" aria-label="' + esc(t('home.allSongs')) + '">' + ARROW + '</button>') +
+    (rec.length ? '<div class="mlist">' + rec.map(({ s, st: ss }) => '<div class="mrow"><button data-song="' + s.id + '"><span class="mt">' + esc(s.title) + '</span>' +
     (!plain && ss.total ? '<span class="mm num">' + fmtDur(ss.total) + '</span>' : s.artist ? '<span class="mm">' + esc(s.artist) + '</span>' : '') + '</button>' +
     '<button class="mplay" data-play="' + s.id + '" aria-label="' + esc(t('home.playSong', { title: s.title })) + '">' + ARROW + '</button></div>').join('') + '</div>'
-    : '<p class="mempty">' + t('mono.noSongs') + '</p>';
-  return h + '</div>';
+    : '<p class="mempty">' + t('mono.noSongs') + '</p>');
+  return '<div class="mono-home">' + topbar(logoHTML()) + blocks(st, P) + '</div>';
 }
 
 export function homeHTML(app) {
   if (app.store.state.settings.uiStyle === 'mono') return homeMonoHTML(app);
   const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
-  const today = weekday(Date.now()), plan = st.days, WD = weekdays();
-  // заголовка «Сегодня» нет: место — неделе и делу (личное обращение после кода — строкой сверху)
-  let h = topbar(logoHTML()) + quoteHTML(app, false) + '<div class="hcols"><div>';
-  // «Только инструменты»: без недели, цели, камня и звания — сразу рабочее место и инструменты
+  const today = weekday(Date.now()), plan = st.days, WD = weekdays(), P = {};
+  // «Только инструменты»: без недели, цели и лиги — сразу рабочее место и инструменты
   const plain = !!st.toolsOnly;
-  if (!plain) h += '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
+  P.voice = quoteHTML(app, false);
+  if (!plain) P.week = '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
     '</div><div class="big num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</div><div class="l2" style="font-size:14px">' + t('home.of', { goal: fmtDur(goal) }) + (p > 1 ? t('home.over') : p >= 1 ? t('home.met') : '') + '</div>' +
     streakPill(app) + '</div></div>' +
     '<div class="days hdays">' + WD.map((d, i) => '<div class="day ' + (w.per[i] > 0 ? 'done' : plan[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '" title="' +
       esc(w.per[i] ? fmtDur(w.per[i]) : plan[i] ? t('home.dayPlan') : t('home.dayRest')) + '"><span class="d"></span>' + d + '</div>').join('') + '</div>' +
     '<button class="hlink" data-pp="' + (st.configured ? 'stats' : 'week') + '">' +
     (st.configured ? (plan[today] ? t('home.todayPlan') : t('home.todayRest')) + ' · ' + t('home.stats') : t('home.setup')) + ' ›</button></div>';
-  h += gemRow(app);
-  h += readingCard(app);
-  h += '<button class="hcta" data-act="free"' + (plain ? ' style="margin-top:4px"' : '') + '><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
+  P.league = gemRow(app);
+  P.reading = readingCard(app);
+  P.start = '<button class="hcta" data-act="free"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
   const q = quickList(st);
-  h += '<div class="hhdr"><span>' + t('home.quick') + '</span><button class="link" data-act="quickedit">' + t('home.edit') + '</button></div>';
-  h += '<div class="qgrid">' + (q.length
+  P.quick = '<div class="hhdr"><span>' + t('home.quick') + '</span><button class="link" data-act="quickedit">' + t('home.edit') + '</button></div>' +
+    '<div class="qgrid">' + (q.length
     ? q.map((id) => { const m = moduleById(id); return '<button class="qbtn" data-open-tool="' + id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="qic">' + m.icon + '</span><span class="qn">' + esc(moduleName(m)) + '</span></button>'; }).join('')
     : '<button class="qbtn add" data-act="quickedit"><span class="qic">' + IC.plus + '</span><span class="qn">' + t('home.add') + '</span></button>') + '</div>';
-  h += '</div><div>';
-  h += nextEventsHTML(app);
+  P.events = nextEventsHTML(app);
   const songs = app.store.songs(), L = ensureLib(app.store.state, t);
   const rec = songs.map((s) => ({ s, st: songStats(app.store.sessions(), s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 4);
-  h += '<div class="hhdr"><span>' + t('home.continue') + '</span>' + (songs.length > 4 ? '<button class="link" data-tab="library">' + t('home.allSongs') + '</button>' : '') + '</div>';
-  if (!rec.length) h += '<div class="group"><button class="cell act" data-act="addSong">' + t('home.firstSong') + '</button></div>';
-  else h += '<div class="slist">' + rec.map(({ s, st: ss }) => {
-    const g = genreOf(L, s.genre);
-    const sub = s.currentBpm && s.targetBpm ? s.currentBpm + ' → ' + s.targetBpm + ' bpm' : plain ? s.artist || '' : ss.last ? relDay(ss.last) + ', ' + fmtDur(ss.total) : t('home.notPlayed');
-    return '<div class="stile3 hsong" style="--g:' + (g ? g.color : 'var(--l3)') + '"><button class="grow" data-song="' + s.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(s.title) +
-      '</div><div class="st">' + esc(sub) + '</div></button><button class="playmini2" aria-label="' + esc(t('home.playSong', { title: s.title })) + '" data-play="' + s.id + '">' + PLAY + '</button></div>';
-  }).join('') + '</div>';
-  return h + '</div></div>';
+  P.songs = '<div class="hhdr"><span>' + t('home.continue') + '</span>' + (songs.length > 4 ? '<button class="link" data-tab="library">' + t('home.allSongs') + '</button>' : '') + '</div>' +
+    (!rec.length ? '<div class="group"><button class="cell act" data-act="addSong">' + t('home.firstSong') + '</button></div>'
+    : '<div class="slist">' + rec.map(({ s, st: ss }) => {
+      const g = genreOf(L, s.genre);
+      const sub = s.currentBpm && s.targetBpm ? s.currentBpm + ' → ' + s.targetBpm + ' bpm' : plain ? s.artist || '' : ss.last ? relDay(ss.last) + ', ' + fmtDur(ss.total) : t('home.notPlayed');
+      return '<div class="stile3 hsong" style="--g:' + (g ? g.color : 'var(--l3)') + '"><button class="grow" data-song="' + s.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(s.title) +
+        '</div><div class="st">' + esc(sub) + '</div></button><button class="playmini2" aria-label="' + esc(t('home.playSong', { title: s.title })) + '" data-play="' + s.id + '">' + PLAY + '</button></div>';
+    }).join('') + '</div>');
+  return topbar(logoHTML()) + '<div class="hlist">' + blocks(st, P) + '</div>';
 }
 
 // Долгое нажатие на инструмент (главная — быстрый доступ, вкладка «Инструменты»): меню у кнопки —
@@ -182,6 +198,30 @@ export function toolHoldMenu(app, btn, rerender, open) {
   if (onHome) items.push({ icon: HI.edit, label: t('hold.edit'), run: () => quickEdit(app, rerender) });
   items.push({ icon: HI.help, label: t('hold.help'), run: () => showHelp(app, m) });
   holdMenu(btn, items, moduleName(m));
+}
+
+// Долгое нажатие на блок главной: меньше, больше, выше, ниже, убрать, настроить всё
+const HB = {
+  smaller: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>',
+  bigger: '<svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg>',
+  up: '<svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>',
+  down: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
+  hide: '<svg viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><path d="M4 20 20 4"/></svg>',
+  edit: '<svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="17" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg>',
+};
+export function homeBlockMenu(app, el, rerender, openPage) {
+  const st = app.store.state.settings, id = el.dataset.hb, L = homeLayout(st);
+  const vis = L.order.filter((k) => !L.off.has(k) && document.querySelector('[data-hb="' + k + '"]')), i = vis.indexOf(id), sz = HOME_SIZES.includes(L.size[id]) ? L.size[id] : 'm';
+  const save = () => { setHomeLayout(st, L); app.store.settingsChanged(); rerender(); };
+  const move = (d) => { const j = L.order.indexOf(vis[i + d]), k = L.order.indexOf(id); [L.order[j], L.order[k]] = [L.order[k], L.order[j]]; save(); };
+  const items = [];
+  if (sz !== 's') items.push({ icon: HB.smaller, label: t('hb.smaller'), run: () => { L.size[id] = sz === 'l' ? 'm' : 's'; save(); } });
+  if (sz !== 'l') items.push({ icon: HB.bigger, label: t('hb.bigger'), run: () => { L.size[id] = sz === 's' ? 'm' : 'l'; save(); } });
+  if (i > 0) items.push({ icon: HB.up, label: t('hb.up'), run: () => move(-1) });
+  if (i >= 0 && i < vis.length - 1) items.push({ icon: HB.down, label: t('hb.down'), run: () => move(1) });
+  items.push({ icon: HB.hide, label: t('hb.hide'), danger: true, run: () => { L.off.add(id); save(); toast(t('hb.hidden')); } });
+  items.push({ icon: HB.edit, label: t('hb.all'), run: openPage });
+  holdMenu(el, items, t('hb.' + id));
 }
 
 // Быстрый доступ: до 8 инструментов, порядок — перетаскиванием по удержанию или стрелкой
