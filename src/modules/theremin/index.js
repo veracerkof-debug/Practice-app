@@ -26,7 +26,7 @@ import { readSign, chordOf, chordName, voicing, shapeOf, harmOf, harmOffsets, HA
 import { createPadVoice, PAD_SOUNDS } from '../../audio/padvoice.js';
 import { notesOf } from '../../music/guitarchords.js';
 import { createGuitar } from './guitar.js';
-import { melodyById, melodyName, createFollower, fitRange } from '../../music/melodies.js';
+import { melodyById, createFollower, fitRange } from '../../music/melodies.js';
 import { melStrip, melSheet } from '../glider/melody.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M7 21V11.5a1.5 1.5 0 0 1 3 0V9a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5z"/><path d="M3 7c1.5-2 3-2 4.5 0S10.5 9 12 7s3-2 4.5 0"/></svg>';
@@ -92,7 +92,7 @@ const cfg = () => {
   if (!s.fx) s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
   s.gmap = { ...DEFAULT_MAP, ...(s.gmap || {}) };
   s.mode ??= 'solo'; if (!MODES.includes(s.mode)) s.mode = 'solo'; s.gmic ??= true; s.gplay ??= false; s.gdia ??= true; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.csound ??= 'same'; s.ctilt ??= true; s.cpro ??= false; s.pacc ??= 'rot'; if (!ACC_GESTURES.includes(s.pacc)) s.pacc = 'rot'; s.pflip ??= false; s.pminor ??= 'back'; s.harm ??= true; s.hstyle ??= 'classic'; if (!HARM_IDS.includes(s.hstyle)) s.hstyle = 'classic'; s.stilt ??= 'vib'; s.hud ??= 'full'; s.camAuto ??= false;
-  s.facing ??= 'user'; s.light ??= false; s.sgest ??= true; s.mel ??= null;
+  s.facing ??= 'user'; s.light ??= false; s.sgest ??= true; s.mel = null; // мелодии по подсказке убраны
   if (!HUDS.includes(s.hud)) s.hud = 'full';
   normalizeFx(s);
   return s;
@@ -737,12 +737,11 @@ function setSheet(start = 'root') {
       const back = '<button class="tmback" data-tback aria-label="' + ui.esc(t('settings')) + '"><svg viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button>';
       return ui.snav(t('sec.' + page), { left: back }) + pages[page](s);
     }
-    const mel = s.mel ? melodyById(s.mel) : null;
-    // режим — сразу сверху: им пользуются чаще всего; мелодия — рядом
+    // режим — сразу сверху: им пользуются чаще всего
     return ui.snav(t('settings')) +
       '<div class="group" style="margin-top:4px"><div class="cellcol">' + ui.seg('tmode2', MODES.map((k) => [k, t('mode.' + k)]), s.mode, t('mode')) +
       '<div class="segcap">' + t(s.mode === 'guitar' ? 'gHint' : s.mode === 'chord' ? 'chordHint' : 'soloHint') + '</div></div>' +
-      '<button class="cell" data-tmel><span class="grow">' + t('mel.title') + '</span><span class="l2">' + ui.esc(mel ? melodyName(mel, ctx.lang()) : t('mel.none')) + '</span>' + CHEVR + '</button></div>' +
+      '</div>' + // мелодии по подсказке убраны (решение автора: демонстрации пока слабые)
       '<div class="group tmsecs" style="margin-top:16px">' + SECS.map((k) => '<button class="cell tmsec" data-tpg="' + k + '"><span class="tmsi"><svg viewBox="0 0 24 24">' + SEC_IC[k] + '</svg></span>' +
         '<span class="grow"><span>' + t('sec.' + k) + '</span><span class="tmsub">' + ui.esc(summary(k, s)) + '</span></span>' + CHEVR + '</button>').join('') + '</div>';
   };

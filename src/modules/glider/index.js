@@ -20,7 +20,7 @@ import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, cl
 import { createGlideVoice, createFxBus, FX, CURVES } from './voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, axisFx, PRESETS } from './fx.js';
 import { melodyById, createFollower, fitRange } from '../../music/melodies.js';
-import { melStrip, melSheet, NOTE_ICON } from './melody.js';
+import { melStrip, melSheet } from './melody.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M3 17c3 0 4-10 9-10s6 6 9 6"/><circle cx="12" cy="7" r="1.6" fill="currentColor"/></svg>';
 const I = {
@@ -38,7 +38,7 @@ const M = { fol: null, id: null, last: null, raf: 0, play: null };
 const cfg = () => {
   const s = ctx.store.all();
   s.sound ??= 'app'; s.hold ??= true; s.snap ??= 'magnet'; s.port ??= 60; s.scale ??= 'chrom'; s.root ??= 0; s.labels ??= true; s.keys ??= true;
-  s.mel ??= null;
+  s.mel = null; // мелодии по подсказке убраны (решение автора: демонстрации пока слабые)
   s.width ??= 12; s.lo ??= 60; // октава C4–C5: на телефоне по ширине в самый раз
   if (!WIDTHS.includes(s.width)) s.width = 12;
   s.lo = clampLo(s.lo, s.width);
@@ -73,13 +73,12 @@ function padHTML(s, over) {
 function view() {
   const { t, ui } = ctx, s = cfg(), big = size === 'full' || size === 'half';
   const gear = ui.icb('data-x="gset"', ui.icons.gear, t('settings'), 'sm');
-  const melBtn = ui.icb('data-x="gmel" aria-pressed="' + !!s.mel + '"', NOTE_ICON, t('mel.title'), 'sm' + (s.mel ? ' on' : ''));
   if (size === 'strip') return '<div class="gl strip">' + padHTML(s, '<div class="glov">' + gear + '</div>') + '</div>';
   const note = '<div class="glnote" aria-live="off"><b class="num" id="glnote">' + (big ? mName(s.lo) + '–' + mName(s.lo + s.width) : '—') + '</b><span class="num" id="glc"></span></div>';
   const range = big ? '<div class="glrange">' + ui.icb('data-x="glo" data-d="-12"', I.left, t('octDown'), 'sm') + '<span class="num">' + rangeTxt(s) + '</span>' + ui.icb('data-x="glo" data-d="12"', I.right, t('octUp'), 'sm') + '</div>' : '';
   // привязка — одной кнопкой: нажатие переключает «без ладов → магнит → ноты»
   const snap = big ? '<button class="glsnap" data-x="gsnap" aria-label="' + ui.esc(t('snapBtn', { mode: t('snap.' + s.snap) })) + '">' + t('snap.' + s.snap) + '</button>' : '';
-  return '<div class="gl ' + size + '">' + padHTML(s, note + '<div class="glov">' + range + snap + melBtn + gear + '</div>') + '</div>';
+  return '<div class="gl ' + size + '">' + padHTML(s, note + '<div class="glov">' + range + snap + gear + '</div>') + '</div>';
 }
 
 function render() {
