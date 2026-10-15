@@ -6,7 +6,7 @@ import { ui, esc, icons } from '../../ui/index.js';
 import { isOn } from '../settings.js';
 import { mountModule, makeCtx, moduleName, trackToolTime, fmtDur } from '../modules.js';
 import { modules, moduleById } from '../../modules/index.js';
-import { topbar, IC } from './common.js';
+import { IC } from './common.js';
 import { showHelp } from '../help.js';
 import { recButtonHTML, bindRec } from './rec.js';
 import { canRecord } from '../recorder.js';
@@ -26,7 +26,7 @@ export function toolsTab(st) {
 export function setToolsTab(st, T) { st.toolsTab = { order: T.order.slice(), off: [...T.off] }; }
 function renderToolsNow(app, root) {
   const st = app.store.state.settings, T = toolsTab(st), list = T.shown.map(moduleById); // Библия — своя вкладка
-  root.innerHTML = topbar() + '<div class="large">' + t('tools.title') + '</div><div class="tgrid">' + list.map((m) => {
+  root.innerHTML = '<div class="large tlarge">' + t('tools.title') + '</div><div class="tgrid">' + list.map((m) => {
     let s2 = '';
     try { s2 = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ }
     return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +

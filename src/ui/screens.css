@@ -361,3 +361,4 @@
 .hbsz{display:flex;background:var(--fill);border-radius:10px;padding:2px;flex:none}
 .hbsz button{min-width:40px;min-height:36px;border-radius:8px;font-size:13px;font-weight:600;color:var(--l2)}
 .hbsz button.on{background:var(--cell);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.large.tlarge{margin-top:18px} /* вкладка «Инструменты» — без кнопки профиля */
