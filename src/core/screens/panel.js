@@ -28,6 +28,7 @@ import { bgAvailable, bgStatus, bgRows, bindBg } from '../background.js';
 import { guardAvailable } from '../guard.js';
 import { helpOf, showHelp, resetHelp, coreHelp, coreTopic, CORE_TOPICS } from '../help.js';
 import { freeTagName, trackMode } from '../session.js';
+import { dockGroups } from './session.js';
 import { INSTRUMENTS, PRIOR_MAX, gemSec, saveProfile, newProfile } from '../profile.js';
 import { gemOf } from '../mastery.js';
 import { APP_ICON_IDS, appIconSVG } from '../../ui/appicons.js';
@@ -405,7 +406,16 @@ function tabsHTML(app) {
   return '<div class="large">' + t('tabs.title') + '</div>' +
     '<div class="hdr">' + t('tabs.shown') + '</div><div class="group">' + vis.map((k, i) => row(k, true, i)).join('') + '</div>' +
     (hid.length ? '<div class="hdr">' + t('tabs.hidden') + '</div><div class="group">' + hid.map((k) => row(k, false)).join('') + '</div>' : '') +
-    '<p class="ftr">' + t('tabs.hint') + '</p>';
+    '<p class="ftr">' + t('tabs.hint') + '</p>' + dockHTML(st);
+}
+
+// Порядок значков нижней панели занятия по умолчанию (у песни может быть свой — удержание значка на панели)
+function dockHTML(st) {
+  const list = dockGroups(st);
+  return '<div class="hdr">' + t('dock.title') + '</div><div class="group">' + list.map((g, i) => { const m = moduleById(g), n = m ? moduleName(m) : g;
+    return '<div class="cell"><span class="ticon" style="--tc:' + ((m && m.color) || 'var(--tint)') + ';--on:' + ((m && m.on) || '#fff') + '">' + (m ? m.icon : '') + '</span><span class="grow">' + esc(n) + '</span>' +
+      (i > 0 ? '<button class="ic sm plain" data-dockup="' + g + '" aria-label="' + esc(t('tabs.up', { name: n })) + '">' + IC.up + '</button>' : '') + '</div>'; }).join('') +
+    (st.dockOrder ? '<button class="cell act center" data-dockreset>' + t('dock.resetDef') + '</button>' : '') + '</div><p class="ftr">' + t('dock.ftr') + '</p>';
 }
 
 function rootHTML(app) {
@@ -490,6 +500,8 @@ export function createPanel(app, onChange) {
       let b;
       if ((b = g('[data-pp]'))) { page = b.dataset.pp; render(); layer.scrollTop = 0; return; }
       if (g('[data-act="pclose"]')) { panel.close(); return; }
+      if ((b = g('[data-dockup]'))) { const st = app.store.state.settings, l = dockGroups(st), i = l.indexOf(b.dataset.dockup); if (i > 0) { [l[i - 1], l[i]] = [l[i], l[i - 1]]; st.dockOrder = l; app.store.settingsChanged(); render(); } return; }
+      if (g('[data-dockreset]')) { delete app.store.state.settings.dockOrder; app.store.settingsChanged(); render(); return; }
       if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, tabIds(app.store.state.settings), b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
       if ((b = g('[data-day]'))) { toggleDay(app.store, +b.dataset.day); render(); onChange(); return; }
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }

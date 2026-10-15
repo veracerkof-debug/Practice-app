@@ -24,6 +24,7 @@ import { clockNotice } from './clock.js';
 import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
 import { pureEnter, pureLeave } from '../pure.js';
+import { dragSort, holdMenu } from '../../ui/hold.js';
 
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -35,19 +36,20 @@ const IC = {
 
 const inSession = (st, m) => m.session !== false && !m.tab && isOn(st, m.id); // Библия — только своя вкладка
 const groupOf = (m) => m.group || m.id;
-// Самые нужные на занятии — первыми на нижней панели; остальные — правее, по прокрутке
-const FIRST = ['metro', 'notes', 'drone', 'voice'];
-const rank = (g) => { const i = FIRST.indexOf(g); return i < 0 ? FIRST.length : i; };
+// Порядок значков нижней панели: свой у песни (song.dock), иначе — из настроек (settings.dockOrder), иначе DOCK_DEF;
+// кого нет в списке — правее, по порядку модулей. Меняется удержанием значка на панели (перетащить)
+export const DOCK_DEF = ['metro', 'notes', 'drone', 'voice', 'tuner', 'audio', 'theory'];
+export const dockBase = (st, song) => (song && Array.isArray(song.dock) && song.dock.length ? song.dock : Array.isArray(st.dockOrder) && st.dockOrder.length ? st.dockOrder : DOCK_DEF);
 
-// Окна сессии: сначала FIRST, затем по порядку модулей
-export function sessionGroups(st) {
-  const out = [];
+// Окна сессии в порядке панели
+export function sessionGroups(st, song = null) {
+  const out = [], base = dockBase(st, song), rank = (g) => { const i = base.indexOf(g); return i < 0 ? base.length : i; };
   modules.forEach((m) => { if (inSession(st, m) && !out.includes(groupOf(m))) out.push(groupOf(m)); });
   out.sort((a, b) => rank(a) - rank(b));
   return out.length ? out : ['metro'];
 }
 // Значки нижней панели: без «внутренних» модулей (спектр открывается из диктофона)
-const dockGroups = (st) => sessionGroups(st).filter((g) => !(moduleById(g) || {}).inner);
+export const dockGroups = (st, song = null) => sessionGroups(st, song).filter((g) => !(moduleById(g) || {}).inner);
 
 // Модули группы (окно старой «сессии с инструментом» — сам модуль)
 function members(st, g) {
@@ -119,7 +121,7 @@ export function createSessionScreen(app) {
     if (!app.active) return;
     if (layer) return;
     const a = app.active, tm = a.type === 'tool', hide = st().showClock === false || !!st().toolsOnly;
-    w = fixWS(getWS(device, a), sessionGroups(st()), a);
+    w = fixWS(getWS(device, a), sessionGroups(st(), song()), a);
     layer = document.createElement('div');
     layer.innerHTML = '<div class="session' + (tm ? ' toolmode' : '') + '" role="dialog" aria-modal="true" aria-label="' + esc(t('ses.aria')) + '"><div class="sin">' +
       '<div class="shd">' + icb('data-s="hide"', IC.down, t('ses.hide'), 'sm') +
@@ -128,7 +130,7 @@ export function createSessionScreen(app) {
       '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + icb('data-s="finish"', IC.check, t(st().toolsOnly ? 'ses.close' : 'ses.finish'), 'sm done') + '</div>' +
       '<div class="ws"></div></div>' +
       (tm ? '' : '<div class="sdock"><div class="tbar" id="tpills" role="tablist" aria-label="' + esc(t('ses.tools')) + '">' +
-        dockGroups(st()).map((g) => '<button class="tb" data-pill="' + g + '" role="tab" aria-label="' + esc(groupName(st(), g)) + '" title="' + esc(groupName(st(), g)) + '">' + groupIcon(g) + '</button>').join('') +
+        dockGroups(st(), song()).map((g) => '<button class="tb" data-pill="' + g + '" role="tab" aria-label="' + esc(groupName(st(), g)) + '" title="' + esc(groupName(st(), g)) + '">' + groupIcon(g) + '</button>').join('') +
         '</div></div>') + '</div>';
     document.body.appendChild(layer);
     layer.pureExit = () => (pureI >= 0 ? (setPanePure(-1), true) : false);
@@ -141,6 +143,11 @@ export function createSessionScreen(app) {
       if (p) setFocus(+p.dataset.pane);
     });
     ses.addEventListener('click', onClick);
+    // удержание значка на панели — перестановка: у песни — свой порядок, у свободного занятия — порядок по умолчанию
+    dragSort(ses, '.sdock .tb[data-pill]', 'data-pill', {
+      onStill: (b) => dockMenu(b),
+      onDrop: (ids) => saveDock(ids),
+    });
     prevOpenTool = app.openTool;
     app.openTool = openTool;
     renderWS();
@@ -149,6 +156,27 @@ export function createSessionScreen(app) {
     updClock();
     clearInterval(tickT);
     tickT = setInterval(tick, 500);
+  }
+
+  function saveDock(ids) {
+    const s = song(), full = dockGroups(st(), s), order = [...ids, ...full.filter((x) => !ids.includes(x))];
+    if (s) { s.dock = order; s.updatedAt = store.now(); store.save(); toast(t('dock.savedSong', { name: s.title })); }
+    else { st().dockOrder = order; store.settingsChanged(); toast(t('dock.savedDef')); }
+  }
+  // Удержание без движения: сбросить порядок песни или вернуть исходный
+  function dockMenu(b) {
+    const s = song(), items = [];
+    if (s && s.dock) items.push({ icon: icons.back, label: t('dock.resetSong'), run: () => { delete s.dock; store.save(); redock(); toast(t('dock.resetDone')); } });
+    if (!s && st().dockOrder) items.push({ icon: icons.back, label: t('dock.resetDef'), run: () => { delete st().dockOrder; store.settingsChanged(); redock(); toast(t('dock.resetDone')); } });
+    items.unshift({ icon: groupIcon(b.dataset.pill), label: t('dock.open'), run: () => openTool(b.dataset.pill) });
+    holdMenu(b, items, t('dock.drag'));
+  }
+  // Панель — заново (после сброса порядка)
+  function redock() {
+    const bar = layer && layer.querySelector('#tpills');
+    if (!bar) return;
+    bar.innerHTML = dockGroups(st(), song()).map((g) => '<button class="tb" data-pill="' + g + '" role="tab" aria-label="' + esc(groupName(st(), g)) + '" title="' + esc(groupName(st(), g)) + '">' + groupIcon(g) + '</button>').join('');
+    dockSel();
   }
 
   function unmountAll() {
@@ -205,7 +233,7 @@ export function createSessionScreen(app) {
   function renderWSNow(animIdx) {
     if (!wsEl) return;
     setPanePure(-1);
-    fixWS(w, sessionGroups(st()), app.active);
+    fixWS(w, sessionGroups(st(), song()), app.active);
     unmountAll();
     if (w.layout === 'F') wsEl.innerHTML = paneHTML(0);
     else {
@@ -540,6 +568,7 @@ export function createSessionScreen(app) {
 
   document.addEventListener('pointermove', (e) => {
     if (!DRG || e.pointerId !== DRG.pid) return;
+    if (DRG.kind === 'tool' && document.documentElement.classList.contains('sorting')) { DRG = null; return; } // идёт перестановка значков
     const dx = e.clientX - DRG.x0, dy = e.clientY - DRG.y0;
     if (DRG.kind === 'div') {
       if (!DRG.on && Math.hypot(dx, dy) < 6) return;

@@ -98,16 +98,18 @@ export function plan(settings, practicedToday, now = Date.now()) {
 
 let LN = null;
 const native = () => Capacitor.isNativePlatform();
+// Плагин — в обёртке { P }: сам объект плагина Capacitor нельзя возвращать из async-функции — обещание ищет у него
+// .then(), и плагин падает «LocalNotifications.then() is not implemented» (из-за этого напоминания не ставились вовсе)
 async function plugin() {
-  if (!native()) return null;
+  if (!native()) return { P: null };
   if (!LN) LN = (await import('@capacitor/local-notifications')).LocalNotifications;
-  return LN;
+  return { P: LN };
 }
 export const remindAvailable = native;
 
 // Разрешение на уведомления (Android 13+ спрашивает). → true, если можно
 export async function remindPermission() {
-  const P = await plugin();
+  const { P } = await plugin();
   if (!P) return false;
   try {
     let st = await P.checkPermissions();
@@ -128,18 +130,18 @@ async function channels(P) {
 // Точные будильники (Android 12+): разрешены — напоминания приходят минута в минуту; нет — обычным способом
 // (система может сдвинуть на несколько минут). Экран настроек сам не открывается — только по кнопке
 export async function exactAllowed() {
-  const P = await plugin();
+  const { P } = await plugin();
   if (!P || !P.checkExactNotificationSetting) return true;
   try { const r = await P.checkExactNotificationSetting(); return r.exact_alarm === 'granted'; } catch { return true; }
 }
 export async function openExactSettings() {
-  const P = await plugin();
+  const { P } = await plugin();
   if (P && P.changeExactNotificationSetting) { try { await P.changeExactNotificationSetting(); } catch { /* нет экрана */ } }
 }
 
 // Пересчитать расписание. texts({ i, ts, n, slot, mode }) → { title, body } — текст напоминания (маскот, цитаты)
 export async function reschedule(state, texts, now = Date.now()) {
-  const P = await plugin();
+  const { P } = await plugin();
   if (!P) return 0;
   try {
     await P.cancel({ notifications: Array.from({ length: ID_N }, (_, i) => ({ id: ID0 + i })) });
@@ -163,7 +165,7 @@ export async function reschedule(state, texts, now = Date.now()) {
 // напоминание у события человек ставит сам. list — [{ ts, title, body }] (calendar.js: eventReminders + тексты)
 const EV_CH = 'melete-events', EV0 = 7100, EV_N = 60;
 export async function rescheduleEvents(list) {
-  const P = await plugin();
+  const { P } = await plugin();
   if (!P) return 0;
   try {
     await P.cancel({ notifications: Array.from({ length: EV_N }, (_, i) => ({ id: EV0 + i })) });
@@ -180,7 +182,7 @@ export async function rescheduleEvents(list) {
 
 // Ближайшее запланированное напоминание о практике (для строки в настройках): время или null
 export async function remindNext() {
-  const P = await plugin();
+  const { P } = await plugin();
   if (!P || !P.getPending) return null;
   try {
     const r = await P.getPending(), ts = (r.notifications || []).filter((x) => x.id >= ID0 && x.id < ID0 + ID_N)
@@ -191,7 +193,7 @@ export async function remindNext() {
 
 // Проверка: напоминание сразу (как оно будет выглядеть). → 'ok' | 'denied' | 'off' | 'fail'
 export async function remindTest(texts, mode = 'classic', slot = 'lead:60', tone) {
-  const P = await plugin();
+  const { P } = await plugin();
   if (!P) return 'fail';
   if (mode === 'quiet') return 'off';
   if (!(await remindPermission())) return 'denied';
