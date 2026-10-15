@@ -8,6 +8,7 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { fileSongs, inSong, linkSong } from '../../core/files.js';
+import { pitchShifter } from '../../audio/pitchshift.js';
 import { fmtDur } from '../../core/format.js';
 import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
 
@@ -43,6 +44,48 @@ const tracks = () => ctx.files.list('audio');
 const curSong = () => (ctx.session && ctx.session.songId) || null;
 const audKey = () => (curSong() ? 'song:' + curSong() : 'free');
 const style = () => (st().style === 'vinyl' && !ctx.mono ? 'vinyl' : 'wave'); // «Минимал» — волна
+// Тональность записи (src/audio/pitchshift.js): у каждой записи своя — settings.pitch[id] = [полутоны, центы]
+const pitchOf = (t) => (t && (st().pitch || {})[t.id]) || [0, 0];
+const keyTxt = () => { const [p, c] = pitchOf(AU.cur); return p || c ? (p > 0 ? '+' : p < 0 ? '−' : '±') + Math.abs(p) + (c ? (c > 0 ? ' +' : ' −') + Math.abs(c) + '¢' : '') : '0'; };
+async function applyPitch() {
+  const [p, c] = pitchOf(AU.cur);
+  if (!AU.shift && !p && !c) return; // пока сдвига не было — звук идёт напрямую, без Web Audio
+  if (!ctx.audio.unlock()) return;
+  const dest = ctx.audio.bus('media');
+  if (!AU.shift) { AU.shift = await pitchShifter(AU.el, dest); AU.el.volume = 1; } // громкость — у шины медиатеки
+  try { if (dest.context.state !== 'running') await dest.context.resume(); } catch { /* по жесту */ }
+  await AU.shift.set(p, c);
+}
+function setPitch(p, c) {
+  if (!AU.cur) return;
+  const all = st().pitch || (st().pitch = {});
+  p = Math.max(-12, Math.min(12, Math.round(p))); c = Math.max(-50, Math.min(50, Math.round(c / 10) * 10));
+  if (p || c) all[AU.cur.id] = [p, c]; else delete all[AU.cur.id];
+  ctx.store.save();
+  applyPitch().catch((e) => ctx.logErr(e));
+  const kv = host && host.querySelector('#keyv'); if (kv) kv.textContent = keyTxt();
+}
+// Шторка тональности: полутоны, центы, «как в тексте песни», сброс
+function keySheet() {
+  const { t, ui } = ctx, song = ctx.song(curSong());
+  const chip = (attr, v, on) => '<button type="button" class="lchip pick num' + (on ? ' on' : '') + '" ' + attr + '="' + v + '" aria-pressed="' + on + '" style="--c:var(--tint);--t:var(--on-tint)">' + (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) + '</button>';
+  ui.sheet(() => { const [p, c] = pitchOf(AU.cur);
+    return ui.snav(t('key.title')) + '<div class="group"><div class="cellcol"><span>' + t('key.semi') + '</span><div class="pickrow" style="margin-top:8px">' +
+      Array.from({ length: 25 }, (_, i) => i - 12).map((v) => chip('data-ks', v, v === p)).join('') + '</div></div><div class="cellcol"><span>' + t('key.cents') + '</span><div class="pickrow" style="margin-top:8px">' +
+      [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50].map((v) => chip('data-kc', v, v === c)).join('') + '</div></div>' +
+      (song && song.tr ? '<button class="cell act" data-ktr>' + t('key.fromSong', { n: (song.tr > 0 ? '+' : '−') + Math.abs(song.tr) }) + '</button>' : '') +
+      '<button class="cell act" data-k0>' + t('key.reset') + '</button></div><p class="ftr">' + t('key.hint') + '</p>'; },
+  (el, sh) => el.addEventListener('click', (e) => {
+    const [p, c] = pitchOf(AU.cur), b = e.target.closest('[data-ks], [data-kc], [data-ktr], [data-k0]');
+    if (!b) return;
+    if (b.dataset.ks != null) setPitch(+b.dataset.ks, c);
+    else if (b.dataset.kc != null) setPitch(p, +b.dataset.kc);
+    else if (b.hasAttribute('data-ktr')) setPitch(song.tr, 0);
+    else setPitch(0, 0);
+    sh.update();
+  }));
+}
+
 const rateTxt = () => ctx.num(AU.rate, AU.rate * 100 % 10 ? 2 : AU.rate % 1 ? 1 : 0) + '×';
 const sizeMb = (r) => ctx.t('mb', { n: ctx.num((r.size || 0) / MB, 1) });
 
@@ -80,7 +123,7 @@ function ensureEl(c) {
   AU.el.addEventListener('play', () => { loopStart(); if (document.querySelector('.mlist') && !document.activeElement?.hasAttribute?.('data-mlq')) render(); });
   AU.el.addEventListener('pause', () => { if (document.querySelector('.mlist') && !document.activeElement?.hasAttribute?.('data-mlq')) render(); });
   AU.el.addEventListener('ended', () => { if (host && host.querySelector('#vdisc') && !AU.loop) { try { AU.el.currentTime = 0; } catch { /* ignore */ } } });
-  const vol = () => { AU.el.volume = c.audio.mixer.elementVolume('media'); };
+  const vol = () => { AU.el.volume = AU.shift ? 1 : c.audio.mixer.elementVolume('media'); };
   vol();
   c.audio.mixer.subscribe(vol);
   c.audio.mixer.probe('media', () => !!(AU.cur && !AU.el.paused));
@@ -117,6 +160,7 @@ function load(t) {
   AU.el.playbackRate = AU.rate;
   AU.a = AU.b = null;
   AU.loop = false;
+  applyPitch().catch(() => {});
 }
 
 function setRate(r) {
@@ -125,7 +169,7 @@ function setRate(r) {
   AU.el.playbackRate = AU.rate;
 }
 
-const playEl = () => AU.el.play().catch(() => ctx.ui.toast(ctx.t('cantPlay')));
+const playEl = () => { if (AU.shift) applyPitch().catch(() => {}); return AU.el.play().catch(() => ctx.ui.toast(ctx.t('cantPlay'))); };
 
 // Выбранный в этом месте файл (свободная практика или песня) ждёт готовым
 function autoAudio() {
@@ -294,6 +338,9 @@ function controls() {
     play: '<button class="bigplay" data-x="aplay" id="aplay" aria-label="' + t('playPause') + '">' + (AU.el.paused ? I.play : I.pause) + '</button>',
     rate: icb('data-step="arate" data-d="-1"', I.minus, t('slower'), 'sm') + '<button class="ratev num" id="ratev" data-x="arate1" aria-label="' + t('rate1') + '">' + rateTxt() + '</button>' +
       icb('data-step="arate" data-d="1"', I.plus, t('faster'), 'sm'),
+    // тональность без изменения скорости: ♭/♯ — полутон, нажатие на значение — шторка (полутоны, центы, сброс)
+    key: '<span class="vrow tight akey">' + icb('data-step="akey" data-d="-1"', '♭', t('key.down'), 'sm txt') + '<button class="ratev num" id="keyv" data-x="akeysheet" aria-label="' + t('key.title') + '">' + keyTxt() + '</button>' +
+      icb('data-step="akey" data-d="1"', '♯', t('key.up'), 'sm txt') + '</span>',
     back: icb('data-x="aback"', I.back5, t('back5')),
     fwd: icb('data-x="afwd"', I.fwd5, t('fwd5')),
     abb: '<button class="ic txt' + (ab === 'on' ? ' act' : '') + '" data-x="aab" aria-pressed="' + (ab === 'on') + '" aria-label="' + t('ab') + '">' + (ab === 'a' ? 'B?' : 'A–B') + '</button>',
@@ -317,7 +364,7 @@ function vinylHTML() {
   if (size === 'strip') return '<div class="srow2 vstrip">' + disc + '<div class="sgrow" style="min-width:0;text-align:left"><div class="aname">' + esc(tr.name) + '</div>' + time + '</div><div class="vrow tight">' + c.rate + '</div></div>';
   if (size === 'quarter') return '<div class="vq vqv">' + disc + time + '<div class="vrow tight">' + c.rate + '</div></div>';
   return '<div class="vwrap ' + size + '">' + c.back2 + '<div class="vtop"><div class="aname sgrow" style="text-align:left">' + esc(tr.name) + '</div>' + c.sty('sm') + '</div><div class="vbody">' + disc +
-    '<div class="vside">' + time + wformHTML('s') + marksHTML() + '<div class="vrow tight vrate">' + c.rate + '</div><div class="ctrl5 vctl">' + c.list + c.back + c.fwd + c.abb + '</div></div></div></div>';
+    '<div class="vside">' + time + wformHTML('s') + marksHTML() + '<div class="vrow tight vrate">' + c.rate + '</div><div class="vrow tight vrate">' + c.key + '</div><div class="ctrl5 vctl">' + c.list + c.back + c.fwd + c.abb + '</div></div></div></div>';
 }
 
 function playerHTML() {
@@ -346,11 +393,11 @@ function playerHTML() {
   const chips = (cls) => '<div class="chips nowrap afiles' + cls + '">' + sf.map((x) => '<button class="chip' + (x.id === AU.cur.id ? ' on' : '') + '" data-x="aload2" data-id="' + x.id + '">' + esc(x.name) + '</button>').join('') + '</div>';
   if (size === 'half') {
     return '<div class="ah2">' + c.back2 + '<div class="arow3">' + (sf.length > 1 ? chips(' sgrow') : '<div class="aname sgrow" style="text-align:left">' + esc(AU.cur.name) + '</div>') +
-      '<div class="vrow tight">' + c.rate + c.sty('sm') + '</div></div><div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' +
+      '<div class="vrow tight">' + c.rate + c.key + c.sty('sm') + '</div></div><div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' +
       c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
   return '<div class="mcard av" style="position:relative">' + c.sty('corner') + c.back2 + (sf.length > 1 ? chips('') : name) + wformHTML('f') +
-    atimes(c, d) + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
+    atimes(c, d) + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + '</div><div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
 const atimes = (c, d) => '<div class="num l2 atimes">' + c.time + '<span>' + (AU.a != null ? 'A ' + fmtT(AU.a) + (AU.b != null ? ' – B ' + fmtT(AU.b) : '') : ctx.t('dragHint')) +
@@ -363,10 +410,10 @@ function videoHTML(c, name, all, sid) {
   if (size === 'strip') return '<div class="srow2 vidstrip">' + vidbox('s') + '<div class="sgrow" style="min-width:0;text-align:left">' + name + '<div class="l2 num vst">' + c.time + ' / ' + fmtT(d) + '</div></div>' + c.back + c.play + '</div>';
   if (size === 'quarter') return '<div class="vq vidq">' + vidbox('q') + wformHTML('s') + '<div class="srow2" style="flex:none">' + c.play + '<span class="l2 num" style="font-size:12px">' + c.time + '</span></div></div>';
   if (size === 'half') {
-    return '<div class="ah2 vidh">' + c.back2 + '<div class="arow3"><div class="sgrow" style="min-width:0">' + head + '</div><div class="vrow tight">' + c.rate + '</div></div>' + vidbox('h') +
+    return '<div class="ah2 vidh">' + c.back2 + '<div class="arow3"><div class="sgrow" style="min-width:0">' + head + '</div><div class="vrow tight">' + c.rate + c.key + '</div></div>' + vidbox('h') +
       '<div class="wfbox vt">' + wformHTML('s') + '<span class="wft num">' + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
-  return '<div class="mcard av vidf">' + c.back2 + head + vidbox('f') + wformHTML('s') + atimes(c, d) + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="ctrl5">' +
+  return '<div class="mcard av vidf">' + c.back2 + head + vidbox('f') + wformHTML('s') + atimes(c, d) + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + '</div><div class="ctrl5">' +
     c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
@@ -792,6 +839,7 @@ function act(a, el) {
     case 'amadd': markAdd(); break;
     case 'amj': seekMark(+el.dataset.i); break;
     case 'amlist': marksSheet(); break;
+    case 'akeysheet': keySheet(); break;
     case 'afs': {
       const v = AU.el, rq = v.requestFullscreen || v.webkitRequestFullscreen;
       if (rq) { v.controls = true; Promise.resolve(rq.call(v)).catch(() => { v.controls = false; }); }
@@ -806,6 +854,8 @@ function bind() {
   on(host, 'click', (e) => {
     const s = e.target.closest('[data-step="arate"]');
     if (s) { setRate(AU.rate + +s.dataset.d * 0.05); const rv = host.querySelector('#ratev'); if (rv) rv.textContent = rateTxt(); return; }
+    const k = e.target.closest('[data-step="akey"]');
+    if (k) { const [p, c] = pitchOf(AU.cur); setPitch(p + +k.dataset.d, c); return; }
     const x = e.target.closest('[data-x]');
     if (x) act(x.dataset.x, x);
   });

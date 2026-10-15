@@ -1091,6 +1091,7 @@
   "lic.pon.text": "Distributed under the SIL Open Font License 1.1 (openfontlicense.org). The app contains a reduced copy with only the letters of the quotations.",
   "lic.pon.sub": "Font of Church Slavonic quotations",
   "lic.fflate.sub": "Unpacking zip when importing songs",
+  "lic.stretch.sub": "Changing the key of recordings in the media library without changing speed",
   "lic.sqljs.sub": "Reading EasyWorship databases when importing songs",
   "lic.mit": "MIT License: use, modification and distribution are free with the copyright notice kept.",
   "lic.bible.title": "Bible, Russian Synodal translation",

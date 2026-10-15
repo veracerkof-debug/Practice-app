@@ -114,5 +114,13 @@
   "help.tip": "Qiyin joy — 70–80 % tezlikda, keyin tezroq.",
   "midiShare": ".mid faylini ulashish",
   "midiFail": "Yuborib boʻlmadi",
-  "midiDelTitle": "MIDI yozuvi oʻchirilsinmi?"
+  "midiDelTitle": "MIDI yozuvi oʻchirilsinmi?",
+  "key.title": "Tonallik",
+  "key.semi": "Yarim tonlar",
+  "key.cents": "Sentlar — yozuv sozlamasiga moslash",
+  "key.fromSong": "Qoʻshiq matnidagidek: {n}",
+  "key.reset": "Siljitishsiz",
+  "key.hint": "Balandlik oʻzgaradi, tezlik — yoʻq. ±3 yarim tongacha deyarli sezilmaydi; katta siljishda ovoz biroz boshqacha eshitiladi.",
+  "key.down": "Yarim ton pastga",
+  "key.up": "Yarim ton yuqoriga"
 }
