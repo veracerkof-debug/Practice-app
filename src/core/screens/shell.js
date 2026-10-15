@@ -78,6 +78,22 @@ export function createShell(app, root) {
     main.classList.add('tab-enter');
     clearTimeout(enterT);
     enterT = setTimeout(() => main.classList.remove('tab-enter'), 900);
+    requestAnimationFrame(() => main.querySelectorAll('.big.num, .gring .num').forEach(countUp));
+  }
+  // крупные цифры (время недели, проценты) — набегают от нуля, как стрелка прибора
+  function countUp(el) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const final = el.textContent, nums = [...final.matchAll(/\d+/g)].map((m) => +m[0]);
+    if (!nums.some((n) => n > 0)) return;
+    const t0 = performance.now(), T = 650;
+    const step = (now) => {
+      if (!el.isConnected) return;
+      const k = Math.min(1, (now - t0) / T), e = 1 - Math.pow(1 - k, 3);
+      let i = 0;
+      el.textContent = k >= 1 ? final : final.replace(/\d+/g, () => String(Math.round(nums[i++] * e)));
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
   }
 
   function go(tab, song) {

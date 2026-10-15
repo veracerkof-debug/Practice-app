@@ -29,6 +29,7 @@ export function onHold(root, sel, cb, ms = HOLD_MS) {
 // Меню у элемента: items — [{ icon, label, run, danger }]; закрывается касанием мимо, Escape и после выбора
 export function holdMenu(anchor, items, title = '') {
   document.querySelectorAll('.hmenu').forEach((m) => m.remove());
+  // (закрытое меню уходит с анимацией — .hmenu.leaving)
   const m = document.createElement('div');
   m.className = 'hmenu';
   m.setAttribute('role', 'menu');
@@ -42,7 +43,7 @@ export function holdMenu(anchor, items, title = '') {
   const x = Math.max(8, Math.min(innerWidth - mw - 8, r.left + r.width / 2 - mw / 2));
   const y = r.bottom + 8 + mh < innerHeight - 8 ? r.bottom + 8 : Math.max(8, r.top - mh - 8);
   m.style.left = x + 'px'; m.style.top = y + 'px';
-  const close = () => { m.remove(); anchor.classList.remove('held'); document.removeEventListener('pointerdown', out, true); document.removeEventListener('keydown', key); };
+  const close = () => { m.classList.add('leaving'); setTimeout(() => m.remove(), 140); anchor.classList.remove('held'); document.removeEventListener('pointerdown', out, true); document.removeEventListener('keydown', key); };
   const out = (e) => { if (!m.contains(e.target)) { close(); if (anchor.contains(e.target)) e.stopPropagation(); } };
   const key = (e) => { if (e.key === 'Escape') close(); };
   setTimeout(() => { document.addEventListener('pointerdown', out, true); document.addEventListener('keydown', key); }, 0);
@@ -104,7 +105,7 @@ export function dragSort(root, sel, key, { onDrop, onStill, skip } = {}) {
     if (skip && skip(e)) return;
     const p = last && last.pointerId === e.pointerId ? last : e;
     D = { el, id: e.pointerId, x0: p.clientX, y0: p.clientY, x: p.clientX, y: p.clientY, moved: false, e, raf: 0, scroller: scrollerOf(el) };
-    el.classList.add('dragging');
+    el.classList.add('lifting');
     el.parentElement.classList.add('draghost');
     document.documentElement.classList.add('sorting');
     document.addEventListener('pointermove', move, { passive: false });
@@ -168,7 +169,7 @@ export function dragSort(root, sel, key, { onDrop, onStill, skip } = {}) {
     document.removeEventListener('pointerup', up);
     document.removeEventListener('pointercancel', up);
     document.documentElement.classList.remove('sorting');
-    d.el.classList.remove('dragging');
+    d.el.classList.remove('lifting');
     if (d.el.parentElement) d.el.parentElement.classList.remove('draghost');
     d.el.style.transform = ''; d.el.style.pointerEvents = '';
     return d;
@@ -177,7 +178,14 @@ export function dragSort(root, sel, key, { onDrop, onStill, skip } = {}) {
     if (!D || e.pointerId !== D.id) return;
     const d = end();
     if (!d.el.isConnected) return;
-    if (d.moved) onDrop && onDrop(siblings(d.el).map((x) => x.getAttribute(key)), d.el);
+    if (d.moved) {
+      const id = d.el.getAttribute(key);
+      if (onDrop) onDrop(siblings(d.el).map((x) => x.getAttribute(key)), d.el);
+      // встал на место — мягко «садится» (и после перерисовки)
+      const at = (root.isConnected && root.querySelector('[' + key + '="' + CSS.escape(id) + '"]')) || d.el;
+      at.classList.add('settle');
+      setTimeout(() => at.classList.remove('settle'), 420);
+    }
     else onStill && onStill(d.el, d.e);
   }
   // пока элемент поднят, страница пальцем не прокручивается

@@ -150,7 +150,7 @@ function open(code, ch, y = 0, go = null) {
     if (ctx.mono && P.raw) rows = P.raw(code, ch);
     render();
     const tx = host.querySelector('.btext');
-    if (tx) tx.scrollTop = y;
+    if (tx) { tx.scrollTop = y; tx.classList.add('bnew'); setTimeout(() => tx.classList.remove('bnew'), 450); } // новая глава проявляется
     loadMarks(code, ch).then(() => {
       if (!go || !host || cur.code !== code || cur.ch !== ch) return;
       flash(go.v);

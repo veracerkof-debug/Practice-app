@@ -86,6 +86,50 @@ button.cell:active, label.cell:active, .cell.act:active { background-color: var(
 #main.tab-enter .rkbar i, #main.tab-enter .mline i, .sheet .gbar i { animation: m-grow 700ms var(--e-out) backwards 120ms; }
 @keyframes m-grow { from { width: 0; } }
 
+/* ---------- списки и сетки: при входе на вкладку элементы появляются волной ---------- */
+#main.tab-enter :is(.tgrid, .slist, .qgrid, .mtools, .clist, .hscroll.catbar) > * { animation: m-rise var(--t-slow) var(--e-out) backwards; }
+#main.tab-enter :is(.tgrid, .qgrid, .mtools, .hscroll.catbar) > * { animation-name: m-pop-in; }
+@keyframes m-pop-in { from { opacity: 0; transform: translateY(10px) scale(.94); } }
+#main.tab-enter :is(.tgrid, .slist, .qgrid, .mtools, .clist, .hscroll.catbar) > :nth-child(2) { animation-delay: 40ms; }
+#main.tab-enter :is(.tgrid, .slist, .qgrid, .mtools, .clist, .hscroll.catbar) > :nth-child(3) { animation-delay: 75ms; }
+#main.tab-enter :is(.tgrid, .slist, .qgrid, .mtools, .clist, .hscroll.catbar) > :nth-child(4) { animation-delay: 105ms; }
+#main.tab-enter :is(.tgrid, .slist, .qgrid, .mtools, .clist, .hscroll.catbar) > :nth-child(5) { animation-delay: 130ms; }
+#main.tab-enter :is(.tgrid, .slist, .qgrid, .mtools, .clist, .hscroll.catbar) > :nth-child(6) { animation-delay: 155ms; }
+#main.tab-enter :is(.tgrid, .slist, .qgrid, .mtools, .clist, .hscroll.catbar) > :nth-child(7) { animation-delay: 175ms; }
+#main.tab-enter :is(.tgrid, .slist, .qgrid, .mtools, .clist, .hscroll.catbar) > :nth-child(n+8) { animation-delay: 195ms; }
+#main.tab-enter .empty { animation: m-pop var(--t-slow) var(--e-spring) backwards 80ms; }
+
+/* ---------- шторки и страницы профиля: группы поднимаются по очереди (только при открытии и переходе) ---------- */
+.scrim.opening .sheet > :is(.group, .hdr, .ftr, .pickrow, .btn, .prohero, .mlmh, .hcbody) { animation: m-rise var(--t-slow) var(--e-out) backwards 60ms; }
+.scrim.opening .sheet > :is(.group, .hdr, .ftr, .pickrow, .btn, .prohero, .mlmh, .hcbody):nth-of-type(n+3) { animation-delay: 100ms; }
+.scrim.opening .sheet > :is(.group, .hdr, .ftr, .pickrow, .btn, .prohero, .mlmh, .hcbody):nth-of-type(n+5) { animation-delay: 140ms; }
+.panel .wrap:is(.pfwd, .pback) > :is(.group, .hdr, .ftr, .large, .prohero, .pstats) { animation: m-rise var(--t-slow) var(--e-out) backwards 40ms; }
+.panel .wrap:is(.pfwd, .pback) > :is(.group, .hdr, .ftr):nth-of-type(n+3) { animation-delay: 80ms; }
+.panel .wrap:is(.pfwd, .pback) > :is(.group, .hdr, .ftr):nth-of-type(n+5) { animation-delay: 120ms; }
+
+/* ---------- календарь: месяц и неделя листаются в свою сторону, день проявляется ---------- */
+.cal-r { animation: m-from-right var(--t-mid) var(--e-out); }
+.cal-l { animation: m-from-left var(--t-mid) var(--e-out); }
+.cal-f { animation: m-pop var(--t-mid) var(--e-out); }
+.cal-d > * { animation: m-rise var(--t-mid) var(--e-out) backwards; }
+.cal-d > :nth-child(2) { animation-delay: 30ms; }
+.cal-d > :nth-child(n+3) { animation-delay: 60ms; }
+.calgrid [aria-selected="true"], .calgrid .sel { transition: background-color var(--t-mid) var(--e-out), color var(--t-mid) var(--e-out), transform var(--t-fast) var(--e-spring); }
+
+/* ---------- Библия: новая глава проявляется ---------- */
+.btext.bnew > * { animation: m-rise var(--t-slow) var(--e-out) backwards; }
+
+/* ---------- мелочи: значки вкладок, переключатели в шторках, кнопки «+» ---------- */
+.tab:active svg { transform: scale(.88); transition: transform var(--t-fast) var(--e-out); }
+.tab svg { transition: transform var(--t-mid) var(--e-spring); }
+.cadd, .qbtn.add { transition: transform var(--t-fast) var(--e-spring), background-color var(--t-mid); }
+.cadd:active, .qbtn.add:active { transform: scale(.88) rotate(90deg); }
+.lchip.pick, .vc-eqp button, .mlfil button { transition: background-color var(--t-mid) var(--e-out), color var(--t-mid) var(--e-out), transform var(--t-fast) var(--e-out); }
+.lchip.pick:active, .vc-eqp button:active { transform: scale(.94); }
+.hmenu button { transition: background-color var(--t-fast) var(--e-out); }
+/* значок записи и воспроизведения — плавная смена */
+.tvrec { transition: background-color var(--t-mid) var(--e-out), color var(--t-mid) var(--e-out), width var(--t-mid) var(--e-out); }
+
 /* «Уменьшить движение»: без перемещений и отскоков — только короткое появление прозрачностью.
    Вспышка метронома — функция, а не украшение: остаётся. */
 @media (prefers-reduced-motion: reduce) {

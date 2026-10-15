@@ -69,7 +69,8 @@ export function sheet(render, init, { onClose } = {}) {
   }
   const prevFocus = document.activeElement;
   const scrim = document.createElement('div');
-  scrim.className = 'scrim';
+  scrim.className = 'scrim opening'; // содержимое поднимается по очереди только при открытии, не при каждом обновлении
+  setTimeout(() => scrim.classList.remove('opening'), 650);
   scrim.style.zIndex = 45 + stack.length;
   scrim.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"></div>';
   const el = scrim.firstChild;

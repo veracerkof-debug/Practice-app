@@ -205,9 +205,10 @@ export function calAct(app, b, cv, rerender) {
   if (d.cdone) { const ev = events(app).find((e) => e.id === d.cdone); if (ev) { toggleDone(app.store, ev, +d.os); rerender(); } return true; }
   if (d.cnew !== undefined) { eventForm(app, null, { day: d.cnew ? +d.cnew : cv ? cv.sel : dayStart(Date.now()), songId: d.csong || null }, rerender); return true; }
   if (!cv) return false;
-  if (d.cday) { cv.sel = +d.cday; rerender(); return true; }
+  if (d.cday) { cv.sel = +d.cday; cv.anim = 'd'; rerender(); return true; }
   if (d.cnav !== undefined) {
     const n = +d.cnav;
+    cv.anim = n > 0 ? 'r' : n < 0 ? 'l' : 'f'; // направление листания — для анимации (bindCalendar)
     cv.sel = !n ? dayStart(Date.now()) : cv.view === 'week' ? addDays(cv.sel, 7 * n) : (() => { const m = addMonths(cv.sel, n), dim = new Date(addMonths(m, 1) - 1).getDate(); return addDays(m, Math.min(new Date(cv.sel).getDate(), dim) - 1); })();
     rerender();
     return true;
@@ -221,6 +222,13 @@ export function calAct(app, b, cv, rerender) {
 
 // После перерисовки: недельная сетка — к утру или к текущему часу; пустое место в сетке — новое событие; свайп по месяцу
 export function bindCalendar(app, main, cv, rerender) {
+  // листание месяца или недели — сетка въезжает с нужной стороны; выбор дня — список дня проявляется
+  const an = cv.anim;
+  cv.anim = null;
+  if (an) {
+    const box = an === 'd' ? main.querySelector('.cday-h ~ .clist') : main.querySelector('.calgrid, #cwscroll');
+    if (box) { box.classList.add('cal-' + an); setTimeout(() => box.classList.remove('cal-' + an), 400); }
+  }
   const sc = main.querySelector('#cwscroll');
   if (sc) {
     // своя неделя — к текущему часу (не раньше 7:00), другая — к 7:00; дальше — где пользователь оставил
@@ -242,7 +250,7 @@ export function bindCalendar(app, main, cv, rerender) {
       if (x0 == null) return;
       const dx = e.clientX - x0;
       x0 = null;
-      if (Math.abs(dx) > 60) { cv.sel = addMonths(cv.sel, dx < 0 ? 1 : -1); rerender(); }
+      if (Math.abs(dx) > 60) { cv.anim = dx < 0 ? 'r' : 'l'; cv.sel = addMonths(cv.sel, dx < 0 ? 1 : -1); rerender(); }
     };
   }
 }
