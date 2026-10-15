@@ -157,20 +157,29 @@ export async function addDemo(app, t, base = new URL('demo/', document.baseURI).
   return songs;
 }
 
-// Убрать файлы демо-набора (записи, табулатуры, ноты)
+// Убрать файлы демо-набора (записи, табулатуры, ноты) — и их копии в папке Melete
 export async function removeDemoFiles(app) {
   const ids = [];
   ['tab', 'audio'].forEach((k) => app.files.list(k).forEach((r) => { if (isDemo(r.id)) ids.push(r.id); }));
   for (const id of ids) await app.files.remove(id);
+  if (app.folder && app.folder.drop) await app.folder.drop({ files: ids });
 }
 
-// Убрать демо-набор целиком. Песни помечаются удалёнными, как обычные: время занятий с ними остаётся в статистике
+// Остались ли следы демо-набора: песни (и удалённые, но не стёртые), события, файлы
+export const demoLeft = (app) => !!((app.store.state.songs || []).some((s) => isDemo(s.id)) || (app.store.state.events || []).some((e) => isDemo(e.id)) ||
+  (app.files && ['tab', 'audio'].some((k) => app.files.list(k).some((r) => isDemo(r.id)))));
+
+// Убрать демо-набор целиком: песни стираются совсем (с ними — их тексты в папке), события и файлы — тоже.
+// Песня, по которой уже были занятия, только помечается удалённой: время занятий остаётся в статистике
 export async function removeDemo(app) {
-  const store = app.store, st = store.state;
-  st.songs.filter((s) => isDemo(s.id) && !s.deleted).forEach((s) => deleteSong(store, s.id));
+  const store = app.store, st = store.state, played = new Set((st.sessions || []).map((x) => x.songId).filter(Boolean));
+  const ids = st.songs.filter((s) => isDemo(s.id)).map((s) => s.id);
+  ids.filter((id) => played.has(id)).forEach((id) => deleteSong(store, id));
+  st.songs = st.songs.filter((s) => !isDemo(s.id) || played.has(s.id));
   st.events = (st.events || []).filter((e) => !isDemo(e.id));
   st.settings.demo = false;
   store.save();
   if (store.settingsChanged) store.settingsChanged();
   await removeDemoFiles(app);
+  if (app.folder && app.folder.drop) await app.folder.drop({ songs: ids });
 }

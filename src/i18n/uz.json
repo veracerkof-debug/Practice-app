@@ -397,7 +397,7 @@
   "demo.remove": "Namuna to'plamini olib tashlash",
   "demo.hint": "Qoʻshiqlar, tablar, notalar, yozuvlar va tadbirlar — hammasi qanday ishlashini koʻrish uchun. Mashgʻulot va statistika qoʻshmaydi. Bitta tugma bilan olib tashlanadi.",
   "demo.removeTitle": "Namuna to'plami olib tashlansinmi?",
-  "demo.removeText": "Namuna to'plamidagi qo'shiqlar, fayllar va tadbirlar o'chiriladi. Bu qo'shiqlar bilan mashg'ulot vaqti statistikada qoladi.",
+  "demo.removeText": "Demo toʻplamining qoʻshiqlari, fayllari va tadbirlari oʻchiriladi — ilovada ham, Melete jildida ham. Ular bilan mashgʻulot vaqti statistikada qoladi.",
   "demo.removeYes": "Olib tashlash",
   "demo.removed": "Namuna to'plami olib tashlandi",
   "demo.adding": "Namuna to'plami qo'shilmoqda…",

@@ -13,7 +13,7 @@ import {
 } from '../stats.js';
 import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
-import { hasDemo, addDemo, removeDemo } from '../demo.js';
+import { demoLeft, addDemo, removeDemo } from '../demo.js';
 import { meleteHTML, bindMelete, mountMelete } from './melete.js';
 import { setsOf, QSETS } from '../quotes.js';
 const QUOTE_IC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M10 7H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5A1.5 1.5 0 0 1 6.5 18H6v2h.5A3.5 3.5 0 0 0 10 16.5zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5a1.5 1.5 0 0 1-1.5 1.5H16v2h.5a3.5 3.5 0 0 0 3.5-3.5z"/></svg>';
@@ -293,7 +293,7 @@ function folderHTML(app) {
 }
 
 function dataHTML(app) {
-  const demo = hasDemo(app.store.state);
+  const demo = demoLeft(app);
   return '<div class="large">' + t('data.title') + '</div><div class="group"><button class="cell act" data-act="export">' + t('data.export') + '</button><button class="cell act" data-act="import">' + t('data.import') + '</button></div>' +
     '<p class="ftr">' + t('data.hint') + '</p>' +
     folderHTML(app) +
@@ -520,7 +520,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); relang(); return; }
       if (g('[data-act="demo"]')) {
-        if (hasDemo(app.store.state)) {
+        if (demoLeft(app)) {
           confirm(t('demo.removeTitle'), t('demo.removeText'), t('demo.removeYes')).then((ok) => {
             if (!ok) return;
             removeDemo(app).then(() => { render(); onChange(); toast(t('demo.removed')); });

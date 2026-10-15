@@ -4,7 +4,7 @@ import '../../ui/screens.css';
 import { t } from '../../i18n/index.js';
 import { confirm, toast } from '../../ui/index.js';
 import { deleteSong } from '../library.js';
-import { addDemo } from '../demo.js';
+import { addDemo, removeDemo } from '../demo.js';
 import { TAB_ICONS, tabIds } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule } from '../modules.js';
@@ -142,6 +142,9 @@ export function createShell(app, root) {
     // команда: отправить песню или выбрать песни; принять файл .melete
     else if (d.act === 'share') { if (d.sid) shareSheet(app, { songIds: [d.sid] }); else shareMenu(app); }
     else if (d.act === 'songImport') songImportMenu(app, () => go('library'));
+    else if (d.act === 'demoDel') {
+      confirm(t('demo.removeTitle'), t('demo.removeText'), t('demo.removeYes')).then((ok) => { if (ok) removeDemo(app).then(() => { render(); toast(t('demo.removed')); }); });
+    }
     else if (d.act === 'demoAdd') { toast(t('demo.adding')); addDemo(app, t).then(() => { render(); toast(t('demo.added')); }); }
     else if (calAct(app, b, view.tab === 'calendar' ? view.cal : null, render)) { /* календарь и строки событий */ }
     else return false;

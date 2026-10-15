@@ -409,7 +409,7 @@
   "demo.remove": "Remove the demo set",
   "demo.hint": "Songs, tabs, scores, recordings and events — to see how everything works. Adds no sessions or stats. Removed with one button.",
   "demo.removeTitle": "Remove the demo set?",
-  "demo.removeText": "Demo songs, files and events will be deleted. Practice time with these songs stays in the statistics.",
+  "demo.removeText": "Demo songs, files and events are removed — in the app and in the Melete folder. Practice time with them stays in the stats.",
   "demo.removeYes": "Remove",
   "demo.removed": "Demo set removed",
   "demo.adding": "Adding the demo set…",

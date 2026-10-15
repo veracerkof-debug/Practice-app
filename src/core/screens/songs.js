@@ -2,6 +2,7 @@
 // Перенесено из legacy/practice.html (libraryHTML, songHTML, tempoChart, songForm, libManager, itemEditor, pickHTML).
 import { t, tn, getLang } from '../../i18n/index.js';
 import { esc, icb, seg, sheet, snav, toast, icons } from '../../ui/index.js';
+import { isDemo } from '../demo.js';
 import { fmtDur } from '../format.js';
 import { songStats } from '../stats.js';
 import {
@@ -59,7 +60,9 @@ export function libraryHTML(app, view) {
       esc([s.artist, g ? g.name : s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + '</div>' +
       (tags.length ? '<div class="tagrow">' + tags.map((x) => chipHTML(x, 'sm')).join('') + '</div>' : '') +
       '</div><div class="val"><div>' + mBadge(getPct(s), st) + '</div>' + (st.toolsOnly ? '' : '<div class="num" style="font-size:12px;margin-top:3px">' + fmtDur(ss.total) + '</div>') + '</div></button>';
-  }).join('') + '</div>';
+  }).join('') + '</div>' +
+    // демо-набор в библиотеке — убрать одной кнопкой прямо здесь (и в «Данных и копиях»)
+    (songs.some((x) => isDemo(x.id)) ? '<div class="group" style="margin-top:18px"><button class="cell act danger center" data-act="demoDel">' + t('demo.remove') + '</button></div>' : '');
 }
 
 /* ---------- карточка песни ---------- */

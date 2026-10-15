@@ -66,6 +66,16 @@ export function initFolder(app) {
       await sync();
       return true;
     },
+    // убрать из папки копии файлов (id записей) и тексты песен (id песен) — например, демо-набора
+    async drop({ files = [], songs = [] } = {}) {
+      const mem = load();
+      let n = 0;
+      const rm = async (path) => { if (!avail || !state.ok) return; try { await nativeDriver.remove(path); n++; } catch { /* уже нет */ } };
+      for (const id of files) { const path = mem.files && mem.files[id]; if (path) { await rm(path); delete mem.files[id]; if (mem.seen) delete mem.seen[path]; } }
+      for (const id of songs) { const m = mem.texts && mem.texts[id]; if (m) { await rm(m.path); delete mem.texts[id]; } }
+      keep(mem);
+      return n;
+    },
     async forget() { if (!avail) return; try { await nativeDriver.forget(); } catch { /* уже нет */ } keep({}); state = { ok: false, name: '' }; emit(); },
     // данные из папки (Data/melete-data.json) — слиянием с текущими, как «Загрузить копию»
     async restore() {
