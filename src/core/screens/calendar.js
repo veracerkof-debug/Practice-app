@@ -470,19 +470,15 @@ function kindEditor(app, id, back) {
 
 /* ---------- экспорт ---------- */
 
+// Выгрузка в .ics: Android — системное «Поделиться» (Google Календарь, файлы, мессенджер), браузер — файл
+// (обычная ссылка-скачивание в Android WebView молча не срабатывает)
 function exportICS(app) {
   const list = events(app);
   if (!list.length) { toast(t('cal.exportEmpty')); return; }
-  const ics = toICS(list, { cal: cal(app), songs: app.store.songs(), name: t('cal.icsName') });
-  const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'practice-calendar-' + dayKey(Date.now()) + '.ics';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast(t('cal.exported', { n: tn('cal.nEvents', list.length) }));
+  const ics = toICS(list, { cal: cal(app), songs: app.store.songs(), name: t('cal.icsName') }), name = 'melete-calendar-' + dayKey(Date.now()) + '.ics';
+  import('./share.js').then(({ sendFile }) => sendFile(new TextEncoder().encode(ics), name, t('cal.icsName'), 'text/calendar'))
+    .then((r) => { if (r !== 'cancel') toast(t('cal.exported', { n: tn('cal.nEvents', list.length) })); })
+    .catch(() => toast(t('cal.exportEmpty')));
 }
 
 /* ---------- на других экранах ---------- */
