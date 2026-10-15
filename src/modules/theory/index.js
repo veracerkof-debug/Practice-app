@@ -11,9 +11,10 @@ import { curTuning } from '../../music/tuning.js';
 import { kbHTML } from '../../ui/keyboard.js';
 import { chordsOf, familiesOf, ladderOf, degreesOf, colorNote, familyOfType, parentOf, rotateMode, modeChords, onFifths, FIFTHS, FAMILIES, LADDER } from '../../music/identify.js';
 import { chroma } from '../../music/analyze.js';
+import { jazzHTML, jazzAct, jstop } from './jazz.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v4.5"/></svg>';
-const SECS = ['circle', 'scales', 'chords', 'intervals'];
+const SECS = ['circle', 'scales', 'chords', 'intervals', 'jazz'];
 // Определитель — в «Минимале» по умолчанию, в обычном виде включается в «Модулях и функциях» (settings.theory.find)
 const findOn = () => { const d = ctx.data(); return ctx.mono ? d.find !== false : d.find === true; };
 const secs = () => (findOn() ? [...SECS, 'find'] : SECS);
@@ -347,7 +348,7 @@ function view() {
   const sw = big ? '<div class="tsw" role="tablist">' + secs().map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' +
     t('sec.' + k) + '</button>').join('') + '</div>'
     : '<div class="csw"><button class="cswb on txt" data-x="tsecnext" aria-label="' + t('secNext') + '">' + t('sec.' + s) + ' ›</button></div>';
-  const body = s === 'circle' ? circleHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : intervalsHTML();
+  const body = s === 'circle' ? circleHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : s === 'jazz' ? jazzHTML({ ctx, th: TH(), size }) : intervalsHTML();
   return '<div class="comp ' + size + '">' + sw + '<div class="cbody">' + body + '</div></div>';
 }
 
@@ -398,6 +399,8 @@ function droneOn(pc, note) {
 
 function act(a, el) {
   const th = TH(), A = ctx.audio, save = () => { ctx.store.save(); render(); };
+  // раздел «Джаз» (jazz.js): свои действия начинаются с «j»
+  if (a[0] === 'j') { const r = jazzAct({ ctx, th, size }, a, el); if (r === 'save') save(); if (r) return; }
   switch (a) {
     case 'tsec': th.sec = el.dataset.v; save(); break;
     case 'tsecnext': th.sec = secs()[(secs().indexOf(curSec()) + 1) % secs().length]; save(); break;
@@ -517,6 +520,7 @@ export default {
   resize(sz) { size = sz; render(); },
   unmount() {
     stopListen();
+    jstop();
     if (host) {
       host.removeEventListener('click', onClick);
       host.removeEventListener('keydown', onKey);
