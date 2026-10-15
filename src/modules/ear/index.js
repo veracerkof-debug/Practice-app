@@ -8,7 +8,7 @@ import en from './i18n/en.json';
 import { SH, MAJI, MAJ_NAMES, MIN_NAMES, spell, mName } from '../../music/notes.js';
 import { SCALES } from '../../music/theory.js';
 import {
-  DRILLS, EIV, ECH, EDG, RANGES, NT_COLORS, NT_TIMBRES, NT_GOAL, LEVELS, normalizeEar, setLevel, toggleInSet, ntSet, generate, playPlan, comparePlan,
+  DRILLS, EIV, ECH, EDG, RANGES, NT_COLORS, NT_TIMBRES, NT_GOAL, LEVELS, TEMPOS, EAR_TIMBRES, normalizeEar, setLevel, toggleInSet, ntSet, generate, playPlan, comparePlan,
   normalizeEarData, record, accuracy, earStreak, ntProgress, dictationStep, pitchCents, pitchTol,
 } from '../../music/ear.js';
 import { yin, createPitchSmoother } from '../../audio/pitch.js';
@@ -37,7 +37,7 @@ const dayKey = (ts) => { const d = new Date(ts); return d.getFullYear() + '-' + 
 const DAY = 86400000;
 
 // Состояние занятия (не сохраняется): вопросы, ответы, серии, таймеры звука
-const EAR = { q: {}, res: {}, sess: {}, timers: [], playing: false, hold: 0, reveal: false, ntPlayed: false };
+const EAR = { q: {}, res: {}, sess: {}, timers: [], playing: false, hold: 0, reveal: false, ntPlayed: false, listen: false, mixTim: 'piano' };
 let host = null, ctx = null, size = 'full', onClick = null, onDown = null;
 let mic = null, micTimer = 0, smooth = null, lastT = 0;
 
@@ -77,9 +77,11 @@ function mask() {
 function runEvent(x) {
   const A = ctx.audio;
   if (x.mask) mask();
-  else if (x.seq) A.playSeq(x.seq, { step: x.step });
-  else if (x.chord) A.playChord(x.chord);
-  else if (x.note != null) note(x.note, x.dur, x.tim);
+  // тембр: 'mix' — случайный встроенный звук на каждый вопрос (EAR.mixTim), иначе — выбранный
+  const tim = x.tim === 'mix' ? EAR.mixTim : x.tim;
+  if (x.seq) A.playSeq(x.seq, { step: x.step, preset: tim });
+  else if (x.chord) A.playChord(x.chord, { preset: tim });
+  else if (x.note != null) note(x.note, x.dur, tim);
 }
 
 function gen(sec) {
@@ -87,6 +89,8 @@ function gen(sec) {
   EAR.q[sec] = q;
   EAR.res[sec] = null;
   EAR.hold = 0;
+  EAR.mixTim = NT_TIMBRES[Math.floor(Math.random() * NT_TIMBRES.length)];
+  EAR.listen = sec === 'nt' && EC().listen; // новый вопрос «Нот» — сначала можно послушать клавиши (если так настроено)
   return q;
 }
 
@@ -328,6 +332,8 @@ function drillHTML(sec) {
     const set = ntSet(e), hist = e.ntHist || [];
     return '<div class="ewrap">' + head + card + '<div class="ntinfo"><span>' + (e.ntMode !== 'custom' ? t('ntProg', { n: set.length, k: Math.max(0, NT_GOAL - hist.reduce((a, b) => a + b, 0)) })
       : tn('ntCustom', set.length)) + '</span><span class="ntlearn" id="ntlearn" aria-live="polite"></span><button class="btn sm" data-x="ntlearn">' + t('ntLearn') + '</button></div>' +
+      // до ответа клавиши можно послушать: «Слушать» — нажатие только звучит, «Ответить» — нажатие засчитывается
+      (res ? '' : '<div class="ntmode">' + ui.seg('ntlisten', [['listen', t('ntListen')], ['answer', t('ntAnswer')]], EAR.listen ? 'listen' : 'answer', t('ntListen')) + '</div>') +
       '<div class="ekeys">' + ntKB(mk) + '</div>' + next + '</div>';
   }
   if (sec === 'dc') {
@@ -346,7 +352,7 @@ function drillHTML(sec) {
   else if (sec === 'sc') opts = e.scSet.filter((k) => SCALES[k]).map((k) => [k, label('sc', k), '']);
   else if (sec === 'dg') opts = EDG.filter((d) => e.dgSet.includes(d[0])).map((d) => [d[0], d[1], d[2] ? t('fn.' + d[2]) : '']);
   const cols = sec === 'sc' ? 2 : opts.length <= 4 ? 2 : opts.length <= 9 ? 3 : 4;
-  return '<div class="ewrap">' + head + card + '<div class="egrid' + (sec === 'sc' ? ' esc' : '') + '" style="--cols:' + cols + ';--c:' + color + '">' + opts.map(([v, s, l]) => {
+  return '<div class="ewrap">' + head + card + '<div class="egrid' + (sec === 'sc' ? ' esc' : '') + (opts.length <= 4 ? ' few' : '') + '" style="--cols:' + cols + ';--c:' + color + '">' + opts.map(([v, s, l]) => {
     const st = res ? (String(v) === String(q.ans) ? ' ok' : res.picked === String(v) ? ' bad' : ' dim') : '';
     return '<button class="eopt' + st + '" data-x="eans" data-v="' + v + '" aria-label="' + esc(l || s) + '"><b>' + esc(s) + '</b>' + (l ? '<small>' + esc(l) + '</small>' : '') + '</button>';
   }).join('') + '</div>' + next + (res ? '<p class="ftr" style="text-align:center;margin-top:2px">' + t('compare') + '</p>' : '') + '</div>';
@@ -369,7 +375,7 @@ function settingsSheet() {
   const body = () => {
     const sec = e.sec, setK = sec + 'Set';
     return ui.snav(t('set.title')) +
-      '<div class="hdr" style="margin-top:4px">' + t('set.level') + '</div><div class="group"><div class="cellcol">' + seg('lv', ['easy', 'mid', 'hard'].map((k) => [k, t('lv.' + k)]), e.level, t('set.level')) + '</div></div>' +
+      '<div class="hdr" style="margin-top:4px">' + t('set.level') + '</div><div class="group"><div class="cellcol">' + seg('lv', ['easy', 'mid', 'hard'].map((k) => [k, t('lv.' + k)]), e.level, t('set.level')) + (e.level === 'custom' ? '<div class="segcap">' + t('lv.customNow') + '</div>' : '') + '</div></div>' +
       (sec === 'iv' ? '<div class="hdr">' + t('set.dir') + '</div><div class="group"><div class="cellcol">' + seg('dir', ['up', 'down', 'harm', 'mix'].map((k) => [k, t('d.' + k)]), e.dir, t('set.dir')) + '</div></div>' : '') +
       (sec === 'ch' ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('set.arp') + '</span>' + ui.sw('earp', e.arp, t('set.arp')) + '</div></div>' : '') +
       (sec === 'dg' ? '<div class="hdr">' + t('set.mode') + '</div><div class="group"><div class="cellcol">' + seg('md', ['major', 'minor', 'mix'].map((k) => [k, t('md.' + k)]), e.mode, t('set.mode')) + '</div></div>' : '') +
@@ -387,6 +393,11 @@ function settingsSheet() {
       (sec !== 'pt' && sec !== 'dc' && !(sec === 'nt' && e.ntMode !== 'custom') ? '<div class="hdr">' + t('set.set') + '</div><div class="group"><div class="cellcol"><div class="pickrow">' +
         items(sec).map(([v, l]) => '<button type="button" class="lchip pick' + (e[setK].map(String).includes(String(v)) ? ' on' : '') + '" data-it="' + v + '" aria-pressed="' +
           e[setK].map(String).includes(String(v)) + '" style="--c:var(--tint);--t:var(--on-tint)">' + esc(l) + '</button>').join('') + '</div></div></div><p class="ftr">' + t('ftr.set') + '</p>' : '') +
+      // звучание — для всех упражнений
+      '<div class="hdr">' + t('set.sound') + '</div><div class="group"><div class="cellcol">' + seg('tempo', Object.keys(TEMPOS).map((k) => [k, t('tempo.' + k)]), e.tempo, t('set.tempo')) +
+      '</div><div class="cellcol"><div class="pickrow">' + EAR_TIMBRES.map((k) => '<button type="button" class="lchip pick' + (e.timbre === k ? ' on' : '') + '" data-tim="' + k + '" aria-pressed="' + (e.timbre === k) +
+        '" style="--c:var(--tint);--t:var(--on-tint)">' + t('tim2.' + k) + '</button>').join('') + '</div></div></div>' + (sec === 'nt' ? '<p class="ftr">' + t('ftr.timbreNt') + '</p>' : '') +
+      (sec === 'nt' ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('set.listen') + '</span>' + ui.sw('elisten', e.listen, t('set.listen')) + '</div></div>' : '') +
       '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('set.auto') + '</span>' + ui.sw('eauto', e.auto, t('set.autoShort')) + '</div></div>';
   };
   ui.sheet(body, (el, sh) => {
@@ -403,13 +414,15 @@ function settingsSheet() {
       else if ((b = g('[data-sd]'))) e.scDir = b.dataset.sd;
       else if ((b = g('[data-md]'))) e.mode = b.dataset.md;
       else if ((b = g('[data-rg]'))) e.rng = b.dataset.rg;
+      else if ((b = g('[data-tempo]'))) e.tempo = b.dataset.tempo;
+      else if ((b = g('[data-tim]'))) e.timbre = b.dataset.tim;
       else if ((b = g('[data-it]'))) { if (!toggleInSet(e, e.sec, b.dataset.it)) { ui.toast(t('needTwo')); return; } }
       else return;
       re();
     });
     el.addEventListener('change', (ev) => {
       const k = ev.target.dataset.sw, v = ev.target.checked;
-      const map = { earp: 'arp', eauto: 'auto', eoct: 'oct', ntmask: 'ntMask', ntcol: 'ntColors' };
+      const map = { earp: 'arp', eauto: 'auto', eoct: 'oct', ntmask: 'ntMask', ntcol: 'ntColors', elisten: 'listen' };
       if (!map[k]) return;
       e[map[k]] = v;
       re();
@@ -499,14 +512,16 @@ function act(a, el) {
 function bind() {
   onClick = (ev) => {
     const k = ev.target.closest('.ekb [data-m]');
-    if (k) { const sec = EC().sec; if (sec === 'nt') ntAnswer(+k.dataset.m); else if (sec === 'dc') dcKey(+k.dataset.m); return; }
+    if (k) { const sec = EC().sec; if (sec === 'nt') { if (!EAR.listen) ntAnswer(+k.dataset.m); } else if (sec === 'dc') dcKey(+k.dataset.m); return; }
+    const lb = ev.target.closest('[data-seg="ntlisten"] [data-v]');
+    if (lb) { EAR.listen = lb.dataset.v === 'listen'; render(); return; }
     const x = ev.target.closest('[data-x]');
     if (x) act(x.dataset.x, x);
   };
   // Нажатая клавиша звучит (как в прототипе)
   onDown = (ev) => {
     const k = ev.target.closest('.ekb [data-m]');
-    if (!k || k.classList.contains('off')) return;
+    if (!k) return;
     ctx.audio.unlock();
     ctx.audio.playNote(+k.dataset.m, { bus: 'piano', dur: 0.5 });
   };

@@ -96,8 +96,9 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
       synth.on(midi, k, { bus, patch: preset ? PRESETS[preset] || PRESETS.piano : null });
       setTimeout(() => synth.off(k), dur * 1000);
     },
-    playChord: (midis, opts) => playChord(synth, midis, opts),
-    playSeq: (midis, opts) => playSeq(synth, midis, opts),
+    // opts.preset — встроенный звук синтезатора (как у playNote)
+    playChord: (midis, opts = {}) => playChord(synth, midis, { ...opts, patch: opts.preset ? PRESETS[opts.preset] || null : null }),
+    playSeq: (midis, opts = {}) => playSeq(synth, midis, { ...opts, patch: opts.preset ? PRESETS[opts.preset] || null : null }),
     chime,
     refTone,
     analyser,

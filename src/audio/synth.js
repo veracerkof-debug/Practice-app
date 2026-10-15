@@ -288,17 +288,18 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
 }
 
 // Ноты по очереди (гамма, мелодия). step — секунды на ноту
-export function playSeq(syn, ms, { step = 0.3, bus = 'theory' } = {}) {
+// patch — свой звук (пресет синтезатора), иначе звук пианино
+export function playSeq(syn, ms, { step = 0.3, bus = 'theory', patch = null } = {}) {
   ms.forEach((m, i) => {
     const k = 'q' + i + Math.random();
-    setTimeout(() => syn.on(m, k, { bus }), i * step * 1000);
+    setTimeout(() => syn.on(m, k, { bus, patch }), i * step * 1000);
     setTimeout(() => syn.off(k), (i * step + step * 0.95) * 1000);
   });
 }
 
 // Аккорд с лёгким арпеджио (18 мс между нотами), звучит 1,4 с
-export function playChord(syn, ms, { bus = 'theory', dur = 1.4 } = {}) {
+export function playChord(syn, ms, { bus = 'theory', dur = 1.4, patch = null } = {}) {
   const ks = ms.map((m, i) => 'c' + i + Math.random());
-  ms.forEach((m, i) => setTimeout(() => syn.on(m, ks[i], { bus }), i * 18));
+  ms.forEach((m, i) => setTimeout(() => syn.on(m, ks[i], { bus, patch }), i * 18));
   setTimeout(() => ks.forEach((k) => syn.off(k)), dur * 1000);
 }

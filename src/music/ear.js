@@ -25,6 +25,9 @@ export const LEVELS = {
     hard: ['major', 'minor', 'harm', 'mel', 'dorian', 'phrygian', 'lydian', 'mixo', 'locrian', 'pmaj', 'pmin', 'blues'] },
   nt: { easy: [0, 2, 4, 5, 7, 9, 11], mid: [0, 2, 4, 5, 7, 9, 11], hard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
 };
+// Темп звучания вопросов (множитель пауз и длительностей) и тембры
+export const TEMPOS = { slow: 1.45, normal: 1, fast: 0.72 };
+export const EAR_TIMBRES = ['piano', 'epiano', 'organ', 'sine', 'bell', 'mix'];
 // Допуск при пении, центы
 export const TOL = { easy: 25, mid: 15, hard: 8 };
 // Диапазоны пения: [от, до] (MIDI); названия — i18n rng.<id>
@@ -56,6 +59,10 @@ export function normalizeEar(e) {
   if (e.ntMask == null) e.ntMask = true;
   if (e.ntColors == null) e.ntColors = false;
   e.scDir = e.scDir || 'up';
+  // общее для всех упражнений: темп звучания и тембр (piano — звук пианино приложения; mix — каждый раз другой)
+  if (!TEMPOS[e.tempo]) e.tempo = 'normal';
+  if (!EAR_TIMBRES.includes(e.timbre)) e.timbre = 'piano';
+  if (e.listen == null) e.listen = true; // «Ноты»: клавиши можно слушать до ответа
   SETS.forEach((k) => { if (!e[k + 'Set'] || !e[k + 'Set'].length) e[k + 'Set'] = LEVELS[k][e.level === 'custom' ? 'easy' : e.level].slice(); });
   return e;
 }
@@ -156,6 +163,10 @@ export function playPlan(sec, q, e, { masked = false } = {}) {
     ev.push({ at: 0, seq: [q.m], step: 1.1 });
     end = 1300;
   }
+  // темп: паузы и длительности — по множителю; тембр — у всех событий (у «Нот» — свой, из вопроса)
+  const k = TEMPOS[e.tempo] || 1, tim = e.timbre && e.timbre !== 'piano' ? e.timbre : null;
+  if (k !== 1) { ev.forEach((x) => { x.at *= k; if (x.step) x.step *= k; if (x.dur) x.dur *= k; }); end *= k; }
+  if (tim && sec !== 'nt') ev.forEach((x) => { if (!x.mask) x.tim = tim; });
   return { ev, end };
 }
 
