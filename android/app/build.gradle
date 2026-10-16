@@ -17,20 +17,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // Бета и предрелиз подписываются одним и тем же ключом (android/beta.keystore), иначе новая сборка не встанет поверх старой;
-    // идентификатор app.practice.beta прежний — предрелиз ставится поверх беты с данными
-    // и придётся удалять приложение вместе с данными. Ключ только для бета-версии; ключ для Google Play — секретный, отдельно
+    // Бета и предрелиз подписываются одним ключом, иначе новая сборка не встанет поверх старой. Ключ — в секретах
+    // GitHub (BETA_KEYSTORE_B64 и пароли), в репозитории его нет: репозиторий открытый (DECISIONS.md, 2026-10).
+    // Без ключа (сборка у себя) — обычная отладочная подпись. Ключ для Google Play — отдельный, тоже не здесь
+    def betaStore = System.getenv('BETA_KEYSTORE')
     signingConfigs {
-        beta {
-            storeFile file('../beta.keystore')
-            storePassword 'practice-beta'
-            keyAlias 'beta'
-            keyPassword 'practice-beta'
+        if (betaStore) {
+            beta {
+                storeFile file(betaStore)
+                storePassword System.getenv('BETA_STORE_PASSWORD')
+                keyAlias System.getenv('BETA_KEY_ALIAS') ?: 'melete'
+                keyPassword System.getenv('BETA_STORE_PASSWORD')
+            }
         }
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.beta
+            if (betaStore) signingConfig signingConfigs.beta
         }
         release {
             minifyEnabled false

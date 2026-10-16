@@ -123,3 +123,4 @@ button.cell:active{background:var(--fill)}
 /* главная кнопка листа — внизу, под пальцем (сохранение занятия и т. п.) */
 .sheetfoot{position:sticky;bottom:0;margin:16px -4px 0;padding:10px 4px calc(6px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent,var(--bg) 30%);z-index:2}
 .sortsel.sortr{margin-left:auto;text-align:right;text-align-last:right}
+.toast{border-radius:22px;text-align:center;line-height:1.35} /* длинное сообщение в две строки — не «пузырь» */

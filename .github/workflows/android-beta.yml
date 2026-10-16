@@ -43,10 +43,20 @@ jobs:
           npm run build
           npx cap sync android
 
+      # Ключ подписи — из секретов репозитория (в коде его нет): Settings → Secrets and variables → Actions
+      - name: Ключ подписи
+        env:
+          KEY_B64: ${{ secrets.BETA_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEY_B64" ]; then echo "::error::Нет секрета BETA_KEYSTORE_B64 — APK не подписать (см. DECISIONS.md, 2026-10)"; exit 1; fi
+          echo "$KEY_B64" | base64 -d > "$RUNNER_TEMP/melete-beta.jks"
+
       - name: Сборка APK
         working-directory: android
         env:
           VERSION_CODE: ${{ github.run_number }}
+          BETA_KEYSTORE: ${{ runner.temp }}/melete-beta.jks
+          BETA_STORE_PASSWORD: ${{ secrets.BETA_STORE_PASSWORD }}
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
@@ -62,7 +72,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PNOTES="Melete 1.2 — предрелиз, сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ветка ${GITHUB_REF_NAME}). Скачать на телефон: Melete-PreRelease.apk. Ставится поверх беты, данные сохраняются."
+          PNOTES="Melete 1.2 — предрелиз, сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ветка ${GITHUB_REF_NAME}). Скачать на телефон: Melete-PreRelease.apk. С 16.10.2026 новая подпись: если стояла сборка раньше — сначала копия данных (Профиль → Данные), удалить старое приложение, поставить это. Веб-версия — отдельная, по ссылке в README."
           if ! gh release view pre >/dev/null 2>&1; then
             gh release create pre --prerelease --title "Melete 1.2 Pre-release" --notes "$PNOTES" --target "$GITHUB_SHA"
           fi

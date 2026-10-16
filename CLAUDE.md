@@ -118,4 +118,6 @@
 - `npm run preview` — посмотреть собранную версию
 - `npm test` — тесты (Vitest). `tests/parity.test.js` сверяет ядро с функциями из `legacy/practice.html`
 - `npx cap sync android` / `npx cap run android -l --external` — Android с живой перезагрузкой
+- Веб-версия (отдельная от APK, для знакомства) собирается GitHub Actions (`.github/workflows/web.yml`) → ветка `gh-pages` → https://veracerkof-debug.github.io/Practice-app/
+- Ключ подписи APK — только в секретах GitHub (`BETA_KEYSTORE_B64`, `BETA_STORE_PASSWORD`), в репозитории его нет (репозиторий открытый)
 - Предрелизный APK собирает GitHub Actions (`.github/workflows/android-beta.yml`) при каждом пуше → релиз «pre», файл `Melete-PreRelease.apk` (Melete, версия 1.2-pre); тот же файл — и в старом релизе «beta» (`Melete-Beta.apk`), чтобы старая ссылка давала свежую сборку

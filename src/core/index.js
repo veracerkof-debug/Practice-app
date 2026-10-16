@@ -1,6 +1,7 @@
 // Ядро: песни, сессии, статистика, цели, ударный режим, хранение.
 import { initTama } from '../ui/tama.js';
 import { webIcon, iconOf, setAppIcon, ICON_BY_MASCOT } from './appicon.js';
+import { Capacitor } from '@capacitor/core';
 import { t, initI18n, getLang } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
@@ -217,6 +218,15 @@ export function boot(root) {
   // Работа в фоне на Android: пока что-то идёт — служба с уведомлением, приложение не замораживается
   initBackground(app);
   initPlayer(app); // шторка, плавающая кнопка, всплывающее окно (Android)
+  // веб-версия: один раз — что это знакомство, а полная версия — приложение для Android
+  // (после регистрации: на стартовом экране не мешает выбору языка)
+  const webHello = () => {
+    const st = store.state.settings;
+    if (Capacitor.isNativePlatform() || st.webHello) return;
+    if (!st.configured || document.querySelector('#onboard, .askname, .ask, #sheetLayer .sheet')) { setTimeout(webHello, 4000); return; }
+    toast(t('web.hello')); st.webHello = true; store.settingsChanged();
+  };
+  setTimeout(webHello, 2500);
   initGuard(app);
   // после возврата из копии — файлы демо-набора, которые добавила проверка, убрать (если набора не было)
   if (restored && !store.state.settings.demo) removeDemoFiles(app).catch(() => {});
