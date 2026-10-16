@@ -29,9 +29,9 @@ public class MainActivity extends BridgeActivity {
         if (getBridge() != null && getBridge().getWebView() != null) {
             getBridge().getWebView().getSettings().setUseWideViewPort(true);
             getBridge().getWebView().getSettings().setLoadWithOverviewMode(true);
-            // долгое касание — не меню выделения и не вибрация: на инструментах держат клавиши и пэды
-            getBridge().getWebView().setLongClickable(false);
-            getBridge().getWebView().setOnLongClickListener(v -> true);
+            // долгое касание без вибрации: на инструментах держат клавиши и пэды. Выделение и меню «копировать»
+            // не отключаются целиком: в полях ввода (текст и аккорды песни, заметки) их дают выделить, вырезать,
+            // вставить; в остальных местах их убирают стили (user-select: none) и guard.js (contextmenu)
             getBridge().getWebView().setHapticFeedbackEnabled(false);
         }
     }
