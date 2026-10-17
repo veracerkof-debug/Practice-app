@@ -36,6 +36,7 @@ const MB = 1048576;
 
 const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0 };
 const ML = { q: '', sort: 'date', f: 'all', view: 'lib', sel: null }; // sel — выбранные файлы (Set id) в режиме выбора
+let dropped = null; // файлы, перетащенные в окно до того, как модуль открылся (src/core/drop.js)
 let host = null, ctx = null, size = 'full', input = null, uiTimer = 0, offs = [], app = null;
 
 const fmtT = (s) => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -771,6 +772,7 @@ function styleSheet() {
 }
 
 async function addFile() {
+  if (ctx.uploadOk && ctx.uploadOk()) { input.click(); return; } // в том же нажатии: Safari открывает выбор файла только так
   if (await ctx.confirmUpload()) input.click();
 }
 
@@ -995,6 +997,9 @@ export default {
     const list = c.files.list('audio'), td = list.reduce((s, x) => s + (x.dur || 0), 0);
     return list.length ? c.tn('files', list.length) + (td ? ' · ' + fmtDur(td) : '') : c.t('empty');
   },
+  // Перетаскивание файлов в окно (веб-версия на компьютере): какие файлы модуль берёт и что с ними делать
+  accepts: (f) => /^(audio|video)\//.test(f.type) || VIDEO_EXT.test(f.name) || /\.(mp3|m4a|aac|wav|ogg|oga|opus|flac)$/i.test(f.name),
+  drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
     ensureEl(c);
@@ -1005,6 +1010,7 @@ export default {
     input.hidden = true;
     input.addEventListener('change', onFile);
     document.body.appendChild(input);
+    if (dropped) { const fs = dropped; dropped = null; c.files.ready.then(() => { if (host) onFile({ target: { files: fs } }); }); }
     render();
     bind();
     offs.push(c.files.subscribe(() => { if (!document.activeElement?.hasAttribute?.('data-mlq')) render(); }));

@@ -1427,5 +1427,6 @@
   "folk.down": "10 cents lower",
   "folk.up": "10 cents higher",
   "folk.del": "Remove degree",
-  "folk.step": "Degree {n}, cents"
+  "folk.step": "Degree {n}, cents",
+  "drop.none": "These files can’t be added here: audio, video, tabs, scores and PDF are supported"
 }

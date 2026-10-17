@@ -1,6 +1,6 @@
 // Звуковой движок: единый AudioContext, шины и микшер, синтезатор, пэды, метроном, микрофон.
 // Создаётся один раз ядром; модулям отдаётся через ctx.audio (см. MODULE_SPEC.md).
-import { getContext, peekContext, now, midiFreq, masterNode, addTap } from './context.js';
+import { getContext, peekContext, now, midiFreq, masterNode, addTap, installUnlock } from './context.js';
 import { createMixer } from './mixer.js';
 import { createSynth, pianoPatch, playChord, playSeq, PRESETS } from './synth.js';
 import { createDrone } from './drone.js';
@@ -79,6 +79,9 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     }
     return ana;
   }
+
+  // звук включается первым же жестом (iPhone: отпускание пальца, щелчок), не дожидаясь инструмента
+  installUnlock(() => device.mix.mode);
 
   let n = 0;
   const audio = {

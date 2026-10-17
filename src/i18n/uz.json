@@ -1400,5 +1400,6 @@
   "folk.down": "10 sent pastga",
   "folk.up": "10 sent yuqoriga",
   "folk.del": "Pogʻonani olib tashlash",
-  "folk.step": "{n}-pogʻona, sent"
+  "folk.step": "{n}-pogʻona, sent",
+  "drop.none": "Bunday fayllar bu yerga qo‘shilmaydi: audio, video, tabulatura, nota va PDF mos keladi"
 }

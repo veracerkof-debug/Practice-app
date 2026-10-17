@@ -95,3 +95,52 @@ export function sendToHall(node, level) {
 
 // MIDI → Гц при заданном строе A4
 export const midiFreq = (m, a4 = 440) => a4 * Math.pow(2, (m - 69) / 12);
+
+// Звук в браузере телефона. iPhone (Safari) включает звук только по «завершённому» касанию (отпускание, щелчок, клавиша),
+// а не по первому прикосновению, и глушит Web Audio переключателем «Без звука». Поэтому: при любом таком жесте контекст
+// создаётся или возобновляется и проигрывает тишину (так Safari его «открывает»); сеанс звука — «воспроизведение»,
+// как у плеера, чтобы переключатель не глушил музыку (navigator.audioSession; на старых iPhone — беззвучный
+// <audio> по кругу, тот же приём). Звонок, другое приложение — контекст «прерван»: следующий жест возобновит.
+const IOS = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+let silentEl = null;
+function silentWav() {
+  const n = 800, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, s) => [...s].forEach((c, i) => { b[o + i] = c.charCodeAt(0); });
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+  b.fill(128, 44);
+  let s = '';
+  b.forEach((x) => { s += String.fromCharCode(x); });
+  return 'data:audio/wav;base64,' + btoa(s);
+}
+function playbackSession() {
+  try { if (navigator.audioSession) { navigator.audioSession.type = 'playback'; return; } } catch { /* нет такого */ }
+  if (!IOS || document.hidden) return;
+  if (!silentEl) {
+    silentEl = document.createElement('audio');
+    silentEl.setAttribute('x-webkit-airplay', 'deny');
+    silentEl.preload = 'auto';
+    silentEl.loop = true;
+    silentEl.src = silentWav();
+  }
+  if (silentEl.paused) silentEl.play().catch(() => {});
+}
+export function installUnlock(getMode = () => 'bal') {
+  if (typeof document === 'undefined') return;
+  let primed = false;
+  const kick = () => {
+    playbackSession();
+    const c = getContext(getMode());
+    if (!c) return;
+    if (c.state !== 'running') c.resume().catch(() => {});
+    if (!primed) { // тишина в один отсчёт — после неё Safari считает звук разрешённым
+      primed = true;
+      try { const s = c.createBufferSource(); s.buffer = c.createBuffer(1, 1, c.sampleRate); s.connect(c.destination); s.start(0); } catch { /* */ }
+    }
+  };
+  const onGesture = () => { if (!primed || !ctx || ctx.state !== 'running' || (silentEl && silentEl.paused && !document.hidden)) kick(); };
+  ['pointerup', 'touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, onGesture, { capture: true, passive: true }));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (silentEl) silentEl.pause(); return; }
+    if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {});
+  });
+}

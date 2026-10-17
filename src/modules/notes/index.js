@@ -32,6 +32,7 @@ const I = {
 };
 const ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.gp8,.xml,.musicxml,.mxl,.pdf,application/pdf';
 
+let dropped = null; // файлы, перетащенные в окно до того, как модуль открылся (src/core/drop.js)
 let host = null, ctx = null, size = 'full', input = null, offs = [];
 const st = () => ctx.store.all();
 const tabs = () => ctx.files.list('tab');
@@ -487,6 +488,7 @@ function lyricsEdit() {
 /* ---------- действия ---------- */
 
 async function addFile() {
+  if (ctx.uploadOk && ctx.uploadOk()) { input.click(); return; } // в том же нажатии: Safari открывает выбор файла только так
   if (await ctx.confirmUpload()) input.click();
 }
 
@@ -612,6 +614,9 @@ export default {
     const n = c.files.list('tab').length;
     return n ? c.tn('tabs', n) : c.t('statusIdle');
   },
+  // Перетаскивание файлов в окно (веб-версия на компьютере): какие файлы модуль берёт и что с ними делать
+  accepts: (f) => f.type === 'application/pdf' || /\.(gp[3-8x]?|xml|musicxml|mxl|pdf)$/i.test(f.name),
+  drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
     input = document.createElement('input');
@@ -620,6 +625,7 @@ export default {
     input.multiple = true;
     input.hidden = true;
     input.addEventListener('change', onFile);
+    if (dropped) { const fs = dropped; dropped = null; c.files.ready.then(() => { if (host) onFile({ target: { files: fs } }); }); }
     document.body.appendChild(input);
     const click = (e) => { const x = e.target.closest('[data-x]'); if (x) act(x.dataset.x, x); };
     host.addEventListener('click', click);

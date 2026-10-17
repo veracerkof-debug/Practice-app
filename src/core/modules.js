@@ -110,6 +110,8 @@ export function makeCtx(app, mod) {
       tool: (id) => { const m = (app.modules || []).find((x) => x.id === id); return m ? { name: moduleName(m), icon: m.icon, color: m.color } : null; },
     },
     confirmUpload: () => app.confirmUpload(),
+    // согласие на загрузку уже дано — выбор файла открывается прямо в нажатии (iPhone иначе его не покажет)
+    uploadOk: () => !!app.store.state.settings.upOk,
     // Песни библиотеки — только чтение: [{ id, title, artist, key, text }] (text — есть ли текст с аккордами)
     songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title, artist: s.artist || '', key: s.key || null, text: !!String(s.notes || '').trim() })),
     // Данные модуля в общем состоянии (попадают в резервную копию): state.settings[id]
