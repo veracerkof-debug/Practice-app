@@ -62,5 +62,17 @@
   "worship": "Hamdu sano",
   "k.hall": "Katta zal",
   "k.air": "Air",
-  "worship.ftr": "Katta zal — alohida uzun reverberatsiya, tovush makonda eriydi. Air — uygʻunlik notalaridagi sokin «nafas»."
+  "worship.ftr": "Katta zal — alohida uzun reverberatsiya, tovush makonda eriydi. Air — uygʻunlik notalaridagi sokin «nafas».",
+  "snd.wair": "Havo",
+  "snd.wair.d": "havodor, suzuvchi",
+  "snd.wair.s": "havo",
+  "snd.wlight": "Nur",
+  "snd.wlight.d": "yorqin, jilvali",
+  "snd.wlight.s": "nur",
+  "snd.wwarm": "Iliqlik",
+  "snd.wwarm.d": "iliq, chuqur",
+  "snd.wwarm.s": "iliqlik",
+  "snd.wchoir": "Ovozlar",
+  "snd.wchoir.d": "«a» tovushidagi ovozlar",
+  "snd.wchoir.s": "ovozlar"
 }

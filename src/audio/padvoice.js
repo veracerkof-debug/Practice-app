@@ -4,16 +4,20 @@
 import { wave } from './waves.js';
 import { SOUNDS } from './drone.js';
 import { sendToHall } from './context.js';
+import { airVoice } from './airsound.js';
 
 // тампура — щипок по рисунку, не созвучие. «Шиммер» — пэд для поклонения: тёплая основа, медленное вступление
 // и мерцающий хвост из октавы и квинты сверху (как отражения большого зала), только у голоса пэда
-export const PAD_SOUNDS = ['shimmer', ...Object.keys(SOUNDS).filter((k) => k !== 'tanpura')];
+// Воздушные пэды для поклонения (airsound.js) — первыми: id → рецепт
+export const AIR_PADS = { wair: 'air', wlight: 'light', wwarm: 'warm', wchoir: 'choir' };
+export const PAD_SOUNDS = [...Object.keys(AIR_PADS), 'shimmer', ...Object.keys(SOUNDS).filter((k) => k !== 'tanpura' && !AIR_PADS[k])];
 // Уровень генератора по тембру: подобран так, чтобы аккорд любым пэдом звучал так же громко,
 // как голосом соло (замер: среднеквадратичный уровень четырёх голосов ≈ 0,09)
 const LVL = { soft: 0.152, pad: 0.205, bow: 0.224, choir: 0.5, glass: 0.147, shimmer: 0.15 };
 
 // hall — посыл в длинный зал (поклонение, src/audio/context.js), 0…1
 export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5, move = 0.5, hall = 0 } = {}) {
+  if (AIR_PADS[sound]) return airPadVoice(c, dest, AIR_PADS[sound], { a4, hall });
   const snd = PAD_SOUNDS.includes(sound) ? sound : 'soft', bright0 = snd === 'shimmer' ? 0.62 : SOUNDS[snd], t0 = c.currentTime + 0.003;
   const freq = (m) => a4 * Math.pow(2, (m - 69) / 12);
   const lp = c.createBiquadFilter(), amp = c.createGain(), vol = c.createGain(), out = c.createGain();
@@ -118,6 +122,68 @@ export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5,
       amp.gain.setTargetAtTime(0, t, r / 4);
       const end = t + r * 1.5;
       [...os.map((x) => x.o), ...lfos].forEach((o) => { try { o.stop(end); } catch { /* уже остановлен */ } });
+      setTimeout(() => { try { out.disconnect(); } catch { /* */ } }, (r * 1.5 + 0.2) * 1000);
+    },
+  };
+  return v;
+}
+
+// Воздушный пэд: тот же порядок вызовов (start, pitch, fx, release). Зал — всегда, хотя бы немного: без него
+// воздушный звук теряет пространство
+const AIR_LVL = 0.19;
+function airPadVoice(c, dest, kind, { a4 = 440, hall = 0 } = {}) {
+  const freq = (m) => a4 * Math.pow(2, (m - 69) / 12);
+  const amp = c.createGain(), vol = c.createGain(), out = c.createGain(), lp = c.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.Q.value = 0;
+  lp.frequency.value = 18000;
+  lp.connect(amp).connect(vol).connect(out).connect(dest);
+  sendToHall(out, Math.max(0.45, hall));
+  amp.gain.value = 0;
+  const vibG = c.createGain(), vib = c.createOscillator(), tr = c.createOscillator(), trG = c.createGain();
+  vib.frequency.value = 5;
+  vibG.gain.value = 0;
+  vib.connect(vibG);
+  tr.frequency.value = 5;
+  trG.gain.value = 0;
+  tr.connect(trG).connect(out.gain);
+  let a = null, m0 = 60, dead = false;
+  const v = {
+    start(m, fx) {
+      const t = c.currentTime + 0.003, f = freq(m);
+      m0 = m;
+      a = airVoice(c, lp, kind, f, t, { width: 1, fade: 2.6, vibIn: vibG });
+      vib.start(t); tr.start(t);
+      amp.gain.setValueAtTime(0, t);
+      amp.gain.setTargetAtTime(AIR_LVL, t, kind === 'choir' ? 0.25 : 0.4);
+      v.fx(fx, true);
+    },
+    pitch(m, tau = 0.05) {
+      if (dead || !a) return;
+      m0 = m;
+      a.set(freq(m), Math.max(tau, 0.04));
+    },
+    fx(fx, now = false) {
+      if (dead) return;
+      const t = c.currentTime, tau = now ? 0.001 : 0.03, br = fx.bright || 0;
+      vibG.gain.setTargetAtTime((fx.vib || 0) * 100, t, tau);
+      vol.gain.setTargetAtTime(fx.volGain ?? 1, t, tau);
+      const td = (fx.trem || 0) * 0.9;
+      trG.gain.setTargetAtTime(td / 2, t, tau);
+      tr.frequency.setTargetAtTime(4 + (fx.trem || 0) * 6, t, tau);
+      out.gain.setTargetAtTime(1 - td / 2, t, tau);
+      // яркость руки: без неё воздушный фильтр решает сам; с ней — дополнительно приоткрывается сверху
+      lp.frequency.setTargetAtTime(br > 0.02 ? Math.min(18000, freq(m0) * (4 + br * br * 40)) : 18000, t, tau);
+    },
+    release() {
+      if (dead) return;
+      dead = true;
+      const t = c.currentTime, r = 2.8;
+      amp.gain.cancelScheduledValues(t);
+      amp.gain.setValueAtTime(amp.gain.value, t);
+      amp.gain.setTargetAtTime(0, t, r / 4);
+      const end = t + r * 1.5;
+      [...(a ? a.srcs : []), vib, tr].forEach((o) => { try { o.stop(end); } catch { /* уже остановлен */ } });
       setTimeout(() => { try { out.disconnect(); } catch { /* */ } }, (r * 1.5 + 0.2) * 1000);
     },
   };

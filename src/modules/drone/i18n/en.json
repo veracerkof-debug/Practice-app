@@ -62,5 +62,17 @@
   "worship": "Worship",
   "k.hall": "Large hall",
   "k.air": "Air",
-  "worship.ftr": "Large hall is a separate long reverb; the sound dissolves into the space. Air is a quiet “breath” on the chord notes."
+  "worship.ftr": "Large hall is a separate long reverb; the sound dissolves into the space. Air is a quiet “breath” on the chord notes.",
+  "snd.wair": "Air",
+  "snd.wair.d": "airy, drifting",
+  "snd.wair.s": "air",
+  "snd.wlight": "Light",
+  "snd.wlight.d": "bright, shimmering",
+  "snd.wlight.s": "light",
+  "snd.wwarm": "Warmth",
+  "snd.wwarm.d": "warm, deep",
+  "snd.wwarm.s": "warmth",
+  "snd.wchoir": "Voices",
+  "snd.wchoir.d": "voices on “ah”",
+  "snd.wchoir.s": "voices"
 }

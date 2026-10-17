@@ -13,7 +13,7 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { PRESETS as SYN } from '../../audio/synth.js';
+import { PRESETS as SYN, WORSHIP } from '../../audio/synth.js';
 import { mName, SH } from '../../music/notes.js';
 import { scaleSelectHTML, folkInfoHTML, folkAct } from '../../ui/scalepick.js';
 import { microLabel } from '../../music/folk.js';
@@ -22,6 +22,7 @@ import { createGlideVoice, createFxBus, FX, CURVES } from './voice.js';
 import { normalizeFx, voiceFx, busFx, applyPreset, axisFx, PRESETS } from './fx.js';
 import { melodyById, createFollower, fitRange } from '../../music/melodies.js';
 import { melStrip, melSheet } from './melody.js';
+import { tabsHTML, chipHTML } from './settabs.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M3 17c3 0 4-10 9-10s6 6 9 6"/><circle cx="12" cy="7" r="1.6" fill="currentColor"/></svg>';
 const I = {
@@ -332,11 +333,19 @@ function releaseAll() {
 
 /* ---------- настройки ---------- */
 
-// Эффект в настройках: вкл/выкл, режим (по вертикали / всегда), сила, чувствительность; у эха — время
+// Настройки — четыре вкладки: «Звук» (тембр и удержание), «Ноты» (привязка, звукоряд, диапазон), «Эффекты»
+// (готовые наборы и каждый эффект — одной строкой, подробности по нажатию), «Вид». Открытая вкладка запоминается
+const TABS = ['sound', 'notes', 'fx', 'look'];
+const CHEV = '<svg class="chev" viewBox="0 0 8 13" aria-hidden="true"><path d="M1.5 1.5 6.5 6.5 1.5 11.5"/></svg>';
+let openFx = null; // какой эффект раскрыт
+
+// Эффект одной строкой: название и что выбрано; включённый раскрывается — режим, сила, чувствительность, у эха время
 function fxRow(k, e) {
-  const { t, ui } = ctx;
-  let h = '<div class="cell glfx"><span class="grow"><b>' + t('fx.' + k) + '</b><small>' + t('fxd.' + k) + '</small></span>' + ui.sw('gfx-' + k, e.on, t('fx.' + k)) + '</div>';
-  if (!e.on) return h;
+  const { t, ui } = ctx, open = e.on && openFx === k;
+  const sum = e.on ? (k === 'vol' ? '' : t('mode.' + e.mode) + ' · ') + Math.round(e.amt * 100) + '%' + (k === 'echo' ? ' · ' + e.time + ' ' + t('ms') : '') : t('fxd.' + k);
+  let h = '<div class="cell glfx"><button class="glfxh" data-gfo="' + k + '" aria-expanded="' + open + '"' + (e.on ? '' : ' tabindex="-1"') + '><span class="grow"><b>' + t('fx.' + k) + '</b><small>' + ui.esc(sum) + '</small></span>' + (e.on ? CHEV : '') + '</button>' +
+    ui.sw('gfx-' + k, e.on, t('fx.' + k)) + '</div>';
+  if (!open) return h;
   h += '<div class="cellcol glfxc">' + (k === 'vol' ? '' : ui.seg('gfxm-' + k, [['axis', t('mode.axis')], ['fixed', t('mode.fixed')]], e.mode, t('mode'))) +
     '<label class="glamt"><span>' + t(k === 'vol' ? 'depth' : 'strength') + '</span><input type="range" min="0" max="100" step="5" value="' + Math.round(e.amt * 100) + '" data-gamt="' + k + '" aria-label="' +
     ui.esc(t('strength') + ': ' + t('fx.' + k)) + '"><b class="num" data-gamtv="' + k + '">' + Math.round(e.amt * 100) + '%</b></label>' +
@@ -347,33 +356,43 @@ function fxRow(k, e) {
 
 function setSheet() {
   const { t, ui } = ctx;
+  const chips = (list, s) => '<div class="glchips">' + list.map((k) => chipHTML('data-gs="' + k + '"', s.sound === k, t('pre.' + k))).join('') + '</div>';
+  const pages = {
+    // звук: сначала набор для поклонения, затем остальные; удержание
+    sound: (s) => '<div class="hdr" style="margin-top:0">' + t('sndWorship') + '</div><div class="group"><div class="cellcol">' + chips(WORSHIP, s) + '</div></div>' +
+      '<div class="hdr">' + t('sndOther') + '</div><div class="group"><div class="cellcol">' + chips(SOUNDS.filter((k) => !WORSHIP.includes(k)), s) + '</div>' +
+      '<div class="cell"><span class="grow">' + t('hold') + '</span>' + ui.sw('ghold', s.hold, t('hold')) + '</div></div><p class="ftr">' + t('soundHint') + '</p>',
+    notes: (s) => {
+      const chrom = s.scale === 'chrom';
+      return '<div class="hdr" style="margin-top:0">' + t('snap') + '</div><div class="group"><div class="cellcol">' + ui.seg('gsnap', SNAPS.map((k) => [k, t('snap.' + k)]), s.snap, t('snap')) +
+        '<div class="segcap">' + t('snapHint.' + s.snap) + '</div></div>' +
+        (s.snap === 'note' ? '<div class="cellcol"><div class="glsub">' + t('port') + '</div>' + ui.seg('gport', [[0, t('port0')], [60, '60 ' + t('ms')], [150, '150 ' + t('ms')], [300, '300 ' + t('ms')]], s.port, t('port')) + '</div>' : '') + '</div>' +
+        '<div class="hdr">' + t('notes') + '</div><div class="group"><div class="cellcol">' + scaleSelectHTML(t, s, 'data-gsc') + folkInfoHTML(t, s, ui) +
+        (chrom ? '' : '<div class="glsub" style="margin-top:10px">' + t('root') + '</div><div class="glroots">' + SH.map((n, i) => chipHTML('data-gr="' + i + '"', s.root === i, n)).join('') + '</div>') +
+        '</div></div>' +
+        '<div class="hdr">' + t('range') + '</div><div class="group"><div class="cell"><span class="grow">' + t('from') + '</span>' + ui.icb('data-glo2="-1"', I.left, t('lower'), 'sm') + '<b class="num glv">' + mName(s.lo) + '</b>' + ui.icb('data-glo2="1"', I.right, t('higher'), 'sm') + '</div>' +
+        '<div class="cellcol"><div class="glsub">' + t('width') + ' · ' + rangeTxt(s) + '</div>' + ui.seg('gw', WIDTHS.map((w) => [w, t('w.' + w)]), s.width, t('width')) + '</div></div><p class="ftr">' + t('widthHint') + '</p>';
+    },
+    fx: (s) => '<p class="gllead">' + t('fxLead') + '</p><div class="glpre" role="group" aria-label="' + t('presets') + '">' +
+      Object.keys(PRESETS).map((k) => chipHTML('data-gpre="' + k + '"', false, t('preset.' + k))).join('') + '</div>' +
+      '<div class="group">' + FX.map((k) => fxRow(k, s.fx[k])).join('') + '</div><p class="ftr">' + t('fxHint') + '</p>',
+    look: (s) => '<div class="group"><div class="cell"><span class="grow">' + t('keys') + '</span>' + ui.sw('gkeys', s.keys, t('keys')) + '</div>' +
+      (s.keys ? '<div class="cell"><span class="grow">' + t('labels') + '</span>' + ui.sw('glab', s.labels, t('labels')) + '</div>' : '') + '</div><p class="ftr">' + t('keysHint') + '</p>',
+  };
   const body = () => {
-    const s = cfg(), chrom = s.scale === 'chrom';
-    return ui.snav(t('settings')) +
-      '<div class="hdr" style="margin-top:4px">' + t('effects') + '</div><div class="glpre" role="group" aria-label="' + t('presets') + '">' +
-      Object.keys(PRESETS).map((k) => '<button class="lchip pick glck" data-gpre="' + k + '" style="--c:var(--tint);--t:var(--on-tint)">' + t('preset.' + k) + '</button>').join('') + '</div>' +
-      '<div class="group">' + FX.map((k) => fxRow(k, s.fx[k])).join('') + '</div><p class="ftr">' + t('fxHint') + '</p>' +
-      '<div class="hdr">' + t('sound') + '</div><div class="group"><div class="cellcol"><div class="glchips">' +
-      SOUNDS.map((k) => '<button class="lchip pick glck' + (s.sound === k ? ' on' : '') + '" data-gs="' + k + '" aria-pressed="' + (s.sound === k) + '" style="--c:var(--tint);--t:var(--on-tint)">' + t('pre.' + k) + '</button>').join('') +
-      '</div></div><div class="cell"><span class="grow">' + t('hold') + '</span>' + ui.sw('ghold', s.hold, t('hold')) + '</div></div><p class="ftr">' + t('soundHint') + '</p>' +
-      '<div class="hdr">' + t('snap') + '</div><div class="group"><div class="cellcol">' + ui.seg('gsnap', SNAPS.map((k) => [k, t('snap.' + k)]), s.snap, t('snap')) +
-      '<div class="segcap">' + t('snapHint.' + s.snap) + '</div></div>' +
-      (s.snap === 'note' ? '<div class="cellcol"><div class="glsub">' + t('port') + '</div>' + ui.seg('gport', [[0, t('port0')], [60, '60 ' + t('ms')], [150, '150 ' + t('ms')], [300, '300 ' + t('ms')]], s.port, t('port')) + '</div>' : '') + '</div>' +
-      '<div class="hdr">' + t('notes') + '</div><div class="group"><div class="cellcol">' + scaleSelectHTML(t, s, 'data-gsc') + folkInfoHTML(t, s, ui) +
-      (chrom ? '' : '<div class="glsub" style="margin-top:10px">' + t('root') + '</div><div class="glroots">' + SH.map((n, i) => '<button class="lchip pick glck' + (s.root === i ? ' on' : '') + '" data-gr="' + i + '" aria-pressed="' + (s.root === i) + '" style="--c:var(--tint);--t:var(--on-tint)">' + n + '</button>').join('') + '</div>') +
-      '</div></div>' +
-      '<div class="hdr">' + t('range') + '</div><div class="group"><div class="cell"><span class="grow">' + t('from') + '</span>' + ui.icb('data-glo2="-1"', I.left, t('lower'), 'sm') + '<b class="num glv">' + mName(s.lo) + '</b>' + ui.icb('data-glo2="1"', I.right, t('higher'), 'sm') + '</div>' +
-      '<div class="cellcol"><div class="glsub">' + t('width') + ' · ' + rangeTxt(s) + '</div>' + ui.seg('gw', WIDTHS.map((w) => [w, t('w.' + w)]), s.width, t('width')) + '</div></div><p class="ftr">' + t('widthHint') + '</p>' +
-      '<div class="hdr">' + t('look') + '</div><div class="group"><div class="cell"><span class="grow">' + t('keys') + '</span>' + ui.sw('gkeys', s.keys, t('keys')) + '</div>' +
-      (s.keys ? '<div class="cell"><span class="grow">' + t('labels') + '</span>' + ui.sw('glab', s.labels, t('labels')) + '</div>' : '') + '</div><p class="ftr">' + t('keysHint') + '</p>';
+    const s = cfg();
+    if (!TABS.includes(s.stab)) s.stab = 'sound';
+    return ui.snav(t('settings')) + tabsHTML(ui, TABS.map((k) => [k, t('tab.' + k)]), s.stab, t('settings')) + '<div class="gltabbody">' + pages[s.stab](s) + '</div>';
   };
   ui.sheet(body, (el, sh) => {
     const done = () => { save(); sh.update(); render(); updateBus(); };
     el.addEventListener('click', (e) => {
       const s = cfg(), g = (q) => e.target.closest(q);
       let b;
+      if ((b = g('[data-tab]'))) { s.stab = b.dataset.tab; save(); sh.update(); el.scrollTop = 0; return; }
+      if ((b = g('[data-gfo]'))) { if (s.fx[b.dataset.gfo].on) { openFx = openFx === b.dataset.gfo ? null : b.dataset.gfo; sh.update(); } return; }
       if (folkAct(e, s)) { done(); return; } // свой лад: ступени в центах
-      if ((b = g('[data-gpre]'))) { const keep = s.fx.echo.time; s.fx = applyPreset(b.dataset.gpre); if (!PRESETS[b.dataset.gpre].echo) s.fx.echo.time = keep; ctx.ui.toast(t('presetOn', { name: t('preset.' + b.dataset.gpre) })); }
+      if ((b = g('[data-gpre]'))) { const keep = s.fx.echo.time; s.fx = applyPreset(b.dataset.gpre); if (!PRESETS[b.dataset.gpre].echo) s.fx.echo.time = keep; openFx = null; ctx.ui.toast(t('presetOn', { name: t('preset.' + b.dataset.gpre) })); }
       else if ((b = g('[data-gs]'))) s.sound = b.dataset.gs;
       else if ((b = g('[data-gr]'))) s.root = +b.dataset.gr;
       else if ((b = g('[data-glo2]'))) s.lo = clampLo(s.lo + +b.dataset.glo2, s.width);
@@ -400,12 +419,12 @@ function setSheet() {
     });
     el.addEventListener('change', (e) => {
       const s = cfg(), sw = e.target.dataset.sw || '';
-      if (e.target.dataset.gamt) { save(); render(); return; }
+      if (e.target.dataset.gamt) { save(); sh.update(); render(); return; }
       if (folkAct(e, s)) { done(); return; }
       if (sw === 'ghold') s.hold = e.target.checked;
       else if (sw === 'glab') s.labels = e.target.checked;
       else if (sw === 'gkeys') s.keys = e.target.checked;
-      else if (sw.startsWith('gfx-')) s.fx[sw.slice(4)].on = e.target.checked;
+      else if (sw.startsWith('gfx-')) { const k = sw.slice(4); s.fx[k].on = e.target.checked; openFx = e.target.checked ? k : openFx === k ? null : openFx; } // включённый эффект сразу раскрыт
       else if (e.target.hasAttribute('data-gsc')) s.scale = e.target.value;
       else return;
       done();

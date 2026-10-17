@@ -1,10 +1,13 @@
 // Пэды и дрон: тёплый, пэд, смычок, хор, стекло, тампура. Слои по октавам, созвучия, плавная смена нот.
 // Настройки — объект device.drone (как в прототипе).
 import { getContext, masterNode, sendToReverb, sendToHall, midiFreq } from './context.js';
-import { wave } from './waves.js';
+import { wave, pinkNoise } from './waves.js';
+import { airVoice } from './airsound.js';
 
 // Тембры: id → яркость по умолчанию. Названия — ключи i18n drone.sound.<id>
-export const SOUNDS = { soft: 0.7, pad: 0.45, bow: 0.85, choir: 0.5, glass: 0.9, tanpura: 0.7 };
+// Первыми — воздушные для поклонения (airsound.js): воздух, свет, тепло, хор
+export const SOUNDS = { wair: 0.5, wlight: 0.5, wwarm: 0.5, wchoir: 0.5, soft: 0.7, pad: 0.45, bow: 0.85, choir: 0.5, glass: 0.9, tanpura: 0.7 };
+const AIRS = { wair: 'air', wlight: 'light', wwarm: 'warm', wchoir: 'choir' };
 // Созвучия: интервалы от нажатой ноты
 export const CHORDS = { root: [0], fifth: [0, 7], maj: [0, 4, 7], min: [0, 3, 7], sus4: [0, 5, 7] };
 export const LAYERS = [2, 3, 4]; // октавы слоёв: низкий, средний, высокий
@@ -80,6 +83,27 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
     }
   }
 
+  // Воздушный пэд: каждая нота созвучия — голос airsound.js; «Движение» — дыхание громкости, «Ширина» — расстройка,
+  // «Яркость» — фильтр. В высоких слоях и на неосновных нотах голосов в унисоне меньше (легче для телефона)
+  function startAir(c, d, master, t, os) {
+    const amp = c.createGain(), breath = c.createOscillator(), bgn = c.createGain();
+    amp.gain.value = 1;
+    amp.connect(master);
+    breath.frequency.value = 0.09;
+    bgn.gain.value = 0.12 * d.move;
+    breath.connect(bgn).connect(amp.gain);
+    breath.start(t);
+    os.push(breath);
+    droneNotes(d).forEach(([m, lvl], i) => {
+      const g = c.createGain();
+      g.gain.value = lvl * 0.16;
+      g.connect(amp);
+      const a = airVoice(c, g, AIRS[d.sound], mf(m), t, { width: 0.3 + d.width * 1.4, bright: 0.45 + d.bright * 1.1, fade: Math.max(2, d.fade * 1.6), uni: i === 0 ? 3 : 2 });
+      os.push(...a.srcs);
+    });
+    if (d.air > 0.01) addAir(c, master, droneNotes(d).map(([m, lvl]) => [mf(m), lvl]), d.air, t, os);
+  }
+
   const dr = {
     get on() { return !!nodes; },
 
@@ -88,7 +112,9 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
       if (!c) return;
       const d = normalizeDrone(getSettings()), t = c.currentTime, master = c.createGain();
       master.connect(masterNode());
-      const send = sendToReverb(master, d.rev), hallS = d.hall > 0 ? sendToHall(master, d.hall) : null;
+      // воздушным пэдам зал нужен всегда, хотя бы немного
+      const hall = AIRS[d.sound] ? Math.max(0.45, d.hall) : d.hall;
+      const send = sendToReverb(master, d.rev), hallS = hall > 0 ? sendToHall(master, hall) : null;
       master.gain.setValueAtTime(0, t);
       master.gain.linearRampToValueAtTime(level(), t + Math.max(0.15, d.fade));
       const os = [];
@@ -100,6 +126,7 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
         timer = setInterval(tan, 120);
         return;
       }
+      if (AIRS[d.sound]) { startAir(c, d, master, t, os); return; }
       const base = 250 * Math.pow(20, d.bright), lp = c.createBiquadFilter();
       lp.type = 'lowpass';
       lp.frequency.value = base;
@@ -211,27 +238,10 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
   return dr;
 }
 
-// Розовый шум (буфер на 4 с, по кругу) → полосы на частотах нот (Q ~ 18) → тихий уровень. Узлы-источники — в os (остановка)
-const pinkCache = new WeakMap();
-function pinkBuffer(c) {
-  if (pinkCache.has(c)) return pinkCache.get(c);
-  const n = c.sampleRate * 4, b = c.createBuffer(2, n, c.sampleRate);
-  for (let ch = 0; ch < 2; ch++) {
-    const d = b.getChannelData(ch);
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
-    for (let i = 0; i < n; i++) {
-      const w = Math.random() * 2 - 1;
-      b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
-      b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
-      d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + w * 0.5362) * 0.11;
-    }
-  }
-  pinkCache.set(c, b);
-  return b;
-}
+// Розовый шум → полосы на частотах нот (Q ~ 18) → тихий уровень. Узлы-источники — в os (остановка)
 export function addAir(c, dest, notes, amount, t, os) {
   const src = c.createBufferSource(), g = c.createGain(), sway = c.createOscillator(), sg = c.createGain();
-  src.buffer = pinkBuffer(c); src.loop = true;
+  src.buffer = pinkNoise(c); src.loop = true;
   g.gain.value = 0;
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(amount * 0.9, t + 3); // вступает медленно

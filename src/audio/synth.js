@@ -2,12 +2,22 @@
 // FM-электропиано (частотная модуляция), аналоговый бас (саб-генератор, резонансный фильтр с огибающей),
 // струнный ансамбль (расстроенные пилы и вибрато). Лёгкие голоса, до 22 одновременно.
 // Параметры звука (patch) — как в прототипе (device.piano.syn).
-import { getContext, midiFreq } from './context.js';
+import { getContext, midiFreq, sendToHall } from './context.js';
 import { synWave, noiseBuf } from './waves.js';
+import { airVoice } from './airsound.js';
 
 // Встроенные пресеты; имена — ключи i18n synth.preset.<id>
 export const PRESETS = {
   piano: { kind: 'piano', tone: 0.7, bright: 0.7, att: 3, dec: 0.75, sus: 0, rel: 0.3, cho: 0.15, rev: 0.3, ham: 1 },
+  // Для поклонения — воздушные, без «электронного» звучания (airsound.js): мягкое пиано, клавиши с пэдом под ними,
+  // воздушный, светлый, тёплый пэд, хор, флейта-дыхание. hall — посыл в длинный зал
+  wfelt: { kind: 'soft', air: 'felt', tone: 0.3, bright: 0.5, att: 3, dec: 1.5, sus: 0, rel: 1.8, cho: 0.35, rev: 0.45, hall: 0.4, gain: 1.15 },
+  wkpad: { kind: 'soft', air: 'felt', layer: 'air', tone: 0.3, bright: 0.5, att: 3, dec: 1.4, sus: 1, rel: 2.8, cho: 0.45, rev: 0.5, hall: 0.6, gain: 1.05 },
+  wair: { kind: 'soft', air: 'air', tone: 0.5, bright: 0.5, att: 1300, dec: 1, sus: 1, rel: 3, cho: 0.6, rev: 0.6, hall: 0.75 },
+  wlight: { kind: 'soft', air: 'light', tone: 0.5, bright: 0.5, att: 1500, dec: 1, sus: 1, rel: 3, cho: 0.6, rev: 0.6, hall: 0.85 },
+  wwarm: { kind: 'soft', air: 'warm', tone: 0.5, bright: 0.5, att: 900, dec: 1, sus: 1, rel: 2.6, cho: 0.5, rev: 0.5, hall: 0.6 },
+  wchoir: { kind: 'soft', air: 'choir', tone: 0.5, bright: 0.5, att: 700, dec: 1, sus: 1, rel: 2.4, cho: 0.55, rev: 0.6, hall: 0.7 },
+  wflute: { kind: 'soft', air: 'flute', tone: 0.5, bright: 0.5, att: 70, dec: 1, sus: 1, rel: 1.1, cho: 0.2, rev: 0.5, hall: 0.6 },
   epiano: { kind: 'soft', tone: 0.3, bright: 0.5, att: 5, dec: 0.55, sus: 0.2, rel: 0.45, cho: 0.45, rev: 0.3, tine: 4 },
   organ: { kind: 'organ', tone: 0.65, bright: 0.75, att: 12, dec: 0.5, sus: 1, rel: 0.1, cho: 0.5, rev: 0.35 },
   sine: { kind: 'soft', tone: 0, bright: 1, att: 8, dec: 0.5, sus: 0.85, rel: 0.25, cho: 0, rev: 0.2 },
@@ -29,11 +39,11 @@ export const PRESETS = {
   wswell: { kind: 'saw', tone: 0.8, bright: 0.42, att: 500, dec: 1, sus: 1, rel: 2.6, cho: 0.85, rev: 0.9, swell: 2.8 },
   wkeys: { kind: 'soft', tone: 0.25, bright: 0.42, att: 5, dec: 1.7, sus: 0.35, rel: 2.4, cho: 0.5, rev: 0.8, tine: 2, tineAmp: 0.07 },
 };
-// Пресеты набора для поклонения (на панели — отдельной группой)
-export const WORSHIP = ['wshimmer', 'wswell', 'wkeys'];
+// Пресеты набора для поклонения (в глайдере и терменвоксе — отдельной группой, первыми)
+export const WORSHIP = ['wfelt', 'wkpad', 'wair', 'wlight', 'wwarm', 'wchoir', 'wflute'];
 // Поля звука, которые не ручки, но входят в пресет (свои пресеты сохраняют их тоже)
-export const PATCH_EXTRA = ['kind', 'tine', 'ham', 'tineAmp', 'gain', 'partials', 'fm', 'res', 'fenv', 'sub', 'vib', 'shimmer', 'swell'];
-const sigOf = (s) => JSON.stringify([s.kind || 'soft', s.tine || 0, s.partials || 0, s.fm || 0, s.sub || 0, s.vib || 0, s.shimmer || 0, s.swell || 0]);
+export const PATCH_EXTRA = ['kind', 'tine', 'ham', 'tineAmp', 'gain', 'partials', 'fm', 'res', 'fenv', 'sub', 'vib', 'shimmer', 'swell', 'air', 'layer', 'hall'];
+const sigOf = (s) => JSON.stringify([s.kind || 'soft', s.tine || 0, s.partials || 0, s.fm || 0, s.sub || 0, s.vib || 0, s.shimmer || 0, s.swell || 0, s.air || 0, s.layer || 0]);
 // Ручки панели и их диапазоны
 export const PATCH_KEYS = ['tone', 'bright', 'att', 'dec', 'sus', 'rel', 'cho', 'rev'];
 export const PATCH_RANGE = { tone: [0, 1], bright: [0, 1], cho: [0, 1], att: [1, 1500], dec: [0.05, 2], sus: [0, 1], rel: [0.03, 3], rev: [0, 1] };
@@ -104,7 +114,9 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
         lp.frequency.linearRampToValueAtTime(cut, t + s.swell);
       } else lp.frequency.value = cut;
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(peak, t + att);
+      // у воздушных пэдов вступление — плавной кривой, без «угла» в конце
+      if (s.air && att > 0.1) g.gain.setTargetAtTime(peak, t, att / 3);
+      else g.gain.linearRampToValueAtTime(peak, t + att);
       if (SU < 0.999) g.gain.setTargetAtTime(Math.max(0.0001, peak * SU), t + att, dec / 3);
 
       const osc = (det, amp) => {
@@ -118,7 +130,20 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
         o.start(t);
         os.push(o); main.push(o);
       };
-      if (s.cho > 0.04) { const d = 4 + s.cho * 10; osc(-d, 0.55); osc(d, 0.55); } else osc(0, 1);
+      if (s.air) { // воздушный звук (airsound.js): свой фильтр и ансамбль; «хорус» — ширина, «яркость» — фильтр
+        lp.frequency.value = 18000;
+        lp.Q.value = 0;
+        const opt = { width: 0.4 + s.cho, bright: 0.6 + s.bright * 0.8, fade: att * 1.5 + 1 };
+        os.push(...airVoice(c, lp, s.air, f, t, s.layer ? { ...opt, body: { decay: dec, floor: 0.12 } } : opt).srcs);
+        if (s.layer) { // пэд под клавишами: вступает медленно и держится, пока держится нота
+          const lg = c.createGain();
+          lg.gain.setValueAtTime(0, t);
+          lg.gain.linearRampToValueAtTime(0.5, t + 1.6);
+          lg.connect(lp);
+          os.push(...airVoice(c, lg, s.layer, f, t, { ...opt, fade: 3 }).srcs);
+        }
+        if (s.hall) sendToHall(g, s.hall);
+      } else if (s.cho > 0.04) { const d = 4 + s.cho * 10; osc(-d, 0.55); osc(d, 0.55); } else osc(0, 1);
       if (s.fm) { // частотная модуляция: синус-модулятор, индекс спадает от удара к ровному звучанию
         const mo = c.createOscillator(), mg = c.createGain(), mf = f * s.fm.ratio, dev = mf * s.fm.index;
         mo.type = 'sine';
@@ -203,7 +228,7 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
       }
       // для живой правки звука (refresh): из чего голос собран и каким патчем
       const vo = { g, os, rel: Math.max(0.03, s.rel), key, bus: busName, held: !!opts.hold, lp, main, m, f, kind, peak, own: !!opts.patch,
-        opts, tine: s.tine || 0, sig: sigOf(s), sustain: SU >= 0.02 };
+        opts, tine: s.tine || 0, sig: sigOf(s), sustain: SU >= 0.02, air: !!s.air };
       voices.set(key, vo);
       order.push(key);
       if (SU < 0.02) { // затухающий звук — освобождаем голос сами
@@ -260,6 +285,7 @@ export function createSynth({ mixer, getPatch, getA4 = () => 440 }) {
       [...voices.values()].forEach((vo) => {
         if (vo.own) return; // сыграно своим звуком (тренажёр, «Теория») — не пианино
         const chorus = s.cho > 0.04;
+        if (vo.air && sigOf(s) === vo.sig) { vo.rel = Math.max(0.03, s.rel); return; } // воздушный звук — ручки слышны со следующей ноты
         if (kind !== vo.kind || sigOf(s) !== vo.sig || chorus !== (vo.main.length === 2)) {
           if (vo.sustain) syn.on(vo.m, vo.key, vo.opts);
           return;

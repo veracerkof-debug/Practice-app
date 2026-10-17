@@ -2,7 +2,7 @@
 // Формат и ключ — как в прототипе (practice.v1.tools).
 export const LS_T = 'practice.v1.tools';
 
-export const DRONE_SOUNDS = ['soft', 'pad', 'bow', 'tanpura', 'choir', 'glass'];
+export const DRONE_SOUNDS = ['wair', 'wlight', 'wwarm', 'wchoir', 'soft', 'pad', 'bow', 'tanpura', 'choir', 'glass'];
 
 export function deviceDefaults() {
   return {

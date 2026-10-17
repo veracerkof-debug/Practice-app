@@ -67,5 +67,12 @@
   "pre.strings": "String ensemble",
   "pre.wshimmer": "Shimmer pad",
   "pre.wswell": "Swell pad",
-  "pre.wkeys": "Warm keys"
+  "pre.wkeys": "Warm keys",
+  "pre.wfelt": "Felt piano",
+  "pre.wkpad": "Keys & pad",
+  "pre.wair": "Air",
+  "pre.wlight": "Light",
+  "pre.wwarm": "Warmth",
+  "pre.wchoir": "Voices",
+  "pre.wflute": "Breath"
 }

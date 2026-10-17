@@ -67,5 +67,12 @@
   "pre.strings": "Струнный ансамбль",
   "pre.wshimmer": "Шиммер-пэд",
   "pre.wswell": "Свелл-пэд",
-  "pre.wkeys": "Тёплые клавиши"
+  "pre.wkeys": "Тёплые клавиши",
+  "pre.wfelt": "Мягкое пиано",
+  "pre.wkpad": "Клавиши и пэд",
+  "pre.wair": "Воздух",
+  "pre.wlight": "Свет",
+  "pre.wwarm": "Тепло",
+  "pre.wchoir": "Голоса",
+  "pre.wflute": "Дыхание"
 }

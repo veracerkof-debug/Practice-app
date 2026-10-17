@@ -2,7 +2,8 @@
 // Тембр — как у пианино приложения (те же таблицы волн и огибающая), высота меняется плавно.
 // Эффекты управляются значением 0…1: внизу поверхности — 0 (эффекта нет совсем), вверху — максимум.
 import { synWave } from '../../audio/waves.js';
-import { reverbNode } from '../../audio/context.js';
+import { reverbNode, sendToHall } from '../../audio/context.js';
+import { airVoice } from '../../audio/airsound.js';
 
 // На голос: яркость (фильтр с резонансом), вибрато, тремоло, громкость, перегруз, фузз. На шину: эхо, реверберация
 export const FX = ['bright', 'vib', 'trem', 'vol', 'drive', 'fuzz', 'echo', 'verb'];
@@ -93,7 +94,10 @@ export function createGlideVoice(c, dest, patch, { hold = true, a4 = 440 } = {})
   trLfo.frequency.value = 6;
   trG.gain.value = 0;
   trLfo.connect(trG).connect(out.gain);
-  const os = [], dets = s.cho > 0.04 ? [-(4 + s.cho * 10), 4 + s.cho * 10] : [0];
+  // воздушный звук (airsound.js) собирается в start(): там уже известна нота
+  const os = [], dets = s.air ? [] : s.cho > 0.04 ? [-(4 + s.cho * 10), 4 + s.cho * 10] : [0];
+  let air = null;
+  if (s.hall) sendToHall(out, s.hall);
   dets.forEach((d) => {
     const o = c.createOscillator(), g = c.createGain();
     o.setPeriodicWave(synWave(c, kind, s.tone));
@@ -119,10 +123,12 @@ export function createGlideVoice(c, dest, patch, { hold = true, a4 = 440 } = {})
       const f = freq(m), att = Math.max(0.006, s.att / 1000), dec = Math.max(0.05, s.dec * 3), peak = kind === 'saw' ? 0.16 : 0.3;
       const su = hold ? Math.max(s.sus, 0.55) : s.sus;
       os.forEach((o) => { o.frequency.setValueAtTime(f, t0); o.start(t0); });
+      if (s.air) air = airVoice(c, lp, s.air, f, t0, { width: 0.4 + s.cho, bright: 0.6 + s.bright * 0.8, fade: att * 1.5 + 0.8, vibIn: vibG });
       vibLfo.start(t0);
       trLfo.start(t0);
       amp.gain.setValueAtTime(0.0001, t0);
-      amp.gain.linearRampToValueAtTime(peak, t0 + att);
+      if (s.air && att > 0.1) amp.gain.setTargetAtTime(peak, t0, att / 3);
+      else amp.gain.linearRampToValueAtTime(peak, t0 + att);
       if (su < 0.999) amp.gain.setTargetAtTime(Math.max(0.0001, peak * su), t0 + att, dec / 3);
       v.fx(fx, true);
     },
@@ -131,6 +137,7 @@ export function createGlideVoice(c, dest, patch, { hold = true, a4 = 440 } = {})
       m0 = m;
       const f = freq(m), t = c.currentTime;
       os.forEach((o) => o.frequency.setTargetAtTime(f, t, tau));
+      if (air) air.set(f, tau);
       filter(Math.max(tau, 0.01));
     },
     // fx — значения эффектов 0…1 для этого пальца: { bright, vib, trem, vol, drive, fuzz }
@@ -157,7 +164,7 @@ export function createGlideVoice(c, dest, patch, { hold = true, a4 = 440 } = {})
       amp.gain.setValueAtTime(Math.max(amp.gain.value, 0.0001), t);
       amp.gain.setTargetAtTime(0.0001, t, r / 4);
       const end = t + r * 1.4 + 0.05;
-      [...os, vibLfo, trLfo].forEach((o) => { try { o.stop(end); } catch { /* ignore */ } });
+      [...os, ...(air ? air.srcs : []), vibLfo, trLfo].forEach((o) => { try { o.stop(end); } catch { /* ignore */ } });
       setTimeout(() => { try { fz.output.disconnect(); } catch { /* ignore */ } }, (end - t + 0.2) * 1000);
     },
     get dead() { return dead; },
