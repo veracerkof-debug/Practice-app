@@ -56,10 +56,11 @@ describe('профиль', () => {
 describe('набор инструментов при регистрации', async () => {
   const { toolsFor } = await import('../src/core/profile.js');
   const ALL = ['metro', 'tuner', 'piano', 'glider', 'theremin', 'drone', 'theory', 'timer', 'audio', 'notes', 'spectrum'];
-  it('новичку — самое нужное, продвинутым — всё, кроме камеры', () => {
+  it('новичку — самое нужное, продвинутым — всё; терменвокс — у всех, кроме новичков', () => {
     expect(toolsFor('beginner', ['guitar'], ALL)).toEqual(['metro', 'tuner', 'audio', 'notes']);
-    expect(toolsFor('amateur', ['guitar'], ALL)).toEqual(['metro', 'tuner', 'piano', 'drone', 'theory', 'timer', 'audio', 'notes']);
-    expect(toolsFor('pro', ['guitar'], ALL)).toEqual(ALL.filter((x) => x !== 'theremin'));
+    expect(toolsFor('amateur', ['guitar'], ALL)).toEqual(['metro', 'tuner', 'piano', 'theremin', 'drone', 'theory', 'timer', 'audio', 'notes'].filter((x) => ALL.includes(x)));
+    expect(toolsFor('pro', ['guitar'], ALL)).toEqual(ALL);
+    expect(toolsFor('beginner', ['guitar'], ALL)).not.toContain('theremin');
   });
   it('поправки на инструмент: вокалу — пианино и дрон, пианисту и барабанщику — без тюнера', () => {
     expect(toolsFor('beginner', ['vocal'], ALL)).toEqual(['metro', 'tuner', 'piano', 'drone', 'audio', 'notes']);

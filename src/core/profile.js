@@ -18,10 +18,10 @@ export const levelByHours = (h) => (LEVEL_FROM.find(([min]) => (+h || 0) >= min)
 // остальное включается потом в «Настройки → Функции». all — id всех модулей; возвращает id включённых
 const BY_LEVEL = {
   beginner: ['metro', 'tuner', 'notes', 'audio'],
-  amateur: ['metro', 'tuner', 'notes', 'audio', 'piano', 'drone', 'theory', 'timer'],
+  amateur: ['metro', 'tuner', 'notes', 'audio', 'piano', 'drone', 'theory', 'timer', 'theremin'],
 };
 export function toolsFor(level, instruments = [], all = []) {
-  const on = new Set(BY_LEVEL[level] || all.filter((id) => id !== 'theremin')); // продвинутым — всё, кроме камеры
+  const on = new Set(BY_LEVEL[level] || all); // продвинутым — всё; терменвокс — у всех, кроме новичков (решение автора)
   if (instruments.includes('vocal')) { on.add('piano'); on.add('drone'); } // голосу нужна опора для интонации
   on.add('bible'); // церковный режим включён по умолчанию — Библия у всех (видна, только пока режим включён)
   if (instruments.length && instruments.every((x) => x === 'piano' || x === 'drums')) on.delete('tuner'); // настраивать нечего
