@@ -1,5 +1,5 @@
 # Веб-версия Melete — для знакомства, с любого телефона и компьютера (iPhone, Android, браузер):
-# https://veracerkof-debug.github.io/Practice-app/
+# https://veracerkof-debug.github.io/Practice-app/  (демонстрация с выдуманным музыкантом — …/Practice-app/show/)
 # Собирается при каждом пуше и выкладывается в ветку gh-pages (Settings → Pages → Deploy from a branch → gh-pages).
 # Это отдельная от APK версия: без напоминаний, папки и управления звуком из шторки; данные — только в браузере.
 name: Web version (GitHub Pages)
@@ -36,6 +36,26 @@ jobs:
 
       - name: Сборка
         run: npm run build
+
+      # Видео к демо-песне «Amazing Grace»: астронавт NASA Челл Линдгрен играет её на волынке на МКС (NASA — общественное
+      # достояние, файл с Wikimedia Commons). В репозиторий не кладётся: скачивается при сборке, сжимается в MP4 (играет
+      # и на iPhone), звук — отдельной записью. Не скачалось — демонстрация просто без видео
+      - name: Видео для демонстрации
+        continue-on-error: true
+        run: |
+          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null; }
+          mkdir -p showcase/media
+          curl -fsSL --retry 3 -A "MeleteBuild/1.0 (https://github.com/${{ github.repository }})" -o "$RUNNER_TEMP/grace.webm" \
+            "https://upload.wikimedia.org/wikipedia/commons/8/8e/NASA_astronaut_Kjell_Lindgren_plays_Amazing_Grace_on_the_bagpipes.webm"
+          ffmpeg -loglevel error -y -i "$RUNNER_TEMP/grace.webm" -vf "scale=-2:'min(480,ih)'" -c:v libx264 -preset veryfast -crf 28 -c:a aac -b:a 96k -movflags +faststart showcase/media/amazing-grace-iss.mp4
+          ffmpeg -loglevel error -y -i "$RUNNER_TEMP/grace.webm" -vn -c:a aac -b:a 128k showcase/media/amazing-grace-iss.m4a
+          ls -la showcase/media
+
+      # Демонстрация — выдуманный музыкант без регистрации (src/showcase/): рядом, по адресу …/Practice-app/show/
+      - name: Демонстрация
+        run: |
+          npx vite build --mode showcase --outDir dist-show
+          cp -r dist-show dist/show
 
       - name: Выложить в gh-pages
         run: |

@@ -440,7 +440,7 @@ function rootHTML(app) {
     '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="' + iconBg(app.store.state.settings, 'pink') + '">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button>' +
       '<button class="cell" data-act="report"><span class="ticon" style="' + iconBg(app.store.state.settings, 'graphite') + '">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button></div>' +
     '<div class="group" style="margin-top:12px">' + ['about', 'tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
-    '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + ' · ' + t(Capacitor.isNativePlatform() ? 'panel.kindApk' : 'panel.kindWeb') + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
+    '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + ' · ' + t(Capacitor.isNativePlatform() ? 'panel.kindApk' : import.meta.env.MODE === 'showcase' ? 'panel.kindShow' : 'panel.kindWeb') + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
 }
 
 /* ---------- панель ---------- */

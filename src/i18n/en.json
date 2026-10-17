@@ -1428,5 +1428,7 @@
   "folk.up": "10 cents higher",
   "folk.del": "Remove degree",
   "folk.step": "Degree {n}, cents",
-  "drop.none": "These files can’t be added here: audio, video, tabs, scores and PDF are supported"
+  "drop.none": "These files can’t be added here: audio, video, tabs, scores and PDF are supported",
+  "panel.kindShow": "demo: a fictional musician and their data",
+  "show.hello": "Demo: the musician, songs and statistics are made up — feel free to look around and try everything"
 }

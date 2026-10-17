@@ -28,14 +28,28 @@ function pdfjsAssets() {
   };
 }
 
-export default defineConfig({
+// Демонстрация (vite build --mode showcase): своя точка входа — выдуманный музыкант без регистрации (src/showcase/),
+// и её файлы (видео и звук к демо-песне) из showcase/media/ — только в этой сборке, не в APK и не в обычной веб-версии
+function showcase(mode) {
+  if (mode !== 'showcase') return null;
+  return {
+    name: 'showcase',
+    // order: 'pre' — до того, как сборка возьмёт точку входа из index.html
+    transformIndexHtml: { order: 'pre', handler: (html) => html.replace('/src/main.js', '/src/showcase/main.js').replace('<title>Melete</title>', '<title>Melete — демонстрация</title>') },
+    generateBundle() {
+      if (existsSync('showcase/media')) walk('showcase/media').forEach((f) => this.emitFile({ type: 'asset', fileName: 'media/' + relative('showcase/media', f).split('\\').join('/'), source: readFileSync(f) }));
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
   // относительные пути — нужны для Capacitor (этап 3)
   base: './',
   // дата сборки: часы устройства раньше неё — сбиты (src/core/clock.js)
   // версия — в отчёт о проблеме (src/core/report.js)
   define: { __BUILD_TIME__: Date.now(), __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version) },
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
-  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe()],
+  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), showcase(mode)],
   // MediaPipe не собирается заранее: иначе в режиме разработки вырезка статистики (build/mediapipe.js) не сработает
   optimizeDeps: { exclude: ['@mediapipe/tasks-vision'] },
   // воркеры alphaTab сжимаются так же, как основной код
@@ -51,4 +65,4 @@ export default defineConfig({
     target: 'es2022',
     chunkSizeWarningLimit: 1300, // alphaTab (~1,2 МБ) грузится отдельно, только при открытии табулатуры
   },
-});
+}));

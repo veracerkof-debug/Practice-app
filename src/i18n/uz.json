@@ -1401,5 +1401,7 @@
   "folk.up": "10 sent yuqoriga",
   "folk.del": "Pogʻonani olib tashlash",
   "folk.step": "{n}-pogʻona, sent",
-  "drop.none": "Bunday fayllar bu yerga qo‘shilmaydi: audio, video, tabulatura, nota va PDF mos keladi"
+  "drop.none": "Bunday fayllar bu yerga qo‘shilmaydi: audio, video, tabulatura, nota va PDF mos keladi",
+  "panel.kindShow": "namoyish: toʻqima musiqachi va uning maʼlumotlari",
+  "show.hello": "Namoyish: musiqachi, qoʻshiqlar va statistika toʻqima — hammasini koʻrib, sinab koʻrish mumkin"
 }

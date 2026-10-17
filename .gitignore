@@ -27,3 +27,5 @@ private/
 
 # личные модули (свои инструменты для себя) — в репозиторий не попадают, см. docs/module-template
 src/modules-local/
+dist-show/
+showcase/media/
