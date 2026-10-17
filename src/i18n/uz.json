@@ -1403,5 +1403,9 @@
   "folk.step": "{n}-pogʻona, sent",
   "drop.none": "Bunday fayllar bu yerga qo‘shilmaydi: audio, video, tabulatura, nota va PDF mos keladi",
   "panel.kindShow": "namoyish: toʻqima musiqachi va uning maʼlumotlari",
-  "show.hello": "Namoyish: musiqachi, qoʻshiqlar va statistika toʻqima — hammasini koʻrib, sinab koʻrish mumkin"
+  "show.hello": "Namoyish: musiqachi, qoʻshiqlar va statistika toʻqima — hammasini koʻrib, sinab koʻrish mumkin",
+  "name.secDef": "«Μελέτη» — **mashq**, tirishqoq mashgʻulot, ishga doimiy eʼtibor.",
+  "name.secRef": "Melete — eng qadimgi uch ilhom parisidan biri, mashq ilhom parisi",
+  "lib.cats.band": "Guruh",
+  "lib.genres.soul": "Soul"
 }

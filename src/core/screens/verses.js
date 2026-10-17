@@ -32,6 +32,9 @@ function card(title, v) {
     '<p class="bvref">' + esc(v.ref) + (v.enRef ? ' · ' + esc(v.enRef) : '') + '</p></div>';
 }
 
+// Стихи — только в церковном режиме (settings.church); без него приложение светское
+let church = () => false;
+
 export function verseSheet(title, v) { sheet(() => snav(refOf(v)) + card(title, v)); }
 export function verseListSheet() {
   const seen = new Set();
@@ -43,6 +46,7 @@ export function verseListSheet() {
 // Эпиграф (Пс 89:12) — в помодоро, секундомере и календаре; ссылка в «Минимале» — греческими числами
 // В обычном виде — на языке интерфейса
 export function epigraphHTML() {
+  if (!church()) return '';
   const v = verseByKey(EPIGRAPH);
   // сам стих — по нажатию на ссылку (меньше текста на экране)
   if (!isMono()) { const x = verseIn(v, lang()); return '<p class="mverse vref" lang="' + lang() + '" data-verse="' + EPIGRAPH + '" role="button" tabindex="0" aria-label="' + esc(x.ref) + '"><span>' + esc(x.ref) + '</span></p>'; }
@@ -51,8 +55,10 @@ export function epigraphHTML() {
 }
 
 const SEL = '.large, .stitle2, .snav b, .snav h2, .hdr, .mhd h2, [data-verse], [data-verses]';
-export function bindVerses() {
+export function bindVerses(app) {
+  church = () => !!(app && app.store.state.settings.church);
   addEventListener('click', (e) => {
+    if (!church()) return;
     const el2 = e.target.closest && e.target.closest(SEL);
     if (!el2) return;
     if (el2.hasAttribute('data-verses')) { verseListSheet(); return; }

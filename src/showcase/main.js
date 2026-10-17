@@ -110,11 +110,13 @@ async function seed(app) {
   const songs = st.songs.filter((s) => isDemo(s.id) && !s.deleted);
   const from = Math.max(EARLIEST + DAY, new Date(2025, 0, 3).getTime());
   if (songs.length && !st.sessions.some((x) => isDemo(x.id))) {
-    st.sessions.push(...demoSessions(songs.map((s, i) => ({ id: s.id, since: (DEMO_SONGS[i] || {}).since ?? 0.5, weight: (DEMO_SONGS[i] || {}).weight ?? 1, targetBpm: s.targetBpm, currentBpm: s.currentBpm })), from, now - 3600000));
-    songs.forEach((s, i) => { s.createdAt = from + ((DEMO_SONGS[i] || {}).since ?? 0.5) * (now - from); });
+    const def = (s) => DEMO_SONGS.find((x) => x.title === s.title) || {};
+    st.sessions.push(...demoSessions(songs.map((s) => ({ id: s.id, since: def(s).since ?? 0.5, weight: def(s).weight ?? 1, targetBpm: s.targetBpm, currentBpm: s.currentBpm })), from, now - 3600000));
+    songs.forEach((s) => { s.createdAt = from + (def(s).since ?? 0.5) * (now - from); });
   }
+  // видео — духовный гимн, поэтому только в церковном режиме (по умолчанию демонстрация светская, как и приложение)
   const grace = songs.find((s) => s.title === 'Amazing Grace');
-  for (const m of MEDIA) {
+  for (const m of grace ? MEDIA : []) {
     try {
       const res = await fetch(new URL(m.file, document.baseURI));
       if (!res.ok) continue;

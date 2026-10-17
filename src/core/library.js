@@ -7,12 +7,13 @@ import { parseKey } from './songinfo.js';
 export const PALETTE = ['#A75750', '#9C7242', '#AE934D', '#5F8568', '#4A8681', '#548591', '#567198',
   '#646493', '#866B9D', '#A95E72', '#A2845E', '#8E8E93', '#3A3A3C', '#F2F2F7'];
 
-// Метки по умолчанию; названия — ключи i18n (lib.<kind>.<key>), создаются один раз на языке пользователя
+// Метки по умолчанию; названия — ключи i18n (lib.<kind>.<key>), создаются один раз на языке пользователя.
+// Светские: категория «Церковь» появляется только при импорте церковных песен (songimport.js)
 export const LIBDEF = {
-  cats: [['work', '#567198'], ['church', '#866B9D'], ['growth', '#5F8568'], ['memes', '#9C7242']],
+  cats: [['work', '#567198'], ['band', '#866B9D'], ['growth', '#5F8568'], ['memes', '#9C7242']],
   genres: [['rock', '#A75750'], ['pop', '#A95E72'], ['classical', '#A2845E'], ['jazz', '#646493'],
     ['blues', '#567198'], ['metal', '#3A3A3C'], ['folk', '#5F8568'], ['hiphop', '#9C7242'],
-    ['electronic', '#4A8681'], ['country', '#AE934D'], ['worship', '#866B9D'], ['indie', '#548591']],
+    ['electronic', '#4A8681'], ['country', '#AE934D'], ['soul', '#866B9D'], ['indie', '#548591']],
   tags: [['stage', '#A75750'], ['warmup', '#9C7242'], ['exercise', '#5F8568'], ['learning', '#567198'], ['repeat', '#8E8E93']],
 };
 export const LIB_KINDS = Object.keys(LIBDEF);

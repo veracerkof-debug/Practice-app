@@ -1,12 +1,18 @@
-// Демо-записи для медиатеки: «Amazing Grace» (общественное достояние) — с мелодией и минусовка без неё.
+// Демо-записи для медиатеки: «Greensleeves» (в церковном режиме — «Amazing Grace»; обе — общественное достояние) —
+// с мелодией и минусовка без неё. Обе — вальс 3/4 с затактом в одну долю.
 // Синтезируются на устройстве (OfflineAudioContext) и сохраняются как WAV — в сборке нет лишних файлов.
 import { melodyById } from '../music/melodies.js';
 
 const SR = 22050;
 const hz = (m) => 440 * 2 ** ((m - 69) / 12);
-// Аккорды по тактам (3/4, первый звук мелодии — затакт): G G7 C G | G Em D D7 | G G7 C G | G D7 G G
-const BARS = [[43, 59, 62, 67], [43, 59, 62, 65], [48, 60, 64, 67], [43, 59, 62, 67], [43, 59, 62, 67], [40, 59, 64, 67], [38, 57, 62, 66], [38, 57, 60, 66],
+// Аккорды по тактам ([бас, …аккорд], первый звук мелодии — затакт).
+// Amazing Grace: G G7 C G | G Em D D7 | G G7 C G | G D7 G G
+const GRACE = [[43, 59, 62, 67], [43, 59, 62, 65], [48, 60, 64, 67], [43, 59, 62, 67], [43, 59, 62, 67], [40, 59, 64, 67], [38, 57, 62, 66], [38, 57, 60, 66],
   [43, 59, 62, 67], [43, 59, 62, 65], [48, 60, 64, 67], [43, 59, 62, 67], [38, 59, 62, 67], [38, 57, 60, 66], [43, 59, 62, 67], [43, 59, 62, 67]];
+// Greensleeves: Am C G Em | Am E E E | Am C G Em | Am E Am Am
+const AM = [45, 57, 60, 64], C = [48, 60, 64, 67], G = [43, 59, 62, 67], EM = [40, 59, 64, 67], E = [40, 56, 59, 64];
+const GREEN = [AM, C, G, EM, AM, E, E, E, AM, C, G, EM, AM, E, AM, AM];
+const BARS_OF = { grace: GRACE, green: GREEN };
 
 function tone(ac, out, f, t, dur, { type = 'sine', gain = 0.2, a = 0.01, partials = null } = {}) {
   const g = ac.createGain();
@@ -23,10 +29,10 @@ function tone(ac, out, f, t, dur, { type = 'sine', gain = 0.2, a = 0.01, partial
 }
 
 // Отрисовать запись: withMelody — с мелодией (фортепиано), без неё — только аккомпанемент. → Float32Array
-async function render(withMelody) {
+async function render(withMelody, id = 'green') {
   const OAC = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext;
   if (!OAC) return null;
-  const mel = melodyById('grace'), beat = 60 / mel.bpm, lead = 1.2; // перед музыкой — пауза и отсчёт
+  const mel = melodyById(id), BARS = BARS_OF[id] || GREEN, beat = 60 / mel.bpm, lead = 1.2; // перед музыкой — пауза и отсчёт
   const beats = mel.notes.reduce((a, n) => a + n[1], 0), len = lead + 4 * beat + (beats + 3) * beat + 2;
   const ac = new OAC(1, Math.ceil(len * SR), SR), out = ac.createGain();
   out.gain.value = 0.9; out.connect(ac.destination);
@@ -66,11 +72,11 @@ function wav(data) {
 }
 
 // Две записи: [{ key: 'full' | 'minus', blob, dur }] (без OfflineAudioContext — пусто)
-export async function demoTracks() {
+export async function demoTracks(id = 'green') {
   const out = [];
   for (const [key, mel] of [['full', true], ['minus', false]]) {
     try {
-      const d = await render(mel);
+      const d = await render(mel, id);
       if (d) out.push({ key, blob: wav(d), dur: d.length / SR });
     } catch { /* без звука на устройстве — без записей */ }
   }

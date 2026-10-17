@@ -368,13 +368,14 @@ export function leagueCheck(app) {
   if (st.rankNote !== false && isOn(st, 'mastery')) toast(t('gem.new', { name: t('gem.' + g.gem.id) }));
 }
 
-// Справка о названии — только стих из Писания с адресом (решение автора)
+// Справка о названии: в церковном режиме — стих из Писания с адресом (решение автора), без него — значение слова и муза
 const VERSE_GR = 'Ταῦτα <b>μελέτα</b>, ἐν τούτοις ἴσθι, ἵνα σου ἡ προκοπὴ φανερὰ ᾖ πᾶσιν.';
 // В переводе слово, соответствующее μελέτα, отмечено **так** — выделяется жирным
 const boldMarks = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-export function nameSheet() {
+export function nameSheet(church = false) {
   sheet(() => snav(t('name.title')) +
     '<div class="namehero">' + logoHTML() + '<div class="tr">' + esc(t('name.tr')) + '</div></div>' +
-    '<div class="group"><div class="cellcol"><p class="nameq" lang="grc">' + VERSE_GR + '</p>' +
-    (t('name.verse') ? '<p style="margin:0 0 6px">' + boldMarks(t('name.verse')) + '</p>' : '') + '<div class="nameref">' + esc(t('name.ref')) + '</div></div></div>');
+    (church ? '<div class="group"><div class="cellcol"><p class="nameq" lang="grc">' + VERSE_GR + '</p>' +
+      (t('name.verse') ? '<p style="margin:0 0 6px">' + boldMarks(t('name.verse')) + '</p>' : '') + '<div class="nameref">' + esc(t('name.ref')) + '</div></div></div>'
+      : '<div class="group"><div class="cellcol"><p style="margin:0 0 6px">' + boldMarks(t('name.secDef')) + '</p><div class="nameref">' + esc(t('name.secRef')) + '</div></div></div>'));
 }

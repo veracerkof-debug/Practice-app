@@ -148,7 +148,7 @@ export function createShell(app, root) {
     else if (d.act === 'unver') unverifiedSheet(app);
     else if (d.act === 'gem') gemSheet(app);
     else if (d.act === 'rank') gemSheet(app); // прежняя кнопка звания — теперь лига
-    else if (d.act === 'name') nameSheet();
+    else if (d.act === 'name') nameSheet(!!app.store.state.settings.church);
     else if (d.cat !== undefined) { view.cat = d.cat; view.genre = ''; view.tag = ''; render(); }
     else if (d.fg !== undefined) { view.genre = view.genre === d.fg ? '' : d.fg; render(); }
     else if (d.ft !== undefined) { view.tag = view.tag === d.ft ? '' : d.ft; render(); }

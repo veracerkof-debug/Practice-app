@@ -248,7 +248,7 @@ export function boot(root) {
   // прошлый запуск закрылся неожиданно — предложить отправить отчёт
   crashOffer(app);
   // касание названия раздела — его стих (в обоих видах)
-  bindVerses();
+  bindVerses(app);
   return app;
 }
 

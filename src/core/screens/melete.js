@@ -7,7 +7,7 @@ import { setMascotLook } from '../../ui/mascot.js';
 import { STYLES, LEADS, OFFSETS, TONES, CUSTOM_MAX, remindOf, setRemind, remindAvailable, remindPermission, remindTest, exactAllowed, openExactSettings, remindNext } from '../reminders.js';
 import { bgAsk } from '../background.js';
 import { remindText, remindCtx } from '../remindtexts.js';
-import { QSETS, setsOf } from '../quotes.js';
+import { QSETS, setsOf, qsetsFor } from '../quotes.js';
 import { mascotSVG } from '../../ui/mascot.js';
 import { tamaOf } from '../tama.js';
 import { setAppIcon, ICON_BY_MASCOT } from '../appicon.js';
@@ -74,7 +74,7 @@ export function meleteHTML(st, { sets = false, test = false } = {}) {
     '</div><p class="ftr">' + t('tama.hint') + '</p>';
   if (sets) {
     const on = setsOf(st);
-    h += '<div class="hdr">' + t('qset.title') + '</div><div class="group">' + QSETS.map((k) => '<label class="cell"><span class="grow">' + t('qset.' + k) + '</span>' +
+    h += '<div class="hdr">' + t('qset.title') + '</div><div class="group">' + qsetsFor(st).map((k) => '<label class="cell"><span class="grow">' + t('qset.' + k) + '</span>' +
       '<input type="checkbox" data-mlset="' + k + '"' + (on.includes(k) ? ' checked' : '') + ' style="width:22px;height:22px"></label>').join('') + '</div><p class="ftr">' + t('qset.hint') + '</p>';
   }
   return h;

@@ -40,7 +40,7 @@ export function onboarding(app, done = () => {}) {
   // по умолчанию: классические напоминания, Мелетий, церковный режим
   if (!st.remind) setRemind(st, { mode: 'classic' });
   if (!st.mascot) st.mascot = 'm';
-  if (st.church == null) st.church = true;
+  if (st.church == null) st.church = false; // приложение светское; церковный режим включают в «Функциях» (решение автора)
   const allIds = modules.map((m) => m.id);
   let f = wheelFrac(+p.priorHours || 0);
   const layer = document.createElement('div');
@@ -161,13 +161,14 @@ export function askName(app) {
 
 // Стартовый экран: Melete — компаньон в практике, стих, где встречается это слово, и выбор языка.
 // Уже выбран язык (или есть профиль) — пропускается. Подробнее о приложении — «О Melete» в настройках
-const VERSE_GR = 'Ταῦτα <b>μελέτα</b>, ἐν τούτοις ἴσθι';
+const MEANING_GR = '<b>μελέτη</b> · ἄσκησις';
 const bold = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 export function startHTML() {
   const lang = getLang();
   return '<div class="wlbox wlstart"><div class="wllang" role="group" aria-label="' + esc(t('look.lang')) + '">' + LANGS.map((k) => '<button type="button" class="wllb' + (lang === k ? ' on' : '') + '" data-lg="' + k + '" lang="' + k + '" aria-pressed="' + (lang === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div>' +
     '<div class="wlhero"><div class="wllogo">' + logoHTML() + '</div><h1 class="wlh">' + t('wel.tag') + '</h1></div>' +
-    '<figure class="wlverse"><p class="wlgr" lang="grc">' + VERSE_GR + '</p><blockquote>' + bold(t('name.verse')) + '</blockquote><figcaption>' + esc(t('name.ref')) + '</figcaption></figure>' +
+    // приложение светское: значение слова и муза Мелета (стих из Писания — только в церковном режиме, «О названии»)
+    '<figure class="wlverse"><p class="wlgr" lang="grc">' + MEANING_GR + '</p><blockquote>' + bold(t('name.secDef')) + '</blockquote><figcaption>' + esc(t('name.secRef')) + '</figcaption></figure>' +
     '<button type="button" class="btn fill block" data-wlgo>' + t('wel.go') + '</button></div>';
 }
 

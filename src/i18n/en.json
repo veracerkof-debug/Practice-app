@@ -1430,5 +1430,9 @@
   "folk.step": "Degree {n}, cents",
   "drop.none": "These files can’t be added here: audio, video, tabs, scores and PDF are supported",
   "panel.kindShow": "demo: a fictional musician and their data",
-  "show.hello": "Demo: the musician, songs and statistics are made up — feel free to look around and try everything"
+  "show.hello": "Demo: the musician, songs and statistics are made up — feel free to look around and try everything",
+  "name.secDef": "“Μελέτη” — **practice**, diligent study, steady care for one’s craft.",
+  "name.secRef": "Melete — one of the three original Muses, the Muse of practice",
+  "lib.cats.band": "Band",
+  "lib.genres.soul": "Soul"
 }

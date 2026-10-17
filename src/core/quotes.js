@@ -219,8 +219,11 @@ export const QSETS = ['rock', 'classic', 'bible', 'faith', 'meme'];
 // По умолчанию: классика и рок; в церковном режиме — ещё Библия и христианские авторы
 // Свои сборники (settings.quoteBooks, из файла .melete / от нейросети) — наборы 'own:<id>'
 const ownIds = (settings) => (settings.quoteBooks || []).map((b) => 'own:' + b.id);
+// Библия и христианские цитаты — только в церковном режиме: без него приложение полностью светское
+const CHURCH_SETS = ['bible', 'faith'];
+export const qsetsFor = (settings = {}) => QSETS.filter((k) => settings.church || !CHURCH_SETS.includes(k));
 export const setsOf = (settings = {}) => {
-  const ok = [...QSETS, ...ownIds(settings)];
+  const ok = [...qsetsFor(settings), ...ownIds(settings)];
   const v = Array.isArray(settings.qsets) ? settings.qsets.filter((k) => ok.includes(k)) : null;
   return v && v.length ? v : settings.church ? ['bible', 'faith', 'classic', 'rock'] : ['classic', 'rock'];
 };

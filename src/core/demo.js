@@ -1,4 +1,5 @@
-// Демо-набор: показать, как устроено приложение, пока своего ещё нет. Пять песен (народные и духовные —
+// Демо-набор: показать, как устроено приложение, пока своего ещё нет. Пять песен (народные и духовная — духовная только
+// в церковном режиме;
 // общественное достояние; аккорды подобраны примерно) с аккордами и словами, табулатуры и ноты (public/demo/: ноты —
 // Mutopia Project, общественное достояние; табулатуры набраны заново), две записи в медиатеке (demoaudio.js)
 // и события календаря. Добавляется и убирается одной кнопкой («Данные и копии»); у всех записей — приставка DEMO_PREFIX.
@@ -14,9 +15,12 @@ export const hasDemo = (state) => !!(state.songs || []).some((s) => isDemo(s.id)
 
 /* ---------- песни ---------- */
 
+// Песни набора: духовные (church: true) — только в церковном режиме; без него приложение светское
+export const demoSongs = (church) => DEMO_SONGS.filter((s) => church || !s.church);
+
 // since и weight — только для истории занятий при проверке (demostats.js): когда песню начали учить и как часто играют
 export const DEMO_SONGS = [
-  { title: 'Amazing Grace', by: 'newton', genre: 'gospel', key: 'G', difficulty: 2, masteryPct: 92, targetBpm: 80, currentBpm: 78,
+  { title: 'Amazing Grace', church: true, by: 'newton', genre: 'gospel', key: 'G', difficulty: 2, masteryPct: 92, targetBpm: 80, currentBpm: 78,
     tab: 'amazing-grace.musicxml', since: 0.02, weight: 1.4,
     notes: `[Куплет 1]
 G            G7        C       G
@@ -107,14 +111,14 @@ function demoEvents(t, songs, now) {
   const id = () => DEMO_PREFIX + uid();
   const ev = (d, h, len, patch) => newEvent(now + d * DAY, now, { id: id(), start: day(d, h), end: day(d, h) + len * 3600000, ...patch });
   const allDay = (d, patch) => newEvent(now + d * DAY, now, { id: id(), allDay: true, start: day(d, 0), end: day(d, 0) + DAY, ...patch });
-  const S = (i) => songs[i].id;
+  const S = (i) => songs[Math.min(i, songs.length - 1)].id;
   return [
     ev(nextWd(2) - 7, 18, 1, { kind: 'lesson', title: t('demo.ev.lesson'), place: t('demo.ev.lessonPlace'), repeat: 'weekly', songs: [S(1)] }),
     ev(nextWd(6) - 7, 12, 2, { kind: 'rehearsal', title: t('demo.ev.rehearsal'), place: t('demo.ev.rehearsalPlace'), repeat: 'weekly', songs: [S(1), S(2), S(3)] }),
     ev(9, 15, 2, { kind: 'recording', title: t('demo.ev.recording'), songs: [S(0)], note: t('demo.ev.recordingNote') }),
     ev(18, 19, 2, { kind: 'concert', title: t('demo.ev.concert'), place: t('demo.ev.concertPlace'), songs: [S(0), S(1), S(2)], note: t('demo.ev.concertNote') }),
     allDay(12, { kind: 'deadline', title: t('demo.ev.deadline', { song: songs[1].title, bpm: songs[1].targetBpm }), songs: [S(1)] }),
-    allDay(30, { kind: 'goal', title: t('demo.ev.goal', { song: songs[4].title }), songs: [S(4)] }),
+    allDay(30, { kind: 'goal', title: t('demo.ev.goal', { song: songs.at(-1).title }), songs: [S(songs.length - 1)] }),
   ].map((e) => ({ ...e, updatedAt: now }));
 }
 
@@ -127,10 +131,11 @@ export async function addDemo(app, t, base = new URL('demo/', document.baseURI).
   if (hasDemo(st)) return null;
   const L = st.settings.lib || {};
   const tag = (i) => (L.tags && L.tags[i] ? [L.tags[i].id] : []);
-  const songs = DEMO_SONGS.map((s, i) => ({
+  const church = !!st.settings.church, list = demoSongs(church);
+  const songs = list.map((s, i) => ({
     id: DEMO_PREFIX + uid(), title: s.title, artist: t('demo.by.' + s.by), genre: t('demo.genre.' + s.genre), cat: L.cats && L.cats[i % 3] ? L.cats[i % 3].id : null, tags: tag(i % 5),
     difficulty: s.difficulty, masteryPct: s.masteryPct, mastery: Math.max(1, Math.round(s.masteryPct / 20)),
-    targetBpm: s.targetBpm, currentBpm: s.currentBpm, notes: s.notes, key: s.key, createdAt: now - (DEMO_SONGS.length - i) * 60000, updatedAt: now,
+    targetBpm: s.targetBpm, currentBpm: s.currentBpm, notes: s.notes, key: s.key, createdAt: now - (list.length - i) * 60000, updatedAt: now,
   }));
   st.songs.push(...songs);
   (st.events || (st.events = [])).push(...demoEvents(t, songs, now));
@@ -147,13 +152,15 @@ export async function addDemo(app, t, base = new URL('demo/', document.baseURI).
       await add({ name, size: blob.size, type: pdf ? 'application/pdf' : 'application/vnd.recordare.musicxml+xml', songs: songIds, blob, kind: 'tab' });
     } catch { /* без своих файлов — просто без них */ }
   };
-  for (let i = 0; i < DEMO_SONGS.length; i++) {
-    const s = DEMO_SONGS[i];
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i];
     if (s.tab) await fetchAdd(s.tab, s.title + ' — ' + t('demo.file.tab') + '.musicxml', [songs[i].id]);
     if (s.pdf) await fetchAdd(s.pdf, s.title + ' — ' + t('demo.file.score') + '.pdf', [songs[i].id]);
   }
   for (const p of PIECES) await fetchAdd(p.file, t('demo.piece.' + p.key) + '.pdf', []);
-  for (const tr of await demoTracks()) await add({ name: 'Amazing Grace — ' + t('demo.track.' + tr.key) + '.wav', size: tr.blob.size, type: 'audio/wav', songs: [songs[0].id], blob: tr.blob, kind: 'audio', dur: tr.dur });
+  // записи — к первой песне набора: «Amazing Grace» в церковном режиме, иначе «Greensleeves»
+  const first = list[0], mel = first.title === 'Amazing Grace' ? 'grace' : 'green';
+  for (const tr of await demoTracks(mel)) await add({ name: first.title + ' — ' + t('demo.track.' + tr.key) + '.wav', size: tr.blob.size, type: 'audio/wav', songs: [songs[0].id], blob: tr.blob, kind: 'audio', dur: tr.dur });
   return songs;
 }
 
