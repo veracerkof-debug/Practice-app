@@ -72,7 +72,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PNOTES="Melete 1.2 — предрелиз, сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ветка ${GITHUB_REF_NAME}). Скачать на телефон: Melete-PreRelease.apk. С 16.10.2026 новая подпись: если стояла сборка раньше — сначала копия данных (Профиль → Данные), удалить старое приложение, поставить это. Веб-версия — отдельная, по ссылке в README."
+          PNOTES="Melete 1.2 — предрелиз, сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ветка ${GITHUB_REF_NAME}). Скачать на телефон: Melete-PreRelease.apk. С 18.10.2026 новое имя пакета (app.melete): ставится без конфликтов рядом со старой бетой. Данные из старой — через копию (Профиль → Данные → Резервная копия, затем «Восстановить» в новой); старую после этого можно удалить. Веб-версия — отдельная, по ссылке в README."
           if ! gh release view pre >/dev/null 2>&1; then
             gh release create pre --prerelease --title "Melete 1.2 Pre-release" --notes "$PNOTES" --target "$GITHUB_SHA"
           fi

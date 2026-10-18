@@ -4,7 +4,8 @@ android {
     namespace = "app.practice.beta"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "app.practice.beta"
+        // app.melete — с 2026-10: прежняя бета (app.practice.beta) была подписана старым ключом и мешала установке
+        applicationId "app.melete"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Номер сборки — от GitHub Actions (каждая следующая больше, чтобы ставилась поверх прежней)
