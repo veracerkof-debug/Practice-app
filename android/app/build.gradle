@@ -29,6 +29,11 @@ android {
                 storePassword System.getenv('BETA_STORE_PASSWORD')
                 keyAlias System.getenv('BETA_KEY_ALIAS') ?: 'melete'
                 keyPassword System.getenv('BETA_STORE_PASSWORD')
+                // и старая подпись (v1, JAR), не только v2/v3: урезанные установщики проекторов и ТВ-приставок
+                // проверяют только её и иначе пишут «ошибка пакета»
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
             }
         }
     }
