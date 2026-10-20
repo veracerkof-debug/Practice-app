@@ -64,12 +64,14 @@ export function makeIR(c, sec, { damp = 0.6, pre = 0 } = {}) {
   return ir;
 }
 
-// Розовый шум, стерео, 4 с — по кругу (дыхание пэдов, «Air»)
-const pinkCache = new WeakMap();
-export function pinkNoise(c) {
-  if (pinkCache.has(c)) return pinkCache.get(c);
-  const n = c.sampleRate * 4, b = c.createBuffer(2, n, c.sampleRate);
-  for (let ch = 0; ch < 2; ch++) {
+// Розовый шум, стерео, 4 с — по кругу («Air»); mono — один канал (дыхание пэдов: фильтры после него считают
+// вдвое меньше, а дыхание у ноты всё равно одно)
+const pinkCache = new WeakMap(), monoCache = new WeakMap();
+export function pinkNoise(c, mono = false) {
+  const cache = mono ? monoCache : pinkCache;
+  if (cache.has(c)) return cache.get(c);
+  const n = c.sampleRate * 4, chs = mono ? 1 : 2, b = c.createBuffer(chs, n, c.sampleRate);
+  for (let ch = 0; ch < chs; ch++) {
     const d = b.getChannelData(ch);
     let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
     for (let i = 0; i < n; i++) {
@@ -79,7 +81,7 @@ export function pinkNoise(c) {
       d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + w * 0.5362) * 0.11;
     }
   }
-  pinkCache.set(c, b);
+  cache.set(c, b);
   return b;
 }
 

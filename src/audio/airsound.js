@@ -3,6 +3,9 @@
 // которые медленно и неравномерно «плывут» (как живой ансамбль, а не ровный хорус), высокая октава и квинта
 // вступают позже основы (мерцание), тихое дыхание — розовый шум в полосе около ноты, мягкий фильтр без резонанса.
 // Пространство — длинный зал (context.js: sendToHall) у того, кто звук играет.
+// Цена: пэд — самый дорогой звук приложения (на один голос — унисон, октава, дыхание). Чтобы четыре источника звучали
+// разом и не захлёбывались: «плавание» — не генератор на каждый голос унисона (это была половина всех генераторов),
+// а автоматизация расстройки; дыхание — моно-шум; когда голосов уже много, новые берутся легче (унисон и мерцание меньше).
 import { uniCap } from './perf.js';
 import { partsWave, pinkNoise } from './waves.js';
 
@@ -23,6 +26,39 @@ export const isAir = (k) => !!AIR[k];
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 
+// Сколько воздушных голосов звучит сейчас (по всему приложению): считаем по концу первого генератора голоса
+let live = 0;
+export const airLive = () => live;
+// Бюджет под нагрузкой (ступень): 0 — до 8 голосов, как задумано; 1 — до 16: унисон не больше двух, без плавания,
+// мерцание одним генератором; 2 — дальше по одному генератору на всё (созвучие из многих нот всё равно звучит густо).
+// Плавание — самое дорогое в голосе: расстройка, меняющаяся во времени, считается генератором на каждый отсчёт
+const tierNow = () => (live < 8 ? 0 : live < 16 ? 1 : 2);
+const budget = (tier, n) => (tier === 0 ? n : tier === 1 ? Math.min(n, 2) : 1);
+
+// «Плавание» расстройки автоматизацией: каждые 1,2…2,2 с — новая случайная цель в пределах ±amt центов, к которой
+// параметр подходит плавно. Один таймер на все голоса, цели ставятся на 30 с вперёд (фоновая вкладка режет таймеры)
+const drifting = new Set();
+let driftTimer = null;
+const HORIZON = 30, DRIFT_TICK = 5000;
+function driftMore(d) {
+  const { c, p, base, amt } = d;
+  while (d.next < c.currentTime + HORIZON) {
+    p.setTargetAtTime(base + rnd(-amt, amt), d.next, 0.6);
+    d.next += rnd(1.2, 2.2);
+  }
+}
+function drift(c, p, base, amt, t) {
+  const d = { c, p, base, amt, next: t };
+  driftMore(d);
+  drifting.add(d);
+  if (!driftTimer) driftTimer = setInterval(() => { drifting.forEach(driftMore); }, DRIFT_TICK);
+  return d;
+}
+function undrift(ds) {
+  ds.forEach((d) => drifting.delete(d));
+  if (!drifting.size && driftTimer) { clearInterval(driftTimer); driftTimer = null; }
+}
+
 // Один голос (нота). dest — куда звучать; f — частота; t — начало.
 // opts: width (ширина, 0…1,5), bright (×фильтр), fade — за сколько секунд вступает мерцание,
 //       vibIn — узел вибрато «от руки» (центы, подключается к расстройке), body — { decay, floor }: основа гаснет сама,
@@ -38,7 +74,7 @@ export const airOf = (kind, mul) => {
     drift: (B.drift || 0) * k('drift'), vib: B.vib && [B.vib[0], B.vib[1] * k('vib'), B.vib[2]], thump: (B.thump || 0) * k('hammer'), pingAmp: 0.55 * k('hammer') };
 };
 export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.5, vibIn = null, body = null, uni = 0, mul = null } = {}) {
-  const R = airOf(kind, mul), srcs = [], tr = []; // tr — [параметр, множитель частоты, предел]
+  const R = airOf(kind, mul), srcs = [], tr = [], tier = tierNow(); // tr — [параметр, множитель частоты, предел]
   const out = c.createGain(), lp = c.createBiquadFilter(), mix = c.createGain();
   lp.type = 'lowpass';
   lp.Q.value = 0.3;
@@ -96,19 +132,15 @@ export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.
     tr.push([o.frequency, mult]);
     return { o, g };
   };
-  // основа: унисон с расстройкой и медленным неровным «плаванием» каждого голоса
-  const n = uniCap(uni ? Math.min(uni, R.uni) : R.uni), wave = partsWave(c, R.parts), lv = 1 / Math.sqrt(n);
+  // основа: унисон с расстройкой и медленным неровным «плаванием» каждого голоса (автоматизацией, без генераторов)
+  const n = uniCap(budget(tier, uni ? Math.min(uni, R.uni) : R.uni)), wave = partsWave(c, R.parts), lv = 1 / Math.sqrt(n), ds = [];
   for (let i = 0; i < n; i++) {
-    const k = n === 1 ? 0 : (i / (n - 1)) * 2 - 1, { o } = osc(1, wave, lv, k * R.det * width + rnd(-1, 1), k * 0.7 * Math.min(1, width));
-    if (R.drift) {
-      const lo = c.createOscillator(), lg = c.createGain();
-      lo.frequency.value = rnd(0.05, 0.23);
-      lg.gain.value = R.drift;
-      lo.connect(lg).connect(o.detune);
-      lo.start(t);
-      srcs.push(lo);
-    }
+    const k = n === 1 ? 0 : (i / (n - 1)) * 2 - 1, det = k * R.det * width + rnd(-1, 1), { o } = osc(1, wave, lv, det, k * 0.7 * Math.min(1, width));
+    if (R.drift && tier === 0) ds.push(drift(c, o.detune, det, R.drift, t));
   }
+  // учёт живых голосов: первый генератор основы кончается — голос кончился
+  live++;
+  srcs[srcs.length - n].addEventListener('ended', () => { live = Math.max(0, live - 1); undrift(ds); }, { once: true });
   // мерцание сверху и опора снизу — вступают медленнее основы
   const swell = (amt) => {
     const g = c.createGain();
@@ -117,7 +149,10 @@ export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.
     g.connect(lp);
     return g;
   };
-  if (R.oct) { const g = swell(R.oct); osc(2, null, 0.5, -4, -0.5, g); osc(2, null, 0.5, 4, 0.5, g); }
+  if (R.oct) { // мерцание: два генератора по сторонам; под нагрузкой — один (с расстройкой, в середине)
+    const g = swell(R.oct);
+    if (budget(tier, 2) > 1) { osc(2, null, 0.5, -4, -0.5, g); osc(2, null, 0.5, 4, 0.5, g); } else osc(2, null, 0.7, rnd(-4, 4), 0, g);
+  }
   if (R.fifth) osc(3, null, 1, rnd(-3, 3), 0, swell(R.fifth));
   if (R.sub) osc(0.5, null, R.sub, 0, 0);
   // удар мягкого пиано: яркие гармоники быстро гаснут, остаётся тёплая основа
@@ -127,15 +162,17 @@ export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.
     g.gain.linearRampToValueAtTime(R.pingAmp ?? 0.55, t + 0.004);
     g.gain.setTargetAtTime(0, t + 0.01, 0.14);
   }
+  // шум в полосе около ноты (моно); срез низа нужен только низким нотам — у высоких полоса и так выше 350 Гц
   const noise = (amt, to) => {
-    const src = c.createBufferSource(), bp = c.createBiquadFilter(), hp = c.createBiquadFilter(), g = c.createGain();
-    src.buffer = pinkNoise(c);
+    const src = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(), fc = Math.min(9000, f * 2);
+    src.buffer = pinkNoise(c, true);
     src.loop = true;
     src.loopStart = rnd(0, 3);
-    bp.type = 'bandpass'; bp.frequency.value = Math.min(9000, f * 2); bp.Q.value = 0.9;
-    hp.type = 'highpass'; hp.frequency.value = 350;
+    bp.type = 'bandpass'; bp.frequency.value = fc; bp.Q.value = 0.9;
     g.gain.value = amt;
-    src.connect(bp).connect(hp).connect(g).connect(to);
+    let tail = bp;
+    if (fc < 1200) { const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 350; bp.connect(hp); tail = hp; }
+    src.connect(bp); tail.connect(g).connect(to);
     src.start(t, rnd(0, 3));
     srcs.push(src);
     tr.push([bp.frequency, 2, 9000]);
@@ -151,7 +188,7 @@ export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.
   }
   if (R.thump) { // войлочный удар: низкий глухой шум, 40 мс
     const src = c.createBufferSource(), lpn = c.createBiquadFilter(), g = c.createGain();
-    src.buffer = pinkNoise(c);
+    src.buffer = pinkNoise(c, true);
     lpn.type = 'lowpass'; lpn.frequency.value = Math.min(900, f * 2.5);
     g.gain.setValueAtTime(R.thump, t);
     g.gain.setTargetAtTime(0, t + 0.004, 0.015);
