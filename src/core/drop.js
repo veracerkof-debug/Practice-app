@@ -20,17 +20,20 @@ export function initDrop(app) {
     depth = 0;
     mark(false);
     if (!app.store.state.settings.configured) return;
-    const files = [...e.dataTransfer.files];
-    // файлы — по модулям, которые их берут
-    const by = new Map();
-    files.forEach((f) => { const m = modules.find((x) => x.accepts && x.accepts(f)); if (m) by.set(m.id, [...(by.get(m.id) || []), f]); });
-    if (!by.size) { toast(t('drop.none')); return; }
-    if (!(await app.confirmUpload())) return;
-    [...by].forEach(([id, fs], i) => {
-      const mod = moduleById(id);
-      mod.drop(fs);
-      if (i) return; // открывается первый; остальные сохранятся, когда их модуль откроют
-      if (app.openTool) app.openTool(id); else openToolView(app, id);
-    });
+    await dropFiles(app, [...e.dataTransfer.files]);
+  });
+}
+
+// Файлы — по модулям, которые их берут (и из окна, и открытые двойным щелчком на компьютере)
+export async function dropFiles(app, files) {
+  const by = new Map();
+  files.forEach((f) => { const m = modules.find((x) => x.accepts && x.accepts(f)); if (m) by.set(m.id, [...(by.get(m.id) || []), f]); });
+  if (!by.size) { toast(t('drop.none')); return; }
+  if (!(await app.confirmUpload())) return;
+  [...by].forEach(([id, fs], i) => {
+    const mod = moduleById(id);
+    mod.drop(fs);
+    if (i) return; // открывается первый; остальные сохранятся, когда их модуль откроют
+    if (app.openTool) app.openTool(id); else openToolView(app, id);
   });
 }

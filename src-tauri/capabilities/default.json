@@ -1,20 +1,51 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Главное окно: диалоги выбора и сохранение файлов туда, куда указал человек",
-  "windows": ["main"],
+  "description": "Главное окно: диалоги выбора, папка Melete и файлы, которые выбрал человек; свои команды — разрешение папки и файлы при запуске",
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-set-title",
     "core:window:allow-set-fullscreen",
     "core:window:allow-is-fullscreen",
+    "allow-allow-dir",
+    "allow-startup-files",
     "dialog:allow-save",
     "dialog:allow-open",
     "fs:allow-write-file",
     "fs:allow-read-file",
+    "fs:allow-read-dir",
+    "fs:allow-mkdir",
+    "fs:allow-stat",
+    "fs:allow-lstat",
+    "fs:allow-exists",
+    "fs:allow-remove",
+    "fs:allow-open",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-seek",
+    "fs:allow-fstat",
+    "fs:allow-truncate",
+    "fs:allow-ftruncate",
+    "fs:allow-size",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "$HOME/**" }, { "path": "$DOCUMENT/**" }, { "path": "$DOWNLOAD/**" }, { "path": "$DESKTOP/**" }]
+      "allow": [
+        {
+          "path": "$HOME/**"
+        },
+        {
+          "path": "$DOCUMENT/**"
+        },
+        {
+          "path": "$DOWNLOAD/**"
+        },
+        {
+          "path": "$DESKTOP/**"
+        }
+      ]
     }
   ]
 }

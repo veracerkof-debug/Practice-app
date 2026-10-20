@@ -7,6 +7,7 @@
 // Правка текста песни в файле — переносится в песню, правка в приложении — в файл. Удаление файла из папки ничего
 // в приложении не удаляет. Логика без DOM; ввод-вывод — через драйвер (нативный или тестовый).
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { isDesktop, desktopDriver } from './desktop.js';
 
 export const DIRS = { data: 'Data', media: 'Media', tabs: 'Tabs', pdf: 'PDF', lyrics: 'Lyrics' };
 export const DATA_FILE = 'Data/melete-data.json';
@@ -57,13 +58,13 @@ export function songText(s) {
 // Короткий отпечаток текста (заметить правку)
 export function hash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + ':' + s.length; }
 
-/* ---------- драйвер: нативный (Android) ---------- */
+/* ---------- драйвер: нативный (Android) или компьютер (Tauri, src/core/desktop.js) ---------- */
 
 const Folder = Capacitor.isNativePlatform() ? registerPlugin('Folder') : null;
-export const folderAvailable = () => !!Folder;
+export const folderAvailable = () => !!Folder || isDesktop();
 const b64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
 const unb64 = (s) => { const b = atob(s), u8 = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u8[i] = b.charCodeAt(i); return u8; };
-export const nativeDriver = Folder && {
+export const nativeDriver = Folder ? {
   status: () => Folder.status(),
   pick: () => Folder.pick(),
   forget: () => Folder.forget(),
@@ -72,7 +73,7 @@ export const nativeDriver = Folder && {
   read: async (path, offset, length) => { const r = await Folder.read({ path, offset, length }); return { data: unb64(r.data || ''), size: r.size }; },
   write: (path, u8, append, mime) => Folder.write({ path, data: b64(u8), append, mime }),
   remove: (path) => Folder.remove({ path }),
-};
+} : isDesktop() ? desktopDriver : null;
 
 // Прочитать файл целиком (частями) → Uint8Array
 export async function readAll(drv, path, size) {

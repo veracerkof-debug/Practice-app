@@ -9,7 +9,7 @@
 | Компонент | Назначение | Лицензия |
 |---|---|---|
 | [alphaTab](https://github.com/CoderLine/alphaTab) 1.8.4 — © CoderLine (Daniel Kuschny) и участники | Отображение и воспроизведение табулатур (модуль «Табы и текст»), используется без изменений | MPL-2.0 |
-| [Tauri](https://github.com/tauri-apps/tauri) 2 (с tauri-plugin-dialog, tauri-plugin-fs, @tauri-apps/api) — © Tauri Programme within The Commons Conservancy | Окно и сохранение файлов в версии для Windows; в веб-версию и APK не входит | MIT / Apache-2.0 |
+| [Tauri](https://github.com/tauri-apps/tauri) 2 (с tauri-plugin-dialog, tauri-plugin-fs, tauri-plugin-window-state, @tauri-apps/api) — © Tauri Programme within The Commons Conservancy | Окно и сохранение файлов в версии для Windows; в веб-версию и APK не входит | MIT / Apache-2.0 |
 | ↳ внутри alphaTab: TinySoundFont, SFZero, Haxe Standard Library, SharpZipLib, NVorbis | Синтез по звуковому банку, разбор XML и zip, декодирование Vorbis | MIT |
 | ↳ внутри alphaTab: libvorbis (через NVorbis) — © Xiph.org Foundation | Декодирование Vorbis | BSD-3-Clause |
 | Bravura — © 2013 Steinberg Media Technologies GmbH, Reserved Font Name «Bravura» | Нотный шрифт (SMuFL) для alphaTab, файл `Bravura.woff2` из пакета alphaTab | SIL OFL 1.1 |

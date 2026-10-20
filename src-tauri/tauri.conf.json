@@ -19,7 +19,7 @@
         "minWidth": 420,
         "minHeight": 600,
         "center": true,
-        "dragDropEnabled": true
+        "dragDropEnabled": false
       }
     ],
     "security": {
@@ -28,20 +28,83 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "category": "Music",
     "shortDescription": "Melete — практика музыкантов",
     "longDescription": "Учёт занятий и статистика, метроном, тюнер, пианино, лупер, студия, табы и ноты. Без рекламы и трекинга.",
     "publisher": "Melete",
     "copyright": "GPL-3.0",
     "windows": {
-      "webviewInstallMode": { "type": "embedBootstrapper" },
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["Russian", "English"],
+        "languages": [
+          "Russian",
+          "English"
+        ],
         "displayLanguageSelector": false
       }
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "melete"
+        ],
+        "name": "Melete",
+        "description": "Файл Melete: песни, табы, сет-лист",
+        "role": "Editor"
+      },
+      {
+        "ext": [
+          "gp",
+          "gp3",
+          "gp4",
+          "gp5",
+          "gpx"
+        ],
+        "name": "Guitar Pro",
+        "description": "Табулатура Guitar Pro",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "musicxml",
+          "mxl"
+        ],
+        "name": "MusicXML",
+        "description": "Ноты MusicXML",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "mid",
+          "midi"
+        ],
+        "name": "MIDI",
+        "description": "Файл MIDI",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "flp",
+          "als",
+          "rpp"
+        ],
+        "name": "DAW project",
+        "description": "Проект студии (FL Studio, Ableton Live, Reaper)",
+        "role": "Viewer"
+      }
+    ]
   }
 }

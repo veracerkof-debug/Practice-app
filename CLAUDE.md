@@ -40,7 +40,7 @@
 - Web Audio API (единый AudioContext, шины, микшер), YIN для тюнера.
 - Хранение: localStorage (лёгкие данные) + IndexedDB (аудио, табы). Local-first.
 - alphaTab (MPL-2.0) для табулатур, pdf.js (Apache-2.0) для нот и табов в PDF, шрифт Bravura (OFL), звуковой банк SONiVOX (Apache-2.0).
-- Android: Capacitor. Windows: Tauri 2 (`src-tauri/`, системный WebView2; отличия от браузера — `src/core/desktop.js`).
+- Android: Capacitor. Windows: Tauri 2 (`src-tauri/`, системный WebView2; отличия от браузера — `src/core/desktop.js`: «Сохранить как», папка Melete, файлы при запуске, F11).
 
 ## Архитектура
 - **Папки**: `src/core` (ядро), `src/modules/<id>` (инструменты), `src/audio` (звук), `src/i18n` (переводы),
