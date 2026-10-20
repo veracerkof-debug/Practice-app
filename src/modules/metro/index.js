@@ -303,6 +303,9 @@ async function moreSheet() {
     '<div class="hdr">' + t('subdiv') + '</div><div class="group"><div class="cellcol">' +
     ui.seg('sub2', [1, 2, 3, 4].map((n) => [n, t('subdiv.' + n)]), c.sub, t('subdiv')) + '</div>' +
     (c.sub === 2 ? '<div class="cell"><span class="grow">' + t('swing') + '</span>' + ui.sw('swing', c.swing, t('swing')) + '</div>' : '') + '</div>' +
+    '<div class="hdr">' + t('poly') + '</div><div class="group"><div class="cellcol">' +
+    ui.seg('poly', [[0, t('poly.off')], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6'], [7, '7']], c.poly || 0, t('poly')) + '</div></div>' +
+    '<p class="ftr">' + t('poly.ftr', { n: c.poly || 3, num: c.num }) + '</p>' +
     '<div class="hdr">' + t('trainer') + '</div><div class="group"><div class="cell"><span class="grow">' + t('on') + '</span>' + ui.sw('tr', c.trainer.on, t('trainer')) + '</div>' +
     (c.trainer.on ? '<div class="cell"><span class="grow">' + t('tr.step') + '</span>' + val(t('tr.stepVal', { n: c.trainer.step })) + ui.stepper('tstep', t('tr.stepLbl')) + '</div>' +
       '<div class="cell"><span class="grow">' + t('tr.every') + '</span>' + val(tn('tr.everyVal', c.trainer.every)) + ui.stepper('tevery', t('tr.everyLbl')) + '</div>' +
@@ -324,6 +327,7 @@ async function moreSheet() {
         const k = sg.closest('[data-seg]').dataset.seg, v = sg.dataset.v;
         if (k === 'adj') { ctx.store.set('adj', v); sh.update(); render(); return; }
         if (k === 'sound') c.sound = v;
+        else if (k === 'poly') c.poly = +v;
         else { c.sub = +v; M().restartBeat(); }
         changed();
         return;
@@ -444,7 +448,7 @@ export default {
   icon: ICON,
   color: '#9C7242',
   sizes: ['full', 'half', 'quarter', 'strip'],
-  status: (c) => c.t('status', { bpm: c.audio.metro.cfg.bpm, meter: c.audio.metro.cfg.num + '/' + c.audio.metro.cfg.den }),
+  status: (c) => c.t('status', { bpm: c.audio.metro.cfg.bpm, meter: c.audio.metro.cfg.num + '/' + c.audio.metro.cfg.den }) + (c.audio.metro.cfg.poly >= 2 ? ' · ' + c.audio.metro.cfg.poly + ':' + c.audio.metro.cfg.num : ''),
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
     render();

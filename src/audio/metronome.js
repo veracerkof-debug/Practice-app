@@ -46,6 +46,15 @@ export function subDur(cfg, subI) {
 // Тихий такт: играем gap.play тактов, молчим gap.mute
 export const isMutedBar = (cfg, bar) => cfg.gap.on && bar % (cfg.gap.play + cfg.gap.mute) >= cfg.gap.play;
 
+// Полиритм: cfg.poly ударов второго голоса ровно на такт (3 при 4/4 — «3 против 4»); 0 — выключен.
+// Длина такта — по долям без свинга (свинг только внутри восьмых). → времена ударов от начала такта barStart
+export function polyTimes(cfg, barStart) {
+  const n = Math.round(cfg.poly || 0);
+  if (n < 2) return [];
+  const bar = (60 / cfg.bpm) * cfg.num;
+  return Array.from({ length: n }, (_, k) => barStart + (bar * k) / n);
+}
+
 // Один шаг: событие текущей позиции и переход к следующей. Тренер может поднять cfg.bpm
 // в начале такта — тогда в событии tempoUp: true (до смены темпа нужно учесть время на старом).
 export function step(pos, cfg) {
@@ -138,6 +147,8 @@ export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = 
       while (next < c.currentTime + ahead) {
         const ev = step(pos, m.cfg);
         if (ev.level) voice(c, mixer.bus('metro'), next, ev.level, m.cfg.sound, noise);
+        // второй голос полиритма — на начале такта, другим тембром (бип против клика и дерева, дерево против бипа)
+        if (ev.b === 0 && ev.s === 0 && !ev.silent && m.cfg.poly >= 2) polyTimes(m.cfg, next).forEach((t, k) => voice(c, mixer.bus('metro'), t, k ? 1 : 2, m.cfg.sound === 'beep' ? 'wood' : 'beep', noise));
         m.queue.push({ t: next, b: ev.b, s: ev.s, bar: ev.bar, silent: ev.silent });
         if (m.queue.length > 256) m.queue.splice(0, m.queue.length - 128); // свёрнуто — анимация не разбирает очередь
         // Сигналы без звука (вспышка, вибрация): только доли, не дробления; через сколько мс удар станет слышен
