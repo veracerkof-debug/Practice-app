@@ -148,11 +148,13 @@ function layerSheet(i) {
     '<div class="hdr">' + ui.esc(t('fx')) + '</div><div class="group">' + slider('lo', t('fx.lo'), -12, 12, 1, L.fx.lo, db) + slider('mid', t('fx.mid'), -12, 12, 1, L.fx.mid, db) + slider('hi', t('fx.hi'), -12, 12, 1, L.fx.hi, db) + slider('comp', t('fx.comp'), 0, 1, 0.05, L.fx.comp, pc) + slider('rev', t('fx.rev'), 0, 1, 0.05, L.fx.rev, pc) + '</div>' +
     '<div class="group" style="margin-top:12px"><button class="cell" data-lmute><span class="grow">' + ui.esc(t(L.mute ? 'unmute' : 'mute')) + '</span></button><button class="cell danger center" data-lrm>' + ui.esc(t('removeLayer')) + '</button></div>'; },
   (el, sh) => {
-    const cv = el.querySelector('.lpeditcv'), C = colors();
+    // холст пересоздаётся при каждом sh.update() — берём текущий, слушатели — на шторке
+    const cvNow = () => el.querySelector('.lpeditcv'), C = colors();
     let drag = null, live = null; // live: { shift, a, b } во время ведения
-    const geom = () => { const S = lp.state, L = S.layers[i], [w, h] = fit(cv), lenMs = S.len * 1000, mg = L.margin, span = lenMs + 2 * mg; return { S, L, w, h, lenMs, mg, span, x: (ms) => ((ms + mg) / span) * w }; };
+    const geom = (cv) => { const S = lp.state, L = S.layers[i], [w, h] = fit(cv), lenMs = S.len * 1000, mg = L ? L.margin : 0, span = lenMs + 2 * mg; return { S, L, w, h, lenMs, mg, span, x: (ms) => ((ms + mg) / span) * w }; };
     function draw() {
-      const G = geom(); if (!G.L) return;
+      const cv = cvNow(); if (!cv) return;
+      const G = geom(cv); if (!G.L) return;
       const { L, w, h, lenMs, mg, x } = G, g = cv.getContext('2d'), sh0 = live ? live.shift : L.shift, a = live ? live.a : L.trim.a, b = live ? live.b : L.trim.b;
       g.clearRect(0, 0, w, h);
       g.fillStyle = C.fill; g.fillRect(0, 0, w, h);
@@ -169,18 +171,19 @@ function layerSheet(i) {
       // ход
       if (G.S.state === 'play' || G.S.state === 'dub') { const px = wx0 + (wx1 - wx0) * G.S.pos; g.fillStyle = C.red; g.fillRect(px - 1, 0, 2, h); }
     }
-    const pt = (e) => { const r = cv.getBoundingClientRect(), d = cv.width / r.width; return (e.clientX - r.left) * d; };
-    cv.addEventListener('pointerdown', (e) => {
-      const G = geom(); if (!G.L) return;
-      const { L, w, lenMs, span, x } = G, px = pt(e), wx0 = x(L.shift), wx1 = x(L.shift + lenMs), ta = wx0 + (wx1 - wx0) * L.trim.a, tb = wx0 + (wx1 - wx0) * L.trim.b;
+    const pt = (cv, e) => { const r = cv.getBoundingClientRect(), d = cv.width / r.width; return (e.clientX - r.left) * d; };
+    el.addEventListener('pointerdown', (e) => {
+      const cv = e.target.closest('.lpeditcv'); if (!cv) return;
+      const G = geom(cv); if (!G.L) return;
+      const { L, w, lenMs, span, x } = G, px = pt(cv, e), wx0 = x(L.shift), wx1 = x(L.shift + lenMs), ta = wx0 + (wx1 - wx0) * L.trim.a, tb = wx0 + (wx1 - wx0) * L.trim.b;
       const near = (v) => Math.abs(px - v) < 18 * (cv.width / cv.getBoundingClientRect().width);
-      drag = { id: e.pointerId, x0: px, kind: near(ta) ? 'a' : near(tb) ? 'b' : px >= wx0 && px <= wx1 ? 'shift' : null, shift: L.shift, a: L.trim.a, b: L.trim.b, msPx: span / w, win: wx1 - wx0 };
+      drag = { id: e.pointerId, cv, x0: px, kind: near(ta) ? 'a' : near(tb) ? 'b' : px >= wx0 && px <= wx1 ? 'shift' : null, shift: L.shift, a: L.trim.a, b: L.trim.b, msPx: span / w, win: wx1 - wx0 };
       if (!drag.kind) { drag = null; return; }
       cv.setPointerCapture(e.pointerId); e.preventDefault();
     });
-    cv.addEventListener('pointermove', (e) => {
+    el.addEventListener('pointermove', (e) => {
       if (!drag || e.pointerId !== drag.id) return;
-      const dx = pt(e) - drag.x0, L = lp.state.layers[i], lim = L.margin;
+      const dx = pt(drag.cv, e) - drag.x0, L = lp.state.layers[i], lim = L.margin;
       if (drag.kind === 'shift') live = { shift: Math.max(-lim, Math.min(lim, Math.round(drag.shift + dx * drag.msPx))), a: drag.a, b: drag.b };
       else if (drag.kind === 'a') live = { shift: drag.shift, a: Math.max(0, Math.min(drag.b - 0.02, drag.a + dx / drag.win)), b: drag.b };
       else live = { shift: drag.shift, a: drag.a, b: Math.max(drag.a + 0.02, Math.min(1, drag.b + dx / drag.win)) };
@@ -193,7 +196,7 @@ function layerSheet(i) {
       if (d.kind === 'shift') lp.shiftLayer(i, v.shift); else lp.trimLayer(i, v.a, v.b);
       sh.update();
     };
-    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
     el.addEventListener('input', (e) => { const k = e.target.dataset.fx; if (!k) return; const v = +e.target.value; lp.setFx(i, { [k]: v }); const b = el.querySelector('[data-fxv="' + k + '"]'); if (b) b.textContent = k === 'comp' || k === 'rev' ? pc(v) : db(v); });
     el.addEventListener('click', (e) => {
       let b;
