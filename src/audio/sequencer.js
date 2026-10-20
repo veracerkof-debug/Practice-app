@@ -1,7 +1,7 @@
 // Проигрыватель проекта студии: ноты клипов — синтезатором пианино (свой звук у дорожки), ударные — drums.js,
 // клипы-записи — записью из медиатеки с нужной секунды. Два режима: песня целиком по кругу и один клип по кругу
 // (правка в редакторе). Планировщик как у метронома: просыпается каждые 25 мс и выставляет всё, что начнётся в
-// ближайшие 150 мс, точно по времени контекста. Свинг — задержка слабых восьмых. Без DOM.
+// ближайшие 300 мс, точно по времени контекста. Свинг — задержка слабых восьмых. Без DOM.
 import { getContext } from './context.js';
 import { presetOf } from './synth.js';
 import { songNotes, songBeats, secPerBeat, clipById, trackOf } from '../music/project.js';
@@ -9,7 +9,7 @@ import { clickVoice, clickNoise } from './metronome.js';
 import { drumHit } from './drums.js';
 import { createFxChain } from './fx.js';
 
-const TICK = 25, AHEAD = 0.15, AHEAD_HIDDEN = 1.6; // свёрнуто: таймеры будят редко — планируем дальше вперёд
+const TICK = 25, AHEAD = 0.3, AHEAD_HIDDEN = 1.6; // 0,3 с — запас на задержки главного потока под нагрузкой; свёрнуто: таймеры будят редко — планируем дальше вперёд
 const ahead = () => (typeof document !== 'undefined' && document.visibilityState === 'hidden' ? AHEAD_HIDDEN : AHEAD);
 
 // getFile(id) → запись медиатеки с blob (клипы-записи) или null
