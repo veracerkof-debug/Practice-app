@@ -139,9 +139,10 @@ export async function openExactSettings() {
   if (P && P.changeExactNotificationSetting) { try { await P.changeExactNotificationSetting(); } catch { /* нет экрана */ } }
 }
 
-// Уведомление из текста: { title, body, icon } → поля плагина. Значок в строке состояния — монохромное лицо маскота
-// (res/drawable/ic_stat_melete.xml), большая картинка — маскот с лицом по поводу (icon, remindtexts.js: notifyIcon)
-const note = ({ title, body, icon }) => ({ title, body, smallIcon: 'ic_stat_melete', iconColor: '#9C7242', ...(icon ? { largeIcon: icon } : {}) });
+// Уведомление из текста: { title, body, icon } → поля плагина. Значок в строке состояния — буква «Μ» логотипа
+// (res/drawable/ic_stat_melete.xml), лицо — одно: большая картинка, маскот с лицом по поводу (icon, remindtexts.js:
+// notifyIcon). largeBody — текст целиком в раскрытом виде (иначе Android обрезает историю на второй строке)
+const note = ({ title, body, icon }) => ({ title, body, largeBody: body, smallIcon: 'ic_stat_melete', iconColor: '#9C7242', ...(icon ? { largeIcon: icon } : {}) });
 
 // Пересчитать расписание. texts({ i, ts, n, slot, mode }) → { title, body, icon } — текст напоминания (маскот, цитаты)
 export async function reschedule(state, texts, now = Date.now()) {

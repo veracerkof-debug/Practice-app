@@ -21,6 +21,8 @@ export function normalizeMix(mx) {
 export function createMixer(mx, { onChange = () => {} } = {}) {
   normalizeMix(mx);
   const nodes = {}, sends = {}, chains = {}, probes = {}, subs = new Set();
+  let saveTm = 0;
+  const saveLater = () => { clearTimeout(saveTm); saveTm = setTimeout(() => onChange(mx), 250); }; // правка эффектов — десятки раз в секунду при ведении точки
 
   const value = (bus) => {
     const k = mixKey(bus);
@@ -76,7 +78,7 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
       mx.fx[k] = next;
       if (chains[bus]) chains[bus].set(next);
       subs.forEach((fn) => fn(mx));
-      onChange(mx);
+      saveLater();
       return next;
     },
     fxActive: (bus) => !fxIsFlat(mixer.fx(bus)),

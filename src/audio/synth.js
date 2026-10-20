@@ -193,7 +193,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     last[busName] = Date.now();
     // голосов не хватает — замолкает самый старый, но удержанные (Hold) не трогаем, пока есть другие
     while (order.length >= MAX_VOICES) offOne(order.find((k) => !voices.get(k)?.held) ?? order[0], true);
-    const out = slot ? strip(c, slot) : bus;
+    const out = slot ? strip(c, slot) : opts.out || bus; // out — свой узел (цепочка эффектов дорожки студии)
     if (kind === 'grand') {
       if (preC !== c) { preC = c; grandPreload(c); } // средние октавы — сразу, остальные — по мере игры
       const sm = grandBuffer(c, m);

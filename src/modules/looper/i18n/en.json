@@ -58,10 +58,5 @@
   "editHint": "Loop window: drag the middle — shift, the corners — trim.",
   "earlier1": "Layer 1 ms earlier",
   "later1": "Layer 1 ms later",
-  "fx": "Layer sound",
-  "fx.lo": "Low",
-  "fx.mid": "Mid",
-  "fx.hi": "High",
-  "fx.comp": "Compression",
-  "fx.rev": "Reverb"
+  "fx": "Layer sound"
 }

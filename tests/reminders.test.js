@@ -142,7 +142,7 @@ describe('характеры Мелеты', () => {
     expect(moodOf({ now: at(20), goalSec: 300, weekSec: 10, days, sessions: [{ start: at(9) }], mode: 'pushy' })).toBe('glad');
   });
   it('тексты: классика за час и за 5 минут, имя, без «ты/вы»', () => {
-    expect(remindText({ slot: 'lead:60', mode: 'classic' }, { lang: 'ru' }).title).toBe('Сегодня практика — через час');
+    expect(remindText({ slot: 'lead:60', mode: 'classic' }, { lang: 'ru' }).title).toBe('Практика через час');
     expect(remindText({ slot: 'lead:5', mode: 'classic' }, { lang: 'ru' }).title).toBe('Пора доставать инструмент');
     expect(remindText({ slot: 'lead:5', mode: 'classic' }, { lang: 'ru', name: 'Алекс' }).title).toBe('Алекс, пора доставать инструмент');
     expect(remindText({ slot: 'morning', mode: 'pushy' }, { lang: 'en' }).title).toMatch(/Good morning/);
@@ -169,8 +169,8 @@ describe('своё расписание', () => {
     expect(list.map((x) => x.tone)).toEqual(['pushy', 'classic', 'pushy', 'classic']);
     const tx = (x) => remindText({ ...x, mode: 'custom' }, { lang: 'ru' }).title;
     expect(tx(list[0])).toBe(PUSHY_TEXTS.ru.pushy.morning[0]);
-    expect(tx(list[1])).toBe('Сегодня практика — через 2 часа');
-    expect(tx({ slot: 'rel:-15', tone: 'classic' })).toBe('Через 15 минут — практика');
+    expect(tx(list[1])).toBe('Практика через 2 часа');
+    expect(tx({ slot: 'rel:-15', tone: 'classic' })).toBe('Практика через 15 минут');
     expect(tx({ slot: 'rel:0', tone: 'classic' })).toBe('Время для практики');
     expect(tx(list[3])).toBe('Время занятий прошло');
   });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eqResponse, biquadCoefs, biquadDb, normalizeFx, fxIsFlat, simpleBands, advancedBands, compParams, freqAt, posOf, logFreqs, activeBands } from '../src/audio/fx.js';
+import { eqResponse, biquadCoefs, biquadDb, normalizeFx, fxIsFlat, simpleBands, advancedBands, compParams, driveCurve, freqAt, posOf, logFreqs, activeBands, REV_TYPES } from '../src/audio/fx.js';
 
 const db = (bands, f, sr = 48000) => eqResponse(bands, [f], sr)[0];
 
@@ -59,6 +59,20 @@ describe('эффекты: настройки', () => {
     const adv = normalizeFx({ mode: 'adv' }); adv.adv[0].on = true;
     expect(fxIsFlat(adv)).toBe(false);
     expect(activeBands(normalizeFx({ mode: 'adv' })).length).toBe(7);
+  });
+  it('старый набор слоя лупера {lo, mid, hi} — в простые полосы; пространство и новые эффекты — по умолчанию', () => {
+    const f = normalizeFx({ lo: 3, mid: -2, hi: 1, comp: 0.4, rev: 0.2 });
+    expect(f.simple.map((b) => b.g)).toEqual([3, -2, 1]);
+    expect(f.lo).toBeUndefined(); expect(f.comp).toBe(0.4); expect(f.rev).toBe(0.2);
+    expect(f.revType).toBe('hall'); expect(f.drive).toBe(0); expect(f.trem).toBe(0); expect(f.tremRate).toBe(5);
+    expect(normalizeFx({ revType: 'xx' }).revType).toBe('hall');
+    expect(REV_TYPES).toEqual(['room', 'hall', 'plate', 'cathedral']);
+    expect(fxIsFlat(normalizeFx({ drive: 0.1 }))).toBe(false);
+  });
+  it('драйв: ноль — прямая, сильнее — насыщение, середина без изменения громкости', () => {
+    const z = driveCurve(0, 1025), h = driveCurve(1, 1025);
+    expect(z[768]).toBeCloseTo(0.5, 1); expect(z[1024]).toBeCloseTo(1, 1);
+    expect(h[768]).toBeCloseTo(0.5, 1); expect(h[1024]).toBeLessThan(0.6); expect(Math.abs(h[512])).toBeLessThan(0.01);
   });
   it('сжатие: ноль — прозрачно; сильнее — ниже порог, выше степень, запас против скрытого усиления', () => {
     expect(compParams(0)).toEqual({ threshold: 0, ratio: 1, knee: 0, trim: 1 });

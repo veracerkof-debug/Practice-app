@@ -1572,5 +1572,13 @@
   "fx.hz": "Гц",
   "fx.khz": "кГц",
   "fx.db": "дБ",
-  "fx.ms": "мс"
+  "fx.ms": "мс",
+  "fx.drive": "Драйв",
+  "fx.trem": "Тремоло",
+  "fx.tremRate": "Скорость тремоло",
+  "fx.revType": "Пространство",
+  "fx.rt.room": "Комната",
+  "fx.rt.hall": "Зал",
+  "fx.rt.plate": "Пластина",
+  "fx.rt.cathedral": "Собор"
 }

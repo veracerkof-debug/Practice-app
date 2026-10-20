@@ -56,10 +56,5 @@
   "editHint": "Halqa oynasi: oʻrtasidan surish — siljish, burchaklaridan — kesish.",
   "earlier1": "Qatlam 1 ms oldinga",
   "later1": "Qatlam 1 ms keyinga",
-  "fx": "Qatlam tovushi",
-  "fx.lo": "Past",
-  "fx.mid": "Oʻrta",
-  "fx.hi": "Yuqori",
-  "fx.comp": "Siqish",
-  "fx.rev": "Reverberatsiya"
+  "fx": "Qatlam tovushi"
 }

@@ -224,16 +224,21 @@ function patMenu(anchor, x) {
 // Звук, октава, громкость и цвет дорожки — одной шторкой
 function trackSheet(tr) {
   const { t, ui } = ctx;
+  // эффекты дорожки — общая панель приложения; правка слышна сразу (цепочка дорожки в секвенсоре), сохраняется при закрытии
+  const pm = ctx.fxPanel({ get: () => tr.fx, set: (fx) => { if (seq) seq.setTrackFx(tr, fx); else tr.fx = fx; proj().updatedAt = Date.now(); return fx; } });
+  let pmb = null;
   ui.sheet(() => ui.snav(trName(tr, proj().tracks.indexOf(tr))) +
     '<div class="group"><label class="cell"><span class="grow">' + ui.esc(t('vol')) + '</span><b class="num" style="min-width:4ch;text-align:right">' + Math.round(tr.vol * 100) + '%</b></label><div class="cell"><input type="range" class="strange" style="accent-color:' + tr.color + '" min="0" max="1.5" step="0.01" value="' + tr.vol + '" data-vol aria-label="' + ui.esc(t('vol')) + '"></div></div>' +
     (tr.kind === 'drums' || tr.kind === 'audio' ? '' : '<div class="hdr">' + ui.esc(t('tr.inst')) + '</div><div class="group">' + INSTRUMENTS.map((id) => '<button class="cell" data-inst="' + id + '"><span class="grow">' + ui.esc(instName(id)) + '</span>' + (tr.inst === id ? ui.icons.check : '') + '</button>').join('') + '</div>' +
       '<div class="hdr">' + ui.esc(t('tr.oct')) + '</div><div class="group"><div class="cellcol">' + ui.seg('stoct', [['-1', '−1'], ['0', '0'], ['1', '+1']], String(tr.oct || 0), t('tr.oct')) + '</div></div>') +
-    '<div class="hdr">' + ui.esc(t('tr.color')) + '</div><div class="stcolors">' + COLORS.map((c) => '<button class="stcol' + (tr.color === c ? ' on' : '') + '" data-col="' + c + '" style="--c:' + c + '" aria-label="' + c + '"></button>').join('') + '</div>',
+    '<div class="hdr">' + ui.esc(t('tr.color')) + '</div><div class="stcolors">' + COLORS.map((c) => '<button class="stcol' + (tr.color === c ? ' on' : '') + '" data-col="' + c + '" style="--c:' + c + '" aria-label="' + c + '"></button>').join('') + '</div>' +
+    '<div class="hdr">' + ui.esc(t('tr.fx')) + '</div>' + pm.html(),
   (el, sh) => {
+    pmb = pm.bind(el, sh);
     el.addEventListener('input', (e) => { if (e.target.matches('[data-vol]')) { tr.vol = +e.target.value; proj().updatedAt = Date.now(); const b = el.querySelector('label b'); if (b) b.textContent = Math.round(tr.vol * 100) + '%'; } });
     el.addEventListener('change', (e) => { if (e.target.matches('[data-vol]')) save(); });
-    el.addEventListener('click', (e) => { let b; if ((b = e.target.closest('[data-inst]'))) { tr.inst = b.dataset.inst; seq.audition(tr, 60); } else if ((b = e.target.closest('[data-seg="stoct"] [data-v]'))) tr.oct = +b.dataset.v; else if ((b = e.target.closest('[data-col]'))) tr.color = b.dataset.col; else return; save(); sh.update(); });
-  }, { onClose: render });
+    el.addEventListener('click', (e) => { let b; if ((b = e.target.closest('[data-inst]'))) { tr.inst = b.dataset.inst; seq.audition(tr, 60); } else if ((b = e.target.closest('[data-seg="stoct"] [data-v]'))) tr.oct = +b.dataset.v; else if ((b = e.target.closest('[data-col]'))) tr.color = b.dataset.col; else return; save(); sh.update(); pmb && pmb.mount(); });
+  }, { onClose: () => { save(); render(); } });
 }
 function trackMenu(anchor, tr, extra = []) {
   const { t, ui } = ctx, p = proj(), i = p.tracks.indexOf(tr);

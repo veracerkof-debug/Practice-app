@@ -72,31 +72,45 @@ export function sendToReverb(node, level) {
   return s;
 }
 
-// Длинный зал для пэдов (поклонение): отдельная реверберация ~7 с с мягкими верхами и медленным нарастанием —
-// звук «растворяется» в пространстве, не мешая общей реверберации остальных инструментов. Создаётся при первом посыле
-let hall = null;
-function hallNode() {
-  if (hall || !ctx) return hall;
+// Пространства реверберации — общие на всё приложение, создаются при первом посыле (свёртка — дорогой узел,
+// лишних не держим): комната (0,9 с, тёплая), зал (2,8 с — та же общая реверберация), пластина (1,7 с, яркая и
+// плотная, без предзадержки), собор (7 с, мягкие верха и медленное нарастание — для пэдов и поклонения, звук
+// «растворяется», не мешая остальным). Все идут в общий компрессор
+export const SPACES = ['room', 'hall', 'plate', 'cathedral'];
+const SPACE_DEF = {
+  room: { sec: 0.9, damp: 0.7, pre: 0, hp: 160, lp: 7000, gain: 0.5 },
+  plate: { sec: 1.7, damp: 0.25, pre: 0, hp: 200, lp: 12000, gain: 0.45 },
+  cathedral: { sec: 7, damp: 0.86, pre: 0.035, hp: 140, lp: 5200, gain: 0.62 },
+};
+const spaces = {};
+function spaceNode(type) {
+  if (!ctx) return null;
+  if (type === 'hall' || !SPACE_DEF[type]) return reverb;
+  if (spaces[type] !== undefined) return spaces[type];
   try {
-    const cv = ctx.createConvolver(), lp = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter(), g = ctx.createGain();
-    cv.buffer = makeIR(ctx, 7, { damp: 0.86, pre: 0.035 });
-    hp.type = 'highpass'; hp.frequency.value = 140;
-    lp.type = 'lowpass'; lp.frequency.value = 5200;
-    g.gain.value = 0.62;
-    hall = ctx.createGain();
-    hall.connect(hp).connect(cv).connect(lp).connect(g).connect(comp);
-  } catch { hall = null; }
-  return hall;
+    const d = SPACE_DEF[type], cv = ctx.createConvolver(), lp = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter(), g = ctx.createGain();
+    cv.buffer = makeIR(ctx, d.sec, { damp: d.damp, pre: d.pre });
+    hp.type = 'highpass'; hp.frequency.value = d.hp;
+    lp.type = 'lowpass'; lp.frequency.value = d.lp;
+    g.gain.value = d.gain;
+    const inp = ctx.createGain();
+    inp.connect(hp).connect(cv).connect(lp).connect(g).connect(comp);
+    spaces[type] = inp;
+  } catch { spaces[type] = null; }
+  return spaces[type];
 }
-// Посыл в длинный зал (уровень 0…1); возвращает узел посыла или null
-export function sendToHall(node, level) {
-  const h = hallNode();
-  if (!h) return null;
+// Посыл узла в пространство (уровень 0…1); возвращает узел посыла или null
+export function sendToSpace(node, type, level) {
+  const sp = spaceNode(type);
+  if (!sp) return null;
   const s = ctx.createGain();
   s.gain.value = level;
-  node.connect(s).connect(h);
+  node.connect(s).connect(sp);
   return s;
 }
+// Длинный зал для пэдов (поклонение) — то же пространство «собор»
+// Посыл в длинный зал (уровень 0…1); возвращает узел посыла или null
+export const sendToHall = (node, level) => sendToSpace(node, 'cathedral', level);
 
 // MIDI → Гц при заданном строе A4
 export const midiFreq = (m, a4 = 440) => a4 * Math.pow(2, (m - 69) / 12);

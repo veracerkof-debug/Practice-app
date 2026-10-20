@@ -1,12 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Значок уведомлений в строке состояния: лицо маскота одним цветом (брови-«Μ», глаза, нос-нотка, улыбка) в круге -->
+<!-- Значок уведомлений в строке состояния: буква «Μ» логотипа (Μελέτη) одним цветом. Лицо маскота — только большой картинкой -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp" android:viewportWidth="100" android:viewportHeight="100">
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="7" android:fillColor="#00000000"
-        android:pathData="M50,6 A44,44 0 1,1 49.99,6 Z"/>
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="7" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
-        android:pathData="M27,41 Q38,28 49,41 Q60,28 71,41 M38,73 Q50,82 62,73"/>
-    <path android:fillColor="#FFFFFFFF" android:pathData="M38,47 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 M60,47 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0"/>
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:fillColor="#00000000" android:pathData="M52.5,61 V48"/>
-    <path android:fillColor="#FFFFFFFF" android:pathData="M48,62 m-5,0 a5,3.6 0 1,0 10,0 a5,3.6 0 1,0 -10,0"/>
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="13" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M14,86 V16 L50,58 L86,16 V86"/>
 </vector>

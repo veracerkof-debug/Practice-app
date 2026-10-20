@@ -140,12 +140,13 @@ function tick() {
 function layerSheet(i) {
   const { t, ui } = ctx, S0 = lp.state, L0 = S0.layers[i];
   if (!L0) return;
-  const slider = (k, lab, min, max, step, v, fmtv) => '<div class="cell"><span class="lpfxl">' + ui.esc(lab) + '</span><input type="range" class="lpfx" data-fx="' + k + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v + '" aria-label="' + ui.esc(lab) + '"><b class="num lpfxv" data-fxv="' + k + '">' + fmtv(v) + '</b></div>';
-  const db = (v) => (v > 0 ? '+' : '') + Math.round(v) + ' dB', pc = (v) => Math.round(v * 100) + '%';
+  // эффекты слоя — общая панель приложения (ctx.fxPanel): эквалайзер, сжатие, драйв, тремоло, задержка, хор, реверберация
+  const pm = ctx.fxPanel({ get: () => (lp.state.layers[i] || {}).fx, set: (fx) => lp.setFx(i, fx) });
+  let pmb = null;
   ui.sheet(() => { const L = lp.state.layers[i]; if (!L) return ui.snav(''); return ui.snav(t('layerN', { n: i + 1 })) +
     '<div class="lpedit"><canvas class="lpeditcv" aria-label="' + ui.esc(t('editHint')) + '"></canvas><p class="ftr" style="margin:4px 0 0">' + ui.esc(t('editHint')) + '</p>' +
     '<div class="lpnudge">' + ui.icb('data-nd="-10"', I.left, t('earlier'), 'sm plain') + ui.icb('data-nd="-1"', '−1', t('earlier1'), 'sm plain txt') + '<button class="lpshv num" data-nd="0" aria-label="' + ui.esc(t('shiftReset')) + '">' + (L.shift > 0 ? '+' : '') + L.shift + ' ms</button>' + ui.icb('data-nd="1"', '+1', t('later1'), 'sm plain txt') + ui.icb('data-nd="10"', I.right, t('later'), 'sm plain') + '</div></div>' +
-    '<div class="hdr">' + ui.esc(t('fx')) + '</div><div class="group">' + slider('lo', t('fx.lo'), -12, 12, 1, L.fx.lo, db) + slider('mid', t('fx.mid'), -12, 12, 1, L.fx.mid, db) + slider('hi', t('fx.hi'), -12, 12, 1, L.fx.hi, db) + slider('comp', t('fx.comp'), 0, 1, 0.05, L.fx.comp, pc) + slider('rev', t('fx.rev'), 0, 1, 0.05, L.fx.rev, pc) + '</div>' +
+    '<div class="hdr">' + ui.esc(t('fx')) + '</div>' + pm.html() +
     '<div class="group" style="margin-top:12px"><button class="cell" data-lmute><span class="grow">' + ui.esc(t(L.mute ? 'unmute' : 'mute')) + '</span></button><button class="cell danger center" data-lrm>' + ui.esc(t('removeLayer')) + '</button></div>'; },
   (el, sh) => {
     // холст пересоздаётся при каждом sh.update() — берём текущий, слушатели — на шторке
@@ -194,14 +195,14 @@ function layerSheet(i) {
       const d = drag, v = live; drag = null; live = null;
       if (!v) return;
       if (d.kind === 'shift') lp.shiftLayer(i, v.shift); else lp.trimLayer(i, v.a, v.b);
-      sh.update();
+      sh.update(); pmb && pmb.mount();
     };
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
-    el.addEventListener('input', (e) => { const k = e.target.dataset.fx; if (!k) return; const v = +e.target.value; lp.setFx(i, { [k]: v }); const b = el.querySelector('[data-fxv="' + k + '"]'); if (b) b.textContent = k === 'comp' || k === 'rev' ? pc(v) : db(v); });
+    pmb = pm.bind(el, sh);
     el.addEventListener('click', (e) => {
       let b;
-      if ((b = e.target.closest('[data-nd]'))) { const d = +b.dataset.nd, L = lp.state.layers[i]; if (!L) return; lp.shiftLayer(i, d === 0 ? 0 : L.shift + d); sh.update(); }
-      else if (e.target.closest('[data-lmute]')) { lp.toggleMute(i); sh.update(); }
+      if ((b = e.target.closest('[data-nd]'))) { const d = +b.dataset.nd, L = lp.state.layers[i]; if (!L) return; lp.shiftLayer(i, d === 0 ? 0 : L.shift + d); sh.update(); pmb && pmb.mount(); }
+      else if (e.target.closest('[data-lmute]')) { lp.toggleMute(i); sh.update(); pmb && pmb.mount(); }
       else if (e.target.closest('[data-lrm]')) { lp.removeLayer(i); sh.close(); }
     });
     let r = 0;

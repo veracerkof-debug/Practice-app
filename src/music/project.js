@@ -78,6 +78,7 @@ export function normalizeProject(p) {
   p.tracks = (p.tracks || []).filter((t) => t && t.id).map((t) => {
     t.vol = Math.max(0, Math.min(1.5, +t.vol || 0)); t.oct = Math.max(-2, Math.min(2, Math.round(+t.oct || 0)));
     if (!INSTRUMENTS.includes(t.inst)) t.inst = 'piano';
+    if (t.fx && typeof t.fx !== 'object') delete t.fx; // эффекты дорожки (src/audio/fx.js), полный вид — там
     if (!KINDS.includes(t.kind)) t.kind = 'notes';
     if (t.kind === 'audio') t.fileId = t.fileId || null;
     if (t.kind === 'chords') { if (!MODES.includes(t.mode)) t.mode = 'hold'; t.arp = { dir: ARP_DIRS.includes(t.arp && t.arp.dir) ? t.arp.dir : 'up', step: [1, 0.5, 0.25].includes(t.arp && t.arp.step) ? t.arp.step : 0.5 }; }

@@ -149,5 +149,6 @@
   "tr.down": "Move down",
   "song.dup": "Repeat",
   "song.empty": "Patterns go here: “+” or hold a chip → “Add to song”",
-  "help.open": "Help"
+  "help.open": "Help",
+  "tr.fx": "Track effects"
 }

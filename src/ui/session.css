@@ -132,20 +132,6 @@
 .mxx{width:40px;height:28px;border-radius:8px;background:#2C2C2E;color:#8D8D93;display:flex;align-items:center;justify-content:center}
 .mxx.on{background:var(--c);color:#fff}
 .mxx svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-/* Шторка эффектов шины (screens/fx.js): полотно эквалайзера и ползунки */
-.fxhead{display:flex;padding:0 0 10px}
-.fxcv{display:block;width:100%;height:min(220px,34vh);border-radius:14px;background:var(--cell);touch-action:none;user-select:none;-webkit-user-select:none;outline:none}
-.fxcv:focus-visible{box-shadow:0 0 0 2px var(--tint)}
-.fxbands{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:4px 2px 10px}
-.fxb{flex:none;min-height:36px;min-width:40px;padding:0 10px;border-radius:10px;background:var(--fill);font-size:13px;font-weight:600;white-space:nowrap;border-bottom:3px solid var(--c,transparent)}
-.fxb.off{opacity:.45;text-decoration:line-through}
-.fxb.on{background:var(--c,var(--tint));color:#fff}
-.fxb.add{color:var(--l2);font-size:18px;border-bottom-color:transparent}
-.fxtypes .seg{width:100%}
-.fxtypes .seg button{font-size:12px;padding:0 2px}
-.fxl{width:96px;flex:none;font-size:14px}
-.fxr{flex:1;min-width:0;height:36px;accent-color:var(--tint)}
-.fxv{width:56px;text-align:right;font-size:13px;color:var(--l2);flex:none}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
 @keyframes blink{50%{opacity:.35}}
 @keyframes mxb{50%{height:4px}}

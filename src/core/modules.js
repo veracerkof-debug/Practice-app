@@ -9,6 +9,7 @@ import '../ui/pane.css';
 import { log, logErr } from './log.js';
 import { epigraphHTML } from './screens/verses.js';
 import { gemSec } from './profile.js';
+import { createFxPanel } from '../ui/fxpanel.js';
 import { gemOf } from './mastery.js';
 import { firstHelp, showHelp } from './help.js';
 import { guardOpen, guardClose } from './guard.js';
@@ -122,6 +123,8 @@ export function makeCtx(app, mod) {
       remove(id) { const x = (app.store.state.projects || []).find((y) => y.id === id); if (x) { x.deleted = true; x.updatedAt = app.store.now(); app.store.save(); } },
     },
     // Данные модуля в общем состоянии (попадают в резервную копию): state.settings[id]
+    // Общая панель эффектов (src/ui/fxpanel.js) для слоя, дорожки и т. п.: { get, set } → { html(), bind(el, api) }
+    fxPanel: ({ get, set }) => createFxPanel({ get, set, profile: app.store.state.settings.profile }),
     data: () => (app.store.state.settings[mod.id] ??= {}),
     saveData: () => app.store.settingsChanged(),
     pomodoro: app.pomodoro,

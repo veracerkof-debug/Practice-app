@@ -1516,5 +1516,13 @@
   "fx.hz": "Gts",
   "fx.khz": "kGts",
   "fx.db": "dB",
-  "fx.ms": "ms"
+  "fx.ms": "ms",
+  "fx.drive": "Drayv",
+  "fx.trem": "Tremolo",
+  "fx.tremRate": "Tremolo tezligi",
+  "fx.revType": "Makon",
+  "fx.rt.room": "Xona",
+  "fx.rt.hall": "Zal",
+  "fx.rt.plate": "Plastina",
+  "fx.rt.cathedral": "Sobor"
 }

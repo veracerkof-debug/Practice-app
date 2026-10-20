@@ -8,9 +8,9 @@ import { getLang, mascotGender } from '../i18n/index.js';
 
 const T = {
   ru: {
-    lead: (m) => (m === 60 ? 'Сегодня практика — через час' : 'Сегодня практика — через ' + m / 60 + ' часа'),
+    lead: (m) => (m === 60 ? 'Практика через час' : 'Практика через ' + m / 60 + ' часа'), // коротко: с именем впереди заголовок не обрезается
     five: ['Пора доставать инструмент', 'Разминка, дела в сторону — через 5 минут занятие'],
-    soon: (m) => 'Через ' + m + ' минут — практика',
+    soon: (m) => 'Практика через ' + m + ' минут',
     after: ['Время занятий прошло', 'Ещё не поздно: даже пятнадцать минут засчитаются'],
     call: 'Время для практики',
     pushy: {
@@ -25,9 +25,9 @@ const T = {
     },
   },
   uz: {
-    lead: (m) => 'Bugun mashg‘ulot — ' + m / 60 + ' soatdan keyin',
+    lead: (m) => 'Mashg‘ulot ' + m / 60 + ' soatdan keyin',
     five: ['Cholg‘uni olish vaqti', 'Qizish, ishlar chetga — 5 daqiqadan keyin mashg‘ulot'],
-    soon: (m) => m + ' daqiqadan keyin — mashg‘ulot',
+    soon: (m) => 'Mashg‘ulot ' + m + ' daqiqadan keyin',
     after: ['Mashg‘ulot vaqti o‘tdi', 'Hali kech emas: o‘n besh daqiqa ham hisobga olinadi'],
     call: 'Mashq vaqti',
     pushy: {
@@ -42,7 +42,7 @@ const T = {
     },
   },
   en: {
-    lead: (m) => (m === 60 ? 'Practice today — in an hour' : 'Practice today — in ' + m / 60 + ' hours'),
+    lead: (m) => (m === 60 ? 'Practice in an hour' : 'Practice in ' + m / 60 + ' hours'),
     five: ['Time to get the instrument out', 'Warm-up, everything else aside — practice in 5 minutes'],
     soon: (m) => 'Practice in ' + m + ' minutes',
     after: ['Practice time has passed', 'It’s not too late: even fifteen minutes count'],

@@ -1551,5 +1551,13 @@
   "fx.hz": "Hz",
   "fx.khz": "kHz",
   "fx.db": "dB",
-  "fx.ms": "ms"
+  "fx.ms": "ms",
+  "fx.drive": "Drive",
+  "fx.trem": "Tremolo",
+  "fx.tremRate": "Tremolo rate",
+  "fx.revType": "Space",
+  "fx.rt.room": "Room",
+  "fx.rt.hall": "Hall",
+  "fx.rt.plate": "Plate",
+  "fx.rt.cathedral": "Cathedral"
 }
