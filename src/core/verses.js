@@ -2,7 +2,7 @@
 // английский — World English Bible (общественное достояние; псалмы — по еврейской нумерации), узбекский — «Muqaddas Kitob»
 // (© Muqaddas Kitobni tarjima qilish instituti, 2016–2020; короткие цитаты со ссылкой на перевод).
 // В «Минимале» — четыре текста: греческий (Септуагинта и Новый Завет, политоника), церковнославянский (Елизаветинская
-// Библия 1751 г., славянским письмом), русский и английский. Ключ — название так, как оно стоит в i18n/el.json. Без DOM.
+// Библия 1751 г., славянским письмом), русский и английский. Ключ — ключ названия раздела в i18n. Без DOM.
 const V = {
   ps89_12: { ref: 'Пс 89:12', gr: 'ἐξαριθμήσασθαι τὴν δεξιάν σου οὕτως γνώρισον καὶ τοὺς πεπεδημένους τῇ καρδίᾳ ἐν σοφίᾳ.',
     ru: 'Научи нас так счислять дни наши, чтобы нам приобрести сердце мудрое.',
@@ -191,7 +191,7 @@ const V = {
     uz: 'Sen va Horun jamiki Isroil xalqini urugʻi, xonadoni boʻyicha sanab chiqinglar. Urushga yaroqli boʻlgan yigirma va undan yuqori yoshdagi hamma erkaklarni guruhlarga boʻlib, nomma–nom roʻyxatini tuzinglar.', uzRef: 'Sahroda 1:2' },
 };
 
-// Раздел → стих. Стихи — в обоих видах; греческие названия (i18n/el.json) — только в «Минимале».
+// Раздел → стих (только в церковном режиме).
 // Ключи строк ядра:
 export const CORE = {
   'nav.home': 'ps118_77', 'home.title': 'ps94_7', 'nav.library': 'eph5_19', 'songs.title': 'eph5_19',
@@ -200,8 +200,7 @@ export const CORE = {
   'panel.title': 'ps72_26', 'page.me': 'ps39_8', 'page.week': 'phil3_14', 'week.title': 'lev23_15',
   'page.stats': 'num1_2', 'stats.title': 'num1_2', 'page.look': 'lk3_22', 'look.title': 'lk3_22',
   'page.data': 'mt6_21', 'data.title': 'mt6_21', 'page.tabs': 'ps23_7', 'tabs.title': 'ps23_7',
-  'page.notif': 'co1_15_52', 'mix.title': 'ps150_3', 'stone.title': 'rev2_17',
-  'rank.title': 'tim1_3_13', 'streak.title': 'rom5_3', 'mastery.title': 'ps110_10', 'tos.title': 'gen1_1',
+  'page.notif': 'co1_15_52', 'mix.title': 'ps150_3', 'stone.title': 'rev2_17', 'streak.title': 'rom5_3', 'mastery.title': 'ps110_10', 'tos.title': 'gen1_1',
   'lay.title': 'co1_14_40', 'track.title': 'eccl3_1', 'mono.title': 'jn7_24',
 };
 // Инструменты (по id модуля) и строки помодоро и секундомера

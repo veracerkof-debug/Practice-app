@@ -6,7 +6,6 @@ import './timer.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
-import el from './i18n/el.json';
 import { POMO_LIMITS } from '../../core/pomodoro.js';
 import { createScene, SCENES } from './scene.js';
 
@@ -102,7 +101,7 @@ function ringHTML() {
 function render() {
   if (!host) return;
   if (scene) { scene.destroy(); scene = null; }
-  host.innerHTML = cfg().style === 'flip' && !ctx.mono ? flipHTML() : ringHTML(); // «Минимал» — кольцо
+  host.innerHTML = cfg().style === 'flip' ? flipHTML() : ringHTML();
   const sc = host.querySelector('.tscene');
   if (sc) try { scene = createScene(sc, ctx, view, sceneKind()); } catch (e) { ctx.logErr(e); }
 }
@@ -146,8 +145,7 @@ function tick() {
 function settingsSheet() {
   const { t, tn, ui } = ctx, c = cfg();
   const body = () => ui.snav(t('set.title')) +
-    (ctx.mono ? '<div class="hdr">' + t('set.view') + '</div><p class="ftr" style="margin-top:0">' + t('monoFixed', { v: t('style.ring') }) + '</p>' :
-    '<div class="hdr">' + t('set.view') + '</div><div class="stycards" role="group" aria-label="' + t('set.view') + '">' + ['ring', 'flip'].map((k) => '<button class="stycard' +
+    ('<div class="hdr">' + t('set.view') + '</div><div class="stycards" role="group" aria-label="' + t('set.view') + '">' + ['ring', 'flip'].map((k) => '<button class="stycard' +
       ((c.style || 'ring') === k ? ' on' : '') + '" data-sty="' + k + '" aria-pressed="' + ((c.style || 'ring') === k) + '"><span class="sprev ' + k + '"><i></i><i></i><i></i><i></i></span><b>' +
       t('style.' + k) + '</b></button>').join('') + '</div><div style="height:10px"></div>') +
     // анимация под часами
@@ -235,8 +233,8 @@ function bind() {
 export default {
   id: 'timer',
   order: 70,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
+  name: { ru: ru.name, uz: uz.name, en: en.name },
+  i18n: { ru, uz, en },
   icon: ICON,
   color: '#A75750',
   sizes: ['full', 'half', 'quarter', 'strip'],

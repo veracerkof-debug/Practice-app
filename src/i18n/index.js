@@ -4,19 +4,17 @@
 import ru from './ru.json';
 import uz from './uz.json';
 import en from './en.json';
-import el from './el.json';
 
-const dicts = { ru, uz, en, el };
+const dicts = { ru, uz, en };
 export const CORE_DICTS = dicts;
 export const LANGS = ['ru', 'uz', 'en'];
-export const MONO_LANG = 'el';
 // Название языка на нём самом
 export const LANG_NAMES = { ru: 'Русский', uz: 'Oʻzbekcha', en: 'English' };
 let lang = 'ru';
 
 export function initI18n(preferred) {
   const sys = (navigator.language || 'ru').slice(0, 2);
-  lang = [preferred, sys].find((l) => LANGS.includes(l) || l === MONO_LANG) || 'ru';
+  lang = [preferred, sys].find((l) => LANGS.includes(l)) || 'ru';
   document.documentElement.lang = lang;
   return lang;
 }
@@ -76,7 +74,7 @@ export function pluralForm(n, forms, l = lang) {
     const m100 = a % 100, m10 = a % 10;
     return forms[m100 > 10 && m100 < 20 ? 2 : m10 > 1 && m10 < 5 ? 1 : m10 === 1 ? 0 : 2] ?? forms.at(-1);
   }
-  if (l === 'en' || l === 'el') return forms[a === 1 ? 0 : 1] ?? forms.at(-1);
+  if (l === 'en') return forms[a === 1 ? 0 : 1] ?? forms.at(-1);
   return forms[0];
 }
 

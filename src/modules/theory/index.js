@@ -4,7 +4,6 @@ import './theory.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
-import el from './i18n/el.json';
 import { SH, FL, MAJ_NAMES, MIN_NAMES, enh } from '../../music/notes.js';
 import { CIRC, keyInfo, circleStep, SCALES, SCALE_TYPES, scaleInfo, CHORDS, chordLabel, chordInfo, INTERVALS, intervalNote, intervalBase } from '../../music/theory.js';
 import { curTuning } from '../../music/tuning.js';
@@ -556,8 +555,8 @@ function bind() {
 export default {
   id: 'theory',
   order: 50,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
+  name: { ru: ru.name, uz: uz.name, en: en.name },
+  i18n: { ru, uz, en },
   icon: ICON,
   color: '#567198',
   sizes: ['full', 'half', 'quarter', 'strip'],

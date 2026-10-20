@@ -268,15 +268,14 @@ function paletteHTML(st) {
 
 function lookHTML(app) {
   const st = app.store.state.settings;
-  const monoLang = st.uiStyle === 'mono' && st.monoLang !== false;
-  return '<div class="large">' + t('look.title') + '</div>' + (monoLang ? '' :
+  return '<div class="large">' + t('look.title') + '</div>' + (
     '<div class="hdr">' + t('look.lang') + '</div><div class="group"><div class="cellcol"><div class="seg uc" role="group" aria-label="' + t('look.lang') + '">' +
     LANGS.map((k) => '<button data-lang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>') +
     sizeHTML(app) +
     '<div class="hdr">' + t('look.theme') + '</div><div class="group"><div class="cellcol">' + seg('theme', [['system', t('look.auto')], ['light', t('look.light')], ['dark', t('look.dark')]], st.theme, t('look.theme')) + '</div></div>' +
     ('<div class="hdr">' + t('mono.title') + '</div><div class="group"><div class="cellcol">' + seg('uistyle', [['default', t('mono.default')], ['mono', t('mono.name')]], st.uiStyle === 'mono' ? 'mono' : 'default', t('mono.title')) +
     '<div class="segcap">' + t('mono.hint') + '</div></div></div>') +
-    (st.uiStyle === 'mono' ? '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('mono.lang') + '</span>' + psw('monoLang', st.monoLang !== false, t('mono.lang')) + '</div></div><p class="ftr">' + t('mono.langHint') + '</p>' +
+    (st.uiStyle === 'mono' ?
       // без текста: значки, графика и цифры на рабочих экранах; настройки и диалоги — с текстом
       '<div class="group"><div class="cell"><span class="grow">' + t('mono.bare') + '</span>' + psw('monoBare', !!st.monoBare, t('mono.bare')) + '</div></div><p class="ftr">' + t('mono.bareHint') + '</p>' : '') +
     // иконка приложения: Мелета, Мелетий, музыкальные значки
@@ -538,11 +537,10 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-appicon]'))) { app.store.state.settings.appIconOwn = true; setAppIcon(app.store.state.settings, b.dataset.appicon).then((ok) => { app.store.settingsChanged(); render(); toast(t(ok ? 'icon.done' : 'icon.fail')); }); return; }
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-seg="uistyle"] [data-v]'))) {
-        const st = app.store.state.settings, was = st.uiStyle === 'mono' && st.monoLang !== false;
+        const st = app.store.state.settings;
         st.uiStyle = b.dataset.v === 'mono' ? 'mono' : 'default';
         applyTheme(st); changed();
         // у «Минимала» свой язык (русский с греческими названиями) — строки меняются на месте
-        if (was !== (st.uiStyle === 'mono' && st.monoLang !== false)) relang();
         return;
       }
       if ((b = g('[data-uisz]'))) {
@@ -648,7 +646,7 @@ export function createPanel(app, onChange) {
         if (k === 'float' && on) canOverlay().then((ok) => { if (!ok) { toast(t('pl.askOverlay')); askOverlay(); } });
         return;
       }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
         onChange();

@@ -6,7 +6,6 @@ import './media.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
-import el from './i18n/el.json';
 import { fileSongs, inSong, linkSong } from '../../core/files.js';
 import { pitchShifter } from '../../audio/pitchshift.js';
 import { fmtDur } from '../../core/format.js';
@@ -44,7 +43,7 @@ const st = () => ctx.store.all();
 const tracks = () => ctx.files.list('audio');
 const curSong = () => (ctx.session && ctx.session.songId) || null;
 const audKey = () => (curSong() ? 'song:' + curSong() : 'free');
-const style = () => (st().style === 'vinyl' && !ctx.mono ? 'vinyl' : 'wave'); // «Минимал» — волна
+const style = () => (st().style === 'vinyl' ? 'vinyl' : 'wave');
 // Тональность записи (src/audio/pitchshift.js): у каждой записи своя — settings.pitch[id] = [полутоны, центы]
 const pitchOf = (t) => (t && (st().pitch || {})[t.id]) || [0, 0];
 const keyTxt = () => { const [p, c] = pitchOf(AU.cur); return p || c ? (p > 0 ? '+' : p < 0 ? '−' : '±') + Math.abs(p) + (c ? (c > 0 ? ' +' : ' −') + Math.abs(c) + '¢' : '') : '0'; };
@@ -381,7 +380,7 @@ function controls() {
     stepb: '<button class="ic txt sm' + (AU.step ? ' act' : '') + '" data-x="astep" aria-pressed="' + AU.step + '" aria-label="' + t('stepUp') + '">+5%↻</button>',
     list: icb('data-x="alist"', I.list, t('files.btn')),
     time: '<span id="acur" class="num">' + fmtT(AU.el.currentTime) + '</span>',
-    sty: (cls) => (ctx.mono ? '' : icb('data-x="astyle"', I.disc, t('styleBtn'), cls)), // в «Минимале» вид закреплён
+    sty: (cls) => icb('data-x="astyle"', I.disc, t('styleBtn'), cls),
     back2: !curSong() && ML.view === 'player' ? '<button class="mlback" data-x="mllib">' + t('backLib') + '</button>' : '',
   };
 }
@@ -987,8 +986,8 @@ function bind() {
 export default {
   id: 'audio',
   order: 80,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
+  name: { ru: ru.name, uz: uz.name, en: en.name },
+  i18n: { ru, uz, en },
   icon: ICON,
   color: '#A95E72',
   sizes: ['full', 'half', 'quarter', 'strip'],

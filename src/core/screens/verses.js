@@ -1,8 +1,8 @@
 // Стихи разделов — в обоих видах (src/core/verses.js). Касание заголовка экрана, раздела, окна инструмента
 // или эпиграфа — его стих. Обычный вид: текст и ссылка на языке интерфейса (русский, английский или узбекский).
 // «Минимал»: греческий, церковнославянский (шрифт Ponomar), русский и английский — каждый своим шрифтом. В «Оформлении» — все подряд.
-// Греческие названия разделов — только в «Минимале» (i18n/el.json): в окне стиха — название так, как оно на экране.
-import { t, makeT, getLang, MONO_LANG } from '../../i18n/index.js';
+// В окне стиха — название раздела так, как оно на экране (язык интерфейса).
+import { t, makeT, getLang } from '../../i18n/index.js';
 import { esc, sheet, snav } from '../../ui/index.js';
 import { modules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
@@ -21,7 +21,7 @@ function entries() {
 const find = (text) => { const s = String(text || '').trim(); return s ? entries().find((e) => e.title === s) : null; };
 
 const isMono = () => document.documentElement.getAttribute('data-style') === 'mono';
-const lang = () => (getLang() === MONO_LANG ? 'ru' : getLang());
+const lang = () => getLang();
 const refOf = (v) => (isMono() ? v.ref : verseIn(v, lang()).ref);
 
 function card(title, v) {
@@ -50,7 +50,7 @@ export function epigraphHTML() {
   const v = verseByKey(EPIGRAPH);
   // сам стих — по нажатию на ссылку (меньше текста на экране)
   if (!isMono()) { const x = verseIn(v, lang()); return '<p class="mverse vref" lang="' + lang() + '" data-verse="' + EPIGRAPH + '" role="button" tabindex="0" aria-label="' + esc(x.ref) + '"><span>' + esc(x.ref) + '</span></p>'; }
-  const ref = getLang() === MONO_LANG ? 'Ψαλμὸς πθʹ, ιβʹ' : v.ref;
+  const ref = v.ref;
   return '<p class="mverse vref" lang="el" data-verse="' + EPIGRAPH + '" role="button" tabindex="0"><span lang="ru">' + esc(ref) + '</span></p>';
 }
 

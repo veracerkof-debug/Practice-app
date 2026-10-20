@@ -7,7 +7,6 @@ import './piano.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
-import el from './i18n/el.json';
 import { pianoPatch, pianoLayer, PRESETS } from '../../audio/synth.js';
 import { synBody, synBind, synthSheet } from './synth-panel.js';
 import { kbHTML, lastWhite } from '../../ui/keyboard.js';
@@ -213,8 +212,8 @@ function bind() {
 export default {
   id: 'piano',
   order: 30,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
+  name: { ru: ru.name, uz: uz.name, en: en.name },
+  i18n: { ru, uz, en },
   icon: ICON,
   color: '#646493',
   // MIDI: запись игры, воспроизведение в самом пианино, MIDI-клавиатура (src/core/midi.js)

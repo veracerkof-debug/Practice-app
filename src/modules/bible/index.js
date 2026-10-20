@@ -7,7 +7,6 @@ import './bible.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
-import el from './i18n/el.json';
 import { BOOKS, ALL, bookOf, loadBook, chKey, parseKey, refText } from '../../core/bible.js';
 // изучение (study.js с разбором модулей) загружается лениво — только в «Минимале»
 let S = null;
@@ -301,8 +300,8 @@ export default {
   order: 5,
   church: true, // только в церковном режиме
   tab: true, // своя вкладка внизу, а не инструмент: в «Инструментах», быстром доступе и окнах сессии её нет
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
+  name: { ru: ru.name, uz: uz.name, en: en.name },
+  i18n: { ru, uz, en },
   icon: ICON,
   color: '#A2845E',
   sizes: ['full', 'half', 'quarter', 'strip'],

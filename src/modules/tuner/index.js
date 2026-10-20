@@ -7,7 +7,6 @@ import './tuner.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
-import el from './i18n/el.json';
 import { yin, createPitchSmoother } from '../../audio/pitch.js';
 import { TUNINGS, TOL, STYLES, normalizeTuner, curTuning, reading, inRange, mName, splitN } from '../../music/tuning.js';
 
@@ -437,8 +436,8 @@ function bind() {
 export default {
   id: 'tuner',
   order: 20,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
+  name: { ru: ru.name, uz: uz.name, en: en.name },
+  i18n: { ru, uz, en },
   icon: ICON,
   color: '#866B9D',
   sizes: ['full', 'half', 'quarter', 'strip'],

@@ -6,7 +6,6 @@ import './looper.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
-import el from './i18n/el.json';
 import { createLooper, SLOTS, MAX_SEC } from '../../audio/looper.js';
 import { encodeWav } from '../../audio/voicefx.js';
 import { onHold, holdMenu } from '../../ui/hold.js';
@@ -290,8 +289,8 @@ function onKey(e) {
 export default {
   id: 'looper',
   order: 46,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
+  name: { ru: ru.name, uz: uz.name, en: en.name },
+  i18n: { ru, uz, en },
   icon: ICON,
   color: '#B5533C',
   sizes: ['full', 'half', 'quarter', 'strip'],

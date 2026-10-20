@@ -5,7 +5,6 @@ import './notes.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
-import el from './i18n/el.json';
 import { fileSongs, inSong } from '../../core/files.js';
 import { lyricsHTML, chordsIn, degreesIn } from '../../music/lyrics.js';
 import { tonicIsMinor } from '../../music/degrees.js';
@@ -727,8 +726,8 @@ function act(a, el) {
 export default {
   id: 'notes',
   order: 90,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
+  name: { ru: ru.name, uz: uz.name, en: en.name },
+  i18n: { ru, uz, en },
   icon: ICON,
   color: '#A2845E',
   sizes: ['full', 'half', 'quarter', 'strip'],

@@ -61,7 +61,7 @@ export function boot(root) {
   const st0 = store.state.settings;
   if (tabsMigrate(st0)) store.settingsChanged();
   if (calmMigrate(store.state)) store.settingsChanged(); // прежние яркие цвета меток и событий — спокойнее
-  initI18n(st0.uiStyle === 'mono' && st0.monoLang !== false ? 'el' : st0.lang);
+  initI18n(st0.lang);
   ensureLib(store.state, t);
   registerTools(modules); // цвет инструментов — от палитры
   applyTheme(store.state.settings);
@@ -214,7 +214,7 @@ export function boot(root) {
   // Язык и вид поменялись (Оформление, доступ к «Минимал»): строки и стили — на месте, без перезапуска и без ухода с экрана
   app.relang = () => {
     const st = store.state.settings;
-    initI18n(st.uiStyle === 'mono' && st.monoLang !== false ? 'el' : st.lang);
+    initI18n(st.lang);
     applyTheme(st);
     if (app.render) app.render();
   };
