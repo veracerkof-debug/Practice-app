@@ -8,7 +8,8 @@ import { songNotes, songBeats, patBeats, secPerBeat, curPattern } from '../music
 import { clickVoice, clickNoise } from './metronome.js';
 import { drumHit } from './drums.js';
 
-const TICK = 25, AHEAD = 0.15;
+const TICK = 25, AHEAD = 0.15, AHEAD_HIDDEN = 1.6; // свёрнуто: таймеры будят редко — планируем дальше вперёд
+const ahead = () => (typeof document !== 'undefined' && document.visibilityState === 'hidden' ? AHEAD_HIDDEN : AHEAD);
 
 // getFile(id) → запись медиатеки с blob (дорожки-петли) или null
 export function createSequencer({ mixer, synth, getProject, getFile = () => null, onBeat = () => {} }) {
@@ -33,7 +34,9 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
   function sched() {
     const p = getProject();
     if (!p || !playing) return;
-    const spb = secPerBeat(p), { notes, total } = plan(p), until = c.currentTime + AHEAD, bus = mixer.bus('theory');
+    // свёрнуто → развёрнуто: планировать сразу (таймер мог проспать)
+    if (!sched.vis) { sched.vis = true; document.addEventListener('visibilitychange', () => { if (playing && document.visibilityState === 'visible') sched(); }); }
+    const spb = secPerBeat(p), { notes, total } = plan(p), until = c.currentTime + ahead(), bus = mixer.bus('theory');
     while (t0 + nextBeat * spb < until) {
       const beatT = t0 + nextBeat * spb, inLoop = ((nextBeat % total) + total) % total;
       if (click) clickVoice(c, mixer.bus('metro'), beatT, inLoop % p.num === 0 ? 3 : 1, 'click', noise || (noise = clickNoise(c)));

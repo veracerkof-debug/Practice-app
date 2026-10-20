@@ -6,7 +6,34 @@
 import { getContext } from './context.js';
 
 export const MAX_SEC = 90, MAX_LAYERS = 12, SLOTS = 4;
+export const MARGIN_SEC = 1; // первая запись пишется с хвостом на секунду дольше петли: слой можно сдвинуть назад-вперёд
 const CHUNK = 2048;
+
+// Слой из полной записи со сдвигом: shift > 0 — звук раньше (берём хвост), < 0 — позже (начало — с конца петли)
+export function shifted(full, len, shift) {
+  const out = new Float32Array(len), n = full.length;
+  for (let i = 0; i < len; i++) {
+    let j = i + shift;
+    if (j < 0) j += len; // с конца петли (по кругу)
+    else if (j >= n) j -= len;
+    out[i] = j >= 0 && j < n ? full[j] : 0;
+  }
+  return out;
+}
+// Огибающая для рисунка: n отрезков, среднеквадратичный уровень каждого, 0…1 (относительно самого громкого)
+export function peaksOf(buf, n) {
+  const out = new Float32Array(n), step = buf.length / n;
+  let mx = 0;
+  for (let k = 0; k < n; k++) {
+    const a = Math.floor(k * step), b = Math.min(buf.length, Math.floor((k + 1) * step)) || a + 1;
+    let s = 0;
+    for (let i = a; i < b; i++) s += buf[i] * buf[i];
+    out[k] = Math.sqrt(s / Math.max(1, b - a));
+    if (out[k] > mx) mx = out[k];
+  }
+  if (mx > 0) for (let k = 0; k < n; k++) out[k] = Math.min(1, out[k] / mx);
+  return out;
+}
 
 // Длина петли по метроному: сколько тактов ближе всего к сыгранному (не меньше одного)
 export const quantBars = (sec, barSec) => Math.max(1, Math.round(sec / barSec));
@@ -71,6 +98,12 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
   // Кусок с микрофона: at — время его первого отсчёта (с поправкой на задержку)
   function capture(data, playbackTime) {
     const sr = c.sampleRate, at = playbackTime - latency();
+    if (rec.tail) { // хвост первой записи: ещё MARGIN_SEC после конца петли — в полную запись слоя (для сдвига)
+      const L = rec.tail, p0 = Math.round((at - rec.start) * sr);
+      for (let i = 0, p = p0; i < data.length; i++, p++) if (p >= 0 && p < L.full.length) L.full[p] = data[i];
+      if (at >= rec.until) rec = null;
+      return;
+    }
     if (rec.chunks) { // первая запись: копим всё
       if (rec.total >= MAX_SEC * sr) { api.stopRec(); return; }
       rec.chunks.push({ at, d: new Float32Array(data) });
@@ -107,7 +140,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
   const api = {
     get state() {
       const s = S(), sr = c ? c.sampleRate : 44100;
-      return { state, slot: cur, len: s.len / sr, layers: s.layers.map((L) => ({ gain: L.gain, mute: !!L.mute })), slots: slots.map((x) => x.layers.length),
+      return { state, slot: cur, len: s.len / sr, layers: s.layers.map((L) => ({ gain: L.gain, mute: !!L.mute, shift: Math.round((L.shift || 0) / sr * 1000), ver: L.ver || 0 })), slots: slots.map((x) => x.layers.length),
         pos: c && s.len && (state === 'play' || state === 'dub') ? ((((c.currentTime - s.t0) % (s.len / sr)) + s.len / sr) % (s.len / sr)) / (s.len / sr) : state === 'rec' && rec ? Math.min(1, (c.currentTime - rec.start) / MAX_SEC) : 0,
         recSec: state === 'rec' && rec ? c.currentTime - rec.start : 0, mon: monOn, mic: !!mic };
     },
@@ -138,18 +171,18 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
         if (!rec.wait) { rec.wait = setTimeout(() => { rec && (rec.wait = null); api.stopRec(barSec); }, (lenSec - played) * 1000 + 5); }
         return;
       }
-      const len = Math.max(1, Math.round(lenSec * sr)), buf = new Float32Array(len), r = rec;
-      rec = null;
+      const len = Math.max(1, Math.round(lenSec * sr)), margin = Math.round(MARGIN_SEC * sr), full = new Float32Array(len + margin), r = rec;
       r.chunks.forEach(({ at, d }) => {
         let p = Math.round((at - r.start) * sr);
-        for (let i = 0; i < d.length; i++, p++) if (p >= 0 && p < len) buf[p] = d[i];
+        for (let i = 0; i < d.length; i++, p++) if (p >= 0 && p < full.length) full[p] = d[i];
       });
-      const s = S();
+      const s = S(), L = { buf: full.slice(0, len), full, margin, shift: 0, gain: 1, mute: false };
       s.len = len; s.t0 = r.start + lenSec;
       if (s.t0 > now) s.t0 -= lenSec; // первая петля ещё идёт — продолжаем её, не повторяя сначала
-      s.layers = [{ buf, gain: 1, mute: false }];
+      s.layers = [L];
       state = 'play';
-      startLayer(s.layers[0]);
+      rec = { tail: L, start: r.start, until: r.start + lenSec + MARGIN_SEC }; // хвост дописывается уже под петлю
+      startLayer(L);
       emit();
     },
     // Наложение: новый слой пишется поверх, пока не остановят (можно несколько кругов)
@@ -158,7 +191,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       if (!s.len || state !== 'play') return;
       await openMic();
       if (s.layers.length >= MAX_LAYERS) throw Object.assign(new Error('layers'), { reason: 'layers' });
-      rec = { buf: new Float32Array(s.len), got: 0 };
+      rec = { buf: new Float32Array(s.len), got: 0 }; // хвост первой записи, если ещё шёл, обрывается
       state = 'dub';
       emit();
     },
@@ -167,7 +200,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       const s = S(), r = rec;
       rec = null;
       state = 'play';
-      if (r.got > 0) { const L = { buf: r.buf, gain: 1, mute: false }; s.layers.push(L); startLayer(L); }
+      if (r.got > 0) { const L = { buf: r.buf, full: r.buf, margin: 0, shift: 0, gain: 1, mute: false }; s.layers.push(L); startLayer(L); }
       emit();
     },
     // Главная кнопка: пусто → запись; запись → петля; играет → наложение; наложение → петля
@@ -206,6 +239,20 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       return true;
     },
     clear() { api.stop(); const s = S(); s.layers = []; s.len = 0; emit(); },
+    // Сдвиг слоя, мс: вперёд (+, звук раньше — хвост из записи с запасом) или назад (−); наложения — по кругу.
+    // Нужен при записи в наушниках: звук доходит с задержкой, слой садится точно под петлю
+    shiftLayer(i, ms) {
+      const s = S(), L = s.layers[i];
+      if (!L || !c) return;
+      const sr = c.sampleRate, lim = L.margin || s.len;
+      L.shift = Math.max(-lim, Math.min(lim, Math.round((+ms || 0) * sr / 1000)));
+      L.buf = shifted(L.full, s.len, L.shift);
+      L.ver = (L.ver || 0) + 1;
+      if (L.node) { try { L.node.src.stop(); L.node.src.disconnect(); } catch { /* */ } s.srcs = s.srcs.filter((x) => x !== L.node.src); startLayer(L); }
+      emit();
+    },
+    // Огибающая слоя для рисунка (n отрезков)
+    peaks(i, n) { const L = S().layers[i]; return L ? peaksOf(L.buf, n) : null; },
     setGain(i, v) { const L = S().layers[i]; if (!L) return; L.gain = Math.max(0, Math.min(1.5, v)); if (L.node) L.node.g.gain.setTargetAtTime(L.mute ? 0 : L.gain, c.currentTime, 0.02); emit(); },
     toggleMute(i) { const L = S().layers[i]; if (!L) return; L.mute = !L.mute; if (L.node) L.node.g.gain.setTargetAtTime(L.mute ? 0 : L.gain, c.currentTime, 0.02); emit(); },
     removeLayer(i) {

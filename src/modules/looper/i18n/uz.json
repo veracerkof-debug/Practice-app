@@ -45,5 +45,11 @@
   "help.2": "Metronom bilan — takt sanogʻi, uzunlik butun taktlarda.",
   "help.3": "Tugmani ushlab turish — qatlamni bekor qilish; pastda toʻrtta halqa.",
   "help.4": "Bluetooth pedal: Probel yoki PageDown — tugma, PageUp — stop.",
-  "do.resume": "Chalish"
+  "do.resume": "Chalish",
+  "viewReels": "Koʻrinish: gʻaltaklar",
+  "viewRing": "Koʻrinish: halqa",
+  "earlier": "Qatlam 10 ms oldinga",
+  "later": "Qatlam 10 ms keyinga",
+  "shiftReset": "Qatlam siljishi, ms; bosish — nolga",
+  "help.5": "Gʻaltaklar: toʻrt qatlam toʻlqinli aylanalar, ±1 s siljishli yoʻlaklar — naushnikdagi yozuvni halqaga aniq moslash."
 }

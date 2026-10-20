@@ -71,7 +71,19 @@ const OK_MS = 300; // «окей» держится столько — пере�
 const KEY_MS = 350; // профи: тональность на левой руке держится столько — меняется (пока пальцы разгибаются, рука «показывает» лишнее)
 const HUDS = ['full', 'quiet', 'off']; // подсказки на экране; двойное касание по кадру переключает
 const HARM_GAIN = 0.55; // голос гармонии — тише мелодии
-const CHORD_GAIN = 0.42; // четыре голоса аккорда вместе — не громче одного голоса соло
+const CHORD_GAIN = 0.36; // все слои аккорда вместе — не громче одного голоса соло
+// Полный аккорд, как у пэдов — низ, середина, верх: суб-бас (октавой ниже баса), бас, голоса аккорда, два верхних
+// голоса октавой выше, тише. Слоты постоянные: [суб, бас, 4 голоса, 2 верха] — при смене аккорда голоса скользят,
+// лишние гаснут, недостающие вступают (без перезапуска всего созвучия)
+const SLOT = [{ k: 'sub', g: 0.5, uni: 1 }, { k: 'bass', g: 0.85, uni: 2 }, { k: 'tone', g: 0.75 }, { k: 'tone', g: 0.75 }, { k: 'tone', g: 0.75 }, { k: 'tone', g: 0.75 }, { k: 'high', g: 0.3, uni: 1 }, { k: 'high', g: 0.3, uni: 1 }];
+function chordPlan(notes) { // notes = [бас, ...голоса] (chords.js: voicing)
+  const [bass, ...top] = notes, plan = Array(SLOT.length).fill(null);
+  if (bass - 12 >= 28) plan[0] = bass - 12;
+  plan[1] = bass;
+  top.slice(0, 4).forEach((m, i) => { plan[2 + i] = m; });
+  top.slice(-2).forEach((m, i) => { plan[6 + i] = m + 12; });
+  return plan;
+}
 const ALONG_GAIN = 0.3; // подыгрывание гитаре — тише: гитара главная
 const MODES = ['solo', 'chord', 'guitar']; // кнопка режима переключает по кругу; «окей» — только соло ↔ аккорды
 
@@ -357,7 +369,7 @@ function midiStop() {
 }
 
 function releaseChord() {
-  if (S.cv) S.cv.forEach((v) => v.release());
+  if (S.cv) S.cv.forEach((v) => v && v.release());
   S.cv = null; S.chord = null; S.cnotes = null; S.along = null;
 }
 
@@ -515,25 +527,18 @@ function playChord(s, h, sign, t, o, dest, lean = 0, tilt = 0) {
     const mid = (n) => (n[1] + n.at(-1)) / 2;
     if (Math.abs(mid(notes) - center) > Math.abs(mid(S.cnotes) - center) - 1.5) notes = S.cnotes;
   }
-  const vo = { ...o, volGain: (o.volGain ?? 1) * CHORD_GAIN };
-  if (!S.cv) {
-    // звук аккордов: как соло или пэд (тембры модуля «Пэды»)
-    const pad = PAD_SOUNDS.includes(s.csound) ? s.csound : s.csound === 'same' ? padOf(s.sound) : null, p = pad ? null : patch(s);
-    ctx.audio.mixer.setReverb('glider', pad ? 0.45 : (p.rev || 0) * 0.9);
-    const make = () => (pad ? createPadVoice(dest.context, S.bus.input, pad, { a4: ctx.audio.mf(69) }) : createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) }));
-    S.cv = notes.map((m) => { const v = make(); v.start(m, vo); return v; });
-  } else {
-    // септаккорд — на голос больше, трезвучие — на голос меньше: лишний затихает, недостающий вступает
-    if (S.cv.length > notes.length) S.cv.splice(notes.length).forEach((v) => v.release());
-    while (S.cv.length < notes.length) {
-      const pad = PAD_SOUNDS.includes(s.csound) ? s.csound : s.csound === 'same' ? padOf(s.sound) : null, m = notes[S.cv.length];
-      const v = pad ? createPadVoice(dest.context, S.bus.input, pad, { a4: ctx.audio.mf(69) }) : createGlideVoice(dest.context, S.bus.input, patch(s), { hold: true, a4: ctx.audio.mf(69) });
-      v.start(m, vo);
-      S.cv.push(v);
-    }
-    if (notes !== S.cnotes) S.cv.forEach((v, i) => v.pitch(notes[i], 0.05));
-    S.cv.forEach((v) => v.fx(vo));
-  }
+  const vo = { ...o, volGain: (o.volGain ?? 1) * CHORD_GAIN }, plan = chordPlan(notes), changed = notes !== S.cnotes;
+  // звук аккордов: как соло или пэд (тембры модуля «Пэды»)
+  const pad = PAD_SOUNDS.includes(s.csound) ? s.csound : s.csound === 'same' ? padOf(s.sound) : null, p = pad ? null : patch(s);
+  const make = (i) => (pad ? createPadVoice(dest.context, S.bus.input, pad, { a4: ctx.audio.mf(69), uni: SLOT[i].uni || 0 }) : createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) }));
+  if (!S.cv) { ctx.audio.mixer.setReverb('glider', pad ? 0.45 : (p.rev || 0) * 0.9); S.cv = Array(SLOT.length).fill(null); }
+  plan.forEach((m, i) => {
+    const fx = { ...vo, volGain: vo.volGain * SLOT[i].g };
+    if (m == null) { if (S.cv[i]) { S.cv[i].release(); S.cv[i] = null; } return; }
+    if (!S.cv[i]) { const v = make(i); v.start(m, fx); S.cv[i] = v; return; }
+    if (changed) S.cv[i].pitch(m, 0.05);
+    S.cv[i].fx(fx);
+  });
   if (notes !== S.cnotes) { notes.id = S.chord.id; S.cnotes = notes; }
   const nm = chordName(S.chord, key), n = host && host.querySelector('#tmnote'), c = host && host.querySelector('#tmc');
   if (n) { n.textContent = nm.name; n.parentNode.classList.add('on'); }

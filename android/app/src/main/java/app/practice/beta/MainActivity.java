@@ -5,6 +5,7 @@ import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Rational;
+import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -34,6 +35,9 @@ public class MainActivity extends BridgeActivity {
             // не отключаются целиком: в полях ввода (текст и аккорды песни, заметки) их дают выделить, вырезать,
             // вставить; в остальных местах их убирают стили (user-select: none) и guard.js (contextmenu)
             getBridge().getWebView().setHapticFeedbackEnabled(false);
+            // Звук в фоне без заиканий: когда приложение свёрнуто, Android по умолчанию снимает с отрисовщика WebView
+            // приоритет (waivedWhenNotVisible) — звуковой поток в нём начинает голодать. Приоритет остаётся важным всегда
+            if (Build.VERSION.SDK_INT >= 26) getBridge().getWebView().setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
         }
     }
 

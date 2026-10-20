@@ -5,17 +5,22 @@ import { makeIR } from './waves.js';
 // Режим звука: 'fast' — быстрый отклик, 'bal' — баланс, 'smooth' — без треска
 const LATENCY = { fast: 'interactive', bal: 'balanced', smooth: 'playback' };
 
-let ctx = null, master = null, reverb = null, comp = null;
+let ctx = null, master = null, reverb = null, comp = null, trim = null;
 
 export function getContext(mode = 'bal') {
   if (!ctx) {
     const C = globalThis.AudioContext || globalThis.webkitAudioContext;
     if (!C) return null;
     try { ctx = new C({ latencyHint: LATENCY[mode] || 'balanced' }); } catch { ctx = new C(); }
+    // Компрессор — только ловить пики, без пережатия: мягкое колено, низкая степень. У компрессора Web Audio есть
+    // скрытое усиление (makeup): чем ниже порог, тем сильнее он поднимает всё и упирается в 0 dBFS — отсюда искажения
+    // на большой громкости. Порог выше, а после него — запас (trim), чтобы выход не клиппило
     comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -18; comp.knee.value = 12; comp.ratio.value = 4;
-    comp.attack.value = 0.005; comp.release.value = 0.2;
-    comp.connect(ctx.destination);
+    comp.threshold.value = -10; comp.knee.value = 10; comp.ratio.value = 3;
+    comp.attack.value = 0.004; comp.release.value = 0.25;
+    trim = ctx.createGain();
+    trim.gain.value = 0.8;
+    comp.connect(trim).connect(ctx.destination);
     master = ctx.createGain();
     master.gain.value = 0.9;
     master.connect(comp);
@@ -48,12 +53,12 @@ export function directOut(node) {
   taps.forEach((d) => node.connect(d));
 }
 export function addTap(dest) {
-  comp.connect(dest);
+  trim.connect(dest);
   direct.forEach((n) => n.connect(dest));
   taps.add(dest);
   return () => {
     taps.delete(dest);
-    [comp, ...direct].forEach((n) => { try { n.disconnect(dest); } catch { /* уже отключено */ } });
+    [trim, ...direct].forEach((n) => { try { n.disconnect(dest); } catch { /* уже отключено */ } });
   };
 }
 export const now = () => (ctx ? ctx.currentTime : 0);

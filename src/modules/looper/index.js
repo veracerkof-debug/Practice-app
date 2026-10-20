@@ -23,10 +23,17 @@ const I = {
   mute: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>',
   vol: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>',
   x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  reels: '<svg viewBox="0 0 24 24"><circle cx="7.5" cy="12" r="4"/><circle cx="16.5" cy="12" r="4"/><path d="M7.5 16h9"/></svg>',
+  ring: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" style="fill:currentColor"/></svg>',
+  left: '<svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg>',
+  right: '<svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>',
 };
+const REELS = 4, SHIFT_STEP = 10; // катушек на экране; шаг сдвига слоя, мс
 const R = 46, C = 2 * Math.PI * R;
 
 let host = null, ctx = null, size = 'full', lp = null, raf = 0, offs = [], arm = null, offBeat = null;
+const peaksCache = new Map(); // слой (номер:версия:точек) → огибающая
+const reelsView = () => st().view === 'reels' && size !== 'strip';
 const st = () => ctx.store.all();
 const metro = () => ctx.audio.metro;
 const barSec = () => { const m = metro().cfg; return (60 / m.bpm) * Math.max(1, m.num); };
@@ -50,12 +57,62 @@ function view() {
     : '<div class="lphint l2">' + ui.esc(t(small ? 'hintShort' : s === 'idle' ? 'hint' : 'hintMore')) + '</div>';
   const slots = '<div class="lpslots" role="group" aria-label="' + ui.esc(t('loops')) + '">' + Array.from({ length: SLOTS }, (_, i) => '<button class="lpslot' + (i === S.slot ? ' on' : '') + (S.slots[i] ? ' has' : '') + '" data-x="slot" data-i="' + i + '" aria-pressed="' + (i === S.slot) + '" aria-label="' + ui.esc(t('loopN', { n: i + 1 })) + '">' + (i + 1) + '</button>').join('') + '</div>';
   const bar = '<div class="lpbar">' +
+    ui.icb('data-x="view"', reelsView() ? I.ring : I.reels, t(reelsView() ? 'viewRing' : 'viewReels'), 'sm') +
     ui.icb('data-x="metro"', I.metro, t('metro'), 'sm' + (withMetro() ? ' on' : '')) +
     ui.icb('data-x="mon"', I.ear, t('mon'), 'sm' + (S.mon ? ' on' : '')) +
     ui.icb('data-x="undo"', I.undo, t('undo'), 'sm') +
     ui.icb('data-x="stop"', I.stop, t('stop'), 'sm') +
     ui.icb('data-x="save"', I.save, t('save'), 'sm') + '</div>';
+  if (reelsView()) {
+    // «Катушки»: четыре кругляша — слои с волной по кругу, крутятся при игре; ниже — те же слои дорожками со сдвигом
+    const reels = '<div class="lpreels">' + Array.from({ length: REELS }, (_, i) => { const L = S.layers[i]; return '<div class="lpreel' + (L ? (L.mute ? ' muted' : '') : ' empty') + '" data-li="' + i + '"' + (L ? ' data-x="mute" data-i="' + i + '" role="button" aria-pressed="' + L.mute + '" aria-label="' + ui.esc(t(L.mute ? 'unmute' : 'mute')) + '"' : '') + '><canvas class="lpreelcv"></canvas><span class="lpreeln num">' + (i + 1) + '</span></div>'; }).join('') + '</div>';
+    const lanes = '<div class="lplanes">' + S.layers.map((L, i) => '<div class="lplane' + (L.mute ? ' muted' : '') + '" data-li="' + i + '"><span class="lpnum num">' + (i + 1) + '</span><canvas class="lplanecv" data-i="' + i + '"></canvas>' +
+      '<span class="lpshift">' + ui.icb('data-x="shl" data-i="' + i + '"', I.left, t('earlier'), 'sm plain') + '<button class="lpshv num" data-x="sh0" data-i="' + i + '" aria-label="' + ui.esc(t('shiftReset')) + '">' + (L.shift > 0 ? '+' : '') + L.shift + '</button>' + ui.icb('data-x="shr" data-i="' + i + '"', I.right, t('later'), 'sm plain') + '</span></div>').join('') +
+      (S.layers.length ? '' : '<div class="lphint l2">' + ui.esc(t(s === 'idle' ? 'hint' : 'hintMore')) + '</div>') + '</div>';
+    return '<div class="lpwrap reels ' + size + '">' + reels + lanes + '<div class="lpmain row">' + main + time + slots + '</div>' + bar + '</div>';
+  }
   return '<div class="lpwrap ' + size + '"><div class="lpmain">' + main + time + '</div>' + layers + slots + bar + '</div>';
+}
+
+/* ---------- катушки и дорожки: рисунок ---------- */
+
+const peaks = (i, L, n) => { const k = i + ':' + L.ver + ':' + n; let p = peaksCache.get(k); if (!p) { p = lp.peaks(i, n); if (p) { if (peaksCache.size > 64) peaksCache.clear(); peaksCache.set(k, p); } } return p; };
+const fit = (cv) => { const r = cv.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1), w = Math.max(1, Math.round(r.width * d)), h = Math.max(1, Math.round(r.height * d)); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; } return [w, h, d]; };
+let css = null;
+const colors = () => css || (css = (() => { const s = getComputedStyle(host); return { tint: s.getPropertyValue('--tint').trim(), fill: s.getPropertyValue('--fill').trim(), ink: s.getPropertyValue('--ink').trim(), l2: s.getPropertyValue('--l2').trim(), red: '#D9534F' }; })());
+
+// Катушка: кольцо волны (отрезки по кругу) крутится с петлёй, головка — неподвижная метка сверху
+function drawReel(cv, i, L, pos, S) {
+  const [w, h] = fit(cv), g = cv.getContext('2d'), C = colors(), cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2, r0 = R * 0.5, r1 = R * 0.92;
+  g.clearRect(0, 0, w, h);
+  g.beginPath(); g.arc(cx, cy, R * 0.98, 0, Math.PI * 2); g.fillStyle = C.fill; g.fill();
+  if (!L) { g.beginPath(); g.arc(cx, cy, r0, 0, Math.PI * 2); g.strokeStyle = C.l2; g.globalAlpha = 0.35; g.setLineDash([4, 6]); g.lineWidth = 2; g.stroke(); g.setLineDash([]); g.globalAlpha = 1; return; }
+  const N = 96, pk = peaks(i, L, N), rot = -pos * Math.PI * 2 - Math.PI / 2; // плёнка идёт мимо головки
+  g.lineWidth = Math.max(1.5, (Math.PI * 2 * r0) / N * 0.6); g.lineCap = 'round';
+  g.strokeStyle = L.mute ? C.l2 : S.state === 'dub' && i === S.layers.length - 1 ? C.red : C.tint;
+  g.globalAlpha = L.mute ? 0.35 : 0.9;
+  for (let k = 0; k < N; k++) {
+    const a = rot + (k / N) * Math.PI * 2, len = r0 + (r1 - r0) * (0.08 + 0.92 * (pk ? pk[k] : 0));
+    g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len); g.stroke();
+  }
+  g.globalAlpha = 1;
+  // ось и головка
+  g.beginPath(); g.arc(cx, cy, r0 * 0.5, 0, Math.PI * 2); g.fillStyle = C.ink; g.globalAlpha = L.mute ? 0.25 : 0.85; g.fill(); g.globalAlpha = 1;
+  g.beginPath(); g.moveTo(cx - 5, cy - R); g.lineTo(cx + 5, cy - R); g.lineTo(cx, cy - R + 9); g.closePath(); g.fillStyle = C.ink; g.fill();
+}
+// Дорожка: волна слева направо, ход — линия
+function drawLane(cv, i, L, pos) {
+  const [w, h] = fit(cv), g = cv.getContext('2d'), C = colors(), N = Math.max(24, Math.floor(w / 3)), pk = peaks(i, L, N), bw = w / N;
+  g.clearRect(0, 0, w, h);
+  g.fillStyle = L.mute ? C.l2 : C.tint; g.globalAlpha = L.mute ? 0.35 : 0.85;
+  for (let k = 0; k < N; k++) { const v = pk ? pk[k] : 0, bh = Math.max(2, v * (h - 4)); g.fillRect(k * bw + bw * 0.2, (h - bh) / 2, bw * 0.6, bh); }
+  g.globalAlpha = 1;
+  if (pos >= 0) { g.fillStyle = C.ink; g.fillRect(pos * w - 1, 0, 2, h); }
+}
+function drawAll() {
+  const S = lp.state, pos = S.state === 'play' || S.state === 'dub' ? S.pos : -1;
+  host.querySelectorAll('.lpreel').forEach((el, i) => drawReel(el.querySelector('canvas'), i, S.layers[i], Math.max(0, pos), S));
+  host.querySelectorAll('.lplanecv').forEach((cv) => { const i = +cv.dataset.i; if (S.layers[i]) drawLane(cv, i, S.layers[i], pos); });
 }
 
 function render() {
@@ -72,6 +129,7 @@ function tick() {
   const S = lp.state, ring = host.querySelector('.lpring'), tm = host.querySelector('.lptime');
   if (ring) ring.setAttribute('stroke-dashoffset', (C * (1 - S.pos)).toFixed(1));
   if (tm && S.state === 'rec') tm.textContent = fmt(S.recSec) + ' / ' + fmt(MAX_SEC);
+  if (reelsView()) drawAll();
   if (S.state !== 'idle') raf = requestAnimationFrame(tick);
 }
 
@@ -134,6 +192,10 @@ function act(x, el) {
     case 'mon': lp.setMonitor(!lp.state.mon); if (lp.state.mon) ctx.ui.toast(ctx.t('monOn')); render(); break;
     case 'mute': lp.toggleMute(i); render(); break;
     case 'slot': if (arm) disarm(); lp.select(i); render(); break;
+    case 'view': st().view = reelsView() ? 'ring' : 'reels'; ctx.store.save(); render(); break;
+    case 'shl': lp.shiftLayer(i, (lp.state.layers[i].shift || 0) + SHIFT_STEP); render(); break;
+    case 'shr': lp.shiftLayer(i, (lp.state.layers[i].shift || 0) - SHIFT_STEP); render(); break;
+    case 'sh0': lp.shiftLayer(i, 0); render(); break;
   }
 }
 
@@ -166,7 +228,7 @@ export default {
     on(window, 'keydown', onKey);
     // удержание кнопки — отмена последнего слоя; удержание слоя — убрать его
     onHold(host, '[data-x="main"]', () => act('undo'));
-    onHold(host, '.lplayer', (row) => holdMenu(row, [{ icon: I.x, label: c.t('removeLayer'), danger: true, run: () => { lp.removeLayer(+row.dataset.li); render(); } }], c.t('layerN', { n: +row.dataset.li + 1 })));
+    onHold(host, '.lplayer, .lplane, .lpreel:not(.empty)', (row) => holdMenu(row, [{ icon: I.x, label: c.t('removeLayer'), danger: true, run: () => { lp.removeLayer(+row.dataset.li); render(); } }], c.t('layerN', { n: +row.dataset.li + 1 })));
     render();
   },
   resize(sz) { size = sz; render(); },

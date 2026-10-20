@@ -16,8 +16,8 @@ export const PAD_SOUNDS = [...Object.keys(AIR_PADS), 'shimmer', ...Object.keys(S
 const LVL = { soft: 0.152, pad: 0.205, bow: 0.224, choir: 0.5, glass: 0.147, shimmer: 0.15 };
 
 // hall — посыл в длинный зал (поклонение, src/audio/context.js), 0…1
-export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5, move = 0.5, hall = 0 } = {}) {
-  if (AIR_PADS[sound]) return airPadVoice(c, dest, AIR_PADS[sound], { a4, hall });
+export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5, move = 0.5, hall = 0, uni = 0 } = {}) {
+  if (AIR_PADS[sound]) return airPadVoice(c, dest, AIR_PADS[sound], { a4, hall, uni });
   const snd = PAD_SOUNDS.includes(sound) ? sound : 'soft', bright0 = snd === 'shimmer' ? 0.62 : SOUNDS[snd], t0 = c.currentTime + 0.003;
   const freq = (m) => a4 * Math.pow(2, (m - 69) / 12);
   const lp = c.createBiquadFilter(), amp = c.createGain(), vol = c.createGain(), out = c.createGain();
@@ -131,7 +131,7 @@ export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5,
 // Воздушный пэд: тот же порядок вызовов (start, pitch, fx, release). Зал — всегда, хотя бы немного: без него
 // воздушный звук теряет пространство
 const AIR_LVL = 0.19;
-function airPadVoice(c, dest, kind, { a4 = 440, hall = 0 } = {}) {
+function airPadVoice(c, dest, kind, { a4 = 440, hall = 0, uni = 0 } = {}) {
   const freq = (m) => a4 * Math.pow(2, (m - 69) / 12);
   const amp = c.createGain(), vol = c.createGain(), out = c.createGain(), lp = c.createBiquadFilter();
   lp.type = 'lowpass';
@@ -152,7 +152,7 @@ function airPadVoice(c, dest, kind, { a4 = 440, hall = 0 } = {}) {
     start(m, fx) {
       const t = c.currentTime + 0.003, f = freq(m);
       m0 = m;
-      a = airVoice(c, lp, kind, f, t, { width: 1, fade: 2.6, vibIn: vibG });
+      a = airVoice(c, lp, kind, f, t, { width: 1, fade: 2.6, vibIn: vibG, ...(uni ? { uni } : {}) });
       vib.start(t); tr.start(t);
       amp.gain.setValueAtTime(0, t);
       amp.gain.setTargetAtTime(AIR_LVL, t, kind === 'choir' ? 0.25 : 0.4);
