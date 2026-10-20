@@ -116,7 +116,7 @@ export function noteHeard(a, now = Date.now(), { mic = false } = {}) {
 // Что делать с бездействием: null, { ask, endAt } — спросить «Занятие продолжается?», { end, endAt } — завершить.
 // sounding — звучит приложение (метроном, пэды, запись); mic — микрофон слушает игру, и тишине можно верить.
 // endAt — до какого момента засчитывается время, если ответа не будет.
-// ask: false — вопросы выключены в «Уведомлениях»: вместо вопроса сразу завершение по последнему действию
+// ask: false — вопросы выключены в «Подсказках приложения»: вместо вопроса сразу завершение по последнему действию
 export function idleAction(a, { sounding = false, mic = false, ask = true } = {}, now = Date.now()) {
   if (!a || a.pausedAt) return null;
   if (a.askedAt) return now - a.askedAt > ASK_WAIT_MS ? { end: true, endAt: a.askEnd || a.last } : null;

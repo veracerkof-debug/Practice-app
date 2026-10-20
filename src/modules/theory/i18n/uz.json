@@ -299,5 +299,26 @@
   "scale.neapmin": "neapolitan minori",
   "scale.dblharm": "qoʻsh garmonik",
   "j.swingS": "sving",
-  "j.straightS": "tekis"
+  "j.straightS": "tekis",
+  "sec.keys": "Transpozitsiya",
+  "kc.from": "Tonallikdan",
+  "kc.to": "Tonallikka",
+  "kc.maj": "major",
+  "kc.min": "minor",
+  "kc.mode": "Lad",
+  "kc.same": "oʻsha tonallik",
+  "kc.up": [
+    "{n} yarim ton yuqoriga"
+  ],
+  "kc.down": [
+    "{n} yarim ton pastga"
+  ],
+  "kc.yours": "Oʻz akkordlaringiz",
+  "kc.textHint": "akkordlarni yozing — bu yerda yangi tonallikda chiqadi",
+  "kc.capo": "Gitara: {key} uchun kapodastr",
+  "kc.noCapo": "Kapodastrsiz",
+  "kc.fret": [
+    "{n}-lad"
+  ],
+  "kc.shape": "{shape} kabi chaling"
 }

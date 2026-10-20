@@ -311,5 +311,29 @@
   "scale.neapmin": "Neapolitan minor",
   "scale.dblharm": "double harmonic",
   "j.swingS": "swing",
-  "j.straightS": "straight"
+  "j.straightS": "straight",
+  "sec.keys": "Transpose",
+  "kc.from": "From key",
+  "kc.to": "To key",
+  "kc.maj": "major",
+  "kc.min": "minor",
+  "kc.mode": "Mode",
+  "kc.same": "same key",
+  "kc.up": [
+    "up {n} semitone",
+    "up {n} semitones"
+  ],
+  "kc.down": [
+    "down {n} semitone",
+    "down {n} semitones"
+  ],
+  "kc.yours": "Your chords",
+  "kc.textHint": "type chords — they appear here in the new key",
+  "kc.capo": "Guitar: capo for {key}",
+  "kc.noCapo": "No capo",
+  "kc.fret": [
+    "fret {n}",
+    "fret {n}"
+  ],
+  "kc.shape": "play as {shape}"
 }

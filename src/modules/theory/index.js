@@ -12,9 +12,11 @@ import { kbHTML } from '../../ui/keyboard.js';
 import { chordsOf, familiesOf, ladderOf, degreesOf, colorNote, familyOfType, parentOf, rotateMode, modeChords, onFifths, FIFTHS, FAMILIES, LADDER } from '../../music/identify.js';
 import { chroma } from '../../music/analyze.js';
 import { jazzHTML, jazzAct, jstop } from './jazz.js';
+import { keyShift, keyTo, diatonic, transposeLine, capoOptions } from '../../music/keycalc.js';
+import { tonicName, keyLabel } from '../../music/transpose.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v4.5"/></svg>';
-const SECS = ['circle', 'scales', 'chords', 'intervals', 'jazz'];
+const SECS = ['circle', 'scales', 'chords', 'keys', 'intervals', 'jazz'];
 // Определитель — в «Минимале» по умолчанию, в обычном виде включается в «Модулях и функциях» (settings.theory.find)
 const findOn = () => { const d = ctx.data(); return ctx.mono ? d.find !== false : d.find === true; };
 const secs = () => (findOn() ? [...SECS, 'find'] : SECS);
@@ -29,7 +31,7 @@ const I = {
   fret: '<svg viewBox="0 0 24 24"><path d="M3 6h18M3 10h18M3 14h18M3 18h18M8 4v16M14 4v16"/></svg>',
 };
 
-let host = null, ctx = null, size = 'full', onClick = null, onKey = null, onDown = null, lis = null;
+let host = null, ctx = null, size = 'full', onClick = null, onKey = null, onDown = null, onInput = null, lis = null;
 
 // Настройки: device.theory (+ scale: тоника и тип гаммы)
 function TH() {
@@ -94,6 +96,33 @@ function circleSVG(k) {
   });
   return s + '<text x="160" y="150" text-anchor="middle" style="font:700 19px var(--font);fill:var(--ink)">' + keyTitle(k) +
     '</text><text x="160" y="174" text-anchor="middle" style="font:400 13px var(--font);fill:var(--l2)">' + sigText(k) + '</text></svg>';
+}
+
+/* ---------- транспонирование: из какой тональности в какую, аккорды по ступеням, своя строка, каподастр ---------- */
+
+function KC() {
+  const th = TH(), k = (th.kc ||= {});
+  k.from ??= { pc: th.pc, minor: !!th.minor }; k.to ??= (k.from.pc + 2) % 12; k.text ??= '';
+  return k;
+}
+function keysHTML() {
+  const { t, ui } = ctx, k = KC(), from = { ...k.from, sharp: null }, n = keyShift(from, k.to), to = keyTo(from, k.to);
+  const pills = (x, cur, minor) => '<div class="hscroll kcrow">' + Array.from({ length: 12 }, (_, pc) => '<button class="pill sm" data-x="' + x + '" data-v="' + pc + '" aria-pressed="' + (pc === cur) + '">' +
+    tonicName(pc, minor) + (minor ? 'm' : '') + '</button>').join('') + '</div>';
+  const A = diatonic(from), B = diatonic(to);
+  const shift = n === 0 ? t('kc.same') : ctx.tn(n > 0 ? 'kc.up' : 'kc.down', Math.abs(n));
+  const res = (txt) => (txt.trim() ? ui.esc(transposeLine(txt, from, n)) : '<span class="l2">' + t('kc.textHint') + '</span>');
+  const capo = capoOptions(to);
+  if (size === 'quarter' || size === 'strip') return '<div class="vq"><div class="fbig sm">' + ui.esc(keyLabel(from)) + ' → ' + ui.esc(keyLabel(to)) + '</div><div class="l2">' + ui.esc(shift) + '</div></div>';
+  return '<div class="swrap kc">' +
+    '<div class="kclab"><span>' + t('kc.from') + '</span>' + ui.seg('kcmin', [['0', t('kc.maj')], ['1', t('kc.min')]], k.from.minor ? '1' : '0', t('kc.mode')) + '</div>' + pills('kcfrom', k.from.pc, k.from.minor) +
+    '<div class="kclab"><span>' + t('kc.to') + '</span></div>' + pills('kcto', k.to, k.from.minor) +
+    '<div class="kcres"><b>' + ui.esc(keyLabel(from)) + ' → ' + ui.esc(keyLabel(to)) + '</b><span>' + ui.esc(shift) + '</span></div>' +
+    '<div class="kctab" role="table">' + A.map((c, i) => '<div class="kccol" role="row"><span class="kcrn">' + c.rn + '</span>' +
+      '<button data-x="kcplay" data-k="a" data-i="' + i + '">' + ui.esc(c.name) + '</button><button class="b" data-x="kcplay" data-k="b" data-i="' + i + '">' + ui.esc(B[i].name) + '</button></div>').join('') + '</div>' +
+    '<div class="hdr">' + t('kc.yours') + '</div><input class="inp left kcinp" data-kctext value="' + ui.esc(k.text) + '" placeholder="G C D Em" aria-label="' + ui.esc(t('kc.yours')) + '" autocomplete="off" autocapitalize="characters" spellcheck="false">' +
+    '<div class="kcout num" id="kcout">' + res(k.text) + '</div>' +
+    '<div class="hdr">' + t('kc.capo', { key: keyLabel(to) }) + '</div><div class="group">' + capo.map((c) => '<div class="cell"><span class="grow">' + (c.capo ? ctx.tn('kc.fret', c.capo) : t('kc.noCapo')) + '</span><b>' + ui.esc(t('kc.shape', { shape: c.shape })) + '</b></div>').join('') + '</div></div>';
 }
 
 function circleHTML() {
@@ -348,7 +377,7 @@ function view() {
   const sw = big ? '<div class="tsw" role="tablist">' + secs().map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' +
     t('sec.' + k) + '</button>').join('') + '</div>'
     : '<div class="csw"><button class="cswb on txt" data-x="tsecnext" aria-label="' + t('secNext') + '">' + t('sec.' + s) + ' ›</button></div>';
-  const body = s === 'circle' ? circleHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : s === 'jazz' ? jazzHTML({ ctx, th: TH(), size }) : intervalsHTML();
+  const body = s === 'circle' ? circleHTML() : s === 'keys' ? keysHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : s === 'jazz' ? jazzHTML({ ctx, th: TH(), size }) : intervalsHTML();
   return '<div class="comp ' + size + '">' + sw + '<div class="cbody">' + body + '</div></div>';
 }
 
@@ -412,6 +441,10 @@ function act(a, el) {
   if (a[0] === 'j') { const r = jazzAct({ ctx, th, size }, a, el); if (r === 'save') save(); if (r) return; }
   switch (a) {
     case 'tsec': th.sec = el.dataset.v; save(); break;
+    case 'kcfrom': KC().from.pc = +el.dataset.v; save(); break;
+    case 'kcto': KC().to = +el.dataset.v; save(); break;
+    case 'kcplay': { const k = KC(), from = { ...k.from, sharp: null }, list = el.dataset.k === 'a' ? diatonic(from) : diatonic(keyTo(from, k.to)), c = list[+el.dataset.i];
+      if (c && A.unlock()) A.playChord(c.midis); break; }
     case 'tsecnext': th.sec = secs()[(secs().indexOf(curSec()) + 1) % secs().length]; save(); break;
     case 'fnote': {
       const pc = +el.dataset.v, n = (th.fnotes ||= []);
@@ -486,6 +519,8 @@ function bind() {
   onClick = (e) => {
     const sg = e.target.closest('[data-seg="kmode"] [data-v]');
     if (sg) { TH().minor = sg.dataset.v === '1'; ctx.store.save(); render(); return; }
+    const km = e.target.closest('[data-seg="kcmin"] [data-v]');
+    if (km) { KC().from.minor = km.dataset.v === '1'; ctx.store.save(); render(); return; }
     const sv = e.target.closest('[data-seg="sview"] [data-v]');
     if (sv) { TH().sview = sv.dataset.v; ctx.store.save(); render(); return; }
     const x = e.target.closest('[data-x]');
@@ -504,6 +539,15 @@ function bind() {
     if (curSec() === 'find') { act('fnote', { dataset: { v: String(+k.dataset.m % 12) } }); return; }
     if (ctx.audio.unlock()) ctx.audio.playNote(+k.dataset.m, { bus: 'theory', dur: 0.6 });
   };
+  // своя строка аккордов: пересчёт сразу, без перерисовки (поле не теряет курсор)
+  onInput = (e) => {
+    if (!e.target.matches('[data-kctext]')) return;
+    const k = KC(), from = { ...k.from, sharp: null }, o = host.querySelector('#kcout');
+    k.text = e.target.value.slice(0, 300);
+    ctx.store.save();
+    if (o) o.textContent = k.text.trim() ? transposeLine(k.text, from, keyShift(from, k.to)) : '';
+  };
+  host.addEventListener('input', onInput);
   host.addEventListener('click', onClick);
   host.addEventListener('keydown', onKey);
   host.addEventListener('pointerdown', onDown);
@@ -531,6 +575,7 @@ export default {
     stopListen();
     jstop();
     if (host) {
+      host.removeEventListener('input', onInput);
       host.removeEventListener('click', onClick);
       host.removeEventListener('keydown', onKey);
       host.removeEventListener('pointerdown', onDown);

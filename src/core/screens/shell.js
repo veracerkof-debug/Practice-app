@@ -9,7 +9,7 @@ import { TAB_ICONS, tabIds } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule } from '../modules.js';
 import { visibleTabs } from '../settings.js';
-import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeBlockMenu, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
+import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeBlockMenu, homeEditAct, homeEditing, setHomeEdit, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView, toolsTab, setToolsTab } from './tools.js';
 import { reportSheet } from './report.js';
@@ -99,6 +99,7 @@ export function createShell(app, root) {
 
   function go(tab, song) {
     if (panel.page) panel.close();
+    setHomeEdit(false); // правка главной заканчивается при уходе с неё
     if (tab === 'settings') { panel.open('week'); return; }
     if (tab === 'stats') { panel.open('stats'); return; }
     // Вкладку можно открыть и убранную (ссылкой «Все песни» и т.п.) — она просто не подсвечена внизу
@@ -123,6 +124,8 @@ export function createShell(app, root) {
     const b = e.target.closest('button,[data-song]');
     if (!b) return false;
     const d = b.dataset;
+    // правка главной (блоки: меньше, больше, убрать, вернуть, готово)
+    if (d.hbe) { if (homeEditAct(app, d.hbe)) render(); return true; }
     if (d.tab) go(d.tab);
     else if (d.go) go(d.go);
     else if (d.play) app.startSession('song', d.play);
@@ -184,6 +187,27 @@ export function createShell(app, root) {
     onStill: (b) => homeBlockMenu(app, b, render, () => panel.open('homes')),
     onDrop: (ids) => { const st = app.store.state.settings, L = homeLayout(st); L.order = [...ids, ...L.order.filter((k) => !ids.includes(k))]; setHomeLayout(st, L); app.store.settingsChanged(); render(); },
   });
+  // Правка главной: щипок двумя пальцами по блоку — больше (развести) или меньше (свести)
+  const pinch = new Map();
+  let pinchBase = 0, pinchId = null;
+  const pdist = () => { const [a, b] = [...pinch.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  root.addEventListener('pointerdown', (e) => {
+    if (!homeEditing()) return;
+    const blk = e.target.closest('[data-hb]');
+    if (!blk) return;
+    pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch.size === 2) { pinchBase = pdist(); pinchId = blk.dataset.hb; }
+  });
+  root.addEventListener('pointermove', (e) => {
+    if (!pinch.has(e.pointerId)) return;
+    pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch.size !== 2 || !pinchBase || !pinchId) return;
+    const r = pdist() / pinchBase;
+    if (r > 1.3 || r < 0.77) { homeEditAct(app, (r > 1 ? 'bigger:' : 'smaller:') + pinchId); pinchBase = pdist(); render(); }
+  });
+  const pend = (e) => { pinch.delete(e.pointerId); if (pinch.size < 2) { pinchBase = 0; pinchId = null; } };
+  root.addEventListener('pointerup', pend);
+  root.addEventListener('pointercancel', pend);
   // Вкладка «Инструменты» обрабатывает свои карточки сама
   root.addEventListener('click', (e) => { if (!e.target.closest('[data-open-tool]') || view.tab !== 'tools') act(e); });
   root.addEventListener('input', (e) => {
@@ -206,6 +230,7 @@ export function createShell(app, root) {
     return false;
   };
   app.go = go;
+  app.homeEditDone = () => { if (!homeEditing()) return false; setHomeEdit(false); render(); return true; };
   app.render = render;
   app.shellAct = act;
   // Первый запуск (профиля ещё нет): главная не показывается вовсе — заставка, затем язык, соглашение и регистрация;

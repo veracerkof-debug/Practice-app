@@ -50,7 +50,7 @@ function askDialog(id, why, what, onGo, onEnd) {
     const k = e.target.closest('[data-k]');
     if (!k) return;
     leave(d, 160);
-    // «Больше не спрашивать»: вопросы выключаются (вернуть — в «Уведомлениях»), сейчас — как «Продолжается»
+    // «Больше не спрашивать»: вопросы выключаются (вернуть — в «Подсказках приложения»), сейчас — как «Продолжается»
     if (k.dataset.k === 'never') { onNever(); onGo(); return; }
     (k.dataset.k === 'go' ? onGo : onEnd)();
   });

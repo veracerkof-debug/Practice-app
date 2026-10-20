@@ -58,10 +58,37 @@ export function homeLayout(st) {
 export function setHomeLayout(st, L) {
   st.home = { order: L.order.slice(), off: [...L.off], size: Object.fromEntries(Object.entries(L.size).filter(([k, v]) => HOME_BLOCKS.includes(k) && v !== 'm')) };
 }
+// Правка главной прямо на ней (как рабочий стол телефона): у каждого блока — меньше, больше, убрать; блоки
+// переставляются пальцем, щипок двумя пальцами — размер; внизу — убранные блоки (касание возвращает), сверху — «Готово»
+let EDIT = false;
+export const homeEditing = () => EDIT;
+export const setHomeEdit = (on) => { EDIT = !!on; };
+const ctl = (k, sz) => '<div class="hbctl">' +
+  '<button data-hbe="smaller:' + k + '"' + (sz === 's' ? ' disabled' : '') + ' aria-label="' + esc(t('hb.smaller') + ': ' + t('hb.' + k)) + '">A−</button>' +
+  '<button data-hbe="bigger:' + k + '"' + (sz === 'l' ? ' disabled' : '') + ' aria-label="' + esc(t('hb.bigger') + ': ' + t('hb.' + k)) + '">A+</button>' +
+  '<button class="x" data-hbe="hide:' + k + '" aria-label="' + esc(t('hb.hide') + ': ' + t('hb.' + k)) + '">×</button></div>';
 const blocks = (st, parts) => {
-  const L = homeLayout(st);
-  return L.order.filter((k) => !L.off.has(k) && parts[k]).map((k) => '<section class="hblk hb-' + (HOME_SIZES.includes(L.size[k]) ? L.size[k] : 'm') + '" data-hb="' + k + '">' + parts[k] + '</section>').join('');
+  const L = homeLayout(st), sz = (k) => (HOME_SIZES.includes(L.size[k]) ? L.size[k] : 'm');
+  const shown = L.order.filter((k) => !L.off.has(k) && parts[k]).map((k) => '<section class="hblk hb-' + sz(k) + '" data-hb="' + k + '">' + (EDIT ? ctl(k, sz(k)) : '') + parts[k] + '</section>').join('');
+  if (!EDIT) return shown;
+  const hidden = L.order.filter((k) => L.off.has(k) && parts[k]);
+  return '<div class="hbedit"><span>' + esc(t('hb.editHint')) + '</span><button class="btn sm fill" data-hbe="done">' + esc(t('hb.done')) + '</button></div>' + shown +
+    (hidden.length ? '<div class="hbtray"><div class="hdr">' + esc(t('hb.hiddenList')) + '</div>' + hidden.map((k) => '<button class="lchip pick" data-hbe="show:' + k + '">＋ ' + esc(t('hb.' + k)) + '</button>').join('') + '</div>' : '');
 };
+// Действие правки: 'smaller:week' | 'bigger:…' | 'hide:…' | 'show:…' | 'done' → true, если что-то изменилось
+export function homeEditAct(app, a) {
+  const st = app.store.state.settings, L = homeLayout(st), [op, id] = a.split(':');
+  if (op === 'done') { EDIT = false; return true; }
+  const sz = HOME_SIZES.includes(L.size[id]) ? L.size[id] : 'm';
+  if (op === 'smaller') L.size[id] = sz === 'l' ? 'm' : 's';
+  else if (op === 'bigger') L.size[id] = sz === 's' ? 'm' : 'l';
+  else if (op === 'hide') L.off.add(id);
+  else if (op === 'show') L.off.delete(id);
+  else return false;
+  setHomeLayout(st, L);
+  app.store.settingsChanged();
+  return true;
+}
 
 /* ---------- «Минимал» (эксперимент): та же главная, но только текст, линии и оттенки серого ---------- */
 
@@ -230,6 +257,7 @@ export function homeBlockMenu(app, el, rerender, openPage) {
   if (i > 0) items.push({ icon: HB.up, label: t('hb.up'), run: () => move(-1) });
   if (i >= 0 && i < vis.length - 1) items.push({ icon: HB.down, label: t('hb.down'), run: () => move(1) });
   items.push({ icon: HB.hide, label: t('hb.hide'), danger: true, run: () => { L.off.add(id); save(); toast(t('hb.hidden')); } });
+  items.push({ icon: HB.edit, label: t('hb.editHere'), run: () => { EDIT = true; rerender(); } });
   items.push({ icon: HB.edit, label: t('hb.all'), run: openPage });
   holdMenu(el, items, t('hb.' + id));
 }

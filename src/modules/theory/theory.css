@@ -247,3 +247,17 @@
 .jgrid i{display:block;padding:9px 0}
 .jgrid i.bar{box-shadow:-3px 0 0 var(--bg,#fff)}
 .jrow.g5 .jrn{font-size:12px;min-width:0}
+/* транспонирование */
+.kclab{white-space:nowrap;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--l2);text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
+.kclab .seg{max-width:220px;text-transform:none;letter-spacing:0}
+.kcrow .pill{min-width:44px}
+.kcres{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:6px 2px}
+.kcres b{font-size:28px;font-weight:700}
+.kcres span{color:var(--l2);font-size:15px}
+.kctab{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.kccol{display:flex;flex-direction:column;align-items:stretch;gap:4px;text-align:center}
+.kcrn{font-size:12px;color:var(--l2);font-family:Georgia,serif}
+.kccol button{min-height:40px;border-radius:10px;background:var(--cell);font-weight:600;font-size:14px;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kccol button.b{background:var(--tint);color:var(--on-tint)}
+.kcinp{width:100%;min-height:44px;border-radius:12px;background:var(--cell);padding:0 12px;font-size:17px;box-shadow:inset 0 0 0 1px var(--sep)}
+.kcout{min-height:28px;font-size:20px;font-weight:700;padding:2px 4px;white-space:pre-wrap;color:var(--tint-text, var(--tint))}
