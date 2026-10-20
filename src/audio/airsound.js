@@ -8,6 +8,7 @@
 // а автоматизация расстройки; дыхание — моно-шум; когда голосов уже много, новые берутся легче (унисон и мерцание меньше).
 import { uniCap, PERF } from './perf.js';
 import { partsWave, pinkNoise } from './waves.js';
+import { after, every, cancel } from './clock.js';
 
 // Рецепты. parts — гармоники основы; uni — голосов в унисоне, det — их расстройка (центы), drift — «плавание» (центы);
 // oct, fifth — октава и квинта над ней (мерцание); sub — октава вниз; breath — дыхание; cut — фильтр (× частота ноты);
@@ -50,7 +51,7 @@ function airVoiceWl(c, dest, R, f, t, { width, bright, fade, vibIn, body, uni })
     stop(at = c.currentTime) {
       if (stopped) return; stopped = true;
       node.port.postMessage({ k: 'stop', t: at });
-      setTimeout(() => { try { node.disconnect(); } catch { /* */ } if (vibIn) { try { vibIn.disconnect(vib); } catch { /* */ } } }, Math.max(0, at - c.currentTime) * 1000 + 120);
+      after(Math.max(0, at - c.currentTime) * 1000 + 120, () => { try { node.disconnect(); } catch { /* */ } if (vibIn) { try { vibIn.disconnect(vib); } catch { /* */ } } });
     },
     disconnect() {}, addEventListener() {}, start() {},
   };
@@ -82,12 +83,12 @@ function drift(c, p, base, amt, t) {
   const d = { c, p, base, amt, next: t };
   driftMore(d);
   drifting.add(d);
-  if (!driftTimer) driftTimer = setInterval(() => { drifting.forEach(driftMore); }, DRIFT_TICK);
+  if (!driftTimer) driftTimer = every(DRIFT_TICK, () => { drifting.forEach(driftMore); });
   return d;
 }
 function undrift(ds) {
   ds.forEach((d) => drifting.delete(d));
-  if (!drifting.size && driftTimer) { clearInterval(driftTimer); driftTimer = null; }
+  if (!drifting.size && driftTimer) { cancel(driftTimer); driftTimer = null; }
 }
 
 // Один голос (нота). dest — куда звучать; f — частота; t — начало.

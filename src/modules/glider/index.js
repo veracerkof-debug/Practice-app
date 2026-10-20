@@ -23,6 +23,7 @@ import { normalizeFx, voiceFx, busFx, applyPreset, axisFx, PRESETS } from './fx.
 import { melodyById, createFollower, fitRange } from '../../music/melodies.js';
 import { melStrip, melSheet } from './melody.js';
 import { tabsHTML, chipHTML } from './settabs.js';
+import { after, cancel } from '../../audio/clock.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M3 17c3 0 4-10 9-10s6 6 9 6"/><circle cx="12" cy="7" r="1.6" fill="currentColor"/></svg>';
 const I = {
@@ -194,7 +195,7 @@ function listen() {
     melShow(false);
     P.k++;
     // нота звучит чуть короче своей доли — слышно, где начинается следующая
-    P.timer = setTimeout(() => { if (P.voice) { P.voice.release(); P.voice = null; } P.timer = setTimeout(step, beat * d * 0.12); }, beat * d * 0.88);
+    P.timer = after(beat * d * 0.88, () => { if (P.voice) { P.voice.release(); P.voice = null; } P.timer = after(beat * d * 0.12, step); });
   };
   melShow(false);
   step();
@@ -203,7 +204,7 @@ function stopListen() {
   const P = M.play;
   if (!P) return;
   M.play = null;
-  clearTimeout(P.timer);
+  cancel(P.timer);
   if (P.voice) P.voice.release();
   P.el.remove();
   if (M.fol) M.fol.reset();

@@ -7,6 +7,7 @@ import { createSynth, pianoPatch, pianoLayer, playChord, playSeq, presetOf } fro
 import { createDrone } from './drone.js';
 import { createMetronome } from './metronome.js';
 import { openMic } from './mic.js';
+import { after } from './clock.js';
 
 // device — настройки устройства (src/core/device.js); metroCfg — настройки метронома;
 // onTempo(bpm, sec) — учёт темпа для активной сессии; save() — сохранить device
@@ -101,7 +102,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     playNote(midi, { bus = 'theory', dur = 0.9, preset = null } = {}) {
       const k = 'n' + n++;
       synth.on(midi, k, { bus, patch: preset ? presetOf(preset) || presetOf('piano') : null });
-      setTimeout(() => synth.off(k), dur * 1000);
+      after(dur * 1000, () => synth.off(k));
     },
     // opts.preset — встроенный звук синтезатора (как у playNote)
     playChord: (midis, opts = {}) => playChord(synth, midis, { ...opts, patch: opts.preset ? presetOf(opts.preset) : null }),

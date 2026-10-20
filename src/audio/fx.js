@@ -18,6 +18,7 @@
 import { sendToSpace, SPACES, SPACE_DEF } from './context.js';
 import { makeIR } from './waves.js';
 import { eco } from './perf.js';
+import { after, cancel } from './clock.js';
 
 export const EQ_TYPES = ['highpass', 'lowshelf', 'peaking', 'highshelf', 'lowpass'];
 export const F_MIN = 20, F_MAX = 20000, G_MAX = 15, Q_MIN = 0.2, Q_MAX = 8, BANDS_MAX = 8;
@@ -253,9 +254,9 @@ export function createFxChain(c, fx, { space = null } = {}) {
     const w = want(), key = [w.bands.map((b) => b.type).join(','), w.comp, w.drive, w.trem, w.delay, w.chorus, w.chorus && cur.chorusType].join('|');
     if (key !== shape) { // перестройка — под затуханием выхода, чтобы не щёлкнуло
       shape = key;
-      clearTimeout(rewireTm);
+      cancel(rewireTm);
       if (first) wire(w);
-      else { fade.gain.setTargetAtTime(0, T(), 0.004); rewireTm = setTimeout(() => { wire(w); fade.gain.setTargetAtTime(1, T(), 0.006); }, 18); }
+      else { fade.gain.setTargetAtTime(0, T(), 0.004); rewireTm = after(18, () => { wire(w); fade.gain.setTargetAtTime(1, T(), 0.006); }); }
     }
     w.bands.forEach((b, i) => {
       const f = filters[i]; if (!f) return;
@@ -292,7 +293,7 @@ export function createFxChain(c, fx, { space = null } = {}) {
     // сколько узлов живёт сейчас (для проверки экономии)
     get nodes() { const w = want(); return 4 + filters.length + ['comp', 'drive', 'trem', 'delay', 'chorus'].filter((k) => w[k]).reduce((n, k) => n + Object.values(S[k]).filter((x) => x && x.disconnect).length, 0) + Object.values(sends).filter(Boolean).length; },
     dispose() {
-      clearTimeout(rewireTm);
+      cancel(rewireTm);
       Object.values(S).forEach(kill);
       [input, output, fade, tap, ...filters, ...Object.values(sends)].forEach((x) => { try { x && x.disconnect(); } catch { /* */ } });
     },

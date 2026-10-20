@@ -5,6 +5,7 @@ import { wave } from './waves.js';
 import { SOUNDS } from './drone.js';
 import { sendToHall } from './context.js';
 import { airVoice } from './airsound.js';
+import { after } from './clock.js';
 
 // тампура — щипок по рисунку, не созвучие. «Шиммер» — пэд для поклонения: тёплая основа, медленное вступление
 // и мерцающий хвост из октавы и квинты сверху (как отражения большого зала), только у голоса пэда
@@ -122,7 +123,7 @@ export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5,
       amp.gain.setTargetAtTime(0, t, r / 4);
       const end = t + r * 1.5;
       [...os.map((x) => x.o), ...lfos].forEach((o) => { try { o.stop(end); } catch { /* уже остановлен */ } });
-      setTimeout(() => { try { out.disconnect(); } catch { /* */ } }, (r * 1.5 + 0.2) * 1000);
+      after((r * 1.5 + 0.2) * 1000, () => { try { out.disconnect(); } catch { /* */ } });
     },
   };
   return v;
@@ -184,7 +185,7 @@ function airPadVoice(c, dest, kind, { a4 = 440, hall = 0, uni = 0 } = {}) {
       amp.gain.setTargetAtTime(0, t, r / 4);
       const end = t + r * 1.5;
       [...(a ? a.srcs : []), vib, tr].forEach((o) => { try { o.stop(end); } catch { /* уже остановлен */ } });
-      setTimeout(() => { try { out.disconnect(); } catch { /* */ } }, (r * 1.5 + 0.2) * 1000);
+      after((r * 1.5 + 0.2) * 1000, () => { try { out.disconnect(); } catch { /* */ } });
     },
   };
   return v;

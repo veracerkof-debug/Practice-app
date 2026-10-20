@@ -1,6 +1,7 @@
 // Метроном: планирование с упреждением (Web Audio), акценты, дробления, свинг,
 // тренер ускорения, тихие такты. Настройки — объект формата METRO_DEF (src/core/store.js).
 import { getContext } from './context.js';
+import { every, cancel } from './clock.js';
 
 export const BPM_MIN = 20, BPM_MAX = 300;
 // Упреждение 0,3 с: на телефоне главный поток под нагрузкой (холсты, камера, сохранения) задерживает таймеры на
@@ -164,7 +165,7 @@ export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = 
       next = c.currentTime + 0.08;
       m.queue = [];
       m.sched();
-      timer = setInterval(m.sched, TICK_MS);
+      timer = every(TICK_MS, m.sched);
       lastTick = Date.now();
       return true;
     },
@@ -172,7 +173,7 @@ export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = 
     stop() {
       m.flush();
       m.running = false;
-      clearInterval(timer);
+      cancel(timer);
       m.queue = [];
     },
 

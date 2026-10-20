@@ -3,6 +3,7 @@
 import { getContext, masterNode, sendToReverb, sendToHall, midiFreq } from './context.js';
 import { wave, pinkNoise } from './waves.js';
 import { airVoice } from './airsound.js';
+import { every, cancel } from './clock.js';
 
 // Тембры: id → яркость по умолчанию. Названия — ключи i18n drone.sound.<id>
 // Первыми — воздушные для поклонения (airsound.js): воздух, свет, тепло, хор
@@ -123,7 +124,7 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
         step = 0;
         next = t + 0.1;
         tan();
-        timer = setInterval(tan, 120);
+        timer = every(120, tan);
         return;
       }
       if (AIRS[d.sound]) { startAir(c, d, master, t, os); return; }
@@ -202,7 +203,7 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
 
     // Затухание за fade секунд (по умолчанию 1,2 с)
     stop(fade = 1.2) {
-      clearInterval(timer);
+      cancel(timer);
       timer = null;
       if (!nodes) return;
       const { g, os } = nodes, t = g.context.currentTime, cur = g.gain.value;

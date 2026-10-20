@@ -5,6 +5,7 @@
 // сбой одной не роняет петлю; ограничение длины (MAX_SEC) защищает память телефона.
 import { getContext } from './context.js';
 import { createFxChain, normalizeFx } from './fx.js';
+import { after, cancel } from './clock.js';
 
 export const MAX_SEC = 90, MAX_LAYERS = 12, SLOTS = 4;
 export const MARGIN_SEC = 1; // первая запись пишется с хвостом на секунду дольше петли: слой можно сдвинуть назад-вперёд
@@ -191,7 +192,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       if (barSec > 0) lenSec = quantBars(played, barSec) * barSec;
       lenSec = Math.min(MAX_SEC, lenSec);
       if (lenSec > played + 0.02) { // дождаться конца такта
-        if (!rec.wait) { rec.wait = setTimeout(() => { rec && (rec.wait = null); api.stopRec(barSec); }, (lenSec - played) * 1000 + 5); }
+        if (!rec.wait) { rec.wait = after((lenSec - played) * 1000 + 5, () => { rec && (rec.wait = null); api.stopRec(barSec); }); }
         return;
       }
       const len = Math.max(1, Math.round(lenSec * sr)), margin = Math.round(MARGIN_SEC * sr), full = new Float32Array(len + margin), r = rec;
@@ -243,7 +244,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       emit();
     },
     stop() {
-      if (rec && rec.wait) clearTimeout(rec.wait);
+      if (rec && rec.wait) cancel(rec.wait);
       rec = null;
       stopAll();
       state = 'idle';

@@ -9,6 +9,7 @@ import { maxVoices } from './perf.js';
 import { synWave, noiseBuf } from './waves.js';
 import { airVoice } from './airsound.js';
 import { grandBuffer, grandPreload } from './grand.js';
+import { after, cancel } from './clock.js';
 
 // Встроенные пресеты; имена — ключи i18n synth.preset.<id>
 export const PRESETS = {
@@ -135,7 +136,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     if (!vo) return;
     voices.delete(key);
     order = order.filter((k) => k !== key);
-    setTimeout(() => { try { vo.g.disconnect(); } catch { /* уже отключён */ } }, 100);
+    after(100, () => { try { vo.g.disconnect(); } catch { /* уже отключён */ } });
   };
 
   // Заглушить один голос (r — время затухания; fast — сразу)
@@ -151,8 +152,8 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     } catch { /* ignore */ }
     voices.delete(key);
     order = order.filter((k) => k !== key);
-    clearTimeout(vo.timer);
-    setTimeout(() => { try { vo.g.disconnect(); } catch { /* ignore */ } }, (r * 1.4 + 0.2) * 1000);
+    cancel(vo.timer);
+    after((r * 1.4 + 0.2) * 1000, () => { try { vo.g.disconnect(); } catch { /* ignore */ } });
   };
 
   let preC = null;
@@ -179,7 +180,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
       opts, sig: sigOf(s), sustain: true, grand: true, vel: v, slot };
     voices.set(key, vo);
     order.push(key);
-    vo.timer = setTimeout(() => { if (voices.get(key) === vo) cleanup(key); }, life * 1000 + 80);
+    vo.timer = after(life * 1000 + 80, () => { if (voices.get(key) === vo) cleanup(key); });
   };
   const grandCut = (s, vo) => Math.min(20000, vo.f * (3 + 70 * Math.pow(s.bright, 1.6) * (0.35 + 0.65 * vo.vel)) + 400);
 
@@ -343,7 +344,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     if (SU < 0.02) { // затухающий звук — освобождаем голос сами
       const life = att + dec * 2.4 * longest + 0.2;
       os.forEach((o) => { try { o.stop(t + life); } catch { /* ignore */ } });
-      vo.timer = setTimeout(() => { if (voices.get(key) === vo) cleanup(key); }, life * 1000 + 60);
+      vo.timer = after(life * 1000 + 60, () => { if (voices.get(key) === vo) cleanup(key); });
     }
   };
 
@@ -383,8 +384,8 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
           vo.g.gain.setTargetAtTime(0.0001, t, tau);
           vo.os.forEach((o) => { try { o.stop(t + end); } catch { /* ignore */ } });
         } catch { /* ignore */ }
-        clearTimeout(vo.timer);
-        vo.timer = setTimeout(() => { if (voices.get(k) === vo) cleanup(k); }, end * 1000 + 100);
+        cancel(vo.timer);
+        vo.timer = after(end * 1000 + 100, () => { if (voices.get(k) === vo) cleanup(k); });
       });
     },
 
@@ -449,14 +450,14 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
 export function playSeq(syn, ms, { step = 0.3, bus = 'theory', patch = null } = {}) {
   ms.forEach((m, i) => {
     const k = 'q' + i + Math.random();
-    setTimeout(() => syn.on(m, k, { bus, patch }), i * step * 1000);
-    setTimeout(() => syn.off(k), (i * step + step * 0.95) * 1000);
+    after(i * step * 1000, () => syn.on(m, k, { bus, patch }));
+    after((i * step + step * 0.95) * 1000, () => syn.off(k));
   });
 }
 
 // Аккорд с лёгким арпеджио (18 мс между нотами), звучит 1,4 с
 export function playChord(syn, ms, { bus = 'theory', dur = 1.4, patch = null } = {}) {
   const ks = ms.map((m, i) => 'c' + i + Math.random());
-  ms.forEach((m, i) => setTimeout(() => syn.on(m, ks[i], { bus, patch }), i * 18));
-  setTimeout(() => ks.forEach((k) => syn.off(k)), dur * 1000);
+  ms.forEach((m, i) => after(i * 18, () => syn.on(m, ks[i], { bus, patch })));
+  after(dur * 1000, () => ks.forEach((k) => syn.off(k)));
 }

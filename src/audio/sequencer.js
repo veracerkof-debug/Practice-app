@@ -4,6 +4,7 @@
 // кругу (правка в редакторе), один проход (сведение). Планировщик как у метронома: просыпается каждые 25 мс и
 // выставляет всё, что начнётся в ближайшие 300 мс, точно по времени контекста. Свинг — задержка слабых восьмых.
 // Отсчёт перед стартом (такты клика), уровни дорожек для микшера (анализаторы только пока микшер открыт). Без DOM.
+import { after, every, cancel } from './clock.js';
 import { getContext } from './context.js';
 import { presetOf } from './synth.js';
 import { songNotes, secPerBeat, clipById, trackOf, loopOf, autoAt } from '../music/project.js';
@@ -91,7 +92,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     const spb = secPerBeat(p), { notes, loop } = plan(p), until = c.currentTime + ahead();
     while (t0 + nextBeat * spb < until) {
       if (mode.once && nextBeat >= loop.b) { // один проход: конец петли — хвост и стоп
-        if (!mode.endTm) { const end = t0 + nextBeat * spb + 2.5; mode.endTm = setTimeout(() => { const fn = mode.onEnd; api.stop(); if (fn) fn(); }, Math.max(0, (end - c.currentTime) * 1000)); }
+        if (!mode.endTm) { const end = t0 + nextBeat * spb + 2.5; mode.endTm = after(Math.max(0, (end - c.currentTime) * 1000), () => { const fn = mode.onEnd; api.stop(); if (fn) fn(); }); }
         return;
       }
       const beatT = t0 + nextBeat * spb, inLoop = songBeat(nextBeat, loop);
@@ -105,7 +106,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
         if (n.tr.inst === 'sample') { const buf = n.tr.sample && n.tr.sample.fileId && readyBuf(n.tr.sample.fileId); if (buf) sampleNote(buf, out, n.tr, n.m, at, n.d * spb, n.v * g); continue; }
         const key = 'sq' + seq++, patch = presetOf(n.tr.inst) || presetOf('piano');
         synth.on(n.m, key, { bus: 'theory', out, patch: { ...patch, gain: (patch.gain || 1) * g }, vel: n.v, at });
-        live.set(key, setTimeout(() => { live.delete(key); synth.off(key, false, at + n.d * spb); }, Math.max(0, (at + n.d * spb - c.currentTime) * 1000 - 60)));
+        live.set(key, after(Math.max(0, (at + n.d * spb - c.currentTime) * 1000 - 60), () => { live.delete(key); synth.off(key, false, at + n.d * spb); }));
       }
       nextBeat++;
     }
@@ -176,7 +177,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
   // записи спланированы на несколько кругов: по истечении — заново (таймер по кругу)
   let audioTm = 0;
   const loopSec = (p) => { const { loop } = plan(p); return (loop.b - loop.a) * secPerBeat(p); };
-  const scheduleAudio = (p) => { clearTimeout(audioTm); startAudio(p); scheduleAuto(p); if (mode.once) return; const ms = loopSec(p) * 1000; audioTm = setTimeout(() => { if (playing) { stopAudioLater(); mode.from = plan(p).loop.a; scheduleAudio(p); } }, ms * (PASSES - 1)); };
+  const scheduleAudio = (p) => { cancel(audioTm); startAudio(p); scheduleAuto(p); if (mode.once) return; const ms = loopSec(p) * 1000; audioTm = after(ms * (PASSES - 1), () => { if (playing) { stopAudioLater(); mode.from = plan(p).loop.a; scheduleAudio(p); } }); };
   const stopAudioLater = () => { const old = audioSrcs; audioSrcs = []; old.forEach((s) => { try { s.stop(c.currentTime + loopSec(getProject())); } catch { /* */ } }); };
 
   const api = {
@@ -217,18 +218,18 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       prime(p);
       if (lead) for (let i = 0; i < lead; i++) clickVoice(c, mixer.bus('metro'), t0 + (from - lead + i) * spb, i % p.num === 0 ? 3 : 1, 'click', noise || (noise = clickNoise(c)));
       sched();
-      timer = setInterval(sched, TICK);
+      timer = every(TICK, sched);
       scheduleAudio(p);
       return true;
     },
     stop() {
-      clearInterval(timer); timer = null; clearTimeout(audioTm); clearTimeout(mode.endTm); mode.endTm = 0;
+      cancel(timer); timer = null; cancel(audioTm); cancel(mode.endTm); mode.endTm = 0;
       if (mode.whole) { mode.whole = false; cache.key = ''; }
       playing = false;
       stopAudio();
       resetAuto();
       { const p = getProject(); if (p) p.tracks.forEach((tr) => { const x = chains.get(tr.id); if (x && x.pan.pan) x.pan.pan.setValueAtTime(tr.pan || 0, x.c.currentTime); }); }
-      live.forEach((tm, key) => { if (tm && tm.stop) { try { tm.stop(); } catch { /* */ } } else { clearTimeout(tm); synth.off(key, true); } });
+      live.forEach((tm, key) => { if (tm && tm.stop) { try { tm.stop(); } catch { /* */ } } else { cancel(tm); synth.off(key, true); } });
       live.clear();
     },
     toggle(fromBeat = 0) { return playing ? (api.stop(), false) : api.start(fromBeat); },
@@ -248,7 +249,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       }
       const key = 'sqa' + seq++, patch = presetOf(tr.inst) || presetOf('piano');
       synth.on(m, key, { bus: 'theory', out, patch, vel });
-      if (!hold) setTimeout(() => synth.off(key), 350);
+      if (!hold) after(350, () => synth.off(key));
       return key;
     },
     release(key) {
