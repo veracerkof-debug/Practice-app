@@ -8,6 +8,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import { t } from '../i18n/index.js';
 import { sheet, snav } from '../ui/index.js';
 import { log } from './log.js';
+import { mascotOf } from './settings.js';
 
 const KA = Capacitor.isNativePlatform() ? registerPlugin('KeepAlive') : null;
 export const bgAvailable = () => !!KA;
@@ -15,6 +16,13 @@ export const bgStatus = () => (KA ? KA.status().catch(() => null) : Promise.reso
 export const bgAsk = { battery: () => KA && KA.askBattery(), notify: () => KA && KA.askNotify(), settings: () => KA && KA.openSettings(), autostart: () => KA && KA.autostart().catch(() => KA.openSettings()) };
 
 // Что сейчас идёт — строка для уведомления; null — ничего
+// Лицо маскота для уведомления (картинки mn_<f|m>_<лицо>.png — build/notifyicons.mjs); '' — без маскота
+export function busyFace(app) {
+  const g = mascotOf(app.settings);
+  if (g === 'none') return '';
+  const mood = app.active ? (app.active.pausedAt ? 'wait' : 'focus') : app.audio.metro.running ? 'calm' : app.soundingAudio() ? 'sing' : 'wait';
+  return 'mn_' + g + '_' + mood;
+}
 export function busyText(app) {
   if (app.active) return t(app.active.pausedAt ? 'bg.paused' : 'bg.session');
   if (app.audio.metro.running) return t('bg.metro');
@@ -28,12 +36,12 @@ export function initBackground(app) {
   if (!KA) return;
   let on = false, shown = '', asked = !!app.device.bgAsked;
   const tick = () => {
-    const text = busyText(app);
-    if (text && (!on || text !== shown)) {
+    const text = busyText(app), face = busyFace(app), key = text + '|' + face;
+    if (text && (!on || key !== shown)) {
       if (document.visibilityState !== 'visible' && !on) return; // из фона Android службу не даёт — дождёмся экрана
-      KA.start({ title: 'Melete', text, channel: t('bg.channel') }).then(() => {
+      KA.start({ title: text, text: '', icon: face, channel: t('bg.channel') }).then(() => {
         if (!on) log('bg', 'работа в фоне: включена');
-        on = true; shown = text;
+        on = true; shown = key;
         if (!asked) { asked = true; app.device.bgAsked = true; app.saveDevice(); offer(); }
       }, (e) => log('bg', 'работа в фоне не включилась: ' + (e && e.message), 'w'));
     } else if (!text && on) {

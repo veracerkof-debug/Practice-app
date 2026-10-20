@@ -28,6 +28,7 @@ public class KeepAlivePlugin extends Plugin {
         i.putExtra("title", call.getString("title", "Melete"));
         i.putExtra("text", call.getString("text", ""));
         i.putExtra("channel", call.getString("channel", "Melete"));
+        i.putExtra("icon", call.getString("icon", ""));
         try { ContextCompat.startForegroundService(getContext(), i); call.resolve(); }
         catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
     }

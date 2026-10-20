@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
@@ -27,7 +28,8 @@ public class KeepAliveService extends Service {
 
     // Кнопки управления звуком в уведомлении (PlayerPlugin, src/core/player.js)
     static final String A_TOGGLE = "melete.player.TOGGLE", A_DOWN = "melete.player.DOWN", A_UP = "melete.player.UP";
-    static volatile String lastTitle = "Melete", lastText = "";
+    static volatile String lastTitle = "Melete", lastText = "", lastIcon = "";
+    static final int ACCENT = 0xFF9C7242; // цвет акцента приложения (src/styles/tokens.css)
     static volatile boolean running = false;
 
     private static PendingIntent action(Context c, String a, int code) {
@@ -35,11 +37,20 @@ public class KeepAliveService extends Service {
         return PendingIntent.getService(c, code, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    static Notification build(Context c, String title, String text) {
+    // Лицо маскота (res/drawable-nodpi/mn_<f|m>_<лицо>.png, build/notifyicons.mjs) или 0 — без маскота
+    static int faceId(Context c, String icon) {
+        if (icon == null || icon.isEmpty()) return 0;
+        return c.getResources().getIdentifier(icon, "drawable", c.getPackageName());
+    }
+
+    static Notification build(Context c, String title, String text, String icon) {
         Intent open = c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
         PendingIntent pi = open == null ? null : PendingIntent.getActivity(c, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        int face = faceId(c, icon);
+        // В духе приложения: значок «Μ» логотипа в строке состояния, цвет акцента, лицо маскота без кружка — крупной картинкой
         NotificationCompat.Builder b = new NotificationCompat.Builder(c, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(R.drawable.ic_stat_melete)
+            .setColor(ACCENT)
             .setContentTitle(title)
             .setContentText(text)
             .setOngoing(true)
@@ -47,6 +58,7 @@ public class KeepAliveService extends Service {
             .setShowWhen(false)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(pi);
+        if (face != 0) { try { b.setLargeIcon(BitmapFactory.decodeResource(c.getResources(), face)); } catch (Exception ignored) { } }
         // пока что-то звучит — значки «Тише», «Пауза / Продолжить», «Громче» (своя разметка: обычные кнопки
         // уведомления на Android 7+ показывают только слова)
         if (PlayerPlugin.notifyCtl && PlayerPlugin.sounding()) {
@@ -54,6 +66,9 @@ public class KeepAliveService extends Service {
             RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.note_ctl);
             v.setTextViewText(R.id.nc_title, title);
             v.setTextViewText(R.id.nc_text, text);
+            v.setViewVisibility(R.id.nc_text, text.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+            if (face != 0) v.setImageViewResource(R.id.nc_face, face);
+            v.setViewVisibility(R.id.nc_face, face != 0 ? android.view.View.VISIBLE : android.view.View.GONE);
             v.setImageViewResource(R.id.nc_toggle, playing ? R.drawable.ic_ctl_pause : R.drawable.ic_ctl_play);
             v.setOnClickPendingIntent(R.id.nc_toggle, action(c, A_TOGGLE, 1));
             v.setOnClickPendingIntent(R.id.nc_down, action(c, A_DOWN, 2));
@@ -70,7 +85,7 @@ public class KeepAliveService extends Service {
     static void refresh(Context c) {
         if (!running) return;
         NotificationManager nm = c.getSystemService(NotificationManager.class);
-        if (nm != null) { try { nm.notify(NOTE_ID, build(c, lastTitle, lastText)); } catch (Exception ignored) { } }
+        if (nm != null) { try { nm.notify(NOTE_ID, build(c, lastTitle, lastText, lastIcon)); } catch (Exception ignored) { } }
     }
 
     @Override
@@ -83,6 +98,7 @@ public class KeepAliveService extends Service {
         String title = intent != null && intent.getStringExtra("title") != null ? intent.getStringExtra("title") : "Melete";
         String text = intent != null && intent.getStringExtra("text") != null ? intent.getStringExtra("text") : "";
         String channelName = intent != null && intent.getStringExtra("channel") != null ? intent.getStringExtra("channel") : "Melete";
+        String icon = intent != null && intent.getStringExtra("icon") != null ? intent.getStringExtra("icon") : "";
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= 26 && nm != null && nm.getNotificationChannel(CHANNEL) == null) {
             NotificationChannel ch = new NotificationChannel(CHANNEL, channelName, NotificationManager.IMPORTANCE_LOW);
@@ -90,8 +106,8 @@ public class KeepAliveService extends Service {
             ch.setSound(null, null);
             nm.createNotificationChannel(ch);
         }
-        lastTitle = title; lastText = text; running = true;
-        Notification note = build(this, title, text);
+        lastTitle = title; lastText = text; lastIcon = icon; running = true;
+        Notification note = build(this, title, text, icon);
         if (Build.VERSION.SDK_INT >= 29) startForeground(NOTE_ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
         else startForeground(NOTE_ID, note);
         // процессор не засыпает при погасшем экране, пока идёт занятие (не дольше 6 часов на всякий случай)
