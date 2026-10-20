@@ -68,7 +68,7 @@ button.cell:active{background:var(--fill)}
 .alert .abtns{display:grid;grid-template-columns:1fr 1fr;border-top:.5px solid var(--sep)}
 .alert .abtns button{min-height:44px;color:var(--tint-text);font-size:17px}
 .alert .abtns button+button{border-left:.5px solid var(--sep);font-weight:600}
-.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));background:var(--cell);color:var(--ink);padding:12px 18px;border-radius:999px;font-size:15px;font-weight:500;z-index:60;max-width:90%;box-shadow:0 8px 30px rgba(0,0,0,.18);animation:fade .2s}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));background:var(--cell);color:var(--ink);padding:12px 18px;border-radius:999px;font-size:15px;font-weight:500;z-index:60;width:max-content;max-width:min(90vw,440px);box-shadow:0 8px 30px rgba(0,0,0,.18);animation:fade .2s}
 .check{width:16px;height:16px;stroke:var(--tint);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .ic{width:44px;height:44px;border-radius:50%;background:var(--fill);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;flex:none;font-weight:600;font-size:15px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}

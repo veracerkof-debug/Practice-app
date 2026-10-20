@@ -32,5 +32,6 @@
     "{n} ta yozuv ajratilgan"
   ],
   "min": "daq",
-  "sec": "s"
+  "sec": "s",
+  "st.idle": "mediateka yozuvidan"
 }

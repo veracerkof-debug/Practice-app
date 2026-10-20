@@ -96,7 +96,7 @@ export default {
   color: '#6E5A8E',
   heavy: true, heavyMb: 180, // модель в сборке; в веб-версии — заглушка
   sizes: ['full', 'half'],
-  status(c) { const n = c.files.list('audio').filter((r) => r.stem).length / 4; return n ? c.tn('stemsDone', Math.floor(n)) : ''; },
+  status(c) { const n = c.files.list('audio').filter((r) => r.stem).length / 4; return n ? c.tn('stemsDone', Math.floor(n)) : c.t('st.idle'); },
   mount(el, c) {
     host = el; ctx = c;
     render();

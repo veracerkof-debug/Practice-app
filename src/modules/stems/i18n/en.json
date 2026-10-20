@@ -33,5 +33,6 @@
     "{n} recordings separated"
   ],
   "min": "min",
-  "sec": "s"
+  "sec": "s",
+  "st.idle": "from a library recording"
 }
