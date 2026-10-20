@@ -143,6 +143,11 @@ export function createStore({ storage = safeStorage(), now = Date.now, clockBad 
       store.save();
       return store.allSessions().length - before;
     },
+    // Заменить состояние целиком (загрузка копии по частям: backupparts.js собирает новое из старого и копии)
+    replaceState(next) {
+      state = normalize(next);
+      store.save();
+    },
     // info — подпись копии (кто, когда, откуда): { by, at, app }; при загрузке не мешает (слияние берёт только данные)
     exportBackup: (info) => JSON.stringify(info ? { backupInfo: info, ...state } : state, null, 1),
 

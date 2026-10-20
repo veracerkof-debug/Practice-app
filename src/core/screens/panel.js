@@ -15,7 +15,8 @@ import {
 import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { demoLeft, addDemo, removeDemo } from '../demo.js';
-import { saveBackup, infoOf } from '../backup.js';
+import { isBackup } from '../store.js';
+import { exportSheet, importSheet } from './backupsheet.js';
 import { playerAvailable, bgCtl, canOverlay, askOverlay } from '../player.js';
 import { meleteHTML, bindMelete, mountMelete } from './melete.js';
 import { setsOf, QSETS, qsetsFor } from '../quotes.js';
@@ -567,15 +568,16 @@ export function createPanel(app, onChange) {
         return;
       }
       if (g('[data-act="export"]')) {
-        saveBackup(app).then((r) => {
+        exportSheet(app, (r) => {
           if (r.where === 'folder') { toast(t('bk.savedFolder', { name: r.name.replace(/\.json$/, '') })); copies = null; loadCopies(app, render); }
           else if (r.where === 'saved') toast(t('data.saved'));
-        }).catch(() => toast(t('bk.fail')));
+        });
         return;
       }
+      // копия из папки — сначала выбрать, что из неё загрузить
       if ((b = g('[data-bk]'))) {
-        const name = b.dataset.bk;
-        confirm(t('bk.loadTitle'), name.replace(/\.json$/, ''), t('bk.loadYes')).then((ok) => ok && app.folder.restoreFile(name).then((n) => { toast(n == null ? t('fold.noData') : tn('data.imported', n)); onChange(); render(); }).catch(() => toast(t('data.notBackup'))));
+        app.folder.readFile(b.dataset.bk).then((p) => { if (isBackup(p)) importSheet(app, p, () => { applyTheme(app.store.state.settings); onChange(); render(); }); else toast(t('fold.noData')); })
+          .catch(() => toast(t('data.notBackup')));
         return;
       }
       if ((b = g('[data-fold]'))) {
@@ -670,17 +672,17 @@ export function createPanel(app, onChange) {
 
 /* ---------- резервная копия ---------- */
 
+// Файл копии → выбор частей → загрузка
 function importBackup(app, input, done) {
   const f = input.files[0];
   input.value = '';
   if (!f) return;
   const r = new FileReader();
   r.onload = () => {
-    try {
-      const p = JSON.parse(r.result), n = app.store.importBackup(p), inf = infoOf(p);
-      done();
-      toast(tn('data.imported', n) + (inf && inf.at ? ' · ' + t('bk.from', { by: inf.by || t('bk.noName'), when: new Date(inf.at).toLocaleDateString(getLang() === 'uz' ? 'uz-Latn' : getLang()) }) : ''));
-    } catch { toast(t('data.notBackup')); }
+    let p = null;
+    try { p = JSON.parse(r.result); } catch { p = null; }
+    if (!isBackup(p)) { toast(t('data.notBackup')); return; }
+    importSheet(app, p, done); // что загрузить — выбор частей
   };
   r.readAsText(f);
 }

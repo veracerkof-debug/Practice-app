@@ -80,7 +80,9 @@ export function initFolder(app) {
     },
     // копии с подписью в Data/Backups: список, сохранить сейчас, загрузить (слиянием)
     async backups() { if (!avail || !state.ok) return []; return listBackups(nativeDriver); },
-    async saveBackup() { if (!avail || !state.ok) return null; try { return await writeBackup(nativeDriver, backupText(app), backupBy(app)); } catch (e) { logErr('folder', e); return null; } },
+    async saveBackup(text = null) { if (!avail || !state.ok) return null; try { return await writeBackup(nativeDriver, text || backupText(app), backupBy(app)); } catch (e) { logErr('folder', e); return null; } },
+    // Прочитать копию из папки (для выбора частей) → объект или null
+    readFile: (name) => readBackupFile(nativeDriver, name),
     async restoreFile(name) { const p = await readBackupFile(nativeDriver, name); if (!p) return null; return app.store.importBackup(p); },
     async forget() { if (!avail) return; try { await nativeDriver.forget(); } catch { /* уже нет */ } keep({}); state = { ok: false, name: '' }; emit(); },
     // данные из папки (Data/melete-data.json) — слиянием с текущими, как «Загрузить копию»

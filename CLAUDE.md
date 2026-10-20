@@ -54,7 +54,7 @@
   `midi.js` — воспроизведение MIDI-записей в инструменте и MIDI-клавиатура (Android — `MidiPlugin.java`, веб — Web MIDI); инструмент с MIDI отдаёт `midiIn`/`midiStop`;
   `palettes.js` — палитры (у каждого инструмента свой оттенок); `demo.js` — демо-набор (песни, табы, ноты, записи `demoaudio.js`, события).
   `player.js` — управление звуком вне приложения: кнопки в уведомлении, плавающая кнопка, всплывающее окно (Android — `PlayerPlugin.java`, `FloatService.java`);
-  `backup.js` — резервная копия с подписью (кто и когда): в папку Melete (`Data/Backups`) или через «Поделиться»;
+  `backup.js` — резервная копия с подписью (кто и когда): в папку Melete (`Data/Backups`) или через «Поделиться»; по частям — `backupparts.js`, выбор — `screens/backupsheet.js`;
   `reading.js` — чтение Библии и планы (свои — `screens/bibleplan.js`); `cleanup.js` — разовая очистка после проверок.
   Сохранять файлы на Android — только через «Поделиться» (`screens/share.js: sendFile`) или папку: скачивание ссылкой в WebView не работает.
   Логика без DOM, формат данных и ключи localStorage — как в прототипе (`practice.v1*`).
