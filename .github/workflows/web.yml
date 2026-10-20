@@ -36,7 +36,7 @@ jobs:
         run: npm test
 
       - name: Сборка
-        run: npm run build
+        run: npx vite build --mode web
 
       # Видео к демо-песне «Amazing Grace»: астронавт NASA Челл Линдгрен играет её на волынке на МКС (NASA — общественное
       # достояние, файл с Wikimedia Commons). В репозиторий не кладётся: скачивается при сборке, сжимается в MP4 (играет

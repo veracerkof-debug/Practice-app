@@ -4,7 +4,7 @@ import '../../ui/screens.css';
 import { t } from '../../i18n/index.js';
 import { ui, esc, icons } from '../../ui/index.js';
 import { isOn } from '../settings.js';
-import { mountModule, makeCtx, moduleName, trackToolTime, fmtDur } from '../modules.js';
+import { mountModule, makeCtx, moduleName, trackToolTime, fmtDur, heavyStub } from '../modules.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { IC } from './common.js';
 import { showHelp } from '../help.js';
@@ -29,6 +29,7 @@ function renderToolsNow(app, root) {
   root.innerHTML = '<h1 class="vh">' + t('tools.title') + '</h1><div class="tgrid tgtop">' + list.map((m) => {
     let s2 = '';
     if (st.uiStyle !== 'mono') { try { s2 = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ } } // «Минимал» — без строк состояния
+    if (heavyStub(m)) s2 = t('heavy.short');
     return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +
       esc(moduleName(m)) + '</span><span class="tcs2">' + esc(s2) + '</span></span></button>';
   }).join('') + '</div>' +

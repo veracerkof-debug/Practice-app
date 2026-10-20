@@ -178,6 +178,18 @@ export function makeCtx(app, mod) {
 
 export const moduleName = (mod) => mod.name[getLang()] || mod.name.ru;
 
+// Тяжёлый модуль (heavy: true — модели, банки звуков) в веб-сборке не работает: его файлов там нет (DECISIONS: размер)
+const WEB_BUILD = typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__;
+export const heavyStub = (mod) => !!(mod && mod.heavy && WEB_BUILD);
+const RELEASE = 'https://github.com/veracerkof-debug/Practice-app/releases/tag/pre';
+function heavyHTML(ctx, mod) {
+  const { t, ui } = ctx, name = moduleName(mod);
+  let what = ''; try { what = t('heavy.desc'); } catch { /* */ }
+  if (!what || what === 'heavy.desc') what = '';
+  return '<div class="heavy"><span class="hvic" style="--c:' + mod.color + '">' + mod.icon + '</span><h2>' + ui.esc(name) + '</h2>' + (what ? '<p>' + ui.esc(what) + '</p>' : '') +
+    '<p class="hvnote">' + ui.esc(t('heavy.web', { mb: mod.heavyMb || '' })) + '</p>' +
+    '<a class="cell act center b" href="' + RELEASE + '" target="_blank" rel="noopener">' + ui.esc(t('heavy.get')) + '</a></div>';
+}
 // Смонтировать модуль в host с размером size; возвращает { resize, unmount }.
 // frame — окно (.pane) с классом размера; по умолчанию сам host. В сессии модуль рисует внутри окна,
 // где есть ещё полоска перетаскивания и переключатель «метроном / тюнер».
@@ -188,6 +200,10 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
   frame.dataset.tool = mod.id;
   frame.dataset.size = size;
   frame.style.setProperty('--mod', mod.color);
+  if (heavyStub(mod)) { // тяжёлый модуль в веб-версии: заглушка с описанием и ссылкой на приложение
+    host.innerHTML = heavyHTML(ctx, mod);
+    return { ctx, resize() {}, unmount() { host.innerHTML = ''; frame.classList.remove('pane', size); } };
+  }
   mod.mount(host, ctx, size);
   // инструмент, где играют несколькими пальцами: пока открыт — системный снимок экрана тремя пальцами не срабатывает
   // (у остальных — медиатека, ноты, тюнер… — защиты нет: она выключала бы и запись экрана)

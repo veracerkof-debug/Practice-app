@@ -42,14 +42,17 @@ function showcase(mode) {
   };
 }
 
+// Веб-версия (vite build --mode web): тяжёлые файлы (модели, банки звуков) из public/models/ в сборку не идут —
+// такие модули (heavy: true) показывают заглушку, сами они есть в APK и Windows (DECISIONS: размер и тяжёлые модули)
+const lightWeb = (mode) => (mode !== 'web' ? null : { name: 'light-web', generateBundle(_, bundle) { Object.keys(bundle).forEach((k) => { if (k.startsWith('models/')) delete bundle[k]; }); } });
 export default defineConfig(({ mode }) => ({
   // относительные пути — нужны для Capacitor (этап 3)
   base: './',
   // дата сборки: часы устройства раньше неё — сбиты (src/core/clock.js)
   // версия — в отчёт о проблеме (src/core/report.js)
-  define: { __BUILD_TIME__: Date.now(), __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version) },
+  define: { __WEB_BUILD__: mode === 'web', __BUILD_TIME__: Date.now(), __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version) },
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
-  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), showcase(mode)],
+  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), showcase(mode), lightWeb(mode)],
   // MediaPipe не собирается заранее: иначе в режиме разработки вырезка статистики (build/mediapipe.js) не сработает
   optimizeDeps: { exclude: ['@mediapipe/tasks-vision'] },
   // воркеры alphaTab сжимаются так же, как основной код
