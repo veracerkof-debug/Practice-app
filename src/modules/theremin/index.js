@@ -13,6 +13,7 @@ import './theremin.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
+import el from './i18n/el.json';
 import { PRESETS as SYN, WORSHIP, presetOf } from '../../audio/synth.js';
 import { mName, SH } from '../../music/notes.js';
 import { scaleSelectHTML, folkInfoHTML, folkAct } from '../../ui/scalepick.js';
@@ -917,8 +918,8 @@ function bind() {
 export default {
   id: 'theremin',
   order: 36,
-  name: { ru: ru.name, uz: uz.name, en: en.name },
-  i18n: { ru, uz, en },
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#866B9D',
   // MIDI: запись игры (голоса — MPE), воспроизведение без камеры, MIDI-клавиатура (src/core/midi.js)

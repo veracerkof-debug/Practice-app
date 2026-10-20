@@ -106,6 +106,7 @@
   "delSelTitle": "{files} oʻchirilsinmi?",
   "notMedia": "Bu audio ham, video ham emas",
   "addedN": "Qoʻshildi: {files}",
+  "monoFixed": "Bu bezakda koʻrinish qotirilgan: {v}.",
   "help.what": "Tahlil va joʻr chalish uchun yozuvlar va videolar.",
   "help.1": "«+» — fayl qoʻshish; faqat qurilmada saqlanadi.",
   "help.2": "Tezlik balandlik oʻzgarmagan holda oʻzgaradi.",

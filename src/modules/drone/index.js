@@ -4,6 +4,7 @@ import './drone.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
+import el from './i18n/el.json';
 import { SOUNDS, CHORDS, LAYERS, normalizeDrone } from '../../audio/drone.js';
 import { presetRow, promptName, presetManager } from '../../ui/presets.js';
 
@@ -133,8 +134,8 @@ function bind() {
 export default {
   id: 'drone',
   order: 40,
-  name: { ru: ru.name, uz: uz.name, en: en.name },
-  i18n: { ru, uz, en },
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#548591',
   multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами

@@ -9,6 +9,7 @@ import './studio.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
+import el from './i18n/el.json';
 import { newProject, newTrack, newData, normalizeProject, normalizeData, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, projectEvents, songBars, addClip, dupClip, removeClip, splitClip, clipById, trackOf, clipsOf, dataBeats, isEmptyProject, projectTracks } from '../../music/project.js';
 import { createSequencer } from '../../audio/sequencer.js';
 import { createRoll } from './roll.js';
@@ -353,8 +354,8 @@ function onClick(e) {
 export default {
   id: 'studio',
   order: 47,
-  name: { ru: ru.name, uz: uz.name, en: en.name },
-  i18n: { ru, uz, en },
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#3E8C8C',
   tab: true, // своя вкладка внизу, не инструмент: в «Инструментах», быстром доступе и окнах сессии её нет

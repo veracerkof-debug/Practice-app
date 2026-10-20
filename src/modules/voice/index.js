@@ -9,6 +9,7 @@
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
+import el from './i18n/el.json';
 import './voice.css';
 import { engine, isLav, KIND } from '../../audio/voiceengine.js';
 import { decodeWav, encodeWav, processVoice, peaks, spectrumDb, EQ_PRESETS, VOICE_BANDS, migrateVoiceFx } from '../../audio/voicefx.js';
@@ -382,8 +383,8 @@ function onEnd() { if (S.playing) { S.playing = false; render(); } }
 export default {
   id: 'voice',
   order: 96,
-  name: { ru: ru.name, uz: uz.name, en: en.name },
-  i18n: { ru, uz, en },
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#B0585C',
   sizes: ['full', 'half', 'quarter', 'strip'],

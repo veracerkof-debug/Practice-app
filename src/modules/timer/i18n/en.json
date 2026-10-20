@@ -50,6 +50,7 @@
   "w.saved": "Saved: {time}",
   "w.statusRun": "Stopwatch, {time}",
   "w.statusPaused": "Stopwatch paused, {time}",
+  "monoFixed": "This style keeps the view fixed: {v}.",
   "help.what": "Pomodoro and stopwatch.",
   "help.1": "Start — work, then a break; a long one after cycles.",
   "help.2": "In a session a break pauses tracking.",

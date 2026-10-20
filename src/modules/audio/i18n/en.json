@@ -107,6 +107,7 @@
   "delSelTitle": "Delete {files}?",
   "notMedia": "That’s not audio or video",
   "addedN": "Added: {files}",
+  "monoFixed": "This style keeps the view fixed: {v}.",
   "help.what": "Recordings and videos to study and play along with.",
   "help.1": "“+” adds files; they stay on this device.",
   "help.2": "Speed changes without changing pitch.",

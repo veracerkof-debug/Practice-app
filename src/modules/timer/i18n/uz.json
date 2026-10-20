@@ -47,6 +47,7 @@
   "w.saved": "Yozildi: {time}",
   "w.statusRun": "Sekundomer, {time}",
   "w.statusPaused": "Sekundomer pauzada, {time}",
+  "monoFixed": "Bu bezakda koʻrinish qotirilgan: {v}.",
   "help.what": "Pomodoro va sekundomer.",
   "help.1": "Start — ish, keyin tanaffus, sikllardan soʻng — uzun.",
   "help.2": "Sessiyada tanaffus hisobni pauzaga qoʻyadi.",

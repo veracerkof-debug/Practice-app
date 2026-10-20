@@ -6,6 +6,7 @@
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
+import el from './i18n/el.json';
 import './spectrum.css';
 import { mName } from '../../music/notes.js';
 import { weightDb, levelDb, BASE_CAL, dominant } from './dsp.js';
@@ -226,8 +227,8 @@ export default {
   id: 'spectrum',
   order: 100,
   inner: true, // не отдельный инструмент: открывается нажатием на окно уровня в диктофоне
-  name: { ru: ru.name, uz: uz.name, en: en.name },
-  i18n: { ru, uz, en },
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#5988A7',
   sizes: ['full', 'half', 'quarter', 'strip'],
