@@ -114,6 +114,13 @@ export function makeCtx(app, mod) {
     uploadOk: () => !!app.store.state.settings.upOk,
     // Песни библиотеки — только чтение: [{ id, title, artist, key, text }] (text — есть ли текст с аккордами)
     songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title, artist: s.artist || '', key: s.key || null, text: !!String(s.notes || '').trim() })),
+    // Проекты студии (state.projects, в резервной копии вместе с песнями): list(), get(id), save(p), remove(id)
+    projects: {
+      list: () => (app.store.state.projects || []).filter((x) => !x.deleted),
+      get: (id) => (app.store.state.projects || []).find((x) => x.id === id && !x.deleted) || null,
+      save(p) { const L = (app.store.state.projects ||= []), i = L.findIndex((x) => x.id === p.id); p.updatedAt = app.store.now(); if (i >= 0) L[i] = p; else L.push(p); app.store.save(); },
+      remove(id) { const x = (app.store.state.projects || []).find((y) => y.id === id); if (x) { x.deleted = true; x.updatedAt = app.store.now(); app.store.save(); } },
+    },
     // Данные модуля в общем состоянии (попадают в резервную копию): state.settings[id]
     data: () => (app.store.state.settings[mod.id] ??= {}),
     saveData: () => app.store.settingsChanged(),

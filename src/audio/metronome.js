@@ -71,7 +71,8 @@ export function step(pos, cfg) {
 
 const VOL = { 3: 1, 2: 0.72, 1: 0.5, 0.5: 0.26 };
 
-function voice(c, out, t, l, sound, noise) {
+// Голос клика — и для студии (sequencer.js)
+export function voice(c, out, t, l, sound, noise) {
   const g = c.createGain();
   g.connect(out);
   const vol = VOL[l];
@@ -104,7 +105,7 @@ function voice(c, out, t, l, sound, noise) {
   }
 }
 
-function makeNoise(c) {
+export function makeNoise(c) {
   const len = c.sampleRate * 0.05, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
   for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
   return buf;
@@ -201,3 +202,5 @@ export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = 
   mixer.probe('metro', () => m.running);
   return m;
 }
+
+export { voice as clickVoice, makeNoise as clickNoise };

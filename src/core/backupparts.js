@@ -1,6 +1,6 @@
 // Резервная копия по частям: что сохранить и что загрузить — выбирает человек. Без DOM.
 // Части: settings — настройки приложения и инструментов (оформление, цель недели, напоминания, звуки, пресеты…);
-// songs — песни, их метки и жанры (settings.lib), по желанию — их файлы (записи, табы, ноты: backup.js);
+// songs — песни, их метки и жанры (settings.lib), проекты студии, по желанию — их файлы (записи, табы, ноты: backup.js);
 // profile — профиль и статистика (все занятия); reading — план чтения и отметки прочитанного;
 // calendar — события и сет-листы, типы событий.
 // Формат — прежний JSON (version: 1) с полем parts; копии без parts (прежние) содержат всё.
@@ -54,6 +54,7 @@ export function pickParts(state, parts, { tools = null } = {}) {
   }
   Object.entries(OWN).forEach(([part, keys]) => { if (on.has(part)) keys.forEach((k) => { if (S[k] != null) out.settings[k] = S[k]; }); });
   if (on.has('songs')) out.songs = state.songs || [];
+  if (on.has('songs') && state.projects) out.projects = state.projects; // проекты студии — вместе с песнями
   if (on.has('profile')) out.sessions = state.sessions || [];
   if (on.has('calendar') && state.events) out.events = state.events;
   out.settings.updatedAt = S.updatedAt || 0;
@@ -67,6 +68,7 @@ export function applyParts(state, p, parts) {
   if (on.has('settings')) Object.keys(P).forEach((k) => { if (!OWNED.has(k) && !LOCAL.has(k)) S[k] = clone(P[k]); });
   if (on.has('songs')) {
     out.songs = byId(out.songs, p.songs);
+    if (p.projects) out.projects = byId(out.projects, p.projects);
     if (P.lib) {
       S.lib = S.lib || {};
       Object.keys(P.lib).forEach((k) => { S.lib[k] = Array.isArray(P.lib[k]) ? unionById(S.lib[k], P.lib[k]) : P.lib[k]; });

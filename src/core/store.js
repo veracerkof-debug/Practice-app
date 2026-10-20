@@ -55,6 +55,7 @@ export function merge(a, b) {
   out.sessions = byId(a.sessions, b.sessions);
   // События календаря (src/core/calendar.js) — поле новее прототипа, появляется с первым событием
   if (a.events || b.events) out.events = byId(a.events, b.events);
+  if (a.projects || b.projects) out.projects = byId(a.projects, b.projects); // проекты студии (src/music/project.js)
   const sa = a.settings || {}, sb = b.settings || {};
   out.settings = Object.assign({}, blank().settings, (sa.updatedAt || 0) >= (sb.updatedAt || 0) ? sa : sb);
   out.updatedAt = Math.max(a.updatedAt || 0, b.updatedAt || 0);

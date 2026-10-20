@@ -138,10 +138,10 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
   };
 
   // Заглушить один голос (r — время затухания; fast — сразу)
-  const offOne = (key, fast = false) => {
+  const offOne = (key, fast = false, at = 0) => {
     const vo = voices.get(key), c = vo && vo.g.context;
     if (!vo) return;
-    const t = c.currentTime, r = fast ? 0.02 : vo.rel;
+    const t = Math.max(c.currentTime, at || 0), r = fast ? 0.02 : vo.rel;
     try {
       vo.g.gain.cancelScheduledValues(t);
       vo.g.gain.setValueAtTime(Math.max(vo.g.gain.value, 0.0001), t);
@@ -186,7 +186,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
   const play = (c, m, key, opts, s, slot) => {
     const busName = opts.bus || 'piano';
     const SU = opts.hold ? Math.max(s.sus, 0.45) : s.sus;
-    const t = c.currentTime + 0.004, f = midiFreq(m, getA4());
+    const t = opts.at > c.currentTime ? opts.at : c.currentTime + 0.004, f = midiFreq(m, getA4()); // at — точное время (студия)
     let kind = s.kind || 'soft';
     if (slot !== 'layer') mixer.setReverb('piano', s.rev * 0.9);
     const bus = mixer.bus(busName);
@@ -349,7 +349,8 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
   const syn = {
     // Нота звуком пианино (и вторым слоем, если он есть).
     // opts: { bus: 'piano' | 'theory', hold: true — держать (Hold), даже если у пресета нет сустейна,
-    //        patch — сыграть другим звуком, без слоя, не меняя настройки пианино (тембры тренажёра слуха), vel — сила 0…1 }
+    //        patch — сыграть другим звуком, без слоя, не меняя настройки пианино (тембры тренажёра слуха), vel — сила 0…1,
+    //        at — время начала по часам контекста (планировщик студии) }
     on(m, key, opts = {}) {
       const c = getContext(mixer.state.mode);
       if (!c) return;
@@ -361,9 +362,9 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     },
 
     // Отпустить ноту (и её второй слой)
-    off(key, fast = false) {
-      offOne(key, fast);
-      if (!key.endsWith(LK)) offOne(key + LK, fast);
+    off(key, fast = false, at = 0) {
+      offOne(key, fast, at);
+      if (!key.endsWith(LK)) offOne(key + LK, fast, at);
     },
 
     // Отпустить «с педалью» (Sustain): нота не глушится, а затухает долгим хвостом, как струна при нажатой педали.

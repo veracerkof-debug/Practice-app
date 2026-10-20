@@ -1,0 +1,50 @@
+/* Студия: транспорт полосой сверху, дорожки списком, редактор дорожки на всё окно */
+.stwrap{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;container-type:size}
+.stlist{flex:1;overflow:auto;min-height:0}
+.sttop{display:flex;align-items:center;gap:8px;flex:none}
+.stplay{width:52px;height:52px;border-radius:50%;background:var(--tint);color:var(--on-tint);display:grid;place-items:center;flex:none}
+.stplay.on{background:#D9534F}
+.stplay svg{width:26px;height:26px}
+.sttop.sm .stplay{width:44px;height:44px}
+.stinfo{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:2px 6px;border-radius:12px;background:var(--fill)}
+.stinfo b{font-size:20px;line-height:1.1}
+.stinfo span{font-size:12px;color:var(--l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.stpos{min-width:3.5ch;text-align:center;font-size:18px;font-weight:600;color:var(--l2)}
+.sttop .ic.on{background:var(--tint);color:var(--on-tint)}
+.sttracks{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px;scrollbar-width:none}
+.sttr{display:flex;align-items:center;gap:6px;padding:6px 8px 6px 10px;border-radius:14px;background:var(--cell);flex-wrap:wrap}
+.sttr.muted .sttrmain{opacity:.5}
+.sttr.solo{box-shadow:inset 0 0 0 2px var(--c)}
+.sttrmain{flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left}
+.sttrdot{width:12px;height:12px;border-radius:50%;background:var(--c);flex:none}
+.sttrmain b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sttr .ic.on{background:var(--c);color:#fff}
+.sttrvol{flex:1 1 100%;min-width:0;height:28px;accent-color:var(--c)}
+.stadd{display:flex;flex-wrap:wrap;gap:8px;padding:6px 2px 10px}
+.sthead{display:flex;align-items:center;gap:8px;flex:none}
+.sttitle{flex:1;min-width:0;display:flex;flex-direction:column;text-align:left}
+.sttitle b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sttitle span{font-size:12px;color:var(--l2)}
+.sthead .seg{width:auto;flex:none}
+.stroll{flex:1;min-height:120px;position:relative;border-radius:14px;overflow:hidden;background:var(--cell);touch-action:none}
+.srcv{display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.stcolors{display:flex;gap:10px;padding:8px 16px;flex-wrap:wrap}
+.stcol{width:36px;height:36px;border-radius:50%;background:var(--c)}
+.stcol.on{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--c)}
+/* аккорды */
+.scwrap{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px}
+.scmode{flex:none;display:flex;flex-direction:column;gap:6px}
+.scarp{display:flex;gap:6px}
+.scarp .seg:last-child{max-width:140px}
+.scbars{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px;scrollbar-width:none}
+.scbar{display:flex;align-items:center;gap:6px}
+.scn{width:20px;text-align:right;color:var(--l2);font-size:12px;flex:none}
+.sccells{flex:1;display:flex;gap:3px;min-height:46px}
+.scgap{min-width:0;border-radius:10px;background:var(--fill);color:var(--l2);font-size:18px}
+.scch{min-width:0;border-radius:10px;background:var(--c);color:#fff;font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.scdia .pill{display:flex;flex-direction:column;align-items:center;line-height:1.1;padding:4px 12px}
+.scdia .pill small{font-size:10px;opacity:.7;font-family:Georgia,serif}
+@container (min-aspect-ratio: 1.4/1) {
+  .sttr{flex-wrap:nowrap}
+  .sttrvol{flex:0 1 160px}
+}
