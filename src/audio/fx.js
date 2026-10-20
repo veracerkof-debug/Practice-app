@@ -5,11 +5,11 @@
 // Два вида эквалайзера: простой (три полосы на фиксированных частотах — низ, середина, верх; только усиление) и
 // продвинутый (до 8 полос: срез низа и верха, полки, пики; частота, усиление и ширина у каждой; полосы можно
 // добавлять и убирать). Хранится и то и другое: переключение вида не теряет настроек.
-// Надёжность: все узлы цепочки созданы один раз и соединены навсегда — правка настроек только меняет параметры
-// (плавно, setTargetAtTime), никаких переподключений во время звучания. Поэтому можно крутить ручки, пока звучат
-// все инструменты сразу: ни щелчков, ни провалов. Неиспользуемая полоса — пик с нулевым усилением (прозрачна),
-// выключенный эффект — нулевой посыл. Пространства реверберации общие на всё приложение (context.js) — лишних
-// свёрток нет.
+// Надёжность и экономия: правка ручек только меняет параметры (плавно, setTargetAtTime) — без переподключений, пока
+// звучат все инструменты сразу. Тяжёлые узлы (компрессор, вейвшейпер, задержки, генераторы) создаются только когда
+// эффект включён, и убираются, когда он в нуле: на телефоне десяток цепочек в нуле не стоит ничего. Перестройка
+// (включили эффект, сменили вид эквалайзера) — под коротким затуханием выхода, без щелчка. Пространства
+// реверберации общие на всё приложение (context.js) — лишних свёрток нет.
 // Звук — только родные узлы Web Audio (Biquad, DynamicsCompressor, WaveShaper, Delay, Oscillator, Convolver):
 // готовых библиотек с таким набором под GPL-совместимой лицензией и без лишнего веса нет (tuna.js — без эквалайзера,
 // Tone.js — целый фреймворк, weq8 — только эквалайзер), а сами фильтры в браузере те же, что в этих библиотеках.
@@ -149,40 +149,54 @@ export function localSpaces(c, dest) {
 }
 
 // Цепочка на контексте c: { input, output, set(fx), fx, dispose() }. opts.space(type) → узел пространства в этом
-// контексте (по умолчанию — общие пространства приложения, context.js)
-// Вход → 8 фильтров → компрессор → запас → драйв (сухой и насыщенный параллельно) → тремоло → выход; задержка и
-// хор — параллельно от тремоло к выходу (сухой сигнал всегда прямой), реверберация — посылы в общие пространства
+// контексте (по умолчанию — общие пространства приложения, context.js).
+// Экономия процессора (телефон): в цепочке живут только нужные узлы. Полосы эквалайзера — только включённые полосы
+// текущего вида; компрессор, драйв, тремоло, задержка и хор создаются и подключаются при первом ненулевом значении
+// и отключаются, когда возвращаются в ноль. Цепочка в нуле — один фильтр-пустышка, почти даром. Перестройка
+// (включили эффект, переключили вид, добавили полосу) — под коротким затуханием выхода (15 мс), без щелчка; правка
+// ручек (усиление, частота, сила эффекта) — только параметры, плавно, без переподключений.
 export function createFxChain(c, fx, { space = null } = {}) {
-  const input = c.createGain(), output = c.createGain(), comp = c.createDynamicsCompressor(), trim = c.createGain();
-  comp.attack.value = 0.005; comp.release.value = 0.2;
-  let cur = normalizeFx(fx), driveLevel = -1;
-  const T = () => c.currentTime, SM = 0.02;
+  const input = c.createGain(), output = c.createGain(), fade = c.createGain();
+  // точка раздачи параллельных эффектов (задержка, хор) и посылов — после последовательной части
+  const tap = c.createGain();
+  tap.connect(fade).connect(output);
+  let cur = normalizeFx(fx), shape = '', filters = [], driveLevel = -1, rewireTm = 0;
+  const T = () => c.currentTime, SM = 0.02, isCut = (b) => b.type === 'highpass' || b.type === 'lowpass';
   const ramp = (p, v) => { try { p.setTargetAtTime(v, T(), SM); } catch { p.value = v; } };
-
-  // фильтры: всегда все, неиспользуемые — прозрачный пик
-  const filters = Array.from({ length: BANDS_MAX }, () => { const f = c.createBiquadFilter(); f.type = 'peaking'; f.gain.value = 0; f.Q.value = 1; f.frequency.value = 1000; return f; });
-  let n = input;
-  filters.forEach((f) => { n.connect(f); n = f; });
-  n.connect(comp).connect(trim);
-  // драйв: сухой и насыщенный параллельно, перекрёстным затуханием (без переключений)
-  const ws = c.createWaveShaper(), dry = c.createGain(), wet = c.createGain(), trem = c.createGain();
-  try { ws.oversample = '2x'; } catch { /* */ }
-  ws.curve = driveCurve(0); dry.gain.value = 1; wet.gain.value = 0;
-  trim.connect(dry).connect(trem); trim.connect(ws).connect(wet).connect(trem);
-  // тремоло: генератор качает громкость вокруг единицы
-  const tlfo = c.createOscillator(), tdepth = c.createGain();
-  tlfo.type = 'sine'; tlfo.frequency.value = 5; tdepth.gain.value = 0; trem.gain.value = 1;
-  tlfo.connect(tdepth).connect(trem.gain);
-  trem.connect(output);
-  // задержка с петлёй и приглушением верха в ней
-  const dl = c.createDelay(2), fb = c.createGain(), damp = c.createBiquadFilter(), dwet = c.createGain();
-  damp.type = 'lowpass'; damp.frequency.value = 3800; fb.gain.value = 0; dwet.gain.value = 0;
-  trem.connect(dl); dl.connect(damp).connect(fb).connect(dl); dl.connect(dwet).connect(output);
-  // хор: короткая задержка, колеблемая генератором
-  const ch = c.createDelay(0.1), lfo = c.createOscillator(), depth = c.createGain(), cwet = c.createGain();
-  ch.delayTime.value = 0.022; lfo.type = 'sine'; lfo.frequency.value = 0.8; depth.gain.value = 0.004; cwet.gain.value = 0;
-  lfo.connect(depth).connect(ch.delayTime); trem.connect(ch).connect(cwet).connect(output);
-  try { lfo.start(); tlfo.start(); } catch { /* */ }
+  const S = {}; // ленивые стадии: comp, drive, trem, delay, chorus
+  const stage = {
+    comp() {
+      const comp = c.createDynamicsCompressor(), trim = c.createGain();
+      comp.attack.value = 0.005; comp.release.value = 0.2; comp.connect(trim);
+      return { i: comp, o: trim, comp, trim };
+    },
+    drive() { // сухой и насыщенный параллельно, перекрёстным затуханием
+      const i = c.createGain(), o = c.createGain(), ws = c.createWaveShaper(), dry = c.createGain(), wet = c.createGain();
+      try { ws.oversample = '2x'; } catch { /* */ }
+      ws.curve = driveCurve(0.05); dry.gain.value = 1; wet.gain.value = 0;
+      i.connect(dry).connect(o); i.connect(ws).connect(wet).connect(o);
+      return { i, o, ws, dry, wet };
+    },
+    trem() { // генератор качает громкость вокруг единицы
+      const g = c.createGain(), lfo = c.createOscillator(), depth = c.createGain();
+      lfo.type = 'sine'; lfo.frequency.value = 5; depth.gain.value = 0; g.gain.value = 1;
+      lfo.connect(depth).connect(g.gain); try { lfo.start(); } catch { /* */ }
+      return { i: g, o: g, g, lfo, depth };
+    },
+    delay() { // параллельно от tap к выходу: петля с приглушением верха
+      const dl = c.createDelay(2), fb = c.createGain(), damp = c.createBiquadFilter(), wet = c.createGain();
+      damp.type = 'lowpass'; damp.frequency.value = 3800; fb.gain.value = 0; wet.gain.value = 0;
+      dl.connect(damp).connect(fb).connect(dl); dl.connect(wet);
+      return { i: dl, on: false, dl, fb, wet, damp };
+    },
+    chorus() { // параллельно: короткая задержка, колеблемая генератором
+      const ch = c.createDelay(0.1), lfo = c.createOscillator(), depth = c.createGain(), wet = c.createGain();
+      ch.delayTime.value = 0.022; lfo.type = 'sine'; lfo.frequency.value = 0.8; depth.gain.value = 0.004; wet.gain.value = 0;
+      lfo.connect(depth).connect(ch.delayTime); ch.connect(wet); try { lfo.start(); } catch { /* */ }
+      return { i: ch, on: false, ch, lfo, depth, wet };
+    },
+  };
+  const kill = (st) => Object.values(st).forEach((n) => { if (n && typeof n === 'object' && n.disconnect) { try { if (n.stop) n.stop(); } catch { /* */ } try { n.disconnect(); } catch { /* */ } } });
   // реверберация: посыл на каждое пространство (создаётся при первом ненулевом уровне, дальше живёт)
   const sends = {};
   const send = (type) => {
@@ -196,24 +210,50 @@ export function createFxChain(c, fx, { space = null } = {}) {
     return (sends[type] = s);
   };
 
-  function apply() {
-    const bands = activeBands(cur), isCut = (b) => b.type === 'highpass' || b.type === 'lowpass';
-    filters.forEach((f, i) => {
-      const b = bands[i];
-      if (!b || !b.on) { if (f.type !== 'peaking') f.type = 'peaking'; ramp(f.gain, 0); return; }
-      if (f.type !== b.type) f.type = b.type;
+  // Какие узлы нужны при текущих настройках
+  const want = () => {
+    const bands = activeBands(cur).filter((b) => b.on);
+    return { bands, comp: cur.comp > 0, drive: cur.drive > 0, trem: cur.trem > 0, delay: cur.delay > 0, chorus: cur.chorus > 0 };
+  };
+  // Собрать последовательную часть: вход → полосы → [компрессор] → [драйв] → [тремоло] → tap; параллельные (задержка,
+  // хор) — от tap к выходу. Выключенная стадия отключается, но остаётся в запасе (узлы создаются один раз — повторное
+  // включение дёшево, а отключённый узел процессор не ест)
+  function wire(w) {
+    try { input.disconnect(); } catch { /* */ }
+    filters.forEach((f) => { try { f.disconnect(); } catch { /* */ } });
+    ['comp', 'drive', 'trem'].forEach((k) => { if (S[k]) { try { S[k].o.disconnect(); } catch { /* */ } } });
+    ['delay', 'chorus'].forEach((k) => { if (S[k] && S[k].on && !w[k]) { S[k].on = false; try { tap.disconnect(S[k].i); } catch { /* */ } try { S[k].wet.disconnect(); } catch { /* */ } } });
+    filters = w.bands.map((b, i) => { const f = filters[i] && filters[i].type === b.type ? filters[i] : c.createBiquadFilter(); f.type = b.type; return f; });
+    let n = input;
+    filters.forEach((f) => { n.connect(f); n = f; });
+    ['comp', 'drive', 'trem', 'delay', 'chorus'].forEach((k) => { if (w[k] && !S[k]) S[k] = stage[k](); });
+    ['comp', 'drive', 'trem'].forEach((k) => { if (w[k]) { n.connect(S[k].i); n = S[k].o; } });
+    n.connect(tap);
+    ['delay', 'chorus'].forEach((k) => { if (w[k] && !S[k].on) { S[k].on = true; tap.connect(S[k].i); S[k].wet.connect(fade); } });
+  }
+  function apply(first = false) {
+    const w = want(), key = [w.bands.map((b) => b.type).join(','), w.comp, w.drive, w.trem, w.delay, w.chorus].join('|');
+    if (key !== shape) { // перестройка — под затуханием выхода, чтобы не щёлкнуло
+      shape = key;
+      clearTimeout(rewireTm);
+      if (first) wire(w);
+      else { fade.gain.setTargetAtTime(0, T(), 0.004); rewireTm = setTimeout(() => { wire(w); fade.gain.setTargetAtTime(1, T(), 0.006); }, 18); }
+    }
+    w.bands.forEach((b, i) => {
+      const f = filters[i]; if (!f) return;
       ramp(f.frequency, b.f);
       ramp(f.gain, isCut(b) ? 0 : b.g);
       ramp(f.Q, isCut(b) ? 20 * Math.log10(b.q) : b.q); // у срезов Q в дБ (Web Audio)
     });
-    const cp = compParams(cur.comp);
-    ramp(comp.threshold, cp.threshold); ramp(comp.ratio, cp.ratio); ramp(comp.knee, cp.knee); ramp(trim.gain, cp.trim);
-    const dv = Math.round(cur.drive * 20) / 20;
-    if (dv !== driveLevel) { driveLevel = dv; ws.curve = driveCurve(dv); }
-    ramp(wet.gain, cur.drive > 0 ? Math.min(1, 0.3 + cur.drive) : 0); ramp(dry.gain, cur.drive > 0 ? Math.max(0, 0.7 - cur.drive) : 1);
-    ramp(tlfo.frequency, cur.tremRate); ramp(tdepth.gain, cur.trem * 0.5); ramp(trem.gain, 1 - cur.trem * 0.5);
-    ramp(dl.delayTime, cur.delayTime); ramp(fb.gain, cur.delay ? cur.delayFb : 0); ramp(dwet.gain, cur.delay * 0.7);
-    ramp(cwet.gain, cur.chorus * 0.6); ramp(depth.gain, 0.002 + cur.chorus * 0.004);
+    if (S.comp) { const cp = compParams(cur.comp); ramp(S.comp.comp.threshold, cp.threshold); ramp(S.comp.comp.ratio, cp.ratio); ramp(S.comp.comp.knee, cp.knee); ramp(S.comp.trim.gain, cp.trim); }
+    if (S.drive) {
+      const dv = Math.max(0.05, Math.round(cur.drive * 20) / 20);
+      if (dv !== driveLevel) { driveLevel = dv; S.drive.ws.curve = driveCurve(dv); }
+      ramp(S.drive.wet.gain, Math.min(1, 0.3 + cur.drive)); ramp(S.drive.dry.gain, Math.max(0, 0.7 - cur.drive));
+    }
+    if (S.trem) { ramp(S.trem.lfo.frequency, cur.tremRate); ramp(S.trem.depth.gain, cur.trem * 0.5); ramp(S.trem.g.gain, 1 - cur.trem * 0.5); }
+    if (S.delay) { ramp(S.delay.dl.delayTime, cur.delayTime); ramp(S.delay.fb.gain, cur.delayFb); ramp(S.delay.wet.gain, cur.delay * 0.7); }
+    if (S.chorus) { ramp(S.chorus.wet.gain, cur.chorus * 0.6); ramp(S.chorus.depth.gain, 0.002 + cur.chorus * 0.004); }
     REV_TYPES.forEach((ty) => {
       const lvl = ty === cur.revType ? cur.rev * 0.9 : 0;
       if (!lvl && !sends[ty]) return;
@@ -221,14 +261,17 @@ export function createFxChain(c, fx, { space = null } = {}) {
       if (s) ramp(s.gain, lvl);
     });
   }
-  apply();
+  apply(true);
   return {
     input, output,
     get fx() { return cur; },
     set(next) { cur = normalizeFx(next); apply(); },
+    // сколько узлов живёт сейчас (для проверки экономии)
+    get nodes() { const w = want(); return 4 + filters.length + ['comp', 'drive', 'trem', 'delay', 'chorus'].filter((k) => w[k]).reduce((n, k) => n + Object.values(S[k]).filter((x) => x && x.disconnect).length, 0) + Object.values(sends).filter(Boolean).length; },
     dispose() {
-      try { lfo.stop(); tlfo.stop(); } catch { /* */ }
-      [input, output, comp, trim, ws, dry, wet, trem, tlfo, tdepth, dl, fb, damp, dwet, ch, lfo, depth, cwet, ...filters, ...Object.values(sends)].forEach((x) => { try { x && x.disconnect(); } catch { /* */ } });
+      clearTimeout(rewireTm);
+      Object.values(S).forEach(kill);
+      [input, output, fade, tap, ...filters, ...Object.values(sends)].forEach((x) => { try { x && x.disconnect(); } catch { /* */ } });
     },
   };
 }
