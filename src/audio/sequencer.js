@@ -43,7 +43,9 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     return src;
   }
   // Записи сэмплеров проекта — раскодировать заранее (к старту и к пробе)
-  const prime = (p) => p.tracks.forEach((tr) => { if (tr.inst === 'sample' && tr.sample && tr.sample.fileId) bufOf(tr.sample.fileId); });
+  const prime = (p) => p.tracks.forEach((tr) => { if (tr.inst === 'sample' && tr.sample && tr.sample.fileId) bufOf(tr.sample.fileId); if (tr.kit) Object.values(tr.kit).forEach(bufOf); });
+  // Удар: своя запись ряда (как есть, до 4 с) или синтез
+  const hit = (tr, lane, out, at, v) => { const id = tr.kit && tr.kit[lane], buf = id && readyBuf(id); if (buf) sampleNote(buf, out, { sample: { root: 60 } }, 60, at, 4, v); else drumHit(c, out, lane, at, v); };
   // Цепочка эффектов и панорама на каждую дорожку (fx.js): создаются один раз и живут, пока дорожка есть в проекте;
   // ноты и удары дорожки идут в цепочку, она — в панораму — в шину теории (записи — в шину медиа)
   const chains = new Map(); // trackId → { chain, fx, pan, an, c }
@@ -99,7 +101,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
         if (n.t < inLoop) continue;
         if (n.t >= inLoop + 1 || n.t >= loop.b) break;
         const at = beatT + (n.t - inLoop + swingOf(p, n.t)) * spb, out = trackOut(p, n.tr), g = n.tr.vol * (n.gain || 1);
-        if (n.drum) { drumHit(c, out, n.drum, at, n.v * g); continue; }
+        if (n.drum) { hit(n.tr, n.drum, out, at, n.v * g); continue; }
         if (n.tr.inst === 'sample') { const buf = n.tr.sample && n.tr.sample.fileId && readyBuf(n.tr.sample.fileId); if (buf) sampleNote(buf, out, n.tr, n.m, at, n.d * spb, n.v * g); continue; }
         const key = 'sq' + seq++, patch = presetOf(n.tr.inst) || presetOf('piano');
         synth.on(n.m, key, { bus: 'theory', out, patch: { ...patch, gain: (patch.gain || 1) * g }, vel: n.v, at });
@@ -235,7 +237,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       c = getContext(mixer.state.mode);
       if (!c) return null;
       const p = getProject(), out = p ? trackOut(p, tr) : mixer.bus('theory');
-      if (tr.kind === 'drums') { drumHit(c, out, m, c.currentTime, vel + 0.1); return null; }
+      if (tr.kind === 'drums') { const id = tr.kit && tr.kit[m]; if (id && !readyBuf(id)) { const b = bufOf(id); if (b instanceof Promise) b.then(() => hit(tr, m, out, c.currentTime, vel + 0.1)); } else hit(tr, m, out, c.currentTime, vel + 0.1); return null; }
       if (tr.inst === 'sample') { // сэмплер: сразу, если запись готова; иначе раскодировать и сыграть, когда будет
         const id = tr.sample && tr.sample.fileId; if (!id) return null;
         const play = (buf) => { if (!buf) return; const src = sampleNote(buf, out, tr, m, c.currentTime, hold ? 60 : 0.6, vel); if (hold) { const k = 'sqs' + seq++; live.set(k, src); return k; } };

@@ -6,7 +6,7 @@
 import { t } from '../i18n/index.js';
 import { esc, seg, sw } from './index.js';
 import { eqCanvas, BAND_COLORS } from './eq.js';
-import { EQ_TYPES, REV_TYPES, BANDS_MAX, Q_MIN, Q_MAX, normalizeFx } from '../audio/fx.js';
+import { EQ_TYPES, REV_TYPES, CHORUS_TYPES, BANDS_MAX, Q_MIN, Q_MAX, normalizeFx } from '../audio/fx.js';
 
 export const fmtFreq = (f) => (f >= 1000 ? String(Math.round(f / 100) / 10) + ' ' + t('fx.khz') : Math.round(f) + ' ' + t('fx.hz'));
 const pc = (v) => Math.round(v * 100) + '%';
@@ -44,7 +44,8 @@ export function createFxPanel({ get, set, profile }) {
     (mode === 'adv' ? slider('tremRate', t('fx.tremRate'), fx.tremRate, 0.5, 12, 0.1, fx.tremRate + ' ' + t('fx.hz')) : '') +
     slider('delay', t('fx.delay'), fx.delay, 0, 1, 0.05, pc(fx.delay)) +
     (mode === 'adv' ? slider('delayTime', t('fx.delayTime'), fx.delayTime, 0.05, 1.5, 0.01, Math.round(fx.delayTime * 1000) + ' ' + t('fx.ms')) + slider('delayFb', t('fx.delayFb'), fx.delayFb, 0, 0.9, 0.05, pc(fx.delayFb)) : '') +
-    slider('chorus', t('fx.chorus'), fx.chorus, 0, 1, 0.05, pc(fx.chorus)) + '</div>' +
+    slider('chorus', t('fx.chorus'), fx.chorus, 0, 1, 0.05, pc(fx.chorus)) +
+    '<div class="cell fxtypes">' + seg('ctype', CHORUS_TYPES.map((k) => [k, t('fx.ct.' + k)]), fx.chorusType || 'chorus', t('fx.chorusType')) + '</div></div>' +
     '<div class="hdr">' + esc(t('fx.rev')) + '</div><div class="group">' +
     slider('rev', t('fx.rev'), fx.rev, 0, 1, 0.05, pc(fx.rev)) +
     '<div class="cell fxtypes">' + seg('revtype', REV_TYPES.map((k) => [k, t('fx.rt.' + k)]), fx.revType, t('fx.revType')) + '</div></div>' +
@@ -95,6 +96,7 @@ export function createFxPanel({ get, set, profile }) {
       let b;
       if ((b = g('[data-seg="fxmode"] [data-v]'))) { mode = b.dataset.v; sel = 0; save({ mode }); rerender(); return; }
       if ((b = g('[data-seg="revtype"] [data-v]'))) { save({ revType: b.dataset.v }); el.querySelectorAll('[data-seg="revtype"] [data-v]').forEach((x) => x.setAttribute('aria-pressed', x === b)); return; }
+      if ((b = g('[data-seg="ctype"] [data-v]'))) { save({ chorusType: b.dataset.v }); el.querySelectorAll('[data-seg="ctype"] [data-v]').forEach((x) => x.setAttribute('aria-pressed', x === b)); return; }
       if ((b = g('[data-seg="btype"] [data-v]'))) { const bd = bands()[sel]; if (!bd) return; bd.type = b.dataset.v; if (isCut(bd)) bd.g = 0; save({ adv: bands() }); refreshBand(); eq && eq.draw(); return; }
       if ((b = g('[data-band]'))) { sel = +b.dataset.band; refreshBand(); eq && eq.select(sel); return; }
       if (g('[data-band-add]')) {

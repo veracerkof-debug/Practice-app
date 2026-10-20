@@ -14,12 +14,13 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { newProject, newTrack, newData, normalizeProject, normalizeData, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, projectEvents, songBars, addClip, dupClip, removeClip, splitClip, clipById, trackOf, clipsOf, dataBeats, isEmptyProject, projectTracks, setRegion, loopOf, setMark, removeMark, markAt, pasteClip, clipCopy, quantizeNotes, secPerBeat, joinClips, clipAt } from '../../music/project.js';
+import { newProject, newTrack, newData, normalizeProject, normalizeData, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, DRUMS, projectEvents, songBars, addClip, dupClip, removeClip, splitClip, clipById, trackOf, clipsOf, dataBeats, isEmptyProject, projectTracks, setRegion, loopOf, setMark, removeMark, markAt, pasteClip, clipCopy, quantizeNotes, secPerBeat, joinClips, clipAt } from '../../music/project.js';
 import { createSequencer } from '../../audio/sequencer.js';
 import { createCapture, openInput } from '../../audio/capture.js';
 import { encodeWav, peaks as wavPeaks } from '../../audio/voicefx.js';
 import { mixerHTML, mixerBind } from './mixer.js';
 import { liveHTML, liveBind, OCT_LO, OCT_HI } from './live.js';
+import { engine as audioEngine } from '../../audio/voiceengine.js';
 import { createRoll } from './roll.js';
 import { createPlaylist } from './playlist.js';
 import { chordsHTML, chordsAct, chordHold } from './chords.js';
@@ -315,6 +316,7 @@ function trackSheet(tr) {
   ui.sheet(() => ui.snav(trName(tr)) +
     '<div class="group"><label class="cell"><span class="grow">' + ui.esc(t('vol')) + '</span><b class="num" style="min-width:4ch;text-align:right">' + Math.round(tr.vol * 100) + '%</b></label><div class="cell"><input type="range" class="strange" style="accent-color:' + tr.color + '" min="0" max="1.5" step="0.01" value="' + tr.vol + '" data-vol aria-label="' + ui.esc(t('vol')) + '"></div>' +
     '<label class="cell"><span class="grow">' + ui.esc(t('mix.pan')) + '</span><b class="num" style="min-width:4ch;text-align:right" data-panv>' + panLabel(tr.pan) + '</b></label><div class="cell"><input type="range" class="strange" style="accent-color:' + tr.color + '" min="-1" max="1" step="0.02" value="' + (tr.pan || 0) + '" data-pan aria-label="' + ui.esc(t('mix.pan')) + '"></div></div>' +
+    (tr.kind === 'drums' ? '<div class="hdr">' + ui.esc(t('tr.kit')) + '</div><div class="group">' + DRUMS.map((l) => '<button class="cell" data-kit="' + l + '"><span class="grow">' + ui.esc(t('drum.' + l)) + '<span class="bksub">' + ui.esc(tr.kit && tr.kit[l] ? fileName(tr.kit[l]) : t('tr.kitSynth')) + '</span></span>' + ui.icons.chev + '</button>').join('') + '</div><p class="ftr">' + ui.esc(t('tr.kitHint')) + '</p>' : '') +
     (tr.kind === 'drums' || tr.kind === 'audio' ? '' : '<div class="hdr">' + ui.esc(t('tr.inst')) + '</div><div class="group">' + INSTRUMENTS.map((id) => '<button class="cell" data-inst="' + id + '"><span class="grow">' + ui.esc(instName(id)) + '</span>' + (tr.inst === id ? ui.icons.check : '') + '</button>').join('') + '</div>' +
       (tr.inst === 'sample' ? '<div class="hdr">' + ui.esc(t('inst.sample')) + '</div><div class="group"><button class="cell" data-sfile><span class="grow">' + ui.esc(fileName(tr.sample && tr.sample.fileId)) + '<span class="bksub">' + ui.esc(t('tr.pickFile')) + '</span></span>' + ui.icons.chev + '</button>' +
         '<div class="cell"><span class="grow">' + ui.esc(t('tr.root')) + '</span><span class="stepper"><button type="button" data-root="-1" aria-label="' + ui.esc(t('tr.root') + ' −') + '">−</button><b class="num stv">' + mName((tr.sample && tr.sample.root) || 60) + '</b><button type="button" data-root="1" aria-label="' + ui.esc(t('tr.root') + ' +') + '">+</button></span></div></div><p class="ftr">' + ui.esc(t('tr.rootHint')) + '</p>' : '') +
@@ -332,6 +334,7 @@ function trackSheet(tr) {
       let b;
       if ((b = e.target.closest('[data-inst]'))) { tr.inst = b.dataset.inst; if (tr.inst === 'sample') { tr.sample = tr.sample || { fileId: null, root: 60 }; if (!tr.sample.fileId) { sh.close(); setTimeout(() => samplePicker(tr), 200); return; } } seq.audition(tr, 60); }
       else if ((b = e.target.closest('[data-sfile]'))) { sh.close(); setTimeout(() => samplePicker(tr), 200); return; }
+      else if ((b = e.target.closest('[data-kit]'))) { const lane = b.dataset.kit; sh.close(); setTimeout(() => samplePicker(tr, { title: t('drum.' + lane), cur: tr.kit && tr.kit[lane], none: true, set: (id) => { tr.kit = tr.kit || {}; if (id) tr.kit[lane] = id; else delete tr.kit[lane]; if (!Object.keys(tr.kit).length) delete tr.kit; seq.audition(tr, lane); } }), 200); return; }
       else if ((b = e.target.closest('[data-root]'))) { tr.sample.root = Math.max(24, Math.min(96, tr.sample.root + +b.dataset.root)); seq.audition(tr, tr.sample.root); }
       else if ((b = e.target.closest('[data-seg="stoct"] [data-v]'))) tr.oct = +b.dataset.v;
       else if ((b = e.target.closest('[data-col]'))) tr.color = b.dataset.col;
@@ -372,13 +375,15 @@ function createClip(tr, beat) {
   if (tr.kind === 'audio') { V.cid = c.id; render(); filePicker(c); } else openClip(c);
 }
 function openClip(c) { V.cid = c.id; V.view = 'clip'; V.bar = 0; render(); }
-// Запись для сэмплера дорожки: любая запись медиатеки; после выбора — снова шторка дорожки
-function samplePicker(tr) {
+// Запись для сэмплера дорожки (или ряда ударных — opts.set): любая запись медиатеки; после выбора — снова шторка дорожки
+function samplePicker(tr, opts = null) {
   const { t, ui } = ctx, L = ctx.files.list('audio').slice().sort((a, b) => (b.created || 0) - (a.created || 0));
+  const cur = opts ? opts.cur : tr.sample.fileId;
   let picked = false;
-  ui.sheet(() => ui.snav(t('inst.sample')) + (L.length ? '<div class="group">' + L.map((r) => '<button class="cell" data-file="' + r.id + '"><span class="grow">' + ui.esc(r.name) + '<span class="bksub">' + (r.dur ? Math.round(r.dur) + ' s' : '') + '</span></span>' + (tr.sample.fileId === r.id ? ui.icons.check : '') + '</button>').join('') + '</div>'
-    : '<p class="ftr">' + ui.esc(t('tr.noAudio')) + '</p>') + '<p class="ftr">' + ui.esc(t('tr.sampleHint')) + '</p>',
-  (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-file]'); if (!b) return; tr.sample.fileId = b.dataset.file; picked = true; save(); seq.audition(tr, tr.sample.root); sh.close(); }),
+  ui.sheet(() => ui.snav(opts ? opts.title : t('inst.sample')) + '<div class="group">' + (opts && opts.none ? '<button class="cell" data-file=""><span class="grow">' + ui.esc(t('tr.kitSynth')) + '</span>' + (!cur ? ui.icons.check : '') + '</button>' : '') +
+    L.map((r) => '<button class="cell" data-file="' + r.id + '"><span class="grow">' + ui.esc(r.name) + '<span class="bksub">' + (r.dur ? Math.round(r.dur) + ' s' : '') + '</span></span>' + (cur === r.id ? ui.icons.check : '') + '</button>').join('') + '</div>' +
+    (L.length ? '' : '<p class="ftr">' + ui.esc(t('tr.noAudio')) + '</p>') + '<p class="ftr">' + ui.esc(t(opts ? 'tr.kitHint' : 'tr.sampleHint')) + '</p>',
+  (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-file]'); if (!b) return; const id = b.dataset.file || null; if (opts) opts.set(id); else { tr.sample.fileId = id; seq.audition(tr, tr.sample.root); } picked = true; save(); sh.close(); }),
   { onClose: () => { render(); if (picked) setTimeout(() => trackSheet(tr), 200); } });
 }
 // Запись для клипа: аудио из медиатеки (сведение лупера — первым); длина клипа — по записи
@@ -440,18 +445,22 @@ function startStems() {
 // Лист записи: куда (дорожка записи или новая), откуда (вход или звук приложения), мониторинг; отсчёт и поправка — в настройках
 function recordSheet() {
   const { t, ui } = ctx, p = proj(), auds = p.tracks.filter((tr) => tr.kind === 'audio'), o = st().rec || (st().rec = { src: 'in', mon: false });
-  let trId = auds.length ? auds[auds.length - 1].id : 'new';
+  let trId = auds.length ? auds[auds.length - 1].id : 'new', inputs = null;
+  audioEngine().devices().then((d) => { inputs = d.inputs || []; if (!inputs.some((x) => x.id === o.in)) o.in = null; const sh = document.querySelector('.sheet'); if (sh && sh.__update) sh.__update(); }).catch(() => { inputs = []; });
   ui.sheet(() => ui.snav(t('rec.title')) +
     '<div class="hdr">' + ui.esc(t('rec.to')) + '</div><div class="group">' + auds.map((tr) => '<button class="cell" data-rt="' + tr.id + '"><span class="grow">' + ui.esc(trName(tr)) + '</span>' + (trId === tr.id ? ui.icons.check : '') + '</button>').join('') +
     '<button class="cell" data-rt="new"><span class="grow">' + ui.esc(t('rec.newTrack')) + '</span>' + (trId === 'new' ? ui.icons.check : '') + '</button></div>' +
     '<div class="hdr">' + ui.esc(t('rec.src')) + '</div><div class="group"><div class="cellcol">' + ui.seg('rsrc', [['in', t('rec.in')], ['app', t('rec.app')]], o.src, t('rec.src')) + '</div>' +
     (o.src === 'in' ? '<label class="cell"><span class="grow">' + ui.esc(t('rec.mon')) + '<span class="bksub">' + ui.esc(t('rec.monHint')) + '</span></span>' + ui.sw('rmon', o.mon, t('rec.mon')) + '</label>' : '') + '</div>' +
+    (o.src === 'in' && inputs && inputs.length > 1 ? '<div class="hdr">' + ui.esc(t('rec.input')) + '</div><div class="group">' + inputs.map((d) => '<button class="cell" data-rin="' + ui.esc(d.id) + '"><span class="grow">' + ui.esc(d.name) + '</span>' + ((o.in || inputs[0].id) === d.id ? ui.icons.check : '') + '</button>').join('') + '</div>' : '') +
     '<p class="ftr">' + ui.esc(t('rec.hint', { n: countIn() })) + '</p>' +
     '<div class="group" style="margin-top:14px"><button class="cell act center b" data-go>' + ui.esc(t('rec.go')) + '</button></div>',
   (el, sh) => {
+    el.__update = () => sh.update();
     el.addEventListener('click', (e) => {
       let b;
       if ((b = e.target.closest('[data-rt]'))) { trId = b.dataset.rt; sh.update(); }
+      else if ((b = e.target.closest('[data-rin]'))) { o.in = b.dataset.rin; ctx.store.save(); sh.update(); }
       else if ((b = e.target.closest('[data-seg="rsrc"] [data-v]'))) { o.src = b.dataset.v; ctx.store.save(); sh.update(); }
       else if (e.target.closest('[data-go]')) { sh.close(); setTimeout(() => startRec({ kind: 'track', trId, src: o.src, mon: o.mon }), 150); }
     });
@@ -470,7 +479,7 @@ async function startRec({ kind, trId = null, src = 'app', mon = false, stem = nu
   const c = tap.ctx, rec = { kind, p, src, cap: null, input: null, off: null, tr: null, lat: 0, stem };
   try {
     if (kind === 'track' && src === 'in') {
-      rec.input = await openInput({});
+      rec.input = await openInput({ in: (st().rec && st().rec.in) || null });
       const node = c.createMediaStreamSource(rec.input.stream);
       rec.cap = createCapture(c, node, { channels: rec.input.channels, onFull: () => stopRec() });
       if (mon) { const g = c.createGain(); g.gain.value = 0.9; node.connect(g).connect(ctx.audio.mixer.bus('media')); rec.monNode = g; }

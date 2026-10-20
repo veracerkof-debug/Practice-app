@@ -184,5 +184,9 @@
   "clip.reversed": "teskari",
   "stems": "Stemlar — har bir yoʻlak WAV ga",
   "stemsStep": "Stem {i} / {n}: {name}",
-  "stemsDone": "Tayyor: mediatekada {n} ta stem"
+  "stemsDone": "Tayyor: mediatekada {n} ta stem",
+  "tr.kit": "Zarbli asboblarning oʻz yozuvlari",
+  "tr.kitSynth": "Oʻrnatilgan tovush",
+  "tr.kitHint": "Zarb qatori oʻrnatilgan tovush oʻrniga mediatekadagi yozuvni borligicha chalishi mumkin.",
+  "rec.input": "Kirish"
 }

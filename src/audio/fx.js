@@ -32,9 +32,10 @@ export const advancedBands = () => [band('highpass', 40, 0.7, false), band('lows
 // Полный набор настроек (всё в нуле — прозрачно)
 export const FX_DEF = () => ({
   mode: null, simple: simpleBands(), adv: advancedBands(),
-  comp: 0, drive: 0, trem: 0, tremRate: 5, delay: 0, delayTime: 0.3, delayFb: 0.35, chorus: 0, rev: 0, revType: 'hall',
+  comp: 0, drive: 0, trem: 0, tremRate: 5, delay: 0, delayTime: 0.3, delayFb: 0.35, chorus: 0, chorusType: 'chorus', rev: 0, revType: 'hall',
 });
 export const FX_KEYS = ['comp', 'drive', 'trem', 'delay', 'chorus', 'rev']; // силы 0…1
+export const CHORUS_TYPES = ['chorus', 'flanger', 'phaser']; // вид модуляции: хор (задержка ~20 мс), фленджер (короткая с обратной связью), фейзер (всепропускающие)
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, +v || 0));
 export function normalizeBand(b) {
@@ -63,6 +64,7 @@ export function normalizeFx(fx) {
   o.delayTime = Math.round(clamp(o.delayTime, 0.05, 1.5) * 1000) / 1000;
   o.delayFb = Math.round(clamp(o.delayFb, 0, 0.9) * 100) / 100;
   if (!REV_TYPES.includes(o.revType)) o.revType = 'hall';
+  if (!CHORUS_TYPES.includes(o.chorusType)) o.chorusType = 'chorus';
   return o;
 }
 // Какие полосы звучат сейчас (по виду)
@@ -190,11 +192,25 @@ export function createFxChain(c, fx, { space = null } = {}) {
       dl.connect(damp).connect(fb).connect(dl); dl.connect(wet);
       return { i: dl, on: false, dl, fb, wet, damp };
     },
-    chorus() { // параллельно: короткая задержка, колеблемая генератором
-      const ch = c.createDelay(0.1), lfo = c.createOscillator(), depth = c.createGain(), wet = c.createGain();
-      ch.delayTime.value = 0.022; lfo.type = 'sine'; lfo.frequency.value = 0.8; depth.gain.value = 0.004; wet.gain.value = 0;
-      lfo.connect(depth).connect(ch.delayTime); ch.connect(wet); try { lfo.start(); } catch { /* */ }
-      return { i: ch, on: false, ch, lfo, depth, wet };
+    chorus() { // параллельно, по виду: хор — задержка ~20 мс, колеблемая генератором; фленджер — ~3 мс с обратной
+      // связью; фейзер — четыре всепропускающих фильтра, частоты которых качает генератор
+      const type = cur.chorusType, lfo = c.createOscillator(), depth = c.createGain(), wet = c.createGain();
+      lfo.type = 'sine'; wet.gain.value = 0; try { lfo.start(); } catch { /* */ }
+      if (type === 'phaser') {
+        const aps = [400, 800, 1600, 3200].map((f) => { const ap = c.createBiquadFilter(); ap.type = 'allpass'; ap.frequency.value = f; ap.Q.value = 0.7; return ap; });
+        const inp = c.createGain(), fb = c.createGain();
+        fb.gain.value = 0.3; lfo.frequency.value = 0.5; depth.gain.value = 600;
+        aps.forEach((ap) => lfo.connect(depth).connect(ap.frequency));
+        let n = inp; aps.forEach((ap) => { n.connect(ap); n = ap; });
+        n.connect(wet); n.connect(fb).connect(inp);
+        return { i: inp, on: false, type, lfo, depth, wet, fb, aps };
+      }
+      const ch = c.createDelay(0.1);
+      ch.delayTime.value = type === 'flanger' ? 0.003 : 0.022; lfo.frequency.value = type === 'flanger' ? 0.25 : 0.8; depth.gain.value = 0.004;
+      lfo.connect(depth).connect(ch.delayTime); ch.connect(wet);
+      const fb = c.createGain(); fb.gain.value = 0;
+      if (type === 'flanger') ch.connect(fb).connect(ch);
+      return { i: ch, on: false, type, ch, lfo, depth, wet, fb };
     },
   };
   const kill = (st) => Object.values(st).forEach((n) => { if (n && typeof n === 'object' && n.disconnect) { try { if (n.stop) n.stop(); } catch { /* */ } try { n.disconnect(); } catch { /* */ } } });
@@ -224,6 +240,7 @@ export function createFxChain(c, fx, { space = null } = {}) {
     filters.forEach((f) => { try { f.disconnect(); } catch { /* */ } });
     ['comp', 'drive', 'trem'].forEach((k) => { if (S[k]) { try { S[k].o.disconnect(); } catch { /* */ } } });
     ['delay', 'chorus'].forEach((k) => { if (S[k] && S[k].on && !w[k]) { S[k].on = false; try { tap.disconnect(S[k].i); } catch { /* */ } try { S[k].wet.disconnect(); } catch { /* */ } } });
+    if (S.chorus && S.chorus.type !== cur.chorusType) { if (S.chorus.on) { try { tap.disconnect(S.chorus.i); } catch { /* */ } try { S.chorus.wet.disconnect(); } catch { /* */ } } kill(S.chorus); delete S.chorus; } // другой вид — заново
     filters = w.bands.map((b, i) => { const f = filters[i] && filters[i].type === b.type ? filters[i] : c.createBiquadFilter(); f.type = b.type; return f; });
     let n = input;
     filters.forEach((f) => { n.connect(f); n = f; });
@@ -233,7 +250,7 @@ export function createFxChain(c, fx, { space = null } = {}) {
     ['delay', 'chorus'].forEach((k) => { if (w[k] && !S[k].on) { S[k].on = true; tap.connect(S[k].i); S[k].wet.connect(fade); } });
   }
   function apply(first = false) {
-    const w = want(), key = [w.bands.map((b) => b.type).join(','), w.comp, w.drive, w.trem, w.delay, w.chorus].join('|');
+    const w = want(), key = [w.bands.map((b) => b.type).join(','), w.comp, w.drive, w.trem, w.delay, w.chorus, w.chorus && cur.chorusType].join('|');
     if (key !== shape) { // перестройка — под затуханием выхода, чтобы не щёлкнуло
       shape = key;
       clearTimeout(rewireTm);
@@ -254,7 +271,12 @@ export function createFxChain(c, fx, { space = null } = {}) {
     }
     if (S.trem) { ramp(S.trem.lfo.frequency, cur.tremRate); ramp(S.trem.depth.gain, cur.trem * 0.5); ramp(S.trem.g.gain, 1 - cur.trem * 0.5); }
     if (S.delay) { ramp(S.delay.dl.delayTime, cur.delayTime); ramp(S.delay.fb.gain, cur.delayFb); ramp(S.delay.wet.gain, cur.delay * 0.7); }
-    if (S.chorus) { ramp(S.chorus.wet.gain, cur.chorus * 0.6); ramp(S.chorus.depth.gain, 0.002 + cur.chorus * 0.004); }
+    if (S.chorus) {
+      const ty = S.chorus.type;
+      ramp(S.chorus.wet.gain, cur.chorus * (ty === 'phaser' ? 0.8 : 0.6));
+      if (ty === 'phaser') ramp(S.chorus.depth.gain, 300 + cur.chorus * 900);
+      else { ramp(S.chorus.depth.gain, ty === 'flanger' ? 0.0005 + cur.chorus * 0.002 : 0.002 + cur.chorus * 0.004); if (ty === 'flanger') ramp(S.chorus.fb.gain, 0.2 + cur.chorus * 0.5); }
+    }
     REV_TYPES.forEach((ty) => {
       const lvl = ty === cur.revType ? cur.rev * 0.9 : 0;
       if (!lvl && !sends[ty]) return;

@@ -187,5 +187,9 @@
   "clip.reversed": "reversed",
   "stems": "Stems — each track to WAV",
   "stemsStep": "Stem {i} of {n}: {name}",
-  "stemsDone": "Done: {n} stems in the library"
+  "stemsDone": "Done: {n} stems in the library",
+  "tr.kit": "Own drum recordings",
+  "tr.kitSynth": "Built-in sound",
+  "tr.kitHint": "A drum lane can play a library recording as is instead of the built-in sound.",
+  "rec.input": "Input"
 }

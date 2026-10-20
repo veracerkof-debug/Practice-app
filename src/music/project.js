@@ -17,6 +17,7 @@ import { CHORDS, keyInfo } from './theory.js';
 import { MAJ_NAMES, MIN_NAMES } from './notes.js';
 
 export const INSTRUMENTS = ['piano', 'wfelt', 'wkpad', 'wair', 'wlight', 'wwarm', 'wchoir', 'wflute', 'organ', 'fmep', 'abass', 'bell', 'sine', 'sample'];
+// Ударные со своими записями: tr.kit = { kick: fileId, … } — ряд звучит записью из медиатеки (как есть) вместо синтеза.
 // Сэмплер: звук дорожки 'sample' — запись из медиатеки (tr.sample = { fileId, root }) по нотам: высота — скорость
 // воспроизведения относительно ноты root (C4 = 60), длина — пока держится нота или пока не кончится запись
 export const COLORS = ['#567198', '#5F8568', '#B5533C', '#9C7242', '#646493', '#A95E72', '#3E8C8C', '#8E8E93'];
@@ -76,6 +77,8 @@ export function normalizeProject(p) {
   p.tracks = (p.tracks || []).filter((t) => t && t.id).map((t) => {
     t.vol = Math.max(0, Math.min(1.5, +t.vol || 0)); t.oct = Math.max(-2, Math.min(2, Math.round(+t.oct || 0))); t.pan = Math.max(-1, Math.min(1, +t.pan || 0));
     if (!INSTRUMENTS.includes(t.inst)) t.inst = 'piano';
+    if (t.kind === 'drums' && t.kit && typeof t.kit === 'object') { const kit = {}; DRUMS.forEach((l) => { if (typeof t.kit[l] === 'string' && t.kit[l]) kit[l] = t.kit[l]; }); t.kit = Object.keys(kit).length ? kit : undefined; }
+    if (t.kit === undefined || t.kind !== 'drums') delete t.kit;
     t.auto = normalizeAuto(t.auto, SONG_BARS_MAX * p.num);
     if (!t.auto) delete t.auto;
     t.sample = t.inst === 'sample' ? { fileId: (t.sample && t.sample.fileId) || null, root: Math.max(24, Math.min(96, Math.round(+(t.sample && t.sample.root) || 60))) } : undefined;

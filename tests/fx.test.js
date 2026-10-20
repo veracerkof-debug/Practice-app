@@ -50,6 +50,7 @@ describe('эффекты: настройки', () => {
     expect(f.adv.length).toBe(8);
     expect(f.adv[0]).toEqual({ type: 'peaking', f: 20, g: 0, q: 8, on: true });
     expect(f.comp).toBe(1); expect(f.rev).toBe(0); expect(f.delayTime).toBe(1.5);
+    expect([f.chorusType, normalizeFx({ chorusType: 'phaser' }).chorusType, normalizeFx({ chorusType: 'zzz' }).chorusType]).toEqual(['chorus', 'phaser', 'chorus']);
     expect(normalizeFx({ simple: [{ g: 3 }, { g: -2 }, { g: 0 }] }).simple.map((b) => b.g)).toEqual([3, -2, 0]);
   });
   it('по умолчанию — всё ровно; включённый срез или усиление — нет', () => {
