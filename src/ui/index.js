@@ -99,7 +99,7 @@ export function sheet(render, init, { onClose } = {}) {
   // Потянуть шторку вниз за полоску сверху или за заголовок (или в любом месте, если она прокручена в начало)
   let drag = null;
   el.addEventListener('pointerdown', (e) => {
-    if (e.button > 0 || e.target.closest('input,textarea,select,[contenteditable],.sw,.seg,[role="slider"],canvas[data-stone]')) return;
+    if (e.button > 0 || e.target.closest('input,textarea,select,[contenteditable],.sw,.seg,[role="slider"],canvas[data-stone],canvas[data-eq]')) return;
     const head = e.target.closest('.grab,.snav');
     if (!head && el.scrollTop > 0) return;
     drag = { y: e.clientY, t: performance.now(), dy: 0, id: e.pointerId, head: !!head };

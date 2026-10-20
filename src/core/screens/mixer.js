@@ -7,6 +7,10 @@ import { mascotSVG } from '../../ui/mascot.js';
 import { esc } from '../../ui/index.js';
 import { MIX_MAX } from '../../audio/mixer.js';
 import { moduleById } from '../../modules/index.js';
+import { onHold } from '../../ui/hold.js';
+import { openFx } from './fx.js';
+
+const FX_ICON = '<svg viewBox="0 0 24 24"><path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="14" r="2.5" fill="currentColor"/><circle cx="12" cy="8" r="2.5" fill="currentColor"/><circle cx="19" cy="16" r="2.5" fill="currentColor"/></svg>';
 
 const SRC = [['metro', '#9C7242', 'metro'], ['piano', '#646493', 'piano'], ['glider', '#866B9D', 'glider'], ['drone', '#548591', 'drone'], ['media', '#A95E72', 'audio'], ['theory', '#5F8568', 'theory']];
 
@@ -18,7 +22,9 @@ export function createMixerDrawer(app) {
 
   const fader = ([k, c, icon]) => {
     const v = raw(k), mu = muted(k), lab = t('mix.' + k), pct = Math.round(v * 100);
-    return '<div class="mxf' + (mu ? ' mu' : '') + '" data-k="' + k + '" style="--c:' + c + '"><span class="mxv num">' + (mu ? '0' : pct) + '</span>' +
+    return '<div class="mxf' + (mu ? ' mu' : '') + '" data-k="' + k + '" style="--c:' + c + '">' +
+      '<button class="mxx' + (mixer.fxActive(k) ? ' on' : '') + '" data-fx="' + k + '" aria-label="' + esc(t('mix.fx', { src: lab })) + '" title="' + esc(t('mix.fx', { src: lab })) + '">' + FX_ICON + '</button>' +
+      '<span class="mxv num">' + (mu ? '0' : pct) + '</span>' +
       '<div class="mxt" role="slider" aria-label="' + esc(t('mix.volume', { src: lab })) + '" aria-valuemin="0" aria-valuemax="' + MIX_MAX * 100 + '" aria-valuenow="' + pct + '" tabindex="0">' +
       '<b style="height:' + (v / MIX_MAX) * 100 + '%"></b><i style="bottom:' + (v / MIX_MAX) * 100 + '%"></i><em style="bottom:' + (1 / MIX_MAX) * 100 + '%"></em></div>' +
       '<button class="mxi" data-mute="' + k + '" aria-label="' + esc(t(mu ? 'mix.unmute' : 'mix.mute', { src: lab })) + '" title="' + esc(lab) + '">' + ((moduleById(icon) || {}).icon || '') + '</button></div>';
@@ -88,6 +94,8 @@ export function createMixerDrawer(app) {
   el.addEventListener('pointerup', () => { drag = null; sw = null; });
   el.addEventListener('click', (e) => {
     if (e.target.closest('[data-tama]')) { app.tama.toggle(); render(); return; }
+    const fxb = e.target.closest('[data-fx]');
+    if (fxb) { openFx(app, fxb.dataset.fx); return; }
     const b = e.target.closest('[data-mute]');
     if (!b) return;
     mixer.toggleMute(b.dataset.mute);
@@ -106,6 +114,9 @@ export function createMixerDrawer(app) {
     render();
     el.querySelector('.mxf[data-k="' + k + '"] .mxt').focus();
   });
+  // удержать значок источника — эффекты этой шины (как кнопка над ползунком)
+  onHold(el, '.mxi[data-mute]', (b) => openFx(app, b.dataset.mute));
+  mixer.subscribe(() => { if (!open) return; SRC.forEach(([k]) => { const x = el.querySelector('.mxx[data-fx="' + k + '"]'); if (x) x.classList.toggle('on', mixer.fxActive(k)); }); });
   document.addEventListener('pointerdown', (e) => { if (open && !el.contains(e.target)) setOpen(false); }, true);
   setInterval(tick, 350);
   app.openMixer = () => setOpen(true);
