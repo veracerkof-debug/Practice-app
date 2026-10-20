@@ -231,3 +231,74 @@ export function projectEvents(p, onlyPat = null) {
   songNotes(p, onlyPat).forEach((n) => { if (n.tr.mute) return; const g = 'n' + id++; ev.push({ t: n.t * spb, k: 'on', id: g, m: n.m, v: n.v * n.tr.vol }); ev.push({ t: (n.t + n.d) * spb, k: 'off', id: g }); });
   return ev.sort((a, b) => a.t - b.t || (a.k === 'off' ? -1 : 1));
 }
+
+/* ---------- обмен со студиями (DAW): дорожки проекта и проект из чужой песни ---------- */
+
+// Инструмент General MIDI для звука дорожки (в чужой студии зазвучит похоже)
+export const GM_PROGRAM = { piano: 0, wfelt: 0, wkpad: 4, wair: 89, wlight: 88, wwarm: 89, wchoir: 52, wflute: 73, organ: 19, fmep: 5, abass: 33, bell: 14, sine: 80 };
+// Звук дорожки по инструменту General MIDI (чужая песня → наш звук)
+export function instOfProgram(pr) {
+  if (pr == null) return 'piano';
+  if (pr >= 32 && pr <= 39) return 'abass';
+  if (pr >= 88 && pr <= 95) return 'wair';
+  if (pr >= 16 && pr <= 23) return 'organ';
+  if (pr >= 52 && pr <= 54) return 'wchoir';
+  if (pr >= 72 && pr <= 79) return 'wflute';
+  if (pr === 4 || pr === 5) return 'fmep';
+  if ((pr >= 8 && pr <= 15) || pr === 112) return 'bell';
+  if (pr >= 80 && pr <= 87) return 'sine';
+  return 'piano';
+}
+// Ряд ударных по ноте General MIDI (канал 10) или по названию (сэмплы FL Studio: «Kick», «Clap»…)
+export function laneOf(m, name = '') {
+  const s = String(name).toLowerCase();
+  if (/kick|бочк|bd\b|bass ?drum/.test(s)) return 'kick';
+  if (/snare|малый|sd\b|rim/.test(s)) return 'snare';
+  if (/open|откр|oh\b/.test(s) && /hat|hh|хэт/.test(s)) return 'ohat';
+  if (/hat|hh|хэт|shaker|tamb/.test(s)) return 'hat';
+  if (/clap|хлоп|snap/.test(s)) return 'clap';
+  if (m == null) return null;
+  if (m === 35 || m === 36 || (m >= 41 && m <= 45) || m === 47) return 'kick'; // бочка и томы
+  if (m === 37 || m === 38 || m === 40) return 'snare';
+  if (m === 39) return 'clap';
+  if (m === 46 || m === 49 || m === 51 || m === 52 || m === 55 || m === 57 || m === 59) return 'ohat'; // открытый хэт, тарелки
+  return 'hat';
+}
+// Дорожки песни для файла .mid: ноты по всему плейлисту со свингом (как звучит в приложении), ударные — ноты GM
+export function projectTracks(p, { swing = true } = {}) {
+  const all = songNotes(p), sw = (t) => (swing && Math.abs(t % 1 - 0.5) < 1e-6 ? p.swing / 3 : 0);
+  return p.tracks.filter((tr) => tr.kind !== 'audio').map((tr, i) => ({
+    name: tr.name || tr.kind + ' ' + (i + 1), drums: tr.kind === 'drums', inst: tr.inst, program: tr.kind === 'drums' ? null : GM_PROGRAM[tr.inst] ?? 0,
+    notes: all.filter((n) => n.tr === tr).map((n) => ({ t: n.t + sw(n.t), d: n.d, m: n.m, v: Math.min(1, n.v * tr.vol) })),
+  }));
+}
+// Чужая песня (из .mid или файла студии: { name, bpm, num, den, key?, tracks: [{ name, drums, program?, notes: [{ t, d, m, v }] }] },
+// время — в долях проекта) → наш проект: паттерны по кускам (до 32 тактов каждый, до 16 кусков), плейлист по порядку
+export function projectFromSong(song) {
+  const p = newProject({ name: String(song.name || '').slice(0, 40), bpm: song.bpm || 120, num: song.num || 4, den: song.den || 4 });
+  if (song.key) p.key = { pc: ((song.key.pc % 12) + 12) % 12, minor: !!song.key.minor };
+  p.tracks = [];
+  const src = (song.tracks || []).filter((t) => t.notes && t.notes.length);
+  src.forEach((t, i) => p.tracks.push(newTrack(t.drums ? 'drums' : 'notes', i, { name: String(t.name || '').slice(0, 30), inst: t.drums ? 'piano' : instOfProgram(t.program) })));
+  const end = Math.max(1, ...src.flatMap((t) => t.notes.map((n) => n.t + n.d))), bars = Math.ceil(end / p.num - 1e-6);
+  const chunk = Math.max(1, Math.min(BARS_MAX, Math.ceil(bars / PATTERNS_MAX / 4) * 4)), count = Math.min(PATTERNS_MAX, Math.ceil(bars / chunk));
+  p.patterns = Array.from({ length: count }, (_, i) => newPattern(i, Math.min(chunk, bars - i * chunk)));
+  p.song = p.patterns.map((x) => x.id); p.cur = p.patterns[0].id;
+  src.forEach((t, i) => {
+    const tr = p.tracks[i];
+    t.notes.forEach((n) => {
+      let t0 = n.t, left = n.d;
+      while (left > 1e-6) { // нота через границу куска делится
+        const k = Math.floor(t0 / (chunk * p.num));
+        if (k >= count) break;
+        const pat = p.patterns[k], off = t0 - k * chunk * p.num, d = Math.min(left, patBeats(p, pat) - off), cell = cellOf(pat, tr);
+        if (d <= 1e-6) break;
+        if (tr.kind === 'drums') { const lane = laneOf(n.m, n.lane); if (lane) setStep(cell, lane, Math.round(off / STEP), true); }
+        else cell.notes.push({ t: Math.round(off * 64) / 64, d: Math.round(d * 64) / 64, m: Math.round(n.m), v: n.v == null ? 0.8 : Math.max(0.05, Math.min(1, n.v)) });
+        t0 += d; left -= d;
+        if (tr.kind === 'drums') break;
+      }
+    });
+  });
+  return normalizeProject(p);
+}

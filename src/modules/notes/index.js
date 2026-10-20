@@ -1,5 +1,6 @@
 // Табы и ноты, текст: табулатуры Guitar Pro / MusicXML (alphaTab, локально) с воспроизведением (SONiVOX),
-// ноты и табы в PDF (pdf.js, локально), текст песни с аккордами и транспонированием. Перенесено из legacy/practice.html (AT, ATP, notesHTML, tabSheet, lyricsEdit).
+// ноты и табы в PDF (pdf.js, локально), текст песни с аккордами и транспонированием; раздел «MIDI и DAW» —
+// файлы .mid и проекты чужих студий (Ableton, Reaper, FL Studio; src/music/daw.js) нотами через MusicXML, «В студию» — править. Перенесено из legacy/practice.html (AT, ATP, notesHTML, tabSheet, lyricsEdit).
 import './notes.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
@@ -11,6 +12,10 @@ import { tonicIsMinor } from '../../music/degrees.js';
 import { detectKey, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
 import { isPdf, openPdf, createPdfView, closePdfDoc, sniffPdf } from './pdf.js';
 import { pinch } from '../../ui/gestures.js';
+import { readDaw, dawFmt, DAW_FORMATS } from '../../music/daw.js';
+import { projectFromSong, isEmptyProject } from '../../music/project.js';
+import { projectXML } from '../../music/musicxml.js';
+import { readMidi, takeDur } from '../../music/midi.js';
 // Шрифт нот и звуковой банк — файлы проекта, никаких CDN
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
 import SONIVOX from '@coderline/alphatab/soundfont/sonivox.sf3?url';
@@ -31,12 +36,14 @@ const I = {
   pen: '<svg viewBox="0 0 24 24"><path d="M15.5 5.5l3 3L9 18l-4 1 1-4z"/></svg>',
   metro: '<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2"><path d="M8 21h8l-3-17h-2zM12 14l5-7"/></svg>',
 };
-const ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.gp8,.xml,.musicxml,.mxl,.pdf,application/pdf';
+const ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.gp8,.xml,.musicxml,.mxl,.pdf,application/pdf,.mid,.midi,.als,.rpp,.flp';
 
 let dropped = null; // файлы, перетащенные в окно до того, как модуль открылся (src/core/drop.js)
 let host = null, ctx = null, size = 'full', input = null, offs = [];
 const st = () => ctx.store.all();
 const tabs = () => ctx.files.list('tab');
+const daws = () => [...ctx.files.list('midi'), ...ctx.files.list('daw')].sort((a, b) => (b.created || 0) - (a.created || 0));
+const isDaw = (r) => !!r && (r.kind === 'midi' || r.kind === 'daw');
 const icb = (...a) => ctx.ui.icb(...a);
 const esc = (s) => ctx.ui.esc(s);
 const big = () => size === 'full' || size === 'half';
@@ -170,6 +177,7 @@ async function openPdfRec(rec) {
 }
 
 async function openTab(rec) {
+  if (isDaw(rec)) return openDaw(rec);
   st().lastTab = rec.id; // при следующем запуске откроется он же, с того же места
   ctx.store.save();
   // загруженный раньше PDF без расширения и типа — узнать по содержимому (один раз, потом запомнено)
@@ -182,6 +190,10 @@ async function openTab(rec) {
   render();
   let at;
   try { at = await loadLib(); } catch (e) { ctx && ctx.logErr(e); AT.state = 'error'; render(); ctx && ctx.ui.toast(ctx.t('libFail')); return; }
+  ensureApi(at);
+  try { AT.api.load(new Uint8Array(await rec.blob.arrayBuffer())); } catch { AT.state = 'error'; render(); }
+}
+function ensureApi(at) {
   if (!AT.api) {
     AT.el = document.createElement('div');
     AT.el.className = 'atsurf';
@@ -197,7 +209,32 @@ async function openTab(rec) {
     playerSetup(); // звуковой банк грузится сразу: нажатие на такт переводит туда, «Играть» — без ожидания
     AT.api.error.on((e) => { if (ctx) ctx.log('alphaTab: ' + ((e && (e.message || e.type)) || 'ошибка'), 'e'); AT.state = 'error'; render(); if (ctx) ctx.ui.toast(ctx.t('openFail')); });
   }
-  try { AT.api.load(new Uint8Array(await rec.blob.arrayBuffer())); } catch { AT.state = 'error'; render(); }
+}
+// Файл .mid или проект чужой студии: читается как есть → проект приложения → MusicXML → ноты (alphaTab)
+async function openDaw(rec) {
+  st().lastTab = rec.id; st().sec = 'midi';
+  ctx.store.save();
+  closePdf();
+  AT.state = 'loading'; AT.cur = rec; AT.score = null; AT.proj = null;
+  render();
+  let at;
+  try { at = await loadLib(); } catch (e) { ctx && ctx.logErr(e); AT.state = 'error'; render(); ctx && ctx.ui.toast(ctx.t('libFail')); return; }
+  if (!ctx || AT.cur !== rec) return;
+  ensureApi(at);
+  try {
+    const song = await readDaw(new Uint8Array(await rec.blob.arrayBuffer()), rec.kind === 'midi' ? 'mid' : rec.fmt);
+    song.name = song.name || rec.name;
+    AT.proj = projectFromSong(song);
+    if (isEmptyProject(AT.proj)) { AT.state = 'error'; render(); ctx.ui.toast(ctx.t('dawNoNotes')); return; }
+    AT.api.load(new TextEncoder().encode(projectXML(AT.proj, { title: rec.name.replace(/\.[a-z0-9]+$/i, '') })));
+  } catch (e) { ctx.logErr(e); AT.state = 'error'; render(); ctx.ui.toast(ctx.t('dawFail')); }
+}
+// «В студию»: прочитанный проект сохраняется и открывается в студии (там — паттерны, дорожки, правка)
+function toStudio() {
+  if (!AT.proj) return;
+  ctx.projects.save(AT.proj);
+  ctx.ui.toast(ctx.t('dawOpened'));
+  if (ctx.openTool) ctx.openTool('studio');
 }
 
 function restyle() {
@@ -322,6 +359,14 @@ function tabRow(x) {
     '<button class="ic sm" data-x="tdel" data-id="' + x.id + '" aria-label="' + esc(ctx.t('deleteX', { name: x.name })) + '" style="color:var(--red)">' + I.minus + '</button></div>';
 }
 
+function dawRow(x) {
+  const songs = ctx.songs(), so = fileSongs(x).map((id) => songs.find((s) => s.id === id)).find(Boolean), tl = x.kind === 'midi' && x.tool && ctx.midi.tool ? ctx.midi.tool(x.tool) : null;
+  const fmt = x.kind === 'midi' ? 'MIDI' + (tl ? ' · ' + tl.name : '') : DAW_FORMATS[x.fmt] || x.fmt;
+  return '<div class="cell"><button class="grow" data-x="topen" data-id="' + x.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(x.name.replace(/\.(midi?|als|rpp|flp)$/i, '')) + '</div><div class="st">' +
+    esc(fmt) + ' · ' + ctx.t('kb', { n: ctx.num((x.size || 0) / 1024, 0) }) + (so ? ', ' + esc(so.title) : '') + '</div></button>' +
+    '<button class="ic sm" data-x="tdel" data-id="' + x.id + '" aria-label="' + esc(ctx.t('deleteX', { name: x.name })) + '" style="color:var(--red)">' + I.minus + '</button></div>';
+}
+
 function barHTML() {
   const { t } = ctx;
   const note = ATP.err ? '<span class="l2" style="font-size:12px">' + t('playNA') + '</span>' : ATP.want && !ATP.sf ? '<span class="l2" style="font-size:12px">' + t('sfLoadingShort') + '</span>' : '';
@@ -334,7 +379,7 @@ function barHTML() {
 
 function tabsBody() {
   const { t } = ctx, song = ctx.song(), all = tabs();
-  if (!AT.cur || AT.state === 'error') {
+  if (!AT.cur || AT.state === 'error' || isDaw(AT.cur)) {
     const mine = song ? all.filter((x) => inSong(x, song.id)) : [];
     const rest = all.filter((x) => !mine.includes(x));
     return '<div class="tablist">' + (all.length
@@ -342,7 +387,7 @@ function tabsBody() {
         (rest.length ? '<div class="hdr">' + t(mine.length ? 'others' : 'allTabs') + '</div><div class="group">' + rest.map(tabRow).join('') + '</div>' : '')
       : '<p class="l2" style="font-size:14px;text-align:center;margin:18px 8px">' + t('uploadHint') + '</p>') +
       '<div class="vrow" style="margin-top:12px"><button class="btn sm" data-x="tadd">' + I.plus.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4"') + ' ' + t('uploadTab') + '</button></div>' +
-      (AT.state === 'error' ? '<p class="ftr" style="text-align:center">' + t('openFailShort') + '</p>' : '') + '</div>';
+      (AT.state === 'error' && !isDaw(AT.cur) ? '<p class="ftr" style="text-align:center">' + t('openFailShort') + '</p>' : '') + '</div>';
   }
   if (isPdf(AT.cur)) {
     return '<div class="ntools">' + icb('data-x="tlist"', I.list, t('tabFiles'), 'sm') +
@@ -351,14 +396,30 @@ function tabsBody() {
       icb('data-x="pzoom" data-d="-1"', I.minus, t('smaller'), 'sm') + icb('data-x="pzoom" data-d="1"', I.plus, t('bigger'), 'sm') + icb('data-x="pfit"', I.fit, t('pdf.fit'), 'sm') + icb('data-x="pfull"', I.full, t('pdf.full'), 'sm') + '</div>' +
       '<div class="pdfwrap" id="pdfSlot">' + (AT.state === 'loading' ? '<div class="atload">' + ctx.ui.loader('book', AT.cur.name) + '</div>' : '') + '</div>';
   }
-  const tr = AT.score ? AT.score.tracks : [];
-  return '<div class="ntools">' + icb('data-x="tlist"', I.list, t('tabFiles'), 'sm') +
+  return scoreView();
+}
+// Ноты alphaTab: дорожки фишками, масштаб, вид; у файла из DAW — ещё «В студию»
+function scoreView() {
+  const { t } = ctx, tr = AT.score ? AT.score.tracks : [], daw = isDaw(AT.cur);
+  return '<div class="ntools">' + icb('data-x="tlist"', I.list, t(daw ? 'sec.midi' : 'tabFiles'), 'sm') +
     (tr.length > 1
       ? '<div class="chips nowrap sgrow">' + tr.map((x, i) => '<button class="chip' + (i === AT.track ? ' on' : '') + '" data-x="ttrack" data-i="' + i + '">' + esc(x.name || t('trackN', { n: i + 1 })) + '</button>').join('') + '</div>'
       : '<span class="sgrow aname" style="text-align:left">' + esc(AT.cur.name) + '</span>') +
     icb('data-x="tzoom" data-d="-1"', I.minus, t('smaller'), 'sm') + icb('data-x="tzoom" data-d="1"', I.plus, t('bigger'), 'sm') +
-    '<button class="ic txt sm' + (st().prof === 'both' ? ' act' : '') + '" data-x="tprof" aria-pressed="' + (st().prof === 'both') + '" aria-label="' + t('scoreTab') + '">♪+T</button></div>' +
+    '<button class="ic txt sm' + (st().prof === 'both' ? ' act' : '') + '" data-x="tprof" aria-pressed="' + (st().prof === 'both') + '" aria-label="' + t('scoreTab') + '">♪+T</button>' +
+    (daw && AT.proj ? '<button class="btn sm" data-x="dstudio">' + t('toStudio') + '</button>' : '') + '</div>' +
     (big() ? barHTML() : '') + '<div class="atwrap" id="atSlot">' + (AT.state === 'loading' ? '<div class="atload">' + ctx.ui.loader('beat', AT.cur.name) + '</div>' : '') + '</div>';
+}
+
+// Раздел «MIDI и DAW»: список файлов .mid и проектов студий; открытый — нотами
+function midiBody() {
+  const { t } = ctx, all = daws();
+  if (!AT.cur || !isDaw(AT.cur) || AT.state === 'error') {
+    return '<div class="tablist">' + (all.length ? '<div class="group">' + all.map(dawRow).join('') + '</div>' : '<p class="l2" style="font-size:14px;text-align:center;margin:18px 8px">' + t('dawEmpty') + '</p>') +
+      '<div class="vrow" style="margin-top:12px"><button class="btn sm" data-x="tadd">' + I.plus.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4"') + ' ' + t('uploadDaw') + '</button></div>' +
+      (AT.state === 'error' && isDaw(AT.cur) ? '<p class="ftr" style="text-align:center">' + t('dawFail') + '</p>' : '') + '</div>';
+  }
+  return scoreView();
 }
 
 // Исходная тональность песни: из карточки песни, иначе — по аккордам текста
@@ -409,15 +470,15 @@ function textBody() {
 }
 
 function html() {
-  const { t } = ctx, sec = st().sec === 'text' ? 'text' : 'tabs';
-  if (sec === 'tabs' && !big()) {
+  const { t } = ctx, sec = st().sec === 'text' ? 'text' : st().sec === 'midi' ? 'midi' : 'tabs';
+  if (sec !== 'text' && !big()) {
     return '<div class="comp ' + size + '"><div class="csw"><button class="cswb on txt" data-x="nsec" data-v="text" aria-label="' + t('toText') + '">' + t('tabsShort') + ' ›</button></div>' +
       '<div class="vq l2" style="font-size:13px">' + t('needsRoom') + '</div></div>';
   }
-  const sw = '<div class="tsw" role="tablist">' + [['tabs', t('sec.tabs')], ['text', t('sec.text')]].map(([k, n]) =>
+  const sw = '<div class="tsw" role="tablist">' + [['tabs', t('sec.tabs')], ['midi', t('sec.midi')], ['text', t('sec.text')]].map(([k, n]) =>
     '<button class="tswb' + (k === sec ? ' on' : '') + '" data-x="nsec" data-v="' + k + '" role="tab" aria-selected="' + (k === sec) + '">' + n + '</button>').join('') + '</div>';
   return '<div class="comp notes-root ' + size + '">' + (big() ? sw : '<div class="csw"><button class="cswb on txt" data-x="nsec" data-v="tabs" aria-label="' + t('toTabs') + '">' + t('textShort') + ' ›</button></div>') +
-    '<div class="cbody">' + (sec === 'text' ? textBody() : tabsBody()) + '</div></div>';
+    '<div class="cbody">' + (sec === 'text' ? textBody() : sec === 'midi' ? midiBody() : tabsBody()) + '</div></div>';
 }
 
 function render() {
@@ -430,7 +491,8 @@ function render() {
 
 function tabSheet() {
   const { t, ui } = ctx;
-  ui.sheet(() => ui.snav(t('tabFiles')) + '<div class="group">' + tabs().map(tabRow).join('') + '<button class="cell act" data-x="tadd">' + t('uploadTab') + '</button></div>',
+  const daw = st().sec === 'midi';
+  ui.sheet(() => ui.snav(t(daw ? 'sec.midi' : 'tabFiles')) + '<div class="group">' + (daw ? daws().map(dawRow) : tabs().map(tabRow)).join('') + '<button class="cell act" data-x="tadd">' + t(daw ? 'uploadDaw' : 'uploadTab') + '</button></div>',
     (el, sh) => el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-x]');
       if (!b) return;
@@ -542,9 +604,14 @@ async function onFile(e) {
   const song = ctx.song();
   let first = null, lost = false;
   for (const f of list) {
-    const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), ext: (/\.([^.]+)$/.exec(f.name) || [])[1] || '', size: f.size, type: f.type,
-      fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' || (await sniffPdf(f)) ? 'pdf' : 'score',
-      songs: song ? [song.id] : [], created: Date.now(), blob: f };
+    const dfmt = dawFmt(f.name), id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const rec = dfmt === 'mid' ? { id, kind: 'midi', tool: 'piano', name: f.name, size: f.size, type: 'audio/midi', songs: song ? [song.id] : [], created: Date.now(), blob: f }
+      : dfmt ? { id, kind: 'daw', fmt: dfmt, name: f.name, size: f.size, type: f.type, songs: song ? [song.id] : [], created: Date.now(), blob: f }
+      : { id, kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), ext: (/\.([^.]+)$/.exec(f.name) || [])[1] || '', size: f.size, type: f.type,
+        fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' || (await sniffPdf(f)) ? 'pdf' : 'score',
+        songs: song ? [song.id] : [], created: Date.now(), blob: f };
+    // .mid со стороны — ещё и запись для пианино (играется там как своя)
+    if (dfmt === 'mid') { try { const r = readMidi(new Uint8Array(await f.arrayBuffer())); rec.take = { v: 1, ev: r.ev }; rec.dur = takeDur(r.ev); } catch { /* ноты покажутся, игра в пианино — нет */ } }
     const { saved, rr, ok } = await storeFile(rec, f);
     ctx.log('загрузка: ' + mbOf(f.size) + ', тип ' + (f.type || 'нет') + ', формат ' + rec.fmt + (saved ? ', сохранён' : ', НЕ сохранён') + (rr ? ', читается из копии' : '') +
       (ok === true ? ', копия сверена' : ok === false ? ', копия НЕ совпала' : ''), saved && ok !== false ? 'i' : 'w');
@@ -553,7 +620,7 @@ async function onFile(e) {
     if (!ctx) return;
   }
   if (lost) ctx.ui.toast(ctx.t('notSaved'));
-  st().sec = 'tabs';
+  st().sec = isDaw(first) ? 'midi' : 'tabs';
   ctx.store.save();
   openTab(first);
 }
@@ -580,6 +647,7 @@ function act(a, el) {
       });
       break;
     case 'tlist': tabSheet(); break;
+    case 'dstudio': toStudio(); break;
     case 'pzoom': if (PDF.view) PDF.view.zoomBy(+el.dataset.d); break;
     case 'pfit': if (PDF.view) PDF.view.fit(); break;
     case 'pgo': if (PDF.view) PDF.view.go(PDF.page + +el.dataset.d); break;
@@ -618,7 +686,7 @@ export default {
     return n ? c.tn('tabs', n) : c.t('statusIdle');
   },
   // Перетаскивание файлов в окно (веб-версия на компьютере): какие файлы модуль берёт и что с ними делать
-  accepts: (f) => f.type === 'application/pdf' || /\.(gp[3-8x]?|xml|musicxml|mxl|pdf)$/i.test(f.name),
+  accepts: (f) => f.type === 'application/pdf' || /\.(gp[3-8x]?|xml|musicxml|mxl|pdf|midi?|als|rpp|flp)$/i.test(f.name),
   drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
@@ -639,7 +707,7 @@ export default {
     // Громкость табов — шина медиатеки
     offs.push(c.audio.mixer.subscribe(() => { if (AT.api && ATP.sf) AT.api.masterVolume = vol(); }));
     if (!ATP.probed) { ATP.probed = true; c.audio.mixer.probe('media', () => ATP.playing); }
-    offs.push(c.files.subscribe(() => { if (!AT.cur || AT.state === 'error') render(); }));
+    offs.push(c.files.subscribe(() => { if (!AT.cur || AT.state === 'error' || st().sec !== (isDaw(AT.cur) ? 'midi' : 'tabs')) render(); }));
     c.files.ready.then(() => {
       // последний открытый файл (табы или ноты) открывается сам, с того же места
       const last = !AT.cur && st().lastTab && c.files.get(st().lastTab);

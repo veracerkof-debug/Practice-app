@@ -41,12 +41,13 @@ export function partXML(tr, p, { flats = false, notes = songNotes(p).filter((n) 
     while (s < e) { const b1 = (Math.floor(s / barDiv) + 1) * barDiv, x = Math.min(e, b1); segs.push({ s, e: x, m: n.m, from: s > Math.round(n.t * beatDiv), cont: x < e }); s = x; }
   });
   segs.sort((a, b) => a.s - b.s || a.m - b.m);
+  const low = segs.length && segs.reduce((a, n) => a + n.m, 0) / segs.length < 55; // низкая партия (бас) — басовый ключ
   const rests = (d) => splitDur(d).map(([v, type]) => '<note><rest/><duration>' + v + '</duration><voice>1</voice><type>' + type + '</type></note>').join('');
   const out = [];
   for (let b = 0; b < bars; b++) {
     const b0 = b * barDiv, b1 = b0 + barDiv;
     let x = '<measure number="' + (b + 1) + '">';
-    if (b === 0) x += '<attributes><divisions>' + DIV + '</divisions><key><fifths>' + fifthsOf(p.key) + '</fifths><mode>' + (p.key.minor ? 'minor' : 'major') + '</mode></key><time><beats>' + p.num + '</beats><beat-type>' + p.den + '</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>' +
+    if (b === 0) x += '<attributes><divisions>' + DIV + '</divisions><key><fifths>' + fifthsOf(p.key) + '</fifths><mode>' + (p.key.minor ? 'minor' : 'major') + '</mode></key><time><beats>' + p.num + '</beats><beat-type>' + p.den + '</beat-type></time><clef>' + (low ? '<sign>F</sign><line>4</line>' : '<sign>G</sign><line>2</line>') + '</clef></attributes>' +
       '<direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>' + p.bpm + '</per-minute></metronome></direction-type><sound tempo="' + p.bpm + '"/></direction>';
     let at = b0;
     const inBar = segs.filter((n) => n.s >= b0 && n.s < b1);

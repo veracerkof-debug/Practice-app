@@ -131,5 +131,8 @@
   "drum.ohat": "Ochiq",
   "drum.clap": "Qarsak",
   "drum.clear": "Qatorni tozalash",
-  "drum.hint": "Bosish — zarb, qator boʻylab surish — bir nechta; qator nomi — eshitish, ushlab turish — tozalash."
+  "drum.hint": "Bosish — zarb, qator boʻylab surish — bir nechta; qator nomi — eshitish, ushlab turish — tozalash.",
+  "exportDaw": "DAW uchun — yoʻlaklar boʻyicha .mid",
+  "exportedDaw": "Studiya fayli — mediatekada va «Tablar»da (MIDI va DAW)",
+  "exportedDawLoops": "Studiya fayli — mediatekada; halqalar — oʻsha yerda alohida yozuvlar"
 }

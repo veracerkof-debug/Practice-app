@@ -88,5 +88,13 @@
   "lib.withText": "Matnli",
   "lib.noText": "Matnsiz — qo‘shish",
   "lib.empty": "Hozircha matnlar yo‘q: ularni qo‘shiqqa qo‘shish yoki .cho/.txt fayl sifatida Melete → Lyrics jildiga qo‘yish mumkin.",
-  "lib.session": "sessiyada"
+  "lib.session": "sessiyada",
+  "sec.midi": "MIDI va DAW",
+  "toStudio": "Studiyaga",
+  "uploadDaw": ".mid yoki studiya loyihasini yuklash",
+  "dawEmpty": ".mid fayllar va studiya loyihalari — Ableton (.als), Reaper (.rpp), FL Studio (.flp) — notalar bilan ochiladi. «Studiyaga» — ilovada tahrirlash.",
+  "dawFail": "Faylni oʻqib boʻlmadi",
+  "dawNoNotes": "Faylda nota yoʻq",
+  "dawOpened": "Loyiha saqlandi — «Studiya»da ochildi",
+  "help.4": "MIDI va DAW: .mid fayllar va Ableton, Reaper, FL Studio loyihalari — notalar bilan; «Studiyaga» — tahrirlash."
 }

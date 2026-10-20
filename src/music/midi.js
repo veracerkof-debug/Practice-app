@@ -190,3 +190,36 @@ export function readMidi(u8) {
 
 // Длительность записи, с
 export const takeDur = (ev) => (ev.length ? ev.reduce((a, e) => Math.max(a, e.t), 0) : 0);
+
+// Файл .mid для студий (формат 1): дорожка темпа (темп, размер, тональность, название) и по дорожке на каждую
+// дорожку проекта — с именем, каналом (ударные — 10-й) и инструментом General MIDI. Время — в долях (четвертях)
+// проекта: { bpm, num, den, key: { pc, minor }, name, tracks: [{ name, ch, program, notes: [{ t, d, m, v }] }] }
+export function writeMidiTracks({ bpm = 120, num = 4, den = 4, key = null, name = '', tracks = [] }) {
+  const tk = (q) => Math.max(0, Math.round(q * PPQ));
+  const text = (type, s) => { const b = [...new TextEncoder().encode(s)].slice(0, 120); return [0xff, type, ...varlen(b.length), ...b]; };
+  const chunk = (msgs) => { // [тик, байты] → MTrk
+    const body = [];
+    let last = 0;
+    msgs.map((m, i) => [m, i]).sort((a, b) => a[0][0] - b[0][0] || a[1] - b[1]).forEach(([[t, b]]) => { body.push(...varlen(t - last), ...b); last = t; });
+    body.push(0, 0xff, 0x2f, 0x00);
+    const n = body.length;
+    return [0x4d, 0x54, 0x72, 0x6b, (n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff, ...body];
+  };
+  const tempo = Math.round(60e6 / Math.max(1, bpm)), dd = Math.round(Math.log2(den));
+  const head = [[0, [0xff, 0x51, 0x03, (tempo >> 16) & 0xff, (tempo >> 8) & 0xff, tempo & 0xff]], [0, [0xff, 0x58, 0x04, num, dd, 24, 8]]];
+  if (name) head.unshift([0, text(0x03, name)]);
+  if (key) { const F = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5], f = F[key.minor ? (key.pc + 3) % 12 : key.pc]; head.push([0, [0xff, 0x59, 0x02, f & 0xff, key.minor ? 1 : 0]]); }
+  const out = [0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1, ((tracks.length + 1) >> 8) & 0xff, (tracks.length + 1) & 0xff, PPQ >> 8, PPQ & 0xff, ...chunk(head)];
+  tracks.forEach((tr, i) => {
+    const ch = clamp(tr.ch == null ? i % 15 + (i >= 9 ? 1 : 0) : tr.ch, 0, 15), msgs = [];
+    if (tr.name) msgs.push([0, text(0x03, tr.name)]);
+    if (tr.program != null && ch !== DRUMS) msgs.push([0, [0xc0 | ch, clamp(Math.round(tr.program), 0, 127)]]);
+    (tr.notes || []).forEach((n) => {
+      const m = clamp(Math.round(n.m), 0, 127), a = tk(n.t), b = Math.max(a + 1, tk(n.t + n.d));
+      msgs.push([a, [0x90 | ch, m, vel(n.v)]]);
+      msgs.push([b, [0x80 | ch, m, 0]]);
+    });
+    out.push(...chunk(msgs));
+  });
+  return new Uint8Array(out);
+}

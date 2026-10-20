@@ -138,5 +138,8 @@
   "drum.ohat": "Open",
   "drum.clap": "Clap",
   "drum.clear": "Clear row",
-  "drum.hint": "Tap — a hit, drag along a row — several; row name — hear it, hold — clear."
+  "drum.hint": "Tap — a hit, drag along a row — several; row name — hear it, hold — clear.",
+  "exportDaw": "For a DAW — multitrack .mid",
+  "exportedDaw": "DAW file is in the media library and in Tabs (MIDI & DAW)",
+  "exportedDawLoops": "DAW file is in the media library; loops are separate recordings there"
 }

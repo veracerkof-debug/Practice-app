@@ -89,5 +89,13 @@
   "lib.withText": "With lyrics",
   "lib.noText": "No lyrics — add",
   "lib.empty": "No lyrics yet: add them to a song or drop a .cho/.txt file into the Melete → Lyrics folder.",
-  "lib.session": "in session"
+  "lib.session": "in session",
+  "sec.midi": "MIDI & DAW",
+  "toStudio": "To Studio",
+  "uploadDaw": "Upload .mid or a DAW project",
+  "dawEmpty": ".mid files and DAW projects — Ableton (.als), Reaper (.rpp), FL Studio (.flp) — open as a score. “To Studio” — edit in the app.",
+  "dawFail": "Could not read the file",
+  "dawNoNotes": "No notes in the file",
+  "dawOpened": "Project saved — opened in Studio",
+  "help.4": "MIDI & DAW: .mid files and Ableton, Reaper, FL Studio projects — as a score; “To Studio” — edit."
 }

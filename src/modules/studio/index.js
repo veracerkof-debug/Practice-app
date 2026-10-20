@@ -8,12 +8,12 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { newProject, newTrack, normalizeProject, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, projectEvents, curPattern, patById, cellOf, countOf, songList, songBeats, patBeats, addPattern, clonePattern, removePattern, songAdd, songRemoveAt, isEmptyProject } from '../../music/project.js';
+import { newProject, newTrack, normalizeProject, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, projectEvents, curPattern, patById, cellOf, countOf, songList, songBeats, patBeats, addPattern, clonePattern, removePattern, songAdd, songRemoveAt, isEmptyProject, projectTracks } from '../../music/project.js';
 import { createSequencer } from '../../audio/sequencer.js';
 import { createRoll } from './roll.js';
 import { chordsHTML, chordsAct, chordHold } from './chords.js';
 import { drumsHTML, drumsGestures, drumHold, showBar } from './drums.js';
-import { writeMidi, takeDur } from '../../music/midi.js';
+import { writeMidi, writeMidiTracks, takeDur } from '../../music/midi.js';
 import { projectXML } from '../../music/musicxml.js';
 import { onHold, holdMenu, sortable, dragSort } from '../../ui/hold.js';
 import { keyLabel } from '../../music/transpose.js';
@@ -248,7 +248,21 @@ function filePicker(tr) {
 // Экспорт песни целиком (плейлист; пустой — текущий паттерн): .mid (играется в пианино) или MusicXML (открывается в «Табах»)
 function exportMenu(anchor) {
   const { t } = ctx;
-  holdMenu(anchor, [{ icon: I.share, label: t('exportMidi'), run: exportMidi }, { icon: I.share, label: t('exportXml'), run: exportXml }], t('export'));
+  holdMenu(anchor, [{ icon: I.share, label: t('exportDaw'), run: exportDaw }, { icon: I.share, label: t('exportMidi'), run: exportMidi }, { icon: I.share, label: t('exportXml'), run: exportXml }], t('export'));
+}
+// Для чужой студии (FL Studio, Ableton, Reaper…): .mid формата 1 — дорожка на дорожку, ударные на 10-м канале,
+// инструменты General MIDI, темп, размер, тональность; свинг запечён. Файл — в медиатеку и «Поделиться»
+async function exportDaw() {
+  const { t } = ctx, p = proj();
+  if (isEmptyProject(p)) { ctx.ui.toast(t('err.empty')); return; }
+  let ch = 0;
+  const tracks = projectTracks(p).map((tr) => ({ name: tr.name, ch: tr.drums ? 9 : (ch === 9 ? ch += 2 : ch++) % 16, program: tr.program, notes: tr.notes }));
+  const name = (p.name || t('untitled')) + ' (DAW).mid', u8 = writeMidiTracks({ bpm: p.bpm, num: p.num, den: p.den, key: p.key, name: p.name || '', tracks });
+  const ev = projectEvents(p), rec = { id: 'sd' + Date.now().toString(36), name, size: u8.length, type: 'audio/midi', songs: p.songId ? [p.songId] : [], created: Date.now(), blob: new Blob([u8], { type: 'audio/midi' }), kind: 'midi', tool: 'piano', take: { v: 1, ev }, dur: takeDur(ev) };
+  try { await ctx.files.add(rec); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('err.fail')); return; }
+  const loops = p.tracks.filter((tr) => tr.kind === 'audio' && tr.fileId).length;
+  ctx.ui.toast(t(loops ? 'exportedDawLoops' : 'exportedDaw'));
+  try { await ctx.midi.share(rec); } catch { /* отменили */ }
 }
 async function exportXml() {
   const { t } = ctx, p = proj();

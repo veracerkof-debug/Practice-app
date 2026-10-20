@@ -90,5 +90,13 @@
   "lib.withText": "С текстом",
   "lib.noText": "Без текста — добавить",
   "lib.empty": "Текстов пока нет: их можно добавить в песню или положить файлом .cho/.txt в папку Melete → Lyrics.",
-  "lib.session": "в сессии"
+  "lib.session": "в сессии",
+  "sec.midi": "MIDI и DAW",
+  "toStudio": "В студию",
+  "uploadDaw": "Загрузить .mid или проект студии",
+  "dawEmpty": "Файлы .mid и проекты студий — Ableton (.als), Reaper (.rpp), FL Studio (.flp) — открываются нотами. «В студию» — править в приложении.",
+  "dawFail": "Не удалось прочитать файл",
+  "dawNoNotes": "В файле нет нот",
+  "dawOpened": "Проект сохранён — открыт в «Студии»",
+  "help.4": "MIDI и DAW: файлы .mid и проекты Ableton, Reaper, FL Studio — нотами; «В студию» — править."
 }
