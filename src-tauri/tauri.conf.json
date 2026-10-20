@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Melete",
+  "version": "1.2.0",
+  "identifier": "app.melete",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Melete",
+        "label": "main",
+        "width": 1180,
+        "height": 800,
+        "minWidth": 420,
+        "minHeight": 600,
+        "center": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "category": "Music",
+    "shortDescription": "Melete — практика музыкантов",
+    "longDescription": "Учёт занятий и статистика, метроном, тюнер, пианино, лупер, студия, табы и ноты. Без рекламы и трекинга.",
+    "publisher": "Melete",
+    "copyright": "GPL-3.0",
+    "windows": {
+      "webviewInstallMode": { "type": "embedBootstrapper" },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Russian", "English"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

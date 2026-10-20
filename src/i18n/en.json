@@ -411,7 +411,10 @@
   "demo.title": "Demo set",
   "demo.add": "Add the demo set",
   "demo.remove": "Remove the demo set",
-  "demo.bar": ["{n} demo song", "{n} demo songs"],
+  "demo.bar": [
+    "{n} demo song",
+    "{n} demo songs"
+  ],
   "demo.removeShort": "Delete demo",
   "demo.hint": "Songs, tabs, scores, recordings and events — to see how everything works. Adds no sessions or stats. Removed with one button.",
   "demo.removeTitle": "Remove the demo set?",
@@ -1436,15 +1439,30 @@
   "bkp.settings": "Settings",
   "bkp.settingsSub": "appearance, goal, reminders, sounds and tools",
   "bkp.songs": "Songs",
-  "bkp.songsN": ["{n} song, tags and genres", "{n} songs, tags and genres"],
+  "bkp.songsN": [
+    "{n} song, tags and genres",
+    "{n} songs, tags and genres"
+  ],
   "bkp.profile": "Profile and stats",
-  "bkp.profileN": ["{n} session", "{n} sessions"],
+  "bkp.profileN": [
+    "{n} session",
+    "{n} sessions"
+  ],
   "bkp.reading": "Reading plan",
-  "bkp.readingN": ["{n} chapter read", "{n} chapters read"],
+  "bkp.readingN": [
+    "{n} chapter read",
+    "{n} chapters read"
+  ],
   "bkp.calendar": "Calendar",
-  "bkp.calendarN": ["{n} event and setlists", "{n} events and setlists"],
+  "bkp.calendarN": [
+    "{n} event and setlists",
+    "{n} events and setlists"
+  ],
   "bkp.files": "Song files",
-  "bkp.filesN": ["{n} file", "{n} files"],
+  "bkp.filesN": [
+    "{n} file",
+    "{n} files"
+  ],
   "bkp.mb": "MB",
   "bkp.big": "Large backup: saving takes a while, email may not accept it.",
   "bkp.save": "Save backup",
@@ -1498,5 +1516,8 @@
   "pg.me": "Me and practice",
   "pg.screen": "Screen",
   "pg.tools": "Tools and prompts",
-  "pg.help": "Help and data"
+  "pg.help": "Help and data",
+  "panel.kindWin": "desktop version: data is stored in this app",
+  "lic.tauri.sub": "Windows app · version 2",
+  "lic.tauri.text": "Distributed under the MIT and Apache License 2.0 (github.com/tauri-apps/tauri), together with the tauri-plugin-dialog and tauri-plugin-fs modules (saving files on the computer) and @tauri-apps/api. The window uses the system WebView2 (Microsoft Edge)."
 }

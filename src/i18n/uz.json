@@ -1409,15 +1409,25 @@
   "bkp.settings": "Sozlamalar",
   "bkp.settingsSub": "koʻrinish, maqsad, eslatmalar, tovushlar va cholgʻular",
   "bkp.songs": "Qoʻshiqlar",
-  "bkp.songsN": ["{n} ta qoʻshiq, teglar va janrlar"],
+  "bkp.songsN": [
+    "{n} ta qoʻshiq, teglar va janrlar"
+  ],
   "bkp.profile": "Profil va statistika",
-  "bkp.profileN": ["{n} ta mashgʻulot"],
+  "bkp.profileN": [
+    "{n} ta mashgʻulot"
+  ],
   "bkp.reading": "Oʻqish rejasi",
-  "bkp.readingN": ["{n} ta bob oʻqilgan"],
+  "bkp.readingN": [
+    "{n} ta bob oʻqilgan"
+  ],
   "bkp.calendar": "Taqvim",
-  "bkp.calendarN": ["{n} ta tadbir va set-listlar"],
+  "bkp.calendarN": [
+    "{n} ta tadbir va set-listlar"
+  ],
   "bkp.files": "Qoʻshiq fayllari",
-  "bkp.filesN": ["{n} ta fayl"],
+  "bkp.filesN": [
+    "{n} ta fayl"
+  ],
   "bkp.mb": "MB",
   "bkp.big": "Nusxa katta: saqlash vaqt oladi, pochta uni qabul qilmasligi mumkin.",
   "bkp.save": "Nusxani saqlash",
@@ -1471,5 +1481,8 @@
   "pg.me": "Men va mashgʻulot",
   "pg.screen": "Ekran",
   "pg.tools": "Cholgʻular va maslahatlar",
-  "pg.help": "Yordam va maʼlumotlar"
+  "pg.help": "Yordam va maʼlumotlar",
+  "panel.kindWin": "kompyuter versiyasi: maʼlumotlar shu ilovada saqlanadi",
+  "lic.tauri.sub": "Windows uchun ilova · 2 versiya",
+  "lic.tauri.text": "MIT va Apache License 2.0 litsenziyalari boʻyicha tarqatiladi (github.com/tauri-apps/tauri); u bilan birga — tauri-plugin-dialog va tauri-plugin-fs modullari (kompyuterda fayllarni saqlash) va @tauri-apps/api. Oyna tizimdagi WebView2 (Microsoft Edge) orqali koʻrsatiladi."
 }

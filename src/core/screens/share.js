@@ -7,6 +7,7 @@ import { emptySong } from '../library.js';
 import { log, logErr } from '../log.js';
 import { weekdays } from './common.js';
 import { coreHelp } from '../help.js';
+import { isDesktop, saveFile } from '../desktop.js';
 
 const Share = Capacitor.isNativePlatform() ? registerPlugin('Share') : null;
 export const SHARE_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 7.5 12 3.5l4 4M6 11H5v9h14v-9h-1"/></svg>';
@@ -17,9 +18,10 @@ const unb64 = (s) => { const b = atob(s), u8 = new Uint8Array(b.length); for (le
 const when = (ts) => new Date(ts).toLocaleString(getLang() === 'uz' ? 'uz-Latn' : getLang(), { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 const chk = (attrs, on) => '<input type="checkbox" ' + attrs + (on ? ' checked' : '') + ' style="width:22px;height:22px;margin-right:12px;flex:none">';
 
-// Отправить готовый файл: Android — выбор приложения; веб — «Поделиться» браузера или сохранение
+// Отправить готовый файл: Android — выбор приложения; компьютер — «Сохранить как»; веб — «Поделиться» браузера или скачивание
 export async function sendFile(u8, name, title, type = 'application/octet-stream') {
   if (Share) { await Share.send({ name, data: b64(u8), title, text: title, mime: type }); return 'shared'; }
+  if (isDesktop()) return saveFile(u8, name, type); // компьютер: «Сохранить как»
   const file = new File([u8], name, { type });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ files: [file], title }); return 'shared'; } catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }

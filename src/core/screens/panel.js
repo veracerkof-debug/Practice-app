@@ -3,6 +3,7 @@
 // Перенесено из legacy/practice.html (panelRoot, renderPanel, PPAGES, weekHTML, lookHTML, dataHTML, featHTML, statsHTML,
 // barsSVG, hbars, legalSheet, doExport, импорт копии).
 import { Capacitor } from '@capacitor/core';
+import { isDesktop } from '../desktop.js';
 import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
 import { sortable } from '../../ui/hold.js';
@@ -450,7 +451,7 @@ function rootHTML(app) {
     '<div class="group" style="margin-top:20px"><a class="cell" href="' + TG_CHAT + '" target="_blank" rel="noopener"><span class="ticon" style="' + iconBg(app.store.state.settings, 'blue') + '">' + PLANE + '</span><span class="grow">' + t('panel.tg') + '<span class="psub">' + t('panel.tgSub') + '</span></span>' + CHEV + '</a>' +
       '<button class="cell" data-act="report"><span class="ticon" style="' + iconBg(app.store.state.settings, 'graphite') + '">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button></div>' +
     '<div class="group" style="margin-top:12px">' + ['about', 'tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
-    '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + ' · ' + t(Capacitor.isNativePlatform() ? 'panel.kindApk' : import.meta.env.MODE === 'showcase' ? 'panel.kindShow' : 'panel.kindWeb') + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
+    '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + ' · ' + t(Capacitor.isNativePlatform() ? 'panel.kindApk' : isDesktop() ? 'panel.kindWin' : import.meta.env.MODE === 'showcase' ? 'panel.kindShow' : 'panel.kindWeb') + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
 }
 
 /* ---------- панель ---------- */
@@ -722,6 +723,7 @@ export function legalSheet(kind) {
       lic('Signalsmith Stretch', t('lic.stretch.sub'), '<p>© Signalsmith Audio Ltd</p><p>' + t('lic.mit') + '</p>') +
       lic('sql.js', t('lic.sqljs.sub'), '<p>© sql.js authors; SQLite — public domain</p><p>' + t('lic.mit') + '</p>') +
       lic('Capacitor', t('lic.cap.sub'), '<p>© Ionic ' + t('lic.andContrib') + '</p><p>' + t('lic.cap.text') + '</p>') +
+      lic('Tauri', t('lic.tauri.sub'), '<p>© Tauri Programme within The Commons Conservancy</p><p>' + t('lic.tauri.text') + '</p>') +
       '<div class="lic"><h3>' + t('lic.snd.title') + '</h3><p>' + t('lic.snd.text') + '</p></div></div>';
   }
   sheet(() => body);

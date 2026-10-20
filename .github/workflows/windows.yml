@@ -1,0 +1,66 @@
+# Версия для Windows (Tauri 2): установщик Melete-Setup.exe в релизе «pre» рядом с APK
+# (releases/download/pre/Melete-Setup.exe). Сборка — на серверах GitHub (Windows, Rust, WebView2 уже есть).
+# Установка — для текущего пользователя, без прав администратора; нужен Windows 10/11 (WebView2 — часть системы,
+# при его отсутствии установщик скачает его).
+name: Windows pre-release
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths-ignore: ['**.md', 'docs/**', 'android/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-pre
+  cancel-in-progress: true
+
+jobs:
+  win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Зависимости
+        run: npm ci
+
+      - name: Тесты
+        run: npm test
+
+      # beforeBuildCommand в tauri.conf.json собирает веб-часть (npm run build)
+      - name: Сборка установщика
+        run: npx tauri build --ci
+
+      - name: Переименовать
+        shell: bash
+        run: |
+          ls -la src-tauri/target/release/bundle/nsis/
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe Melete-Setup.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Melete-Setup-${{ github.run_number }}
+          path: Melete-Setup.exe
+
+      - name: Выложить в релиз «pre»
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view pre >/dev/null 2>&1; then
+            gh release create pre --prerelease --title "Melete 1.2 Pre-release" --notes "Melete 1.2 — предрелиз. Android: Melete-PreRelease.apk, Windows: Melete-Setup.exe" --target "$GITHUB_SHA"
+          fi
+          gh release upload pre Melete-Setup.exe --clobber

@@ -7,7 +7,7 @@
 Приложение для практики музыкантов: учёт занятий и статистика (ядро) плюс набор инструментов-модулей
 (метроном, тюнер, пианино, глайдер, терменвокс (руки перед камерой), пэды/дрон, лупер, студия-черновик, теория, тренажёр слуха, помодоро, медиатека, табы и тексты, диктофон, спектр и шумомер).
 Без рекламы, без трекинга, без давления «ежедневными сериями» — ритм недельный.
-Бесплатное, с открытым кодом (GPL-3.0). Платформы: Android (Google Play, F-Droid), веб, позже Windows.
+Бесплатное, с открытым кодом (GPL-3.0). Платформы: Android (Google Play, F-Droid), веб, Windows.
 
 ## Основной принцип: пространство работает на функцию
 Каждый инструмент использует всё пространство экрана по максимуму — стильно и красиво, но прежде всего
@@ -40,7 +40,7 @@
 - Web Audio API (единый AudioContext, шины, микшер), YIN для тюнера.
 - Хранение: localStorage (лёгкие данные) + IndexedDB (аудио, табы). Local-first.
 - alphaTab (MPL-2.0) для табулатур, pdf.js (Apache-2.0) для нот и табов в PDF, шрифт Bravura (OFL), звуковой банк SONiVOX (Apache-2.0).
-- Android: Capacitor. Windows: позже, Tauri.
+- Android: Capacitor. Windows: Tauri 2 (`src-tauri/`, системный WebView2; отличия от браузера — `src/core/desktop.js`).
 
 ## Архитектура
 - **Папки**: `src/core` (ядро), `src/modules/<id>` (инструменты), `src/audio` (звук), `src/i18n` (переводы),
@@ -129,5 +129,6 @@
 - `npm test` — тесты (Vitest). `tests/parity.test.js` сверяет ядро с функциями из `legacy/practice.html`
 - `npx cap sync android` / `npx cap run android -l --external` — Android с живой перезагрузкой
 - Веб-версия (отдельная от APK, для знакомства) собирается GitHub Actions (`.github/workflows/web.yml`) → ветка `gh-pages` → https://veracerkof-debug.github.io/Practice-app/
+- Windows-установщик собирает GitHub Actions (`.github/workflows/windows.yml`, Tauri) при каждом пуше → релиз «pre», файл `Melete-Setup.exe`; локально — `npm run win` (нужны Rust и Windows), `npm run win:dev` — окно с живой перезагрузкой
 - Ключ подписи APK — только в секретах GitHub (`BETA_KEYSTORE_B64`, `BETA_STORE_PASSWORD`), в репозитории его нет (репозиторий открытый)
 - Предрелизный APK собирает GitHub Actions (`.github/workflows/android-beta.yml`) при каждом пуше → релиз «pre», файл `Melete-PreRelease.apk` (Melete, версия 1.2-pre); тот же файл — и в старом релизе «beta» (`Melete-Beta.apk`), чтобы старая ссылка давала свежую сборку

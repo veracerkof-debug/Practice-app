@@ -1,0 +1,29 @@
+# Melete для Windows (Tauri 2): окно с веб-версией приложения (dist/), системный WebView2.
+# Сборка — GitHub Actions (.github/workflows/windows.yml); локально: npx tauri build (нужны Rust и WebView2).
+[package]
+name = "melete"
+version = "1.2.0"
+description = "Melete — приложение для практики музыкантов"
+authors = ["Ким Александр"]
+license = "GPL-3.0-only"
+edition = "2021"
+rust-version = "1.80"
+
+[lib]
+name = "melete_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
