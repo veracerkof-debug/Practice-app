@@ -75,6 +75,7 @@ public class KeepAliveService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        CrashLog.install(this);
         String a = intent != null ? intent.getAction() : null;
         if (A_TOGGLE.equals(a)) { PlayerPlugin.emit("toggle", null, 0); return START_NOT_STICKY; }
         if (A_DOWN.equals(a)) { PlayerPlugin.emit("down", null, 0); return START_NOT_STICKY; }

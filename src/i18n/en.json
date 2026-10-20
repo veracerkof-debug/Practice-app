@@ -130,7 +130,7 @@
   "imp.title": "Import songs",
   "imp.files": "From files",
   "imp.holyrics": "From Holyrics over Wi-Fi",
-  "imp.formats": "ProPresenter 6 and 7 (.pro6, .pro, .proBundle), PowerPoint (.pptx), EasyWorship (Songs.db and SongWords.db, .ewsx), OpenLyrics (.xml), ChordPro and OnSong, text (.txt). Many files or a zip archive at once.",
+  "imp.formats": "ProPresenter 6 and 7 (.pro6, .pro, .proBundle), Holyrics (.muf, .mufl, .json), PowerPoint (.pptx), EasyWorship (Songs.db and SongWords.db, .ewsx), OpenLyrics (.xml), ChordPro and OnSong, text (.txt). Many files or a zip archive at once.",
   "imp.reading": "Reading files…",
   "imp.fail": "The files could not be read",
   "imp.none": "No songs found in the files.",
@@ -1434,5 +1434,8 @@
   "name.secDef": "“Μελέτη” — **practice**, diligent study, steady care for one’s craft.",
   "name.secRef": "Melete — one of the three original Muses, the Muse of practice",
   "lib.cats.band": "Band",
-  "lib.genres.soul": "Soul"
+  "lib.genres.soul": "Soul",
+  "scr.hdr": "Screen",
+  "scr.on": "Keep screen on",
+  "scr.hint": "While the app is open, the screen does not turn off by itself. Once the app is minimized, the screen sleeps as usual."
 }

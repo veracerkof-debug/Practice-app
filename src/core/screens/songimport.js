@@ -1,6 +1,7 @@
 // Импорт песен (раздел «Песни», в церковном режиме): выбор файлов (можно сразу много и zip), разбор
 // (src/core/songimport.js), шторка с найденными песнями — галочки, повторы по названию отмечены и сняты,
 // категория (по умолчанию «Церковь»), затем запись в библиотеку. Holyrics — по Wi-Fi (src/core/holyrics.js).
+import { Capacitor } from '@capacitor/core';
 import { t, tn } from '../../i18n/index.js';
 import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { ensureLib, emptySong, saveSong, PALETTE } from '../library.js';
@@ -60,7 +61,9 @@ export function songImport(app, onDone) {
   const input = document.createElement('input');
   input.type = 'file';
   input.multiple = true;
-  input.accept = '.pro,.pro6,.probundle,.pptx,.db,.ewsx,.xml,.txt,.cho,.chordpro,.chopro,.crd,.onsong,.zip';
+  // на Android без фильтра: у файлов Holyrics (.muf, .mufl), EasyWorship и ProPresenter нет своего типа, и система
+  // показывает их серыми — их нельзя было выбрать. Что это за файл, разбор определяет сам
+  if (!Capacitor.isNativePlatform()) input.accept = '.pro,.pro6,.probundle,.pptx,.db,.ewsx,.xml,.txt,.cho,.chordpro,.chopro,.crd,.onsong,.zip,.muf,.mufl,.json';
   input.addEventListener('change', async () => {
     const list = [...input.files];
     if (!list.length) return;

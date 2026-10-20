@@ -40,6 +40,10 @@ export async function reportText(app, what = '', withLog = true) {
   const now = new Date(), log = entries();
   const head = ['Отчёт о проблеме — Melete', now.toLocaleString('ru-RU'), ''];
   const body = [what.trim() ? 'Что случилось:\n' + what.trim() : 'Что случилось: (не описано)', '', '— Устройство —', ...(await deviceInfo(app)), ''];
+  // последнее падение приложения на Android (CrashLog.java) — только техническое: время, модель, стек вызовов
+  let crash = '';
+  if (Report) { try { crash = ((await Report.lastCrash()) || {}).text || ''; } catch { /* старая сборка без метода */ } }
+  if (crash) body.push('— Последнее падение приложения —', crash.trim(), '');
   const tail = withLog ? ['— Журнал (' + (log.length ? stamp(log[0][0]) + '–' + stamp(log.at(-1)[0]) : 'пусто') + ', записей: ' + log.length + ') —', logText(log)] : ['— Журнал не приложен —'];
   return [...head, ...body, ...tail].join('\n');
 }

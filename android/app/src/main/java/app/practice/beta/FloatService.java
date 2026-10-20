@@ -46,6 +46,7 @@ public class FloatService extends Service {
 
     @Override
     public void onCreate() {
+        CrashLog.install(this);
         super.onCreate();
         inst = this;
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);

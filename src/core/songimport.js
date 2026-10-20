@@ -3,13 +3,14 @@
 // .onsong), простой текст (.txt). Несколько файлов и zip-архивы — сразу (групповой импорт). Без DOM и без сети.
 // Результат — песни в формате приложения: { title, artist, key, bpm, notes } — текст в notes: части песни
 // («Куплет 1», «Припев») — строкой-заголовком, между частями — пустая строка, аккорды — [C] в тексте (как в ChordPro).
-import { unzipSync, strFromU8 } from 'fflate';
+import { unzipSync, gunzipSync, strFromU8 } from 'fflate';
 
 const ext = (name) => (/\.([^.\\/]+)$/.exec(name || '') || [])[1]?.toLowerCase() || '';
 const base = (name) => String(name || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '').trim();
 const clean = (s) => String(s || '').replace(/\r\n?/g, '\n').replace(/[ \t ]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 const utf8 = (u8) => new TextDecoder('utf-8').decode(u8);
 const isZip = (u8) => u8.length > 4 && u8[0] === 0x50 && u8[1] === 0x4b && u8[2] === 0x03 && u8[3] === 0x04;
+const isGzip = (u8) => u8.length > 2 && u8[0] === 0x1f && u8[1] === 0x8b;
 const isSqlite = (u8) => u8.length > 16 && utf8(u8.subarray(0, 15)) === 'SQLite format 3';
 
 /* ---------- маленький разбор XML (элементы, атрибуты, текст, CDATA, сущности) ---------- */
@@ -236,10 +237,34 @@ export async function fromEasyWorship(dbs) {
   return out.filter((s) => s.title || s.notes);
 }
 
+/* ---------- Holyrics: файлы песен (.muf, .mufl) и JSON ---------- */
+
+// Песня Holyrics: слайды API (slides: [{ text, slide_description }]), абзацы файла (lyrics.paragraphs или
+// paragraphs: [{ text, description }]) или просто текст (lyrics: '...'). Описание абзаца («Verse 1») — заголовком части
+function holySong(h) {
+  const list = Array.isArray(h.slides) ? h.slides : Array.isArray(h.paragraphs) ? h.paragraphs : h.lyrics && Array.isArray(h.lyrics.paragraphs) ? h.lyrics.paragraphs : null;
+  const parts = [];
+  if (list) list.forEach((p) => {
+    const text = clean(p.text_with_comment || p.text || '');
+    if (!text) return;
+    const name = String(p.slide_description || p.description || '').trim(), last = parts.at(-1);
+    if (last && (!name || name === last.name)) last.text += '\n\n' + text; else parts.push({ name, text });
+  });
+  else if (typeof h.lyrics === 'string') parts.push({ name: '', text: clean(h.lyrics) });
+  return song({ title: h.title || h.name || '', artist: h.artist || h.author || '', key: h.key || null, bpm: h.bpm ? Math.round(+h.bpm) || null : null,
+    notes: parts.map((x) => (x.name ? x.name + '\n' : '') + x.text).join('\n\n') });
+}
+// JSON Holyrics → песни; null — это не Holyrics
+export function fromHolyricsJSON(obj) {
+  const list = Array.isArray(obj) ? obj : obj && Array.isArray(obj.songs) ? obj.songs : obj && Array.isArray(obj.data) ? obj.data : obj ? [obj] : [];
+  const ok = list.filter((h) => h && typeof h === 'object' && (h.title || h.name) && (h.lyrics || h.paragraphs || h.slides));
+  return ok.length ? ok.map(holySong) : null;
+}
+
 /* ---------- всё вместе: файлы → песни ---------- */
 
-const TEXT_EXT = ['txt', 'cho', 'chordpro', 'chopro', 'crd', 'onsong', 'pro6', 'xml'];
-export const ACCEPT = '.pro,.pro6,.probundle,.pptx,.db,.ewsx,.xml,.txt,.cho,.chordpro,.chopro,.crd,.onsong,.zip';
+const TEXT_EXT = ['txt', 'cho', 'chordpro', 'chopro', 'crd', 'onsong', 'pro6', 'xml', 'json', 'muf', 'mufl', ''];
+export const ACCEPT = '.pro,.pro6,.probundle,.pptx,.db,.ewsx,.xml,.txt,.cho,.chordpro,.chopro,.crd,.onsong,.zip,.muf,.mufl,.json';
 
 // files — [{ name, u8 }]; → { songs, errors: [{ name, error }] }
 export async function importSongs(files) {
@@ -248,6 +273,7 @@ export async function importSongs(files) {
     const e = ext(name);
     try {
       if (isSqlite(u8)) { dbs.push({ name, u8 }); return; }
+      if (isGzip(u8)) { await one(name.replace(/\.gz$/i, ''), gunzipSync(u8), depth + 1); return; } // сжатый файл (бывает у Holyrics)
       if (isZip(u8)) {
         const z = unzipSync(u8);
         if (z['[Content_Types].xml'] && Object.keys(z).some((p) => p.startsWith('ppt/slides/'))) { songs.push(fromPptx(z, name)); return; }
@@ -258,6 +284,14 @@ export async function importSongs(files) {
       if (e === 'pro') { songs.push(fromPro7(u8, name)); return; }
       if (!TEXT_EXT.includes(e) && depth > 0) return; // внутри архива — картинки и прочее пропускаются
       const txt = utf8(u8).replace(/^﻿/, '');
+      // Holyrics: JSON (файл песен или выгрузка) — в том числе внутри .muf и .mufl
+      if (/^\s*[[{]/.test(txt)) {
+        let hs = null;
+        try { hs = fromHolyricsJSON(JSON.parse(txt)); } catch { /* не JSON */ }
+        if (hs) { songs.push(...hs); return; }
+        if (e === 'json' || e === 'muf' || e === 'mufl') throw new Error('unknown json');
+      }
+      if (e === 'muf' || e === 'mufl') throw new Error('holyrics format');
       if (e === 'pro6' || /<RVPresentationDocument/.test(txt)) songs.push(fromPro6(txt, name));
       else if (/<song[\s>][\s\S]*openlyrics/i.test(txt.slice(0, 2000)) || (e === 'xml' && /<lyrics/.test(txt))) songs.push(fromOpenLyrics(txt, name));
       else if (e === 'xml') throw new Error('unknown xml');

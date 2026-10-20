@@ -25,6 +25,17 @@ public class GuardPlugin extends Plugin {
         });
     }
 
+    // Экран не гаснет, пока приложение открыто (настройка «Экран не гаснет»): флаг окна, без отдельных разрешений
+    @PluginMethod
+    public void keepOn(PluginCall call) {
+        boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
+        getActivity().runOnUiThread(() -> {
+            if (on) getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            else getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            call.resolve();
+        });
+    }
+
     // Полный экран инструмента: системные панели (статус и навигация) скрыты, появляются от края жестом и прячутся снова
     @PluginMethod
     public void immersive(PluginCall call) {

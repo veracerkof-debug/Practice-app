@@ -366,6 +366,8 @@ function featHTML(app) {
     (playerAvailable() ? (() => { const c = bgCtl(st), row = (k) => '<div class="cell"><span class="grow"><span>' + t('pl.' + k) + '</span><span class="st l2" style="display:block;font-size:13px">' + t('pl.' + k + '.about') + '</span></span>' +
       '<label class="sw"><input type="checkbox" data-bgctl="' + k + '"' + (c[k] ? ' checked' : '') + ' aria-label="' + esc(t('pl.' + k)) + '"><i></i></label></div>';
       return '<div class="hdr">' + t('pl.hdr') + '</div><div class="group">' + ['notify', 'float', 'pip'].map(row).join('') + '</div><p class="ftr">' + t('pl.hint') + '</p>'; })() : '') +
+    // экран не гаснет, пока приложение открыто (src/core/screenon.js), — по умолчанию включено
+    '<div class="hdr">' + t('scr.hdr') + '</div><div class="group"><div class="cell"><span class="grow">' + t('scr.on') + '</span><label class="sw"><input type="checkbox" data-psw="screenOn"' + (st.screenOn !== false ? ' checked' : '') + ' aria-label="' + esc(t('scr.on')) + '"><i></i></label></div></div><p class="ftr">' + t('scr.hint') + '</p>' +
     // защита игры от снимка экрана тремя пальцами (Android)
     (guardAvailable() ? '<div class="hdr">' + t('guard.hdr') + '</div><div class="group"><div class="cell"><span class="grow">' + t('guard.on') + '</span><label class="sw"><input type="checkbox" data-psw="guardShots"' + (st.guardShots !== false ? ' checked' : '') + ' aria-label="' + esc(t('guard.on')) + '"><i></i></label></div></div><p class="ftr">' + t('guard.hint') + '</p>' : '') +
     // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны

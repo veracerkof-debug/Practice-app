@@ -10,6 +10,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        CrashLog.install(this); // причина падения — в «Отчёт о проблеме»
         // Свои плагины регистрируются до запуска моста
         registerPlugin(VolumePlugin.class);
         registerPlugin(PulsePlugin.class);

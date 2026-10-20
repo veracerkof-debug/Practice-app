@@ -134,7 +134,7 @@
   "imp.title": "Импорт песен",
   "imp.files": "Из файлов",
   "imp.holyrics": "Из Holyrics по Wi-Fi",
-  "imp.formats": "ProPresenter 6 и 7 (.pro6, .pro, .proBundle), PowerPoint (.pptx), EasyWorship (Songs.db и SongWords.db, .ewsx), OpenLyrics (.xml), ChordPro и OnSong, текст (.txt). Можно выбрать сразу много файлов или zip-архив.",
+  "imp.formats": "ProPresenter 6 и 7 (.pro6, .pro, .proBundle), Holyrics (.muf, .mufl, .json), PowerPoint (.pptx), EasyWorship (Songs.db и SongWords.db, .ewsx), OpenLyrics (.xml), ChordPro и OnSong, текст (.txt). Можно выбрать сразу много файлов или zip-архив.",
   "imp.reading": "Чтение файлов…",
   "imp.fail": "Не удалось прочитать файлы",
   "imp.none": "В файлах не нашлось песен.",
@@ -1449,5 +1449,8 @@
   "name.secDef": "«Μελέτη» — **упражнение**, усердное занятие, постоянная забота о деле.",
   "name.secRef": "Мелета — одна из трёх древнейших муз, муза упражнения",
   "lib.cats.band": "Группа",
-  "lib.genres.soul": "Соул"
+  "lib.genres.soul": "Соул",
+  "scr.hdr": "Экран",
+  "scr.on": "Экран не гаснет",
+  "scr.hint": "Пока приложение открыто, экран не выключается сам. Свернуть приложение — экран снова гаснет как обычно."
 }

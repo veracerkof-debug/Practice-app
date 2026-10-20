@@ -18,6 +18,14 @@ import java.nio.charset.StandardCharsets;
 @CapacitorPlugin(name = "Report")
 public class ReportPlugin extends Plugin {
 
+    // Последнее падение приложения (CrashLog): { text } — пусто, если не падало; clear — стереть после чтения
+    @PluginMethod
+    public void lastCrash(PluginCall call) {
+        com.getcapacitor.JSObject r = new com.getcapacitor.JSObject();
+        r.put("text", CrashLog.read(getContext(), call.getBoolean("clear", false)));
+        call.resolve(r);
+    }
+
     @PluginMethod
     public void file(PluginCall call) {
         String name = call.getString("name", "melete-report.txt").replaceAll("[^A-Za-z0-9._-]", "_");

@@ -80,7 +80,8 @@ export const mascotOf = (settings) => (['m', 'f', 'none'].includes(settings && s
 // раскладка, касания и холсты работают как обычно (на Android нужен useWideViewPort — MainActivity).
 export const SCALE_MIN = 0.8, SCALE_MAX = 1.3, SCALE_STEP = 0.05;
 // Авто: маленькие телефоны — мельче, обычные — как задумано, планшеты — чуть крупнее (смотрят издалека)
-export const autoScale = (short) => (short < 340 ? 0.86 : short < 375 ? 0.93 : short < 600 ? 1 : 1.1);
+// (обычные телефоны 340–600 — без подмены области просмотра: она давала сдвиг экрана на телефонах с кнопками навигации)
+export const autoScale = (short) => (short < 340 ? 0.9 : short < 600 ? 1 : 1.1);
 export const screenShort = () => (typeof screen !== 'undefined' ? Math.min(screen.width, screen.height) : 390);
 export function uiScale(settings, short = screenShort()) {
   const s = +settings.uiScale;
@@ -92,8 +93,11 @@ export function applyScale(settings) {
   if (typeof document === 'undefined') return;
   const meta = document.querySelector('meta[name="viewport"]');
   if (!meta) return;
-  const s = uiScale(settings), land = matchMedia('(orientation: landscape)').matches;
-  const w = land ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+  const s = uiScale(settings);
+  // ширина — видимой области (без полосы кнопок навигации; в горизонтальном положении она сбоку), а не всего экрана:
+  // иначе раскладка шире окна и «едет»; outerWidth от масштаба страницы не зависит
+  const land = matchMedia('(orientation: landscape)').matches, scr = land ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+  const w = outerWidth > 0 ? Math.min(outerWidth, scr) : scr;
   // ширина раскладки и масштаб страницы задаются вместе (и закрепляются): иначе Android WebView оставляет масштаб 1,
   // и широкая раскладка вылезает за экран, а узкая — не растягивается
   const k = String(+s.toFixed(3));
@@ -101,7 +105,15 @@ export function applyScale(settings) {
     : 'width=' + layoutWidth(w, s) + ', initial-scale=' + k + ', minimum-scale=' + k + ', maximum-scale=' + k + ', viewport-fit=cover';
   if (meta.content !== want) meta.content = want;
   document.documentElement.style.setProperty('--uiscale', s);
-  if (!applyScale.bound) { applyScale.bound = true; addEventListener('orientationchange', () => setTimeout(() => applyScale(settings), 200)); }
+  applyScale.last = settings;
+  if (!applyScale.bound) {
+    applyScale.bound = true;
+    let rt = 0;
+    const again = () => { clearTimeout(rt); rt = setTimeout(() => applyScale(applyScale.last), 200); };
+    addEventListener('orientationchange', again);
+    // панели системы появились или скрылись, окно телефона поменяло размер — ширина заново
+    addEventListener('resize', () => { if (Math.abs(uiScale(applyScale.last) - 1) > 1e-3) again(); });
+  }
 }
 
 const BG_KEYS = ['--bg', '--cell', '--ink', '--l2', '--l3', '--sep', '--fill', '--fill2', '--bar'];

@@ -126,7 +126,7 @@
   "imp.title": "Qoʻshiqlarni import qilish",
   "imp.files": "Fayllardan",
   "imp.holyrics": "Holyrics’dan Wi-Fi orqali",
-  "imp.formats": "ProPresenter 6 va 7 (.pro6, .pro, .proBundle), PowerPoint (.pptx), EasyWorship (Songs.db va SongWords.db, .ewsx), OpenLyrics (.xml), ChordPro va OnSong, matn (.txt). Bir vaqtda koʻp fayl yoki zip arxiv.",
+  "imp.formats": "ProPresenter 6 va 7 (.pro6, .pro, .proBundle), Holyrics (.muf, .mufl, .json), PowerPoint (.pptx), EasyWorship (Songs.db va SongWords.db, .ewsx), OpenLyrics (.xml), ChordPro va OnSong, matn (.txt). Bir vaqtda koʻp fayl yoki zip arxiv.",
   "imp.reading": "Fayllar oʻqilmoqda…",
   "imp.fail": "Fayllarni oʻqib boʻlmadi",
   "imp.none": "Fayllarda qoʻshiq topilmadi.",
@@ -1407,5 +1407,8 @@
   "name.secDef": "«Μελέτη» — **mashq**, tirishqoq mashgʻulot, ishga doimiy eʼtibor.",
   "name.secRef": "Melete — eng qadimgi uch ilhom parisidan biri, mashq ilhom parisi",
   "lib.cats.band": "Guruh",
-  "lib.genres.soul": "Soul"
+  "lib.genres.soul": "Soul",
+  "scr.hdr": "Ekran",
+  "scr.on": "Ekran oʻchmaydi",
+  "scr.hint": "Ilova ochiq ekan, ekran oʻzi oʻchmaydi. Ilova yopilsa, ekran odatdagidek oʻchadi."
 }
