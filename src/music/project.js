@@ -1,13 +1,14 @@
 // Студия: проект песни по образцу FL Studio Mobile — плейлист: дорожки (инструменты) и клипы на таймлайне.
 // Чистые функции, без звука и DOM.
-// Дорожка: { id, kind: 'notes' | 'chords' | 'drums' | 'audio', name, color, inst, vol, mute, solo, oct, mode, arp, fx }.
-// Клип: { id, tr, at, len, data } — на дорожке tr с доли at длиной len долей; содержимое data — по роду дорожки,
+// Дорожка: { id, kind: 'notes' | 'chords' | 'drums' | 'audio', name, color, inst, vol, pan (−1…1), mute, solo, oct, mode, arp, fx }.
+// Клип: { id, tr, at, len, data, gain (0…2), mute } — на дорожке tr с доли at длиной len долей; содержимое data — по роду дорожки,
 // это короткий кусок на data.bars тактов, который повторяется по кругу на всю длину клипа (растянул — звучит дальше):
 //   ноты    { bars, notes: [{ t, d, m, v }] }   — t и d в долях от начала куска, m — высота MIDI;
 //   аккорды { bars, chords: [{ t, d, pc, type }] } — разворачиваются в ноты по режиму дорожки (hold | rhythm | arp);
 //   ударные { bars, steps: { kick: [i…], snare: [i…] … } } — номера шестнадцатых, где есть удар;
-//   запись  { fileId, off } — запись из медиатеки с секунды off, по кругу на длину клипа.
+//   запись  { fileId, off, fadeIn, fadeOut } — запись из медиатеки с секунды off, по кругу на длину клипа; затухания в долях.
 // Время всегда в долях: смена темпа ничего не двигает. Свинг — отдельное число проекта (0…1).
+// Петля region { a, b } — играть по кругу этот отрезок песни (доли); маркеры marks [{ t, name }] — места в песне.
 // Старые проекты (паттерны × дорожки и плейлист из паттернов, 2026-10) переезжают в клипы при нормализации.
 import { uid } from '../core/time.js';
 import { CHORDS, keyInfo } from './theory.js';
@@ -26,7 +27,7 @@ export const BARS_MAX = 64, SONG_BARS_MAX = 512, CLIPS_MAX = 256, NOTE_LO = 24, 
 
 export function newTrack(kind = 'notes', i = 0, patch = {}) {
   const base = { id: 'tr' + uid(), kind: KINDS.includes(kind) ? kind : 'notes', name: '', color: COLORS[i % COLORS.length],
-    inst: kind === 'chords' ? 'wair' : kind === 'notes' && i === 1 ? 'abass' : 'piano', vol: 0.9, mute: false, solo: false, oct: 0 };
+    inst: kind === 'chords' ? 'wair' : kind === 'notes' && i === 1 ? 'abass' : 'piano', vol: 0.9, pan: 0, mute: false, solo: false, oct: 0 };
   if (kind === 'chords') return { ...base, mode: 'hold', arp: { dir: 'up', step: 0.5 }, ...patch };
   return { ...base, ...patch };
 }
@@ -35,10 +36,10 @@ export const newData = (kind, bars = 1) => (kind === 'audio' ? { fileId: null, o
 // Клип на дорожке tr с доли at длиной len долей (по умолчанию — длина куска)
 export function newClip(p, tr, at, len = 0, data = null) {
   const d = data || newData(tr.kind, 1);
-  return { id: 'cl' + uid(), tr: tr.id, at: Math.max(0, at), len: len > 0 ? len : dataBeats(p, d), data: d };
+  return { id: 'cl' + uid(), tr: tr.id, at: Math.max(0, at), len: len > 0 ? len : dataBeats(p, d), data: d, gain: 1, mute: false };
 }
 export function newProject(patch = {}) {
-  const p = { id: 'pj' + uid(), name: '', bpm: 90, num: 4, den: 4, key: { pc: 0, minor: false }, swing: 0, songId: null,
+  const p = { id: 'pj' + uid(), name: '', bpm: 90, num: 4, den: 4, key: { pc: 0, minor: false }, swing: 0, songId: null, region: null, marks: [],
     tracks: [newTrack('drums', 2), newTrack('chords', 0), newTrack('notes', 1)], clips: [],
     createdAt: Date.now(), updatedAt: Date.now(), ...patch };
   delete p.bars;
@@ -69,7 +70,7 @@ export function normalizeProject(p) {
   p.swing = Math.max(0, Math.min(1, +p.swing || 0));
   p.key = p.key && Number.isFinite(+p.key.pc) ? { pc: ((+p.key.pc % 12) + 12) % 12, minor: !!p.key.minor } : { pc: 0, minor: false };
   p.tracks = (p.tracks || []).filter((t) => t && t.id).map((t) => {
-    t.vol = Math.max(0, Math.min(1.5, +t.vol || 0)); t.oct = Math.max(-2, Math.min(2, Math.round(+t.oct || 0)));
+    t.vol = Math.max(0, Math.min(1.5, +t.vol || 0)); t.oct = Math.max(-2, Math.min(2, Math.round(+t.oct || 0))); t.pan = Math.max(-1, Math.min(1, +t.pan || 0));
     if (!INSTRUMENTS.includes(t.inst)) t.inst = 'piano';
     if (t.fx && typeof t.fx !== 'object') delete t.fx; // эффекты дорожки (src/audio/fx.js), полный вид — там
     if (!KINDS.includes(t.kind)) t.kind = 'notes';
@@ -82,15 +83,20 @@ export function normalizeProject(p) {
     c.at = Math.max(0, Math.min(SONG_BARS_MAX * p.num, Math.round((+c.at || 0) * 64) / 64));
     c.data = normalizeData(p, tr, c.data);
     c.len = Math.max(STEP, Math.min(SONG_BARS_MAX * p.num - c.at, Math.round((+c.len || dataBeats(p, c.data) || p.num) * 64) / 64));
+    c.gain = c.gain == null ? 1 : Math.max(0, Math.min(2, +c.gain || 0)); c.mute = !!c.mute;
     return c;
   }).sort((a, b) => a.at - b.at);
+  const maxB = SONG_BARS_MAX * p.num, snapQ = (x) => Math.max(0, Math.min(maxB, Math.round((+x || 0) * 64) / 64));
+  p.region = p.region && Number.isFinite(+p.region.a) && Number.isFinite(+p.region.b) && +p.region.b - +p.region.a >= STEP ? { a: snapQ(p.region.a), b: snapQ(p.region.b) } : null;
+  if (p.region && p.region.b <= p.region.a) p.region = null;
+  p.marks = (Array.isArray(p.marks) ? p.marks : []).filter((m) => m && Number.isFinite(+m.t)).map((m) => ({ t: snapQ(m.t), name: String(m.name || '').slice(0, 30) })).sort((a, b) => a.t - b.t).slice(0, 64);
   delete p.bars; delete p.loop; delete p.patterns; delete p.song; delete p.cur;
   return p;
 }
 // Содержимое клипа — в порядок: границы куска, числа, порядок нот
 export function normalizeData(p, tr, d) {
   const o = { ...newData(tr.kind, 1), ...(d && typeof d === 'object' ? d : {}) };
-  if (tr.kind === 'audio') { o.fileId = o.fileId || null; o.off = Math.max(0, +o.off || 0); delete o.bars; return o; }
+  if (tr.kind === 'audio') { o.fileId = o.fileId || null; o.off = Math.max(0, +o.off || 0); o.fadeIn = Math.max(0, Math.min(64, +o.fadeIn || 0)); o.fadeOut = Math.max(0, Math.min(64, +o.fadeOut || 0)); delete o.bars; return o; }
   o.bars = Math.max(1, Math.min(BARS_MAX, Math.round(+o.bars || 1)));
   const total = o.bars * p.num, steps = total / STEP;
   if (tr.kind === 'chords') { o.chords = (o.chords || []).filter((c) => c && c.d > 0 && c.t >= 0 && c.t < total).map((c) => ({ ...c, d: Math.min(c.d, total - c.t) })).sort((a, b) => a.t - b.t); delete o.notes; delete o.steps; }
@@ -151,6 +157,35 @@ export function trimClipStart(p, c, at, grid = 1) {
   if (c.data && c.data.fileId !== undefined) c.data.off = Math.max(0, (c.data.off || 0) + (nat - c.at) * secPerBeat(p));
   c.at = nat; c.len = end - nat;
 }
+// Копия клипа на дорожку tr (того же рода) с доли at — вставка из буфера
+export function pasteClip(p, src, tr, at, grid = 1) {
+  if (p.clips.length >= CLIPS_MAX || !src || tr.kind !== src.kind) return null;
+  const c = newClip(p, tr, snapBeat(at, grid), src.len, JSON.parse(JSON.stringify(src.data)));
+  c.gain = src.gain == null ? 1 : src.gain; c.mute = false;
+  c.at = Math.min(SONG_BARS_MAX * p.num - c.len, c.at);
+  p.clips.push(c); p.clips.sort((a, b) => a.at - b.at);
+  return c;
+}
+// Слепок клипа для буфера обмена (род дорожки — чтобы вставлять только на такую же)
+export const clipCopy = (p, c) => ({ kind: trackOf(p, c).kind, len: c.len, gain: c.gain, data: JSON.parse(JSON.stringify(c.data)) });
+// Петля: отрезок [a, b) в долях (по сетке), не короче шага; a ≥ b или не числа — снять
+export function setRegion(p, a, b, grid = 1) {
+  const A = snapBeat(Math.min(a, b), grid), B = snapBeat(Math.max(a, b), grid);
+  p.region = Number.isFinite(A) && Number.isFinite(B) && B - A >= Math.min(grid, STEP) ? { a: A, b: Math.min(SONG_BARS_MAX * p.num, B) } : null;
+  return p.region;
+}
+// Отрезок, который играет по кругу: петля или вся песня (один клип — его длина)
+export const loopOf = (p, onlyClip = null) => (onlyClip ? { a: 0, b: onlyClip.len } : p.region && p.region.b > p.region.a ? { a: p.region.a, b: p.region.b } : { a: 0, b: songBeats(p) });
+// Маркер: место в песне с названием; в той же доле — заменяется
+export function setMark(p, t, name = '') {
+  const T = Math.max(0, Math.round(t * 64) / 64);
+  p.marks = (p.marks || []).filter((m) => Math.abs(m.t - T) > 1e-6);
+  p.marks.push({ t: T, name: String(name || '').slice(0, 30) });
+  p.marks.sort((a, b) => a.t - b.t);
+  return p.marks.at(-1);
+}
+export const removeMark = (p, m) => { p.marks = (p.marks || []).filter((x) => x !== m); };
+export const markAt = (p, t, tol = 0.5) => (p.marks || []).find((m) => Math.abs(m.t - t) <= tol) || null;
 // Клип на дорожке в доле t (или null)
 export const clipAt = (p, tr, t) => clipsOf(p, tr).find((c) => t >= c.at && t < c.at + c.len) || null;
 // Разрезать клип в доле t на два
@@ -182,6 +217,22 @@ export function moveNote(total, n, dt, dm, grid) {
   n.m = Math.max(NOTE_LO, Math.min(NOTE_HI, Math.round(n.m + dm)));
 }
 export function resizeNote(total, n, len, grid) { n.d = Math.max(grid, Math.min(total - n.t, Math.round(len / grid) * grid)); }
+// Квантовать: начала нот — к сетке (длина не короче сетки, в пределах куска); совпавшие — слить
+export function quantizeNotes(d, grid, total) {
+  d.notes.forEach((n) => { n.t = Math.max(0, Math.min(total - grid, Math.round(n.t / grid) * grid)); n.d = Math.max(grid, Math.min(total - n.t, Math.round(n.d / grid) * grid)); });
+  const seen = new Set();
+  d.notes = d.notes.filter((n) => { const k = n.t + ':' + n.m; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => a.t - b.t || a.m - b.m);
+  return d;
+}
+// Сыгранная нота (время в долях куска, без сетки) → в кусок: начало к сетке, длина не короче сетки; по кругу куска
+export function addPlayedNote(d, total, t, dur, m, v = 0.8, grid = 0.25) {
+  const T = ((Math.round(t / grid) * grid) % total + total) % total, D = Math.max(grid, Math.min(total - T, Math.round(dur / grid) * grid || grid));
+  const i = d.notes.findIndex((n) => n.m === m && Math.abs(n.t - T) < 1e-6);
+  const n = { t: T, d: D, m, v: Math.max(0.05, Math.min(1, v)) };
+  if (i >= 0) d.notes[i] = n; else d.notes.push(n);
+  d.notes.sort((a, b) => a.t - b.t || a.m - b.m);
+  return n;
+}
 
 /* ---------- аккорды (содержимое d = { bars, chords }) ---------- */
 
@@ -260,7 +311,7 @@ export function clipNotes(p, tr, c) {
 // Все ноты для звука: вся песня или один клип (onlyClip — от его начала, время с нуля); у каждой ноты — её дорожка (tr)
 export function songNotes(p, onlyClip = null) {
   const out = [];
-  (onlyClip ? [onlyClip] : p.clips).forEach((c) => { const tr = trackOf(p, c); if (tr) clipNotes(p, tr, c).forEach((n) => out.push({ ...n, t: onlyClip ? n.t - c.at : n.t, tr })); });
+  (onlyClip ? [onlyClip] : p.clips).forEach((c) => { const tr = trackOf(p, c); if (tr && (!c.mute || onlyClip)) clipNotes(p, tr, c).forEach((n) => out.push({ ...n, t: onlyClip ? n.t - c.at : n.t, tr, gain: c.gain == null ? 1 : c.gain })); });
   return out.sort((a, b) => a.t - b.t || a.m - b.m);
 }
 
@@ -268,7 +319,7 @@ export function songNotes(p, onlyClip = null) {
 export function projectEvents(p, onlyClip = null) {
   const spb = secPerBeat(p), ev = [];
   let id = 0;
-  songNotes(p, onlyClip).forEach((n) => { if (n.tr.mute) return; const g = 'n' + id++; ev.push({ t: n.t * spb, k: 'on', id: g, m: n.m, v: n.v * n.tr.vol }); ev.push({ t: (n.t + n.d) * spb, k: 'off', id: g }); });
+  songNotes(p, onlyClip).forEach((n) => { if (n.tr.mute) return; const g = 'n' + id++; ev.push({ t: n.t * spb, k: 'on', id: g, m: n.m, v: Math.min(1, n.v * n.tr.vol * (n.gain || 1)) }); ev.push({ t: (n.t + n.d) * spb, k: 'off', id: g }); });
   return ev.sort((a, b) => a.t - b.t || (a.k === 'off' ? -1 : 1));
 }
 
@@ -309,7 +360,7 @@ export function projectTracks(p, { swing = true } = {}) {
   const all = songNotes(p), sw = (t) => (swing && Math.abs(t % 1 - 0.5) < 1e-6 ? p.swing / 3 : 0);
   return p.tracks.filter((tr) => tr.kind !== 'audio').map((tr, i) => ({
     name: tr.name || tr.kind + ' ' + (i + 1), drums: tr.kind === 'drums', inst: tr.inst, program: tr.kind === 'drums' ? null : GM_PROGRAM[tr.inst] ?? 0,
-    notes: all.filter((n) => n.tr === tr).map((n) => ({ t: n.t + sw(n.t), d: n.d, m: n.m, v: Math.min(1, n.v * tr.vol) })),
+    notes: all.filter((n) => n.tr === tr).map((n) => ({ t: n.t + sw(n.t), d: n.d, m: n.m, v: Math.min(1, n.v * tr.vol * (n.gain || 1)) })),
   }));
 }
 // Чужая песня (из .mid или файла студии: { name, bpm, num, den, key?, tracks: [{ name, drums, program?, notes: [{ t, d, m, v }] }] },

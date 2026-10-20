@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newProject, newTrack, newData, newClip, normalizeProject, toggleNote, moveNote, resizeNote, setChord, chordAt, expandChords, diatonicChords, chordName, projectEvents, dataBeats, songBeats, songBars, songNotes, clipNotes, countOf, toggleStep, stepOn, drumNotes, addClip, dupClip, moveClip, resizeClip, trimClipStart, splitClip, removeClip, clipAt, clipsOf, isEmptyProject, CLIPS_MAX } from '../src/music/project.js';
+import { newProject, newTrack, newData, newClip, normalizeProject, toggleNote, moveNote, resizeNote, setChord, chordAt, expandChords, diatonicChords, chordName, projectEvents, dataBeats, songBeats, songBars, songNotes, clipNotes, countOf, toggleStep, stepOn, drumNotes, addClip, dupClip, moveClip, resizeClip, trimClipStart, splitClip, removeClip, clipAt, clipsOf, isEmptyProject, CLIPS_MAX, setRegion, loopOf, setMark, removeMark, markAt, clipCopy, pasteClip, quantizeNotes, addPlayedNote } from '../src/music/project.js';
 
 describe('студия: проект', () => {
   it('новый проект: дорожки, клипов нет, песня — 4 такта', () => {
@@ -124,5 +124,42 @@ describe('студия: проект', () => {
     p.tracks[1].mute = true;
     const ev = projectEvents(p);
     expect(ev.map((e) => [e.k, e.t, e.m])).toEqual([['on', 0.5, 38], ['on', 0.5, 60], ['off', 0.625, undefined], ['off', 1, undefined]]);
+  });
+  it('петля и маркеры: отрезок по сетке, не короче шага; маркер в той же доле заменяется', () => {
+    const p = newProject();
+    expect(setRegion(p, 9.3, 3.2, 1)).toEqual({ a: 3, b: 9 });
+    expect(loopOf(p)).toEqual({ a: 3, b: 9 });
+    expect(setRegion(p, 4, 4, 1)).toBe(null);
+    expect(loopOf(p)).toEqual({ a: 0, b: 4 }); // вся песня — не меньше такта
+    expect(loopOf(p, { at: 8, len: 6 })).toEqual({ a: 0, b: 6 });
+    setMark(p, 4, 'Припев'); setMark(p, 4, 'Куплет'); setMark(p, 0, '');
+    expect(p.marks.map((m) => [m.t, m.name])).toEqual([[0, ''], [4, 'Куплет']]);
+    expect(markAt(p, 4.3, 0.5).name).toBe('Куплет');
+    removeMark(p, markAt(p, 0));
+    expect(normalizeProject(p).marks.length).toBe(1);
+    p.region = { a: 5, b: 2 };
+    expect(normalizeProject(p).region).toBe(null);
+  });
+  it('буфер обмена: копия клипа вставляется только на дорожку того же рода, со своей громкостью', () => {
+    const p = newProject(), dr = p.tracks[0], nt = p.tracks[2], c = addClip(p, dr, 0, 4, newData('drums', 1));
+    toggleStep(c.data, 'kick', 0); c.gain = 0.5; c.mute = true;
+    const buf = clipCopy(p, c);
+    expect(pasteClip(p, buf, nt, 8)).toBe(null);
+    const n = pasteClip(p, buf, dr, 8.4, 1);
+    expect([n.at, n.len, n.gain, n.mute, stepOn(n.data, 'kick', 0)]).toEqual([8, 4, 0.5, false, true]);
+    toggleStep(n.data, 'kick', 4);
+    expect(stepOn(c.data, 'kick', 4)).toBe(false); // копия независима
+    expect(songNotes(p).length).toBe(2); // выключенный клип не звучит
+    expect(projectEvents(p).filter((e) => e.k === 'on').map((e) => e.v)).toEqual([0.9 * 0.9 * 0.5, 0.9 * 0.9 * 0.5].map((v) => expect.closeTo(v, 5)));
+  });
+  it('квантование и живой ввод: начала к сетке, длина не короче сетки, через границу круга', () => {
+    const p = newProject(), d = newData('notes', 1), total = dataBeats(p, d);
+    d.notes = [{ t: 0.3, d: 0.4, m: 60, v: 0.8 }, { t: 0.2, d: 1, m: 60, v: 0.8 }, { t: 0.1, d: 1, m: 60, v: 0.8 }, { t: 3.9, d: 1, m: 62, v: 0.8 }];
+    quantizeNotes(d, 0.5, total);
+    expect(d.notes.map((n) => [n.t, n.d, n.m])).toEqual([[0, 1, 60], [0.5, 0.5, 60], [3.5, 0.5, 62]]); // совпавшие слились, за концом — срез
+    addPlayedNote(d, total, 3.95, 0.3, 64, 0.9, 0.25);
+    expect(d.notes.find((n) => n.m === 64)).toEqual({ t: 0, d: 0.25, m: 64, v: 0.9 }); // почти конец круга — на начало
+    addPlayedNote(d, total, 1.1, 0.9, 64, 0.5, 0.5);
+    expect(d.notes.find((n) => n.t === 1 && n.m === 64).d).toBe(1);
   });
 });
