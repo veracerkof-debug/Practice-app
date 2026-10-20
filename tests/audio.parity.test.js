@@ -103,7 +103,10 @@ describe('звук: синтезатор, пэды, микшер, настрой
 
   it('настройки устройства грузятся так же', () => {
     const d = loadDevice(memStorage({ [LS_T]: JSON.stringify(stored) }));
-    expect(d).toEqual(clone(L.T));
+    // режим звука: в прототипе «баланс», теперь по умолчанию большой буфер и режим ресурсов (2026-10) — сверяем остальное
+    const { mode, perf, ...mix } = d.mix;
+    expect([mode, perf]).toEqual(['smooth', 'auto']);
+    expect({ ...d, mix }).toEqual({ ...clone(L.T), mix: (({ mode: _m, ...r }) => r)(clone(L.T).mix) });
   });
   it('спектры синтезатора', () => {
     for (const kind of ['piano', 'organ', 'saw', 'soft']) for (let tone = 0; tone <= 1; tone += 0.1)

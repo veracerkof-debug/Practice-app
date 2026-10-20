@@ -1559,5 +1559,16 @@
   "fx.rt.room": "Room",
   "fx.rt.hall": "Hall",
   "fx.rt.plate": "Plate",
-  "fx.rt.cathedral": "Cathedral"
+  "fx.rt.cathedral": "Cathedral",
+  "snd.title": "Sound",
+  "snd.mode": "Audio buffer",
+  "snd.fast": "Fast response",
+  "snd.bal": "Balanced",
+  "snd.smooth": "No crackle",
+  "snd.perf": "Resources",
+  "snd.auto": "Auto",
+  "snd.full": "Full",
+  "snd.eco": "Economy",
+  "snd.hint": "Resources now: {now}. “No crackle” — a large buffer, reliable on stage; “fast response” — less latency for keys, may crackle on a weak phone. Full: all voices, pad unison, four reverb spaces. Economy is for weak phones: fewer voices, simpler pads, one reverb, always a large buffer.",
+  "snd.later": "The buffer applies after a restart"
 }

@@ -100,5 +100,11 @@
   "slot.on": "Second layer: {name}",
   "slot.off": "Layer removed",
   "sec.sound": "SOUND",
-  "sec.layer": "LAYER"
+  "sec.layer": "LAYER",
+  "mode.hint": "No crackle — a large buffer, reliable on stage (default). Fast response — less latency for playing keys, but may crackle on a weak phone.",
+  "perf": "Resources",
+  "perf.auto": "Auto",
+  "perf.full": "Full",
+  "perf.eco": "Economy",
+  "perf.hint": "Now: {now}. Full: all voices, pad unison, four reverb spaces. Economy is for weak phones: fewer voices, simpler pads, one reverb, always a large buffer."
 }

@@ -3,6 +3,7 @@
 // которые медленно и неравномерно «плывут» (как живой ансамбль, а не ровный хорус), высокая октава и квинта
 // вступают позже основы (мерцание), тихое дыхание — розовый шум в полосе около ноты, мягкий фильтр без резонанса.
 // Пространство — длинный зал (context.js: sendToHall) у того, кто звук играет.
+import { uniCap } from './perf.js';
 import { partsWave, pinkNoise } from './waves.js';
 
 // Рецепты. parts — гармоники основы; uni — голосов в унисоне, det — их расстройка (центы), drift — «плавание» (центы);
@@ -96,7 +97,7 @@ export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.
     return { o, g };
   };
   // основа: унисон с расстройкой и медленным неровным «плаванием» каждого голоса
-  const n = uni ? Math.min(uni, R.uni) : R.uni, wave = partsWave(c, R.parts), lv = 1 / Math.sqrt(n);
+  const n = uniCap(uni ? Math.min(uni, R.uni) : R.uni), wave = partsWave(c, R.parts), lv = 1 / Math.sqrt(n);
   for (let i = 0; i < n; i++) {
     const k = n === 1 ? 0 : (i / (n - 1)) * 2 - 1, { o } = osc(1, wave, lv, k * R.det * width + rnd(-1, 1), k * 0.7 * Math.min(1, width));
     if (R.drift) {

@@ -266,7 +266,8 @@ export function synBody(ctx, inline) {
     '<div class="rsec wide"><span class="rt">' + t(slot === 'layer' ? 'sec.layer' : 'sec.sound') + '</span><div class="krow">' + knobsOf(s).map(kn).join('') + '</div></div>' +
     '<div class="rsec wide"><span class="rt">MIX</span><div class="krow">' + MIX_KNOBS.map(kn).join('') + '</div></div></div>' +
     (inline ? '' : '<div class="hdr">' + t('mode') + '</div><div class="group"><div class="cellcol">' +
-      ui.seg('amode', [['fast', t('mode.fast')], ['bal', t('mode.bal')], ['smooth', t('mode.smooth')]], mode, t('mode')) + '</div></div><p class="ftr">' + t('mix.ftr') +
+      ui.seg('amode', [['fast', t('mode.fast')], ['bal', t('mode.bal')], ['smooth', t('mode.smooth')]], mode, t('mode')) + '</div></div><p class="ftr">' + t('mode.hint') + '</p>' +
+      '<div class="hdr">' + t('perf') + '</div><div class="group"><div class="cellcol">' + ui.seg('aperf', [['auto', t('perf.auto')], ['full', t('perf.full')], ['eco', t('perf.eco')]], ctx.audio.mixer.state.perf, t('perf')) + '</div></div><p class="ftr">' + t('perf.hint', { now: t(ctx.audio.mixer.perf === 'eco' ? 'perf.eco' : 'perf.full') }) + ' ' + t('mix.ftr') +
       '</p><div style="height:120px"></div><div class="mkdock">' + mkbHTML(ctx) + '</div>');
 }
 
@@ -364,6 +365,7 @@ export function synBind(ctx, root, inline, { rerender, onClose, onChange = () =>
         ctx.ui.toast(ctx.t('preset.saved'));
       });
     } else if (g('[data-pman]')) presetManager(ctx.presets('piano'), re);
+    else if ((b = g('[data-seg="aperf"] [data-v]'))) { ctx.audio.mixer.setPerf(b.dataset.v); re(); }
     else if ((b = g('[data-seg="amode"] [data-v]'))) {
       ctx.audio.mixer.setMode(b.dataset.v);
       re();

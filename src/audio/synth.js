@@ -5,6 +5,7 @@
 // (у рояля — крышка, удар, демпферы; у пэда — дыхание, мерцание, плавание; у баса — фильтр и резонанс).
 // Параметры звука (patch) — как в прототипе (device.piano.syn), слой — device.piano.layer.
 import { getContext, midiFreq, sendToHall } from './context.js';
+import { maxVoices } from './perf.js';
 import { synWave, noiseBuf } from './waves.js';
 import { airVoice } from './airsound.js';
 import { grandBuffer, grandPreload } from './grand.js';
@@ -71,7 +72,7 @@ export function knobsOf(s) {
 export const MIX_KNOBS = ['vol', 'eqlo', 'eqmid', 'eqhi'];
 const AIR_MUL = (s) => ({ breath: knobVal(s, 'ab'), shim: knobVal(s, 'ash'), drift: knobVal(s, 'adr'), vib: knobVal(s, 'avib'), hammer: knobVal(s, 'ath') });
 
-export const MAX_VOICES = 22;
+export const MAX_VOICES = 22; // в полном режиме; в экономном — meньше (perf.js: maxVoices)
 
 // Патч пианино из настроек устройства (создаётся при первом обращении); убранный звук — ближайший из оставшихся,
 // прежнее синтезированное «Пианино» — рояль
@@ -192,7 +193,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     const bus = mixer.bus(busName);
     last[busName] = Date.now();
     // голосов не хватает — замолкает самый старый, но удержанные (Hold) не трогаем, пока есть другие
-    while (order.length >= MAX_VOICES) offOne(order.find((k) => !voices.get(k)?.held) ?? order[0], true);
+    while (order.length >= maxVoices()) offOne(order.find((k) => !voices.get(k)?.held) ?? order[0], true);
     const out = slot ? strip(c, slot) : opts.out || bus; // out — свой узел (цепочка эффектов дорожки студии)
     if (kind === 'grand') {
       if (preC !== c) { preC = c; grandPreload(c); } // средние октавы — сразу, остальные — по мере игры

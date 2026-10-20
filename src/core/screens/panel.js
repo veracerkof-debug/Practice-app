@@ -186,6 +186,10 @@ function weekHTML(app) {
     '<div class="segcap">' + t('track.hint.' + trackMode(st)) + '</div></div></div><p class="ftr">' + t('track.hint') + '</p>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('presence.title') + '</span>' + psw('micPresence', !!st.micPresence, t('presence.title')) + '</div></div>' +
     '<p class="ftr">' + t('presence.hint') + '</p>' +
+    // звук: буфер (задержка против треска) и режим ресурсов (полный / экономный для слабых телефонов) — src/audio/perf.js
+    '<div class="hdr">' + t('snd.title') + '</div><div class="group"><div class="cellcol">' + seg('sndmode', [['fast', t('snd.fast')], ['bal', t('snd.bal')], ['smooth', t('snd.smooth')]], app.audio.mixer.state.mode, t('snd.mode')) + '</div>' +
+    '<div class="cellcol">' + seg('sndperf', [['auto', t('snd.auto')], ['full', t('snd.full')], ['eco', t('snd.eco')]], app.audio.mixer.state.perf, t('snd.perf')) + '</div></div>' +
+    '<p class="ftr">' + t('snd.hint', { now: t(app.audio.mixer.perf === 'eco' ? 'snd.eco' : 'snd.full') }) + '</p>' +
     '<div class="hdr">' + t('week.days') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" aria-label="' + t('week.days') + '">' +
     WD.map((d, i) => '<button data-day="' + i + '" aria-pressed="' + !!st.days[i] + '">' + d + '</button>').join('') + '</div></div></div>' +
     '<p class="ftr">' + t('week.restHint') + '</p>' +
@@ -559,6 +563,8 @@ export function createPanel(app, onChange) {
         saveProfile(app.store, p); render(); onChange(); return;
       }
       if ((b = g('[data-seg="track"] [data-v]'))) { app.store.state.settings.trackMode = b.dataset.v; changed(); return; }
+      if ((b = g('[data-seg="sndmode"] [data-v]'))) { app.audio.mixer.setMode(b.dataset.v); toast(t('snd.later')); render(); return; }
+      if ((b = g('[data-seg="sndperf"] [data-v]'))) { app.audio.mixer.setPerf(b.dataset.v); toast(t('snd.later')); render(); return; }
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); relang(); return; }
       if (g('[data-act="demo"]')) {

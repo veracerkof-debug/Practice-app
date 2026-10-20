@@ -1,6 +1,7 @@
 // Единый AudioContext: общий выход через компрессор, реверберация (свёртка со сгенерированным импульсом).
 // Создаётся лениво — браузер разрешает звук только после жеста пользователя.
 import { makeIR } from './waves.js';
+import { spaceOf, latencyFor } from './perf.js';
 
 // Режим звука: 'fast' — быстрый отклик, 'bal' — баланс, 'smooth' — без треска
 const LATENCY = { fast: 'interactive', bal: 'balanced', smooth: 'playback' };
@@ -11,7 +12,7 @@ export function getContext(mode = 'bal') {
   if (!ctx) {
     const C = globalThis.AudioContext || globalThis.webkitAudioContext;
     if (!C) return null;
-    try { ctx = new C({ latencyHint: LATENCY[mode] || 'balanced' }); } catch { ctx = new C(); }
+    try { ctx = new C({ latencyHint: LATENCY[latencyFor(mode)] || 'balanced' }); } catch { ctx = new C(); }
     // Компрессор — только ловить пики, без пережатия: мягкое колено, низкая степень. У компрессора Web Audio есть
     // скрытое усиление (makeup): чем ниже порог, тем сильнее он поднимает всё и упирается в 0 dBFS — отсюда искажения
     // на большой громкости. Порог выше, а после него — запас (trim), чтобы выход не клиппило
@@ -86,6 +87,7 @@ export const SPACE_DEF = {
 const spaces = {};
 function spaceNode(type) {
   if (!ctx) return null;
+  type = spaceOf(type); // экономный режим: одно пространство на всех
   if (type === 'hall' || !SPACE_DEF[type]) return reverb;
   if (spaces[type] !== undefined) return spaces[type];
   try {

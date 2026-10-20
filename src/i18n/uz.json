@@ -1524,5 +1524,16 @@
   "fx.rt.room": "Xona",
   "fx.rt.hall": "Zal",
   "fx.rt.plate": "Plastina",
-  "fx.rt.cathedral": "Sobor"
+  "fx.rt.cathedral": "Sobor",
+  "snd.title": "Tovush",
+  "snd.mode": "Tovush buferi",
+  "snd.fast": "Tez javob",
+  "snd.bal": "Muvozanat",
+  "snd.smooth": "Shitirlashsiz",
+  "snd.perf": "Resurslar",
+  "snd.auto": "Avto",
+  "snd.full": "Toʻliq",
+  "snd.eco": "Tejamkor",
+  "snd.hint": "Hozir resurslar — {now}. «Shitirlashsiz» — katta bufer, sahnada ishonchli; «tez javob» — klavishlar uchun kamroq kechikish, kuchsiz telefonda shitirlashi mumkin. Toʻliq: barcha ovozlar, pedlar unisoni, toʻrt reverberatsiya makoni. Tejamkor — kuchsiz telefonlar uchun: kamroq ovoz, soddaroq pedlar, bitta reverberatsiya, doim katta bufer.",
+  "snd.later": "Bufer qayta ishga tushirilgandan keyin qoʻllanadi"
 }

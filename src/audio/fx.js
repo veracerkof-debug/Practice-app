@@ -17,6 +17,7 @@
 // чистой функцией, чтобы рисовать и проверять без звука.
 import { sendToSpace, SPACES, SPACE_DEF } from './context.js';
 import { makeIR } from './waves.js';
+import { eco } from './perf.js';
 
 export const EQ_TYPES = ['highpass', 'lowshelf', 'peaking', 'highshelf', 'lowpass'];
 export const F_MIN = 20, F_MAX = 20000, G_MAX = 15, Q_MIN = 0.2, Q_MAX = 8, BANDS_MAX = 8;
@@ -172,7 +173,7 @@ export function createFxChain(c, fx, { space = null } = {}) {
     },
     drive() { // сухой и насыщенный параллельно, перекрёстным затуханием
       const i = c.createGain(), o = c.createGain(), ws = c.createWaveShaper(), dry = c.createGain(), wet = c.createGain();
-      try { ws.oversample = '2x'; } catch { /* */ }
+      try { ws.oversample = eco() ? 'none' : '2x'; } catch { /* */ }
       ws.curve = driveCurve(0.05); dry.gain.value = 1; wet.gain.value = 0;
       i.connect(dry).connect(o); i.connect(ws).connect(wet).connect(o);
       return { i, o, ws, dry, wet };

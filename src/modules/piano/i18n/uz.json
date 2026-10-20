@@ -100,5 +100,11 @@
   "slot.on": "Ikkinchi qatlam: {name}",
   "slot.off": "Qatlam olib tashlandi",
   "sec.sound": "TOVUSH",
-  "sec.layer": "QATLAM"
+  "sec.layer": "QATLAM",
+  "mode.hint": "Shovqinsiz — katta bufer, sahnada ishonchli (standart). Tez javob — klavishlarda kamroq kechikish, lekin kuchsiz telefonda shitirlashi mumkin.",
+  "perf": "Resurslar",
+  "perf.auto": "Avto",
+  "perf.full": "Toʻliq",
+  "perf.eco": "Tejamkor",
+  "perf.hint": "Hozir — {now}. Toʻliq: barcha ovozlar, pedlar unisoni, toʻrt reverberatsiya makoni. Tejamkor — kuchsiz telefonlar uchun: kamroq ovoz, soddaroq pedlar, bitta reverberatsiya, doim katta bufer."
 }
