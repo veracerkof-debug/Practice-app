@@ -52,7 +52,7 @@
 .lpreel{position:relative;aspect-ratio:1;width:min(44cqw,46cqh)}
 .lpreelcv{display:block;width:100%;height:100%}
 .lpreeln{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--bg);font-weight:700;font-size:14px;pointer-events:none}
-.lpreel.empty .lpreeln{color:var(--l2)}
+.lpreel.lpnone .lpreeln{color:var(--l2)}
 .lplanes{flex:none;display:flex;flex-direction:column;gap:4px;padding:0 4px;max-height:30cqh;overflow:auto;scrollbar-width:none}
 .lplane{display:flex;align-items:center;gap:6px;height:34px}
 .lplanecv{flex:1;min-width:0;height:100%;border-radius:8px;background:var(--fill)}
