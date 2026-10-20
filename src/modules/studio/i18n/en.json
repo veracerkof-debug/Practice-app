@@ -98,5 +98,13 @@
   "help.3": "Hold a track — sound, octave, colour, duplicate.",
   "help.4": "Export .mid — to the media library and the team.",
   "pname": "Name",
-  "name": "Studio"
+  "name": "Studio",
+  "tr.audio": "Loop",
+  "tr.noFile": "no recording chosen",
+  "tr.pickFile": "Choose a recording",
+  "tr.noAudio": "No recordings in the media library. Record a loop in the Looper and save it to the media library.",
+  "tr.audioHint": "The recording loops from bar 1 for the length of the project. A Looper mix works best.",
+  "exportMidi": ".mid — to the media library (piano)",
+  "exportXml": "Score — to Tabs (MusicXML)",
+  "exportedXml": "Score saved — open it in Tabs & notes"
 }

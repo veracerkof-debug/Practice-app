@@ -1,4 +1,5 @@
-// Проигрыватель проекта студии: ноты дорожек — синтезатором пианино (свой звук у дорожки), по кругу или до конца.
+// Проигрыватель проекта студии: ноты дорожек — синтезатором пианино (свой звук у дорожки), дорожки-петли — записью
+// из медиатеки по кругу; по кругу или до конца.
 // Планировщик как у метронома: просыпается каждые 25 мс и выставляет всё, что начнётся в ближайшие 150 мс,
 // точно по времени контекста. Клик — голосом метронома. Без DOM.
 import { getContext } from './context.js';
@@ -8,8 +9,35 @@ import { clickVoice, clickNoise } from './metronome.js';
 
 const TICK = 25, AHEAD = 0.15;
 
-export function createSequencer({ mixer, synth, getProject, onBeat = () => {} }) {
+// getFile(id) → запись медиатеки с blob (дорожки-петли) или null
+export function createSequencer({ mixer, synth, getProject, getFile = () => null, onBeat = () => {} }) {
   let c = null, timer = null, t0 = 0, nextBeat = 0, playing = false, noise = null, click = false, seq = 0;
+  const bufs = new Map(); // fileId → AudioBuffer | Promise
+  let audioSrcs = [];
+  // Дорожки-петли: записи раскодируются один раз, звучат по кругу длиной проекта, в такт с нотами
+  async function startAudio(p) {
+    const solo = p.tracks.some((t) => t.solo), total = beatsOf(p) * secPerBeat(p), myT0 = t0;
+    for (const tr of p.tracks) {
+      if (tr.kind !== 'audio' || !tr.fileId || tr.mute || (solo && !tr.solo)) continue;
+      let b = bufs.get(tr.fileId);
+      if (!b) {
+        const r = getFile(tr.fileId);
+        if (!r || !r.blob) continue;
+        b = r.blob.arrayBuffer().then((ab) => c.decodeAudioData(ab)).catch(() => null);
+        bufs.set(tr.fileId, b);
+      }
+      b = await b;
+      if (!b || !playing || t0 !== myT0) continue;
+      const src = c.createBufferSource(), g = c.createGain();
+      src.buffer = b; src.loop = true; src.loopStart = 0; src.loopEnd = Math.min(b.duration, total);
+      g.gain.value = tr.vol;
+      src.connect(g).connect(mixer.bus('media'));
+      const now = c.currentTime, off = ((now - t0) % src.loopEnd + src.loopEnd) % src.loopEnd;
+      src.start(Math.max(now, t0), t0 > now ? 0 : off);
+      audioSrcs.push(src);
+    }
+  }
+  const stopAudio = () => { audioSrcs.forEach((s) => { try { s.stop(); s.disconnect(); } catch { /* */ } }); audioSrcs = []; };
   const live = new Map(); // ключ голоса → таймер выключения
   const cache = { p: null, upd: 0, notes: [] };
 
@@ -61,11 +89,13 @@ export function createSequencer({ mixer, synth, getProject, onBeat = () => {} })
       playing = true;
       sched();
       timer = setInterval(sched, TICK);
+      startAudio(p);
       return true;
     },
     stop() {
       clearInterval(timer); timer = null;
       playing = false;
+      stopAudio();
       live.forEach((tm, key) => { clearTimeout(tm); synth.off(key, true); });
       live.clear();
     },

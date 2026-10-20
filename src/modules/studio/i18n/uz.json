@@ -93,5 +93,13 @@
   "help.3": "Yoʻlakni ushlab turish — tovush, oktava, rang, nusxa.",
   "help.4": ".mid eksporti — mediatekaga va jamoaga.",
   "pname": "Nomi",
-  "name": "Studiya"
+  "name": "Studiya",
+  "tr.audio": "Halqa",
+  "tr.noFile": "yozuv tanlanmagan",
+  "tr.pickFile": "Yozuvni tanlash",
+  "tr.noAudio": "Mediatekada yozuv yoʻq. Luperda halqa yozib, uni mediatekaga saqlang.",
+  "tr.audioHint": "Yozuv birinchi taktdan loyiha uzunligida aylanib chalinadi. Eng qulayi — Luper aralashmasi.",
+  "exportMidi": ".mid — mediatekaga (pianino)",
+  "exportXml": "Notalar — «Tablar»ga (MusicXML)",
+  "exportedXml": "Notalar saqlandi — «Tablar va notalar»da oching"
 }

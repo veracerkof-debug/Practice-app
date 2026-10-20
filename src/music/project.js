@@ -1,6 +1,7 @@
 // Студия-черновик: проект песни — темп, размер, тональность, такты, дорожки. Чистые функции, без звука и DOM.
 // Дорожка нот: { kind: 'notes', notes: [{ t, d, m, v }] } — t и d в долях от начала (не в тактах), m — высота MIDI.
 // Дорожка аккордов: { kind: 'chords', chords: [{ t, d, pc, type }], mode: 'hold' | 'rhythm' | 'arp', arp: { dir, step } }
+// Дорожка-петля: { kind: 'audio', fileId } — запись из медиатеки (сведение лупера), звучит по кругу с первого такта.
 // — аккорды разворачиваются в ноты (expandChords), остальное у дорожек общее: инструмент (звук пианино), название,
 // цвет, громкость, тишина, соло. Время всегда в долях: смена темпа ничего не двигает.
 import { uid } from '../core/time.js';
@@ -20,6 +21,7 @@ export function newProject(patch = {}) {
 }
 export function newTrack(kind = 'notes', i = 0, patch = {}) {
   const base = { id: 'tr' + uid(), kind, name: '', color: COLORS[i % COLORS.length], inst: kind === 'chords' ? 'wair' : i === 1 ? 'abass' : 'piano', vol: 0.9, mute: false, solo: false, oct: 0 };
+  if (kind === 'audio') return { ...base, inst: 'piano', fileId: null, ...patch }; // дорожка-петля: запись из медиатеки (лупер), по кругу с первого такта
   return kind === 'chords' ? { ...base, chords: [], mode: 'hold', arp: { dir: 'up', step: 0.5 }, ...patch } : { ...base, notes: [], ...patch };
 }
 export const beatsOf = (p) => p.bars * p.num;
@@ -35,6 +37,7 @@ export function normalizeProject(p) {
   p.tracks = (p.tracks || []).filter((t) => t && t.id).map((t) => {
     t.vol = Math.max(0, Math.min(1.5, +t.vol || 0)); t.oct = Math.max(-2, Math.min(2, Math.round(+t.oct || 0)));
     if (!INSTRUMENTS.includes(t.inst)) t.inst = 'piano';
+    if (t.kind === 'audio') { t.fileId = t.fileId || null; return t; }
     if (t.kind === 'chords') { t.chords = (t.chords || []).filter((c) => c && c.d > 0).sort((a, b) => a.t - b.t); if (!MODES.includes(t.mode)) t.mode = 'hold'; t.arp = { dir: ARP_DIRS.includes(t.arp && t.arp.dir) ? t.arp.dir : 'up', step: [1, 0.5, 0.25].includes(t.arp && t.arp.step) ? t.arp.step : 0.5 }; }
     else { t.kind = 'notes'; t.notes = (t.notes || []).filter((n) => n && n.d > 0 && n.m >= 0 && n.m <= 127).sort((a, b) => a.t - b.t || a.m - b.m); }
     return t;
@@ -107,7 +110,7 @@ export function expandChords(track, p, base = 48) {
 }
 
 // Все ноты дорожки для звука (с октавой дорожки)
-export const trackNotes = (track, p) => (track.kind === 'chords' ? expandChords(track, p) : track.notes.map((n) => ({ ...n, m: n.m + 12 * (track.oct || 0) })));
+export const trackNotes = (track, p) => (track.kind === 'audio' ? [] : track.kind === 'chords' ? expandChords(track, p) : track.notes.map((n) => ({ ...n, m: n.m + 12 * (track.oct || 0) })));
 
 // Проект → события MIDI (src/music/midi.js: { t сек, k, id, m, v }) для файла .mid
 export function projectEvents(p) {

@@ -48,7 +48,9 @@ const ATP = { on: false, sf: false, playing: false, want: false, speed: 1, metro
 
 // Библиотека грузится только при открытии табулатуры (отдельный кусок сборки)
 const loadLib = () => AT.lib || (AT.lib = import('@coderline/alphatab').catch((e) => { AT.lib = null; throw e; }));
-const prof = (at) => (st().prof === 'both' ? at.StaveProfile.ScoreTab : at.StaveProfile.Tab);
+// Партия без струн (ноты из студии, фортепиано) в профиле «только табы» не рисуется — для неё нотный стан
+const stringed = (sc) => !sc || sc.tracks.some((tr) => tr.staves.some((x) => x.tuning && x.tuning.length));
+const prof = (at) => (st().prof === 'both' ? at.StaveProfile.ScoreTab : stringed(AT.score) ? at.StaveProfile.Tab : at.StaveProfile.Score);
 
 /* ---------- PDF: один просмотр на приложение (как и alphaTab) ---------- */
 
@@ -189,7 +191,7 @@ async function openTab(rec) {
       player: { enablePlayer: false },
       display: { scale: st().scale, layoutMode: at.LayoutMode.Page, staveProfile: prof(at) },
     });
-    AT.api.scoreLoaded.on((sc) => { AT.score = sc; AT.track = 0; AT.state = 'ready'; hlHide(); render(); });
+    AT.api.scoreLoaded.on((sc) => { const was = AT.score; AT.score = sc; AT.track = 0; AT.state = 'ready'; hlHide(); if (stringed(was) !== stringed(sc)) restyle(); render(); });
     // подсветка играемого места — заново после каждой отрисовки (масштаб, вид, дорожка)
     AT.api.renderFinished.on(() => { if (AT.beat) hlPlace(AT.beat, false); });
     playerSetup(); // звуковой банк грузится сразу: нажатие на такт переводит туда, «Играть» — без ожидания
