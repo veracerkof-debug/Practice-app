@@ -26,7 +26,7 @@
   "thisSong": "This song",
   "others": "Others",
   "allTabs": "All tabs and sheet music",
-  "uploadHint": "Supported: PDF (sheet music and tabs), Guitar Pro files (gp3, gp4, gp5, gpx, gp) and MusicXML.",
+  "uploadHint": "Supported: PDF (sheet music and tabs), Guitar Pro (gp3–gp5, gpx, gp), MusicXML (.xml, .mxl), Capella and text tabs (.txt).",
   "uploadTab": "Upload tabs or sheet music",
   "tabFiles": "Tabs and sheet music",
   "trackN": "Track {n}",
@@ -71,7 +71,7 @@
   "deg.hint": "Scale degrees do not depend on the key: I is the tonic, IV the subdominant, V the dominant; major in capitals, minor in lower case (vi), ° diminished, ø half-diminished. The Nashville system writes the same with numbers: 1, 4, 5, 6m. Lyrics can also be written in degrees — [I], [vi7], 1 4 5 1 — and are then shown as chords in the chosen key.",
   "tr.fromAssumed": "The text is written in scale degrees and no key is set — showing {k}. The key can be set in the song card or chosen here.",
   "help.what": "Tabs, PDF scores and lyrics with chords.",
-  "help.1": "Guitar Pro and MusicXML tabs with playback.",
+  "help.1": "Guitar Pro, MusicXML, Capella and text (ASCII) tabs — with playback; the format is detected from the content.",
   "help.2": "PDF — pinch to zoom; opens on the last page.",
   "help.3": "Chord sheets — transpose, show degrees.",
   "help.tip": "Transpose to fit the voice or a capo.",
@@ -97,5 +97,10 @@
   "dawFail": "Could not read the file",
   "dawNoNotes": "No notes in the file",
   "dawOpened": "Project saved — opened in Studio",
-  "help.4": "MIDI & DAW: .mid files and Ableton, Reaper, FL Studio projects — as a score; “To Studio” — edit."
+  "help.4": "MIDI & DAW: .mid files and Ableton, Reaper, FL Studio projects — as a score; “To Studio” — edit.",
+  "openFailFmt": "Could not open the file ({fmt}). Supported: Guitar Pro 3–8, MusicXML, Capella, PDF and text tabs",
+  "pasteTab": "Text tab",
+  "pasteOpen": "Open",
+  "pasteName": "Name",
+  "pasteHint": "String lines from a website or a message: e|--3--5--|… Frets, chords, h/p, slides and bars are recognised; rhythm — by the spacing between notes. Playback as with any tab."
 }

@@ -16,6 +16,8 @@ import { readDaw, dawFmt, DAW_FORMATS } from '../../music/daw.js';
 import { projectFromSong, isEmptyProject } from '../../music/project.js';
 import { projectXML } from '../../music/musicxml.js';
 import { readMidi, takeDur } from '../../music/midi.js';
+import { sniffScore } from './sniff.js';
+import { asciiToTex } from '../../music/asciitab.js';
 // Шрифт нот и звуковой банк — файлы проекта, никаких CDN
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
 import SONIVOX from '@coderline/alphatab/soundfont/sonivox.sf3?url';
@@ -36,7 +38,8 @@ const I = {
   pen: '<svg viewBox="0 0 24 24"><path d="M15.5 5.5l3 3L9 18l-4 1 1-4z"/></svg>',
   metro: '<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2"><path d="M8 21h8l-3-17h-2zM12 14l5-7"/></svg>',
 };
-const ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.gp8,.xml,.musicxml,.mxl,.pdf,application/pdf,.mid,.midi,.als,.rpp,.flp';
+const ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.gp8,.xml,.musicxml,.mxl,.cap,.capx,.txt,.tab,.pdf,application/pdf,.mid,.midi,.als,.rpp,.flp';
+const FMT_NAMES = { pdf: 'PDF', gp345: 'Guitar Pro 3–5', gpx: 'Guitar Pro 6', gp7: 'Guitar Pro 7/8', mxl: 'MusicXML', musicxml: 'MusicXML', capella: 'Capella', ascii: 'ASCII', text: 'TXT' };
 
 let dropped = null; // файлы, перетащенные в окно до того, как модуль открылся (src/core/drop.js)
 let host = null, ctx = null, size = 'full', input = null, offs = [];
@@ -191,7 +194,17 @@ async function openTab(rec) {
   let at;
   try { at = await loadLib(); } catch (e) { ctx && ctx.logErr(e); AT.state = 'error'; render(); ctx && ctx.ui.toast(ctx.t('libFail')); return; }
   ensureApi(at);
-  try { AT.api.load(new Uint8Array(await rec.blob.arrayBuffer())); } catch { AT.state = 'error'; render(); }
+  const bytes = new Uint8Array(await rec.blob.arrayBuffer());
+  if (!rec.det) { rec.det = sniffScore(bytes, rec.name + (rec.ext ? '.' + rec.ext : '')) || ''; if (rec.det === 'ascii' || rec.det === 'text') rec.fmt = rec.det; ctx.files.save(rec); }
+  if (rec.fmt === 'ascii' || rec.fmt === 'text') { openText(rec, new TextDecoder().decode(bytes)); return; }
+  try { AT.api.load(bytes); } catch { AT.state = 'error'; render(); }
+}
+// Текстовые табы (ASCII): строки струн → alphaTex → alphaTab с воспроизведением; просто текст — как есть, моноширинно
+function openText(rec, text) {
+  const tex = asciiToTex(text, { title: rec.name });
+  if (!tex) { AT.text = text; AT.state = 'text'; render(); return; }
+  AT.text = null;
+  try { AT.api.tex(tex); } catch (e) { ctx.logErr(e); AT.text = text; AT.state = 'text'; render(); }
 }
 function ensureApi(at) {
   if (!AT.api) {
@@ -207,7 +220,14 @@ function ensureApi(at) {
     // подсветка играемого места — заново после каждой отрисовки (масштаб, вид, дорожка)
     AT.api.renderFinished.on(() => { if (AT.beat) hlPlace(AT.beat, false); });
     playerSetup(); // звуковой банк грузится сразу: нажатие на такт переводит туда, «Играть» — без ожидания
-    AT.api.error.on((e) => { if (ctx) ctx.log('alphaTab: ' + ((e && (e.message || e.type)) || 'ошибка'), 'e'); AT.state = 'error'; render(); if (ctx) ctx.ui.toast(ctx.t('openFail')); });
+    AT.api.error.on((e) => {
+      const msg = (e && (e.message || e.type)) || 'ошибка';
+      // партия без струн (фортепиано, ударные) в профиле «только табы» не рисуется — переключение на нотный стан и повтор
+      if (/staves/.test(msg) && AT.api.settings.display.staveProfile === at.StaveProfile.Tab) { AT.api.settings.display.staveProfile = at.StaveProfile.Score; AT.api.updateSettings(); AT.api.render(); return; }
+      if (ctx) ctx.log('alphaTab: ' + msg, 'e');
+      AT.state = 'error'; render();
+      if (ctx) ctx.ui.toast(AT.cur && AT.cur.det ? ctx.t('openFailFmt', { fmt: FMT_NAMES[AT.cur.det] || AT.cur.det }) : ctx.t('openFail'));
+    });
   }
 }
 // Файл .mid или проект чужой студии: читается как есть → проект приложения → MusicXML → ноты (alphaTab)
@@ -226,7 +246,13 @@ async function openDaw(rec) {
     song.name = song.name || rec.name;
     AT.proj = projectFromSong(song);
     if (isEmptyProject(AT.proj)) { AT.state = 'error'; render(); ctx.ui.toast(ctx.t('dawNoNotes')); return; }
-    AT.api.load(new TextEncoder().encode(projectXML(AT.proj, { title: rec.name.replace(/\.[a-z0-9]+$/i, '') })));
+    if (st().prof !== 'both') { AT.api.settings.display.staveProfile = at.StaveProfile.Score; AT.api.updateSettings(); } // партии без струн
+    const sc = at.importer.ScoreLoader.loadScoreFromBytes(new TextEncoder().encode(projectXML(AT.proj, { title: rec.name.replace(/\.[a-z0-9]+$/i, '') })), AT.api.settings);
+    // ударные из MusicXML: у инструментов партии нет головок нот (alphaTab рисует пусто) — обычные головки, звук остаётся
+    const F = at.model.MusicFontSymbol;
+    const X = [42, 44, 46, 49, 51, 52, 53, 55, 57, 59]; // хэты и тарелки — крестиком
+    sc.tracks.forEach((tr) => tr.percussionArticulations.forEach((a) => { if (a.noteHeadDefault !== F.None) return; const x = X.includes(a.outputMidiNumber); a.noteHeadDefault = x ? F.NoteheadXBlack : F.NoteheadBlack; a.noteHeadHalf = x ? F.NoteheadXHalf : F.NoteheadHalf; a.noteHeadWhole = x ? F.NoteheadXWhole : F.NoteheadWhole; }));
+    AT.api.renderScore(sc);
   } catch (e) { ctx.logErr(e); AT.state = 'error'; render(); ctx.ui.toast(ctx.t('dawFail')); }
 }
 // «В студию»: прочитанный проект сохраняется и открывается в студии (там — паттерны, дорожки, правка)
@@ -355,7 +381,7 @@ function togglePlay() {
 function tabRow(x) {
   const songs = ctx.songs(), so = fileSongs(x).map((id) => songs.find((s) => s.id === id)).find(Boolean);
   return '<div class="cell"><button class="grow" data-x="topen" data-id="' + x.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(x.name) + '</div><div class="st">' +
-    (isPdf(x) ? 'PDF · ' : '') + ctx.t('kb', { n: ctx.num((x.size || 0) / 1024, 0) }) + (so ? ', ' + esc(so.title) : '') + '</div></button>' +
+    (isPdf(x) ? 'PDF · ' : x.det && FMT_NAMES[x.det] ? FMT_NAMES[x.det] + ' · ' : '') + ctx.t('kb', { n: ctx.num((x.size || 0) / 1024, 0) }) + (so ? ', ' + esc(so.title) : '') + '</div></button>' +
     '<button class="ic sm" data-x="tdel" data-id="' + x.id + '" aria-label="' + esc(ctx.t('deleteX', { name: x.name })) + '" style="color:var(--red)">' + I.minus + '</button></div>';
 }
 
@@ -386,8 +412,14 @@ function tabsBody() {
       ? (mine.length ? '<div class="hdr" style="margin-top:4px">' + t('thisSong') + '</div><div class="group">' + mine.map(tabRow).join('') + '</div>' : '') +
         (rest.length ? '<div class="hdr">' + t(mine.length ? 'others' : 'allTabs') + '</div><div class="group">' + rest.map(tabRow).join('') + '</div>' : '')
       : '<p class="l2" style="font-size:14px;text-align:center;margin:18px 8px">' + t('uploadHint') + '</p>') +
-      '<div class="vrow" style="margin-top:12px"><button class="btn sm" data-x="tadd">' + I.plus.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4"') + ' ' + t('uploadTab') + '</button></div>' +
+      '<div class="vrow" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn sm" data-x="tadd">' + I.plus.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4"') + ' ' + t('uploadTab') + '</button>' +
+      '<button class="btn sm" data-x="tpaste">' + I.pen.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2"') + ' ' + t('pasteTab') + '</button></div>' +
       (AT.state === 'error' && !isDaw(AT.cur) ? '<p class="ftr" style="text-align:center">' + t('openFailShort') + '</p>' : '') + '</div>';
+  }
+  if (AT.state === 'text') { // текст без строк струн — как есть
+    return '<div class="ntools">' + icb('data-x="tlist"', I.list, t('tabFiles'), 'sm') + '<span class="sgrow aname" style="text-align:left">' + esc(AT.cur.name) + '</span>' +
+      icb('data-x="nfs" data-d="-1"', 'A−', t('smaller'), 'sm txt') + icb('data-x="nfs" data-d="1"', 'A+', t('bigger'), 'sm txt') + '</div>' +
+      '<div class="lyr" style="font-size:' + (st().fs || 15) + 'px;white-space:pre">' + esc(AT.text || '') + '</div>';
   }
   if (isPdf(AT.cur)) {
     return '<div class="ntools">' + icb('data-x="tlist"', I.list, t('tabFiles'), 'sm') +
@@ -502,6 +534,24 @@ function tabSheet() {
     }, true));
 }
 
+// Табы текстом (с сайта или из мессенджера): вставить — сохраняется файлом и открывается нотами
+function pasteSheet() {
+  const { t, ui } = ctx;
+  ui.sheet(() => ui.snav(t('pasteTab'), { left: '<button class="link l" data-close>' + t('cancel') + '</button>', right: '<button class="link b r" id="tpok">' + t('pasteOpen') + '</button>' }) +
+    '<div class="group"><input class="inp left" id="tpname" maxlength="60" placeholder="' + esc(t('pasteName')) + '" aria-label="' + esc(t('pasteName')) + '" style="width:100%;padding:10px 12px;border:0;background:transparent">' +
+    '<textarea class="ta" id="tpta" style="min-height:48vh;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre" aria-label="' + esc(t('pasteTab')) + '" placeholder="' + esc('e|--3--5--|\nB|--0-----|\nG|--------|\nD|--------|\nA|--------|\nE|--------|') + '"></textarea></div><p class="ftr">' + esc(t('pasteHint')) + '</p>',
+  (el, sh) => el.querySelector('#tpok').addEventListener('click', async () => {
+    const text = el.querySelector('#tpta').value, name = el.querySelector('#tpname').value.trim() || t('pasteName');
+    if (!text.trim()) return;
+    sh.close();
+    const u8 = new TextEncoder().encode(text), song = ctx.song();
+    const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), kind: 'tab', name, ext: 'txt', size: u8.length, type: 'text/plain', fmt: 'ascii', det: 'ascii', songs: song ? [song.id] : [], created: Date.now(), blob: new Blob([u8], { type: 'text/plain' }) };
+    await ctx.files.add(rec);
+    st().sec = 'tabs'; ctx.store.save();
+    openTab(rec);
+  }));
+}
+
 // Выбор тональности напрямую: 12 вариантов того же наклонения, «Исходная» — сброс сдвига
 function keySheet() {
   const { t, ui } = ctx, song = curSong(), key = song && songKey(song);
@@ -610,6 +660,8 @@ async function onFile(e) {
       : { id, kind: 'tab', name: f.name.replace(/\.[^.]+$/, ''), ext: (/\.([^.]+)$/.exec(f.name) || [])[1] || '', size: f.size, type: f.type,
         fmt: /\.pdf$/i.test(f.name) || f.type === 'application/pdf' || (await sniffPdf(f)) ? 'pdf' : 'score',
         songs: song ? [song.id] : [], created: Date.now(), blob: f };
+    // формат — по содержимому (чужое расширение не помеха); текст и ASCII-табы открываются как текст
+    if (rec.kind === 'tab' && rec.fmt !== 'pdf') { try { rec.det = sniffScore(new Uint8Array(await f.slice(0, 262144).arrayBuffer()), f.name) || ''; if (rec.det === 'ascii' || rec.det === 'text') rec.fmt = rec.det; else if (rec.det === 'pdf') rec.fmt = 'pdf'; } catch { /* откроется как есть */ } }
     // .mid со стороны — ещё и запись для пианино (играется там как своя)
     if (dfmt === 'mid') { try { const r = readMidi(new Uint8Array(await f.arrayBuffer())); rec.take = { v: 1, ev: r.ev }; rec.dur = takeDur(r.ev); } catch { /* ноты покажутся, игра в пианино — нет */ } }
     const { saved, rr, ok } = await storeFile(rec, f);
@@ -642,11 +694,12 @@ function act(a, el) {
       if (x) ui.confirm(t('delTitle', { name: x.name }), t('delText'), t('delete')).then((ok) => {
         if (!ok) return;
         ctx.files.remove(x.id);
-        if (AT.cur && AT.cur.id === x.id) { if (PDF.rec === x) closePdf(); else if (ATP.sf) AT.api.stop(); AT.cur = null; AT.state = 'idle'; }
+        if (AT.cur && AT.cur.id === x.id) { if (PDF.rec === x) closePdf(); else if (ATP.sf && AT.api) AT.api.stop(); AT.cur = null; AT.state = 'idle'; AT.text = null; }
         render();
       });
       break;
     case 'tlist': tabSheet(); break;
+    case 'tpaste': pasteSheet(); break;
     case 'dstudio': toStudio(); break;
     case 'pzoom': if (PDF.view) PDF.view.zoomBy(+el.dataset.d); break;
     case 'pfit': if (PDF.view) PDF.view.fit(); break;
@@ -686,7 +739,7 @@ export default {
     return n ? c.tn('tabs', n) : c.t('statusIdle');
   },
   // Перетаскивание файлов в окно (веб-версия на компьютере): какие файлы модуль берёт и что с ними делать
-  accepts: (f) => f.type === 'application/pdf' || /\.(gp[3-8x]?|xml|musicxml|mxl|pdf|midi?|als|rpp|flp)$/i.test(f.name),
+  accepts: (f) => f.type === 'application/pdf' || /\.(gp[3-8x]?|xml|musicxml|mxl|capx?|txt|tab|pdf|midi?|als|rpp|flp)$/i.test(f.name),
   drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;

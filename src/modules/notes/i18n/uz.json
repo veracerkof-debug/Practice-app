@@ -25,7 +25,7 @@
   "thisSong": "Shu qoʻshiq",
   "others": "Boshqalar",
   "allTabs": "Barcha tablar va notalar",
-  "uploadHint": "PDF (notalar va tablar), Guitar Pro (gp3, gp4, gp5, gpx, gp) va MusicXML fayllari qoʻllab-quvvatlanadi.",
+  "uploadHint": "PDF (notalar va tablar), Guitar Pro (gp3–gp5, gpx, gp), MusicXML (.xml, .mxl), Capella va matnli tablar (.txt) qoʻllab-quvvatlanadi.",
   "uploadTab": "Tab yoki nota yuklash",
   "tabFiles": "Tablar va notalar",
   "trackN": "{n}-yoʻlak",
@@ -70,7 +70,7 @@
   "deg.hint": "Pogʻonalar tonallikka bogʻliq emas: I — tonika, IV — subdominanta, V — dominanta; major — katta harflar bilan, minor — kichik (vi), ° — kamaytirilgan, ø — yarim kamaytirilgan. Neshvill tizimi xuddi shuni raqamlar bilan yozadi: 1, 4, 5, 6m. Matnni pogʻonalar bilan ham yozish mumkin — [I], [vi7], 1 4 5 1 — shunda akkordlar tanlangan tonallikda koʻrsatiladi.",
   "tr.fromAssumed": "Matn pogʻonalar bilan yozilgan, tonallik koʻrsatilmagan — {k} koʻrsatilmoqda. Uni qoʻshiq kartochkasida berish yoki shu yerda tanlash mumkin.",
   "help.what": "Tablar, PDF notalar va akkordli matnlar.",
-  "help.1": "Guitar Pro va MusicXML tablari — ijro bilan.",
+  "help.1": "Guitar Pro, MusicXML, Capella va matnli (ASCII) tablar — ijro bilan; format mazmuniga qarab aniqlanadi.",
   "help.2": "PDF — chimdib kattalashtirish, oxirgi sahifada ochiladi.",
   "help.3": "Akkordli matn — transpozitsiya va pogʻonalar.",
   "help.tip": "Oʻz ovozi yoki kapodastrga moslab transpozitsiya qilish.",
@@ -96,5 +96,10 @@
   "dawFail": "Faylni oʻqib boʻlmadi",
   "dawNoNotes": "Faylda nota yoʻq",
   "dawOpened": "Loyiha saqlandi — «Studiya»da ochildi",
-  "help.4": "MIDI va DAW: .mid fayllar va Ableton, Reaper, FL Studio loyihalari — notalar bilan; «Studiyaga» — tahrirlash."
+  "help.4": "MIDI va DAW: .mid fayllar va Ableton, Reaper, FL Studio loyihalari — notalar bilan; «Studiyaga» — tahrirlash.",
+  "openFailFmt": "Faylni ochib boʻlmadi ({fmt}). Guitar Pro 3–8, MusicXML, Capella, PDF va matnli tablar qoʻllab-quvvatlanadi",
+  "pasteTab": "Matnli tab",
+  "pasteOpen": "Ochish",
+  "pasteName": "Nomi",
+  "pasteHint": "Saytdan yoki xabardan tor qatorlari: e|--3--5--|… Pardalar, akkordlar, h/p, slaydlar va taktlar taniladi; ritm — notalar orasidagi masofa boʻyicha. Ijro — oddiy tablardagidek."
 }
