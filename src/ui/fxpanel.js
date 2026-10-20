@@ -53,7 +53,8 @@ export function createFxPanel({ get, set, profile }) {
   function bind(el, api) {
     const mount = () => {
       const cv = el.querySelector('canvas[data-eq]');
-      if (!cv) return;
+      if (!cv || cv.dataset.bound) return; // хозяин может звать mount() после каждой перерисовки
+      cv.dataset.bound = '1';
       eq = eqCanvas(cv, {
         get: bands, simple: mode !== 'adv',
         onChange: () => { save(mode === 'adv' ? { adv: bands() } : { simple: bands() }); refreshBand(); },

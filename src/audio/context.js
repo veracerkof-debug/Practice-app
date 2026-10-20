@@ -77,8 +77,9 @@ export function sendToReverb(node, level) {
 // плотная, без предзадержки), собор (7 с, мягкие верха и медленное нарастание — для пэдов и поклонения, звук
 // «растворяется», не мешая остальным). Все идут в общий компрессор
 export const SPACES = ['room', 'hall', 'plate', 'cathedral'];
-const SPACE_DEF = {
+export const SPACE_DEF = {
   room: { sec: 0.9, damp: 0.7, pre: 0, hp: 160, lp: 7000, gain: 0.5 },
+  hall: { sec: 2.8, damp: 0.6, pre: 0, hp: 180, lp: 20000, gain: 0.55 }, // общая реверберация (строится в getContext)
   plate: { sec: 1.7, damp: 0.25, pre: 0, hp: 200, lp: 12000, gain: 0.45 },
   cathedral: { sec: 7, damp: 0.86, pre: 0.035, hp: 140, lp: 5200, gain: 0.62 },
 };

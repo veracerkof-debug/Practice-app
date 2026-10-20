@@ -1,9 +1,10 @@
 // Диктофон: запись с выбранного входа (микрофон телефона, гарнитура, Bluetooth, USB — и приёмники петличек
-// Hollyland, DJI и других), воспроизведение на выбранный выход, простая обработка: обрезка, срез низа, шумоподавление,
-// гейт, компрессия, усиление и нормализация, лёгкая реверберация. Готовая запись — в медиатеку (WAV).
-// До записи: вход слушается сразу — мини-окно спектра и уровня, обработка (усиление, эквалайзер, срез низа,
-// компрессия, реверберация) звучит вживую в наушниках; в файл пишется исходник, обработка с теми же настройками
-// применяется при сохранении. Кнопка записи — внизу, под рукой.
+// Hollyland, DJI и других), воспроизведение на выбранный выход, обработка: обрезка, шумоподавление, гейт, общая
+// цепочка эффектов приложения (эквалайзер, сжатие, драйв, тремоло, задержка, хор, реверберация — ctx.fxPanel),
+// усиление и нормализация. Готовая запись — в медиатеку (WAV).
+// До записи: вход слушается сразу — мини-окно спектра и уровня, цепочка эффектов и усиление звучат вживую в наушниках
+// теми же узлами, что и при обработке записи; в файл пишется исходник, обработка с теми же настройками применяется
+// при сохранении. Кнопка записи — внизу, под рукой.
 // Звук не покидает устройство. Движок — src/audio/voiceengine.js, обработка — src/audio/voicefx.js и livefx.js.
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
@@ -11,7 +12,8 @@ import en from './i18n/en.json';
 import el from './i18n/el.json';
 import './voice.css';
 import { engine, isLav, KIND } from '../../audio/voiceengine.js';
-import { decodeWav, encodeWav, process, peaks, spectrumDb, eqResponse, EQ_BANDS, EQ_PRESETS } from '../../audio/voicefx.js';
+import { decodeWav, encodeWav, processVoice, peaks, spectrumDb, EQ_PRESETS, VOICE_BANDS, migrateVoiceFx } from '../../audio/voicefx.js';
+import { normalizeFx } from '../../audio/fx.js';
 import { createLiveFx, openInput, setOutput, levelOf } from '../../audio/livefx.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>';
@@ -24,14 +26,18 @@ const I = {
   wave: '<svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"/></svg>',
   save: '<svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>',
 };
-const FX_DEF = { lowcut: true, eq: [0, 0, 0, 0, 0], denoise: 0, gate: -90, comp: 'off', gain: 0, normalize: true, reverb: 0 };
+const FX_DEF = { denoise: 0, gate: -90, gain: 0, normalize: true }; // своё у диктофона; остальное — общая цепочка (s.chain)
 // Окно уровня: что показывать (настраивается — шестерёнка в окне)
 const METER_DEF = { spec: true, style: 'bars', mode: 'both', clip: -0.3, hold: 2, range: 60, smooth: 'mid' };
 
-let host = null, ctx = null, size = 'full', offs = [], onClick = null, onChange = null, onPtr = null, onInput = null;
+let host = null, ctx = null, size = 'full', offs = [], onClick = null, onChange = null, onPtr = null, onInput = null, pm = null, pmb = null;
 const S = { phase: 'idle', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, take: null, sel: [0, 1], playing: false, pos: 0, mode: 'proc', busy: false, devs: { inputs: [], outputs: [] }, err: null, proc: null };
 
-const st = () => { const s = ctx.store.all(); s.fx = { ...FX_DEF, ...(s.fx || {}) }; s.meter = { ...METER_DEF, ...(s.meter || {}) }; s.in ??= null; s.out ??= null; s.stereo ??= false; s.raw ??= true; s.live ??= true; s.hear ??= false; return s; };
+const st = () => {
+  const s = ctx.store.all();
+  s.fx = { ...FX_DEF, ...(s.fx || {}) };
+  if (!s.chain) { s.chain = normalizeFx(migrateVoiceFx(s.fx)); ['lowcut', 'eq', 'comp', 'reverb'].forEach((k) => delete s.fx[k]); ctx.store.save(); } // настройки до 2026-10 — перенос один раз
+  s.meter = { ...METER_DEF, ...(s.meter || {}) }; s.in ??= null; s.out ??= null; s.stereo ??= false; s.raw ??= true; s.live ??= true; s.hear ??= false; return s; };
 const big = () => size === 'full' || size === 'half';
 const esc = (s) => ctx.ui.esc(s);
 const t = (k, v) => ctx.t(k, v);
@@ -79,7 +85,7 @@ async function liveStart() {
     if (E.native) await E.route(dev ? dev.id : -1);
     const inp = await openInput(c, !E.native && dev ? dev.id : null);
     if (!L || !L.pending) { inp.stop(); c.close(); if (E.native) E.unroute(); return; } // успели закрыть
-    const fx = createLiveFx(c, s.fx), an = c.createAnalyser(), mon = c.createGain();
+    const fx = createLiveFx(c, { chain: s.chain, gain: s.fx.gain }), an = c.createAnalyser(), mon = c.createGain();
     an.fftSize = 2048;
     inp.src.connect(fx.input); fx.output.connect(an); fx.output.connect(mon).connect(c.destination);
     mon.gain.value = s.hear ? 1 : 0;
@@ -100,7 +106,7 @@ async function liveStop() {
   try { await l.c.close(); } catch { /* уже */ }
   if (engine().native) await engine().unroute();
 }
-const liveFx = () => { if (L && L.fx) L.fx.update(st().fx); };
+const liveFx = () => { if (L && L.fx) L.fx.update({ chain: st().chain, gain: st().fx.gain }); };
 const liveHear = () => { if (L && L.mon) L.mon.gain.setTargetAtTime(st().hear ? 1 : 0, L.c.currentTime, 0.03); };
 const liveRestart = async () => { await liveStop(); if (st().live) liveStart(); };
 async function startRec() {
@@ -138,12 +144,12 @@ async function dropTake() {
 /* ---------- обработка и воспроизведение ---------- */
 
 const selSec = () => [S.sel[0] * S.take.sec, S.sel[1] * S.take.sec];
-const fxKey = () => JSON.stringify([st().fx, S.sel]);
+const fxKey = () => JSON.stringify([st().fx, st().chain, S.sel]);
 async function processed() {
   if (S.proc && S.proc.key === fxKey()) return S.proc;
   S.busy = true; render();
   await new Promise((r) => setTimeout(r, 30)); // дать экрану обновиться
-  const out = process(S.take.ch, S.take.sr, { ...st().fx, trim: selSec() }), path = 'proc-' + Date.now() + '.wav';
+  const out = await processVoice(S.take.ch, S.take.sr, { ...st().fx, chain: st().chain, trim: selSec() }), path = 'proc-' + Date.now() + '.wav';
   if (S.proc) engine().remove(S.proc.path);
   await engine().write(path, encodeWav(out, S.take.sr));
   S.proc = { path, key: fxKey(), ch: out, sec: out[0].length / S.take.sr };
@@ -266,105 +272,23 @@ function meterSheet() {
     ctx.store.save(); sh.update(); render();
   }));
 }
+// Пресет эквалайзера подсвечен, если полосы продвинутого вида совпадают с ним (срез низа — первая полоса, не считается)
+const presetOn = (k) => { const a = (st().chain.adv || []).slice(1), b = VOICE_BANDS(EQ_PRESETS[k]); return a.length === b.length && a.every((x, i) => x.type === b[i].type && x.f === b[i].f && x.g === b[i].g && x.on); };
 function fxHTML(pre = false) {
   const f = st().fx, rng = (k, min, max, step, val, label, txt) => '<label class="cellcol vc-fx"><span class="vc-fxh"><span>' + label + '</span><b class="num" id="vfx-' + k + '">' + txt + '</b></span>' +
     '<input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" data-fx="' + k + '" aria-label="' + esc(label) + '"></label>';
-  return '<div class="hdr">' + t(pre ? 'live.title' : 'fx') + '</div><div class="group">' +
-    '<div class="cell"><span class="grow"><span>' + t('fx.lowcut') + '</span><span class="st l2">' + t('fx.lowcutHint') + '</span></span><label class="sw"><input type="checkbox" data-fx="lowcut"' + (f.lowcut ? ' checked' : '') + '><i></i></label></div>' +
-    // эквалайзер: режимы — строкой слов; полосы — точки на кривой, тянутся пальцем вверх-вниз (полосы-ползунки —
-    // для чтения с экрана, невидимы). Касание точки дважды — полоса в ноль
-    '<div class="cellcol vc-eq"><div class="vc-eqh"><span>' + t('fx.eq') + '</span><div class="vc-eqp" role="group" aria-label="' + esc(t('fx.eq')) + '">' + Object.keys(EQ_PRESETS).map((k) =>
-      '<button type="button"' + (JSON.stringify(EQ_PRESETS[k]) === JSON.stringify(f.eq) ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + ' data-eqp="' + k + '">' + t('eq.' + k) + '</button>').join('') + '</div></div>' +
-      '<canvas id="vc-eqc" class="vc-eqc" aria-hidden="true"></canvas><div class="vc-sr">' + EQ_BANDS.map((b, i) =>
-      '<input type="range" min="-12" max="12" step="0.5" value="' + f.eq[i] + '" data-eq="' + i + '" aria-label="' + esc(t('fx.eq') + ' ' + hz(b.f)) + '">').join('') + '</div></div>' +
+  return '<div class="hdr">' + t(pre ? 'live.title' : 'fx') + '</div>' +
+    // пресеты для голоса — строкой слов над общей панелью эффектов (ставят полосы продвинутого эквалайзера)
+    '<div class="vc-eqp" role="group" aria-label="' + esc(t('fx.eq')) + '">' + Object.keys(EQ_PRESETS).map((k) =>
+      '<button type="button"' + (presetOn(k) ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + ' data-eqp="' + k + '">' + t('eq.' + k) + '</button>').join('') + '</div>' +
+    (pm ? pm.html() : '') +
+    '<div class="hdr">' + t('fx.file') + '</div><div class="group">' +
     rng('denoise', 0, 1, 0.05, f.denoise, t('fx.denoise'), fxTxt('denoise', f.denoise)) +
     rng('gate', -90, -25, 1, f.gate, t('fx.gate'), fxTxt('gate', f.gate)) +
-    '<div class="cellcol"><span>' + t('fx.comp') + '</span>' + ctx.ui.seg('vcomp', ['off', 'light', 'mid', 'strong'].map((k) => [k, t('comp.' + k)]), f.comp, t('fx.comp')) + '</div>' +
     rng('gain', -12, 18, 1, f.gain, t('fx.gain'), fxTxt('gain', f.gain)) +
-    '<div class="cell"><span class="grow">' + t('fx.normalize') + '</span><label class="sw"><input type="checkbox" data-fx="normalize"' + (f.normalize ? ' checked' : '') + '><i></i></label></div>' +
-    rng('reverb', 0, 0.6, 0.05, f.reverb, t('fx.reverb'), fxTxt('reverb', f.reverb)) + '</div>' +
+    '<div class="cell"><span class="grow">' + t('fx.normalize') + '</span><label class="sw"><input type="checkbox" data-fx="normalize"' + (f.normalize ? ' checked' : '') + '><i></i></label></div></div>' +
     '<p class="ftr">' + t(pre ? 'live.hint' : 'fxHint') + '</p>';
 }
-const hz = (f) => (f >= 1000 ? f / 1000 + 'k' : String(f));
-const eqTxt = (v) => (v > 0 ? '+' : '') + (+v).toFixed(v % 1 ? 1 : 0);
-// Кривая эквалайзера и точки полос; eqHot — полоса, которую сейчас тянут (с подписью значения)
-let eqHot = -1;
-const EQ_LO = Math.log10(30), EQ_HI = Math.log10(18000), EQ_MAX = 12, EQ_PAD = 18;
-const eqX = (f, W) => ((Math.log10(f) - EQ_LO) / (EQ_HI - EQ_LO)) * W;
-const eqY = (d, H) => H / 2 - (d / EQ_MAX) * (H / 2 - EQ_PAD);
-function drawEq() {
-  const cv = host && host.querySelector('#vc-eqc');
-  if (!cv) return;
-  const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
-  if (!W || !H) return;
-  if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
-  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#9C7242', l3 = cs.getPropertyValue('--l3').trim() || '#ccc',
-    l2 = cs.getPropertyValue('--l2').trim() || '#888', ink = cs.getPropertyValue('--ink').trim() || '#222', cell = cs.getPropertyValue('--cell').trim() || '#fff', gains = st().fx.eq;
-  g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.clearRect(0, 0, W, H);
-  // ноль и деления ±6 дБ — тонко
-  g.fillStyle = l3;
-  g.fillRect(0, Math.round(eqY(0, H)), W, 1);
-  g.globalAlpha = 0.45;
-  [6, -6].forEach((d) => g.fillRect(0, Math.round(eqY(d, H)), W, 1));
-  g.globalAlpha = 1;
-  // кривая и заливка до нуля
-  g.beginPath();
-  for (let i = 0; i <= 160; i++) { const f = Math.pow(10, EQ_LO + ((EQ_HI - EQ_LO) * i) / 160), y = eqY(Math.max(-EQ_MAX - 3, Math.min(EQ_MAX + 3, eqResponse(gains, f))), H); i ? g.lineTo((i / 160) * W, y) : g.moveTo(0, y); }
-  g.strokeStyle = tint; g.lineWidth = 2.5; g.lineJoin = 'round'; g.stroke();
-  g.lineTo(W, eqY(0, H)); g.lineTo(0, eqY(0, H)); g.closePath(); g.globalAlpha = 0.14; g.fillStyle = tint; g.fill(); g.globalAlpha = 1;
-  // точки полос и частоты
-  g.font = '600 11px system-ui, sans-serif'; g.textAlign = 'center';
-  EQ_BANDS.forEach((b, i) => {
-    const x = Math.max(12, Math.min(W - 12, eqX(b.f, W))), y = eqY(gains[i], H), hot = i === eqHot;
-    g.beginPath(); g.arc(x, y, hot ? 11 : 8, 0, Math.PI * 2);
-    g.fillStyle = hot ? tint : cell; g.fill();
-    g.lineWidth = 2.5; g.strokeStyle = tint; g.stroke();
-    g.fillStyle = l2; g.textBaseline = 'bottom'; g.fillText(hz(b.f), x, H - 2);
-    if (hot) { g.fillStyle = ink; g.textBaseline = 'bottom'; g.fillText(eqTxt(gains[i]) + ' ' + t('db'), x, Math.max(14, y - 14)); }
-  });
-}
-// Режим эквалайзера подсвечен, если кривая совпадает с ним
-function markEqPreset() {
-  const cur = JSON.stringify(st().fx.eq);
-  host && host.querySelectorAll('[data-eqp]').forEach((b) => { const on = JSON.stringify(EQ_PRESETS[b.dataset.eqp]) === cur; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
-}
-// Перетаскивание точки полосы: ближайшая по горизонтали; страница при этом не прокручивается (touch-action: none)
-function eqDrag(e, cv) {
-  e.preventDefault();
-  const r = cv.getBoundingClientRect(), W = r.width, H = r.height;
-  let best = 0;
-  EQ_BANDS.forEach((b, i) => { if (Math.abs(eqX(b.f, W) - (e.clientX - r.left)) < Math.abs(eqX(EQ_BANDS[best].f, W) - (e.clientX - r.left))) best = i; });
-  const now = Date.now();
-  // двойное касание той же точки — в ноль
-  if (S.eqTap && S.eqTap.i === best && now - S.eqTap.t < 320) {
-    st().fx.eq = st().fx.eq.slice(); st().fx.eq[best] = 0; S.eqTap = null; eqHot = -1;
-    ctx.store.save(); liveFx(); drawEq(); markEqPreset(); syncEqInputs();
-    return;
-  }
-  S.eqTap = { i: best, t: now };
-  eqHot = best;
-  st().fx.eq = st().fx.eq.slice();
-  let raf = 0;
-  const set = (ev) => {
-    const d = Math.round(((H / 2 - (ev.clientY - r.top)) / (H / 2 - EQ_PAD)) * EQ_MAX * 2) / 2;
-    const v = Math.max(-EQ_MAX, Math.min(EQ_MAX, d));
-    if (st().fx.eq[best] === v) return;
-    st().fx.eq[best] = v;
-    if (!raf) raf = requestAnimationFrame(() => { raf = 0; liveFx(); drawEq(); });
-  };
-  const id = e.pointerId;
-  try { cv.setPointerCapture(id); } catch { /* ignore */ }
-  const move = (ev) => { if (ev.pointerId === id) set(ev); };
-  const up = (ev) => {
-    if (ev.pointerId !== id) return;
-    cv.removeEventListener('pointermove', move); cv.removeEventListener('pointerup', up); cv.removeEventListener('pointercancel', up);
-    eqHot = -1; ctx.store.save(); liveFx(); drawEq(); markEqPreset(); syncEqInputs();
-  };
-  cv.addEventListener('pointermove', move); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-  drawEq();
-}
-function syncEqInputs() { host && host.querySelectorAll('[data-eq]').forEach((inp) => { inp.value = st().fx.eq[+inp.dataset.eq]; }); }
 function fxTxt(k, v) {
   if (k === 'gate') return v <= -90 ? t('off') : v + ' ' + t('db');
   if (k === 'gain') return (v > 0 ? '+' : '') + v + ' ' + t('db');
@@ -412,7 +336,7 @@ function render() {
   if (S.phase === 'idle' && big() && st().live && !L && !S.err) liveStart();
   else if (L && (S.phase !== 'idle' || !big())) liveStop();
   drawWave();
-  drawEq();
+  if (pmb) pmb.mount(); // полотно эквалайзера общей панели — на новом холсте
 }
 
 function drawWave() {
@@ -477,11 +401,14 @@ export default {
       if (sg) {
         const k = sg.closest('[data-seg]').dataset.seg;
         if (k === 'vmode') { stopPlay(); S.mode = sg.dataset.v; render(); }
-        if (k === 'vcomp') { st().fx.comp = sg.dataset.v; ctx.store.save(); liveFx(); render(); }
         return;
       }
       const ep = e.target.closest('[data-eqp]');
-      if (ep) { st().fx.eq = EQ_PRESETS[ep.dataset.eqp].slice(); ctx.store.save(); liveFx(); drawEq(); markEqPreset(); syncEqInputs(); return; }
+      if (ep) { // пресет: полосы голоса в продвинутый вид (срез низа остаётся как был)
+        const ch = st().chain, hp = (ch.adv && ch.adv[0] && ch.adv[0].type === 'highpass') ? ch.adv[0] : { type: 'highpass', f: 80, g: 0, q: 0.7, on: true };
+        st().chain = normalizeFx({ ...ch, mode: 'adv', adv: [hp, ...VOICE_BANDS(EQ_PRESETS[ep.dataset.eqp])] });
+        ctx.store.save(); liveFx(); S.proc = null; render(); return;
+      }
       const x = e.target.closest('[data-x]');
       if (!x || S.busy) return;
       const a = x.dataset.x;
@@ -500,7 +427,6 @@ export default {
       const d = e.target.dataset, s = st();
       if (d.v === 'in' || d.v === 'out') { s[d.v] = e.target.value || null; ctx.store.save(); render(); if (S.phase === 'idle') { S.err = null; liveRestart(); } }
       else if (d.v === 'stereo' || d.v === 'raw') { s[d.v] = e.target.checked; ctx.store.save(); }
-      else if (d.eq != null) { s.fx.eq = s.fx.eq.slice(); s.fx.eq[+d.eq] = +e.target.value; ctx.store.save(); liveFx(); drawEq(); markEqPreset(); }
       else if (d.fx) {
         const v = e.target.type === 'checkbox' ? e.target.checked : +e.target.value;
         s.fx[d.fx] = v; ctx.store.save(); liveFx();
@@ -509,8 +435,6 @@ export default {
     };
     // ручки обрезки: перетаскивание ближайшей
     onPtr = (e) => {
-      const eq = e.target.closest('#vc-eqc');
-      if (eq) { eqDrag(e, eq); return; }
       const cv = e.target.closest('#vc-wave');
       if (!cv || !S.take) return;
       stopPlay();
@@ -524,15 +448,15 @@ export default {
     host.addEventListener('click', onClick);
     host.addEventListener('change', onChange);
     host.addEventListener('pointerdown', onPtr);
-    // эквалайзер: подпись и кривая — пока тянут ползунок
-    // ползунки обработки: подпись, кривая и звук до записи — пока тянут
+    // ползунки обработки: подпись и звук до записи — пока тянут
     onInput = (e) => {
       const d = e.target.dataset;
-      if (d.fx && e.target.type === 'range') { st().fx[d.fx] = +e.target.value; liveFx(); const lb = host.querySelector('#vfx-' + d.fx); if (lb) lb.textContent = fxTxt(d.fx, +e.target.value); return; }
-      const i = d.eq; if (i == null) return;
-      st().fx.eq[+i] = +e.target.value; liveFx(); drawEq();
+      if (d.fx && e.target.type === 'range') { st().fx[d.fx] = +e.target.value; liveFx(); const lb = host.querySelector('#vfx-' + d.fx); if (lb) lb.textContent = fxTxt(d.fx, +e.target.value); }
     };
     host.addEventListener('input', onInput);
+    // общая панель эффектов: правка применяется к живому входу сразу и к записи при обработке; слушатели — на окне один раз
+    pm = ctx.fxPanel({ get: () => st().chain, set: (fx) => { st().chain = normalizeFx(fx); ctx.store.save(); liveFx(); S.proc = null; return st().chain; } });
+    pmb = pm.bind(host, { update: render });
     render();
     loadDevices();
   },
@@ -540,6 +464,7 @@ export default {
   unmount() {
     offs.forEach((f) => f()); offs = [];
     if (host) { host.removeEventListener('click', onClick); host.removeEventListener('change', onChange); host.removeEventListener('pointerdown', onPtr); host.removeEventListener('input', onInput); }
+    pm = null; pmb = null;
     liveStop();
     stopPlay();
     // запись не прерывается молча: остановить и оставить дубль до следующего открытия

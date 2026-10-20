@@ -74,3 +74,23 @@ describe('эквалайзер и спектр', () => {
     expect(Math.max(...s)).toBeGreaterThan(-12);
   });
 });
+
+import { migrateVoiceFx, VOICE_BANDS } from '../src/audio/voicefx.js';
+import { normalizeFx, fxIsFlat } from '../src/audio/fx.js';
+describe('диктофон: старые настройки → общая цепочка', () => {
+  it('полосы, срез, компрессия и реверберация переносятся', () => {
+    const f = normalizeFx(migrateVoiceFx({ lowcut: true, eq: [-3, -2, 0, 2.5, 1.5], comp: 'mid', reverb: 0.2, denoise: 0.5 }));
+    expect(f.mode).toBe('adv');
+    expect(f.adv[0]).toEqual({ type: 'highpass', f: 80, g: 0, q: 0.7, on: true });
+    expect(f.adv.slice(1).map((b) => b.g)).toEqual([-3, -2, 0, 2.5, 1.5]);
+    expect(f.adv.slice(1).map((b) => b.type)).toEqual(['lowshelf', 'peaking', 'peaking', 'peaking', 'highshelf']);
+    expect(f.comp).toBe(0.55); expect(f.rev).toBe(0.2); expect(f.revType).toBe('hall');
+    expect(f.denoise).toBeUndefined();
+  });
+  it('по умолчанию — простой вид, срез низа включён; без настроек всё ровно, кроме среза', () => {
+    const f = normalizeFx(migrateVoiceFx({}));
+    expect(f.mode).toBe(null); expect(f.adv[0].on).toBe(true);
+    expect(fxIsFlat(f)).toBe(true); // простой вид: срез в продвинутом не звучит
+    expect(VOICE_BANDS().length).toBe(5);
+  });
+});

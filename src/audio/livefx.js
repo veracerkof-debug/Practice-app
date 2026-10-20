@@ -1,49 +1,25 @@
-// Обработка в реальном времени (диктофон до записи и мониторинг): те же настройки, что у обработки записи
-// (voicefx.process): срез низа, эквалайзер на 5 полос, компрессия, усиление, реверберация — но узлами Web Audio,
-// чтобы звук было слышно сразу, ещё до записи. Шумоподавление, гейт и нормализация — только при обработке записи.
+// Обработка в реальном времени (диктофон до записи и мониторинг): общая цепочка эффектов приложения (fx.js) и
+// усиление — те же узлы, что при обработке записи (voicefx.processVoice → renderFx), поэтому вживую и в файле звучит
+// одинаково. Шумоподавление, гейт и нормализация — только при обработке записи. Контекст у диктофона свой (малая
+// задержка), пространства реверберации строятся в нём (localSpaces).
 // Вход и выход — свои: открыть вход (deviceId, где браузер умеет выбирать), выход — setSinkId, где он есть.
-import { EQ_BANDS, COMP } from './voicefx.js';
-import { makeIR } from './waves.js';
+import { createFxChain, localSpaces } from './fx.js';
 
-// Цепочка: in → highpass → 5 фильтров → компрессор → усиление → (сухой + реверберация) → out
+// Цепочка: in → эффекты (fx.js) → усиление → out; update({ chain, gain }) — настройки диктофона
 export function createLiveFx(c, fx = {}) {
-  const input = c.createGain(), hp = c.createBiquadFilter(), bands = EQ_BANDS.map((b) => {
-    const f = c.createBiquadFilter();
-    f.type = b.type === 'peak' ? 'peaking' : b.type;
-    f.frequency.value = b.f;
-    if (b.q) f.Q.value = b.q;
-    return f;
-  });
-  const comp = c.createDynamicsCompressor(), gain = c.createGain(), dry = c.createGain(), wet = c.createGain(), output = c.createGain();
-  hp.type = 'highpass'; hp.Q.value = 0.707;
-  let cv = null;
-  try { cv = c.createConvolver(); cv.buffer = makeIR(c, 1.6); } catch { cv = null; }
-  let node = input.connect(hp);
-  bands.forEach((f) => { node = node.connect(f); });
-  node.connect(comp).connect(gain);
-  gain.connect(dry).connect(output);
-  if (cv) gain.connect(cv).connect(wet).connect(output);
-  const set = (p, v) => p.setTargetAtTime(v, c.currentTime, 0.02);
+  const input = c.createGain(), gain = c.createGain(), output = c.createGain();
+  const chain = createFxChain(c, fx.chain, { space: localSpaces(c, gain) });
+  input.connect(chain.input); chain.output.connect(gain).connect(output);
   function update(o = {}) {
-    set(hp.frequency, o.lowcut ? 80 : 10);
-    const eq = o.eq || [];
-    bands.forEach((f, i) => set(f.gain, +eq[i] || 0));
-    const cp = COMP[o.comp];
-    set(comp.threshold, cp ? cp.threshold : 0); set(comp.ratio, cp ? cp.ratio : 1);
-    comp.knee.value = 6; comp.attack.value = 0.01; comp.release.value = 0.15;
-    // усиление (как gain в обработке) плюс небольшая компенсация сжатия
-    const makeup = cp ? Math.min(9, (-cp.threshold * (1 - 1 / cp.ratio)) * 0.5) : 0;
-    set(gain.gain, Math.pow(10, ((+o.gain || 0) + makeup) / 20));
-    const r = Math.max(0, Math.min(1, +o.reverb || 0));
-    set(dry.gain, 1 - r * 0.4); set(wet.gain, cv ? r * 1.6 : 0);
+    chain.set(o.chain);
+    gain.gain.setTargetAtTime(Math.pow(10, (+o.gain || 0) / 20), c.currentTime, 0.02);
   }
   update(fx);
   return {
     input, output, update,
-    disconnect() { [input, hp, ...bands, comp, gain, dry, wet, output, cv].forEach((n) => { try { n && n.disconnect(); } catch { /* уже */ } }); },
+    disconnect() { chain.dispose(); [input, gain, output].forEach((n) => { try { n.disconnect(); } catch { /* уже */ } }); },
   };
 }
-
 // Открыть вход: deviceId — для браузера (на Android вход выбирает система — см. engine.route)
 export async function openInput(c, deviceId) {
   const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };

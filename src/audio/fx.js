@@ -1,6 +1,7 @@
 // Общие эффекты для всего приложения: эквалайзер, сжатие, драйв, тремоло, задержка, хор, реверберация (четыре
 // пространства). Одна и та же цепочка — на каждой шине микшера (клик, пианино, глайдер, пэды, медиа, теория),
-// на каждом слое лупера и на каждой дорожке студии; настраивается каждая отдельно.
+// на каждом слое лупера, на каждой дорожке студии и в диктофоне (вживую и при обработке записи — renderFx);
+// настраивается каждая отдельно.
 // Два вида эквалайзера: простой (три полосы на фиксированных частотах — низ, середина, верх; только усиление) и
 // продвинутый (до 8 полос: срез низа и верха, полки, пики; частота, усиление и ширина у каждой; полосы можно
 // добавлять и убирать). Хранится и то и другое: переключение вида не теряет настроек.
@@ -14,7 +15,8 @@
 // Tone.js — целый фреймворк, weq8 — только эквалайзер), а сами фильтры в браузере те же, что в этих библиотеках.
 // Кривая эквалайзера считается здесь же по формулам RBJ Audio EQ Cookbook — по ним же работает BiquadFilterNode, —
 // чистой функцией, чтобы рисовать и проверять без звука.
-import { sendToSpace, SPACES } from './context.js';
+import { sendToSpace, SPACES, SPACE_DEF } from './context.js';
+import { makeIR } from './waves.js';
 
 export const EQ_TYPES = ['highpass', 'lowshelf', 'peaking', 'highshelf', 'lowpass'];
 export const F_MIN = 20, F_MAX = 20000, G_MAX = 15, Q_MIN = 0.2, Q_MAX = 8, BANDS_MAX = 8;
@@ -127,10 +129,30 @@ export function driveCurve(amount, n = 2048) {
 
 /* ---------- цепочка узлов ---------- */
 
-// Цепочка на контексте c: { input, output, set(fx), fx, dispose() }.
+// Пространства реверберации в своём контексте (диктофон — отдельный контекст с малой задержкой; офлайн-рендер):
+// space(type) → вход пространства, выход — в dest; создаются при первом посыле
+export function localSpaces(c, dest) {
+  const made = {};
+  return (type) => {
+    if (made[type] !== undefined) return made[type];
+    try {
+      const d = SPACE_DEF[type] || SPACE_DEF.hall, cv = c.createConvolver(), hp = c.createBiquadFilter(), lp = c.createBiquadFilter(), g = c.createGain(), inp = c.createGain();
+      cv.buffer = makeIR(c, d.sec, { damp: d.damp, pre: d.pre });
+      hp.type = 'highpass'; hp.frequency.value = d.hp;
+      lp.type = 'lowpass'; lp.frequency.value = Math.min(d.lp, c.sampleRate / 2 - 100);
+      g.gain.value = d.gain;
+      inp.connect(hp).connect(cv).connect(lp).connect(g).connect(dest);
+      made[type] = inp;
+    } catch { made[type] = null; }
+    return made[type];
+  };
+}
+
+// Цепочка на контексте c: { input, output, set(fx), fx, dispose() }. opts.space(type) → узел пространства в этом
+// контексте (по умолчанию — общие пространства приложения, context.js)
 // Вход → 8 фильтров → компрессор → запас → драйв (сухой и насыщенный параллельно) → тремоло → выход; задержка и
 // хор — параллельно от тремоло к выходу (сухой сигнал всегда прямой), реверберация — посылы в общие пространства
-export function createFxChain(c, fx) {
+export function createFxChain(c, fx, { space = null } = {}) {
   const input = c.createGain(), output = c.createGain(), comp = c.createDynamicsCompressor(), trim = c.createGain();
   comp.attack.value = 0.005; comp.release.value = 0.2;
   let cur = normalizeFx(fx), driveLevel = -1;
@@ -163,7 +185,16 @@ export function createFxChain(c, fx) {
   try { lfo.start(); tlfo.start(); } catch { /* */ }
   // реверберация: посыл на каждое пространство (создаётся при первом ненулевом уровне, дальше живёт)
   const sends = {};
-  const send = (type) => sends[type] || (sends[type] = sendToSpace(output, type, 0));
+  const send = (type) => {
+    if (sends[type] !== undefined) return sends[type];
+    if (!space) return (sends[type] = sendToSpace(output, type, 0));
+    const sp = space(type);
+    if (!sp) return (sends[type] = null);
+    const s = c.createGain();
+    s.gain.value = 0;
+    output.connect(s).connect(sp);
+    return (sends[type] = s);
+  };
 
   function apply() {
     const bands = activeBands(cur), isCut = (b) => b.type === 'highpass' || b.type === 'lowpass';
@@ -200,4 +231,32 @@ export function createFxChain(c, fx) {
       [input, output, comp, trim, ws, dry, wet, trem, tlfo, tdepth, dl, fb, damp, dwet, ch, lfo, depth, cwet, ...filters, ...Object.values(sends)].forEach((x) => { try { x && x.disconnect(); } catch { /* */ } });
     },
   };
+}
+
+// Хвост после сигнала, с — чтобы реверберация и задержка дозвучали при офлайн-рендере
+export const fxTailSec = (fx) => {
+  const f = normalizeFx(fx), rev = f.rev > 0 ? { room: 1, hall: 3, plate: 2, cathedral: 7 }[f.revType] : 0, dl = f.delay > 0 ? Math.min(6, f.delayTime * (1 + 4 * f.delayFb) + 1) : 0;
+  return Math.max(rev, dl, 0.05);
+};
+
+// Прогнать каналы (Float32Array[]) через цепочку офлайн — тот же звук, что вживую: OfflineAudioContext с теми же узлами.
+// gainDb — усиление после цепочки. Возвращает каналы той же длины плюс хвост (без тишины в конце). null — нет OfflineAudioContext
+export async function renderFx(ch, sr, fx, gainDb = 0) {
+  const OAC = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext;
+  if (!OAC || !ch.length) return null;
+  const n = ch[0].length, tail = Math.ceil(fxTailSec(fx) * sr), c = new OAC(ch.length, n + tail, sr);
+  const buf = c.createBuffer(ch.length, n, sr);
+  ch.forEach((x, i) => buf.copyToChannel(x, i));
+  const src = c.createBufferSource(), g = c.createGain();
+  src.buffer = buf;
+  g.gain.value = Math.pow(10, gainDb / 20);
+  const chain = createFxChain(c, fx, { space: localSpaces(c, g) });
+  src.connect(chain.input); chain.output.connect(g).connect(c.destination);
+  src.start(0);
+  const out = await c.startRendering();
+  const res = Array.from({ length: out.numberOfChannels }, (_, i) => out.getChannelData(i));
+  // хвост: оставить, пока слышно (−60 дБ), остальное отрезать
+  let end = n;
+  for (let i = n + tail - 1; i >= n; i -= 64) { if (res.some((x) => Math.abs(x[i]) > 0.001)) { end = Math.min(n + tail, i + 64); break; } }
+  return res.map((x) => x.slice(0, end));
 }

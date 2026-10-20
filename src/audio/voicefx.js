@@ -3,6 +3,8 @@
 // без DOM и без AudioContext (тесты — tests/voicefx.test.js). Всё на устройстве.
 import { fft } from '../music/analyze.js';
 
+import { renderFx } from './fx.js';
+
 const dbToLin = (db) => Math.pow(10, db / 20);
 export const linToDb = (x) => (x > 1e-9 ? 20 * Math.log10(x) : -180);
 
@@ -202,6 +204,38 @@ export function reverb(ch, sr, wet = 0.2, size = 1) {
 
 // Цепочка обработки: o = { trim:[a,b], lowcut, denoise, gate, comp: 'off'|'light'|'mid'|'strong', gain, normalize, reverb }
 export const COMP = { light: { threshold: -18, ratio: 2 }, mid: { threshold: -22, ratio: 3.5 }, strong: { threshold: -28, ratio: 6 } };
+
+// Старые настройки диктофона (срез низа, 5 полос, компрессия словом, реверберация) → общая цепочка эффектов (fx.js):
+// полосы — в продвинутый вид на тех же частотах, срез — полоса «срез низа» 80 Гц, компрессия — сила, реверберация — зал
+export const VOICE_BANDS = (g = [0, 0, 0, 0, 0]) => [
+  { type: 'lowshelf', f: 80, g: +g[0] || 0, q: 0.7, on: true }, { type: 'peaking', f: 250, g: +g[1] || 0, q: 1, on: true }, { type: 'peaking', f: 1000, g: +g[2] || 0, q: 1, on: true },
+  { type: 'peaking', f: 3500, g: +g[3] || 0, q: 1, on: true }, { type: 'highshelf', f: 10000, g: +g[4] || 0, q: 0.7, on: true },
+];
+export function migrateVoiceFx(o = {}) {
+  const eq = Array.isArray(o.eq) ? o.eq : [], any = eq.some((g) => g);
+  return {
+    mode: any || o.lowcut === false ? 'adv' : null,
+    adv: [{ type: 'highpass', f: 80, g: 0, q: 0.7, on: o.lowcut !== false }, ...VOICE_BANDS(eq)],
+    comp: { light: 0.3, mid: 0.55, strong: 0.85 }[o.comp] || 0,
+    rev: Math.min(1, Math.max(0, +o.reverb || 0)), revType: 'hall',
+  };
+}
+
+// Обработка на общей цепочке (та же, что звучит вживую до записи): обрезка → шумоподавление → гейт →
+// цепочка эффектов (эквалайзер, сжатие, драйв, тремоло, задержка, хор, реверберация) и усиление → нормализация.
+// Шумоподавление и гейт — до эффектов, чтобы реверберация и задержка не тянули шум. Без OfflineAudioContext (тесты) —
+// старая обработка эквивалентными шагами
+export async function processVoice(ch, sr, o = {}) {
+  let c = ch.map((x) => Float32Array.from(x));
+  if (o.trim) c = trim(c, sr, o.trim[0], o.trim[1]);
+  if (o.denoise > 0) c = denoise(c, sr, o.denoise);
+  if (o.gate != null && o.gate > -90) gateFx(c, sr, o.gate);
+  const r = await renderFx(c, sr, o.chain, +o.gain || 0);
+  if (r) c = r; else if (o.gain) gain(c, o.gain);
+  if (o.normalize) normalize(c, -1);
+  c.forEach((x) => { for (let i = 0; i < x.length; i++) x[i] = Math.max(-1, Math.min(1, x[i])); });
+  return c;
+}
 export function process(ch, sr, o = {}) {
   let c = ch.map((x) => Float32Array.from(x));
   if (o.trim) c = trim(c, sr, o.trim[0], o.trim[1]);
