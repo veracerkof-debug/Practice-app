@@ -1,15 +1,15 @@
-// Аккордовая дорожка в паттерне (ячейка d = { chords }): такты в ряд, в каждом — аккорды (ширина — длительность). Касание пустого места в такте —
+// Аккорды клипа (содержимое d = { bars, chords }): такты куска в ряд, в каждом — аккорды (ширина — длительность). Касание пустого места в такте —
 // выбор аккорда (ступени тональности, остальные — по корню и виду), касание аккорда — сменить, удержание — убрать.
 // Режим дорожки: держать, ритм (по доле), арпеджио (вверх, вниз, туда-обратно; шаг).
-import { setChord, chordAt, removeChord, chordName, diatonicChords, MODES, ARP_DIRS, patBeats } from '../../music/project.js';
+import { setChord, chordAt, removeChord, chordName, diatonicChords, MODES, ARP_DIRS, dataBeats } from '../../music/project.js';
 import { CHORDS } from '../../music/theory.js';
 import { holdMenu } from '../../ui/hold.js';
 
 const NAMES = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 
-export function chordsHTML(ctx, p, pat, tr, d) {
+export function chordsHTML(ctx, p, tr, d) {
   const { t, ui } = ctx, bars = [];
-  for (let b = 0; b < pat.bars; b++) {
+  for (let b = 0; b < d.bars; b++) {
     const t0 = b * p.num, cs = d.chords.filter((c) => c.t >= t0 && c.t < t0 + p.num);
     let cells = '', at = t0;
     cs.forEach((c) => {
@@ -26,7 +26,7 @@ export function chordsHTML(ctx, p, pat, tr, d) {
 }
 
 // Выбор аккорда для доли t длиной dur. done() — после правки
-export function chordPicker(ctx, p, pat, d, t, dur, done) {
+export function chordPicker(ctx, p, d, t, dur, done) {
   const { t: T, ui } = ctx, dia = diatonicChords(p.key), cur = chordAt(d, t);
   let root = cur ? cur.pc : dia[0].pc, type = cur ? cur.type : dia[0].type, len = cur ? cur.d : dur;
   const lens = [[1, '1'], [2, '2'], [p.num, T('ch.bar')], [p.num * 2, '2 ' + T('ch.bars2')]].filter(([v], i, a) => a.findIndex(([x]) => x === v) === i);
@@ -42,19 +42,19 @@ export function chordPicker(ctx, p, pat, d, t, dur, done) {
     else if ((b = e.target.closest('[data-root]'))) { root = +b.dataset.root; sh.update(); }
     else if ((b = e.target.closest('[data-type]'))) { type = b.dataset.type; sh.update(); }
     else if ((b = e.target.closest('[data-seg="sclen"] [data-v]'))) { len = +b.dataset.v; sh.update(); }
-    else if (e.target.closest('[data-ok]')) { setChord(d, t, Math.min(len, patBeats(p, pat) - t), root, type); sh.close(); done(root, type); }
+    else if (e.target.closest('[data-ok]')) { setChord(d, t, Math.min(len, dataBeats(p, d) - t), root, type); sh.close(); done(root, type); }
     else if (e.target.closest('[data-del]')) { if (cur) removeChord(d, cur); sh.close(); done(); }
   }));
 }
 
 // Нажатия в редакторе аккордов. → true, если обработано
-export function chordsAct(ctx, p, pat, tr, d, e, done) {
+export function chordsAct(ctx, p, tr, d, e, done) {
   let b;
   if ((b = e.target.closest('[data-seg="scmode"] [data-v]'))) { tr.mode = b.dataset.v; done(); return true; }
   if ((b = e.target.closest('[data-seg="scdir"] [data-v]'))) { tr.arp.dir = b.dataset.v; done(); return true; }
   if ((b = e.target.closest('[data-seg="scstep"] [data-v]'))) { tr.arp.step = +b.dataset.v; done(); return true; }
-  if ((b = e.target.closest('.scgap'))) { chordPicker(ctx, p, pat, d, +b.dataset.ct, +b.dataset.cd, done); return true; }
-  if ((b = e.target.closest('.scch'))) { const c = chordAt(d, +b.dataset.ct); chordPicker(ctx, p, pat, d, c.t, c.d, done); return true; }
+  if ((b = e.target.closest('.scgap'))) { chordPicker(ctx, p, d, +b.dataset.ct, +b.dataset.cd, done); return true; }
+  if ((b = e.target.closest('.scch'))) { const c = chordAt(d, +b.dataset.ct); chordPicker(ctx, p, d, c.t, c.d, done); return true; }
   return false;
 }
 // Удержание аккорда — убрать

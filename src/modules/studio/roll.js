@@ -1,9 +1,9 @@
-// Пиано-ролл на холсте: слева клавиши (касание — услышать высоту), дальше сетка тактов и долей паттерна по
+// Пиано-ролл на холсте: слева клавиши (касание — услышать высоту), дальше сетка тактов и долей куска клипа по
 // горизонтали, высоты по вертикали, ноты — плашки цвета дорожки.
 // Жесты: касание пустого места — нота (длина — сетка), удержание ноты — убрать, вести ноту — переместить,
 // вести за правый край — длина, вести по пустому — прокрутка, щипок — масштаб по горизонтали.
 // Линия хода — при проигрывании. Без зависимости от модуля: получает проект, паттерн, ячейку и обратные вызовы.
-import { toggleNote, noteAt, moveNote, resizeNote, patBeats, NOTE_LO, NOTE_HI } from '../../music/project.js';
+import { toggleNote, noteAt, moveNote, resizeNote, NOTE_LO, NOTE_HI } from '../../music/project.js';
 import { pinch } from '../../ui/gestures.js';
 const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch { /* нет вибрации */ } };
 
@@ -11,7 +11,7 @@ const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A�
 const BLACK = [1, 3, 6, 8, 10];
 const HOLD_MS = 450, KEYW = 36; // ширина клавиш слева
 
-// host — элемент под холст; get() → { p, pat, d, tr, grid }; on: { change(), audition(m) }
+// host — элемент под холст; get() → { p, total (длина куска в долях), d, tr, grid }; on: { change(), audition(m) }
 export function createRoll(host, get, on) {
   const cv = document.createElement('canvas'), g = cv.getContext('2d');
   cv.className = 'srcv';
@@ -20,7 +20,7 @@ export function createRoll(host, get, on) {
   let W = 0, H = 0, raf = 0, drag = null, holdT = 0, css = null;
   const colors = () => css || (css = (() => { const s = getComputedStyle(host); return { ink: s.getPropertyValue('--ink').trim(), l2: s.getPropertyValue('--l2').trim(), sep: s.getPropertyValue('--sep').trim(), fill: s.getPropertyValue('--fill').trim(), cell: s.getPropertyValue('--cell').trim(), tint: s.getPropertyValue('--tint').trim(), bg: s.getPropertyValue('--bg').trim() }; })());
   const rows = NOTE_HI - NOTE_LO + 1;
-  const total = () => { const { p, pat } = get(); return patBeats(p, pat); };
+  const total = () => get().total;
   const mOfY = (y) => NOTE_HI - Math.floor((y + V.y) / V.rowH);
   const tOfX = (x) => (x - KEYW + V.x) / V.pxb;
   const clampView = () => {

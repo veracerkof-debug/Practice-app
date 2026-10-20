@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { writeMidiTracks } from '../src/music/midi.js';
 import { readMidiSong, readAls, readRpp, readFlp, dawFmt } from '../src/music/daw.js';
-import { newProject, cellOf, toggleNote, toggleStep, projectTracks, projectFromSong, laneOf, instOfProgram } from '../src/music/project.js';
+import { newProject, newData, addClip, clipsOf, toggleNote, toggleStep, projectTracks, projectFromSong, laneOf, instOfProgram } from '../src/music/project.js';
 
 const bass = { t: 0, d: 1, m: 40, v: 0.8 }, hat = { t: 0.5, d: 0.25, m: 42, v: 0.7 };
 
@@ -17,29 +17,29 @@ describe('обмен со студиями', () => {
     expect(s.tracks[1].notes[0]).toMatchObject({ t: 0.5, d: 0.25, m: 42 });
   });
   it('проект → дорожки для DAW: свинг запечён, ударные — ноты GM', () => {
-    const p = newProject({ bpm: 120 }), pat = p.patterns[0];
+    const p = newProject({ bpm: 120 });
     p.swing = 0.6;
-    toggleNote(cellOf(pat, p.tracks[2]), 0.5, 60, 0.5);
-    toggleStep(cellOf(pat, p.tracks[0]), 'snare', 4);
+    toggleNote(addClip(p, p.tracks[2], 0, 4, newData('notes', 1)).data, 0.5, 60, 0.5);
+    toggleStep(addClip(p, p.tracks[0], 0, 4, newData('drums', 1)).data, 'snare', 4);
     const tr = projectTracks(p);
     expect(tr.map((t) => [t.drums, t.program])).toEqual([[true, null], [false, 89], [false, 33]]);
     expect(tr[0].notes[0]).toMatchObject({ t: 1, m: 38 });
     expect(tr[2].notes[0].t).toBeCloseTo(0.5 + 0.2, 6);
     expect(projectTracks(p, { swing: false })[2].notes[0].t).toBe(0.5);
   });
-  it('чужая песня → проект: паттерны кусками, нота через границу делится, ударные — шаги', () => {
+  it('чужая песня → проект: дорожка — клип на всю длину, кусок до 64 тактов, ударные — шаги', () => {
     const song = { name: 'X', bpm: 90, num: 4, den: 4, tracks: [
       { name: 'Keys', drums: false, program: 90, notes: [{ t: 0, d: 2, m: 60, v: 0.8 }, { t: 127, d: 2, m: 64, v: 0.8 }] },
       { name: 'Drums', drums: true, notes: [{ t: 0, d: 0.25, m: 36, v: 0.9 }, { t: 1, d: 0.25, m: 38, v: 0.9 }, { t: 1.5, d: 0.25, m: 46, v: 0.9 }] },
     ] };
     const p = projectFromSong(song);
-    expect([p.bpm, p.name, p.tracks.map((t) => [t.kind, t.inst]), p.patterns.length]).toEqual([90, 'X', [['notes', 'wair'], ['drums', 'piano']], 9]);
-    expect(p.patterns.map((x) => x.bars)).toEqual([4, 4, 4, 4, 4, 4, 4, 4, 1]); // 33 такта кусками по 4
-    expect(p.patterns[0].data[p.tracks[0].id].notes).toEqual([{ t: 0, d: 2, m: 60, v: 0.8 }]);
-    expect(p.patterns[7].data[p.tracks[0].id].notes).toEqual([{ t: 15, d: 1, m: 64, v: 0.8 }]);
-    expect(p.patterns[8].data[p.tracks[0].id].notes).toEqual([{ t: 0, d: 1, m: 64, v: 0.8 }]);
-    expect(p.patterns[0].data[p.tracks[1].id].steps).toEqual({ kick: [0], snare: [4], ohat: [6] });
-    expect(p.song.length).toBe(9);
+    expect([p.bpm, p.name, p.tracks.map((t) => [t.kind, t.inst]), p.clips.length]).toEqual([90, 'X', [['notes', 'wair'], ['drums', 'piano']], 2]);
+    const keys = clipsOf(p, p.tracks[0]), dr = clipsOf(p, p.tracks[1]);
+    expect(keys.map((c) => [c.at, c.len, c.data.bars])).toEqual([[0, 132, 33]]); // 33 такта одним клипом
+    expect(keys[0].data.notes).toEqual([{ t: 0, d: 2, m: 60, v: 0.8 }, { t: 127, d: 2, m: 64, v: 0.8 }]);
+    expect(dr[0].data.steps).toEqual({ kick: [0], snare: [4], ohat: [6] });
+    expect(dr[0].len).toBe(4); // удары до 1,75 доли — один такт
+
     expect(laneOf(null, 'Clap 909')).toBe('clap');
     expect(laneOf(49)).toBe('ohat');
     expect(instOfProgram(35)).toBe('abass');

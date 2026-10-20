@@ -152,6 +152,7 @@ export function makeCtx(app, mod) {
     openTool: (id) => app.openTool && app.openTool(id),
     // инструкция модуля (для вкладок-модулей, у которых нет шапки с «?»)
     help: () => showHelp(app, mod),
+    openMixer: () => { if (app.openMixer) app.openMixer(); }, // шторка микшера (студия: кнопка в транспорте)
     // Настройки другого модуля — только чтение (копия)
     peek: (id) => JSON.parse(JSON.stringify(app.device[id] || {})),
     shared: app.shared,

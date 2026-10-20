@@ -4,7 +4,7 @@
 // сетке 1/16 доли (divisions = 4 на четверть); одновременные ноты — аккорд (<chord/>), пустоты — паузы.
 // У каждой ноты <voice> — без него alphaTab не отрисовывает партию.
 // Чистые функции, без DOM.
-import { songNotes, songBeats, chordName, curPattern, DRUM_MIDI } from './project.js';
+import { songNotes, songBeats, chordName, clipsOf, DRUM_MIDI } from './project.js';
 import { keyLabel } from './transpose.js';
 
 const DIV = 4; // делений на четверть
@@ -99,5 +99,5 @@ export function projectXML(p, { title = '', trackName = (tr, i) => tr.name || 'T
 }
 
 // Подпись аккордов дорожки в текущем паттерне строкой (для названия файла и текста): «C F G Am»
-export const chordLine = (tr, p) => (((curPattern(p).data[tr.id] || {}).chords) || []).map((c) => chordName(c.pc, c.type, p.key.minor)).join(' ');
+export const chordLine = (tr, p) => clipsOf(p, tr).flatMap((cl) => (cl.data.chords || []).map((c) => chordName(c.pc, c.type, p.key.minor))).join(' ');
 export { keyLabel };

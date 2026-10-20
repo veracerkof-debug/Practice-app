@@ -1,49 +1,53 @@
-/* Студия — вкладка по форме FL Studio: полоса транспорта, ряд паттернов, рэк каналов с шагами, плейлист лентой внизу */
-.stwrap{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;container-type:size}
+/* Студия — по форме FL Studio Mobile: плейлист на холсте во всё окно, внизу полоса транспорта; редактор клипа на всё окно */
+.stwrap{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;container-type:size}
 .stlist{flex:1;overflow:auto;min-height:0}
 .sthdr{display:flex;align-items:center;gap:8px;padding:4px 2px 8px}
 .sthdr h2{flex:1;margin:0;font-size:22px}
-/* транспорт */
-.sttop{display:flex;align-items:center;gap:6px;flex:none}
-.stplay{width:46px;height:46px;border-radius:12px;background:var(--tint);color:var(--on-tint);display:grid;place-items:center;flex:none}
-.stplay.on{background:#D9534F}
+/* плейлист */
+.stpl{flex:1;min-height:120px;position:relative;border-radius:14px;overflow:hidden;background:var(--cell);touch-action:none}
+.plcv{display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.stanchor{position:fixed;width:1px;height:1px;pointer-events:none}
+/* транспорт внизу: три группы — проекты и настройки | в начало, играть, темп, клик | отмена и помощь */
+.sttop{display:flex;align-items:center;justify-content:space-between;gap:4px;flex:none;padding:2px 0}
+.stgrp{display:flex;align-items:center;gap:2px}
+.stgrp.mid{gap:4px}
+.stwrap .sttop .ic.sm{width:36px;height:36px;min-width:36px;padding:0;flex:none}
+.sttop .ic svg{width:20px;height:20px}
+.sttop .ic.plain{background:none;color:var(--l2)}
+.sttop .ic.plain.on{color:var(--tint)}
+.sttop .ic[disabled]{opacity:.3}
+.stplay{width:46px;height:46px;border-radius:50%;background:var(--tint);color:var(--on-tint);display:grid;place-items:center;flex:none;box-shadow:0 3px 10px color-mix(in srgb,var(--tint) 40%,transparent)}
+.stplay.on{background:#D9534F;box-shadow:none}
 .stplay svg{width:24px;height:24px}
-.stinfo{flex:1;min-width:0;height:46px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:1fr 1fr;column-gap:8px;align-items:center;text-align:left;padding:2px 10px;border-radius:12px;background:var(--ink);color:var(--bg)}
-.stinfo b{grid-row:1/3;font-size:24px;line-height:1;letter-spacing:-.02em}
-.stinfo span{font-size:11px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:end}
-.stinfo i{font-style:normal;font-size:12px;font-weight:700;opacity:.9;align-self:start}
-.stmode{flex:none;width:66px;height:46px;border-radius:12px;background:var(--fill);display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.01em;color:var(--l2);text-align:left}
-.stmode span{line-height:1.2;border-radius:4px;padding:1px 4px}
-.stmode span:first-child{background:var(--ink);color:var(--bg)}
-.stmode.song span:first-child{background:none;color:inherit}
-.stmode.song span:last-child{background:var(--ink);color:var(--bg)}
-.sttop .ic.on{background:var(--tint);color:var(--on-tint)}
-.sttop .ic[disabled]{opacity:.35}
-/* паттерны */
-.stchips{display:flex;gap:6px;flex:none;height:40px;padding:0 2px;margin:0;scrollbar-width:none;overflow-x:auto;overflow-y:hidden}
-.stpat{flex:none;min-width:44px;min-height:36px;padding:0 10px;border-radius:10px;background:var(--fill);font-weight:700;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
-.stpat small{font-weight:500;font-size:11px;color:var(--l2)}
-.stpat.on{background:var(--tint);color:var(--on-tint)}
-.stpat.on small{color:inherit;opacity:.8}
-.stpat.add{min-width:40px;color:var(--l2)}
-.stpat.add svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-.stpat.sm{min-height:32px;min-width:32px;padding:0 8px;font-size:13px;border-radius:9px}
-.stchips.sm{flex:0 1 auto;max-width:40%}
-.stpat.lifting,.stblk.lifting{transform:scale(1.04);box-shadow:0 6px 18px rgba(0,0,0,.2);z-index:2}
-/* рэк каналов */
-.strack{flex:0 1 auto;max-height:64%;min-height:0;overflow:auto;scrollbar-width:none;border-radius:14px;background:var(--cell);padding:6px}
-.rkbars{display:flex;gap:4px;padding:0 0 6px 118px;overflow:auto;scrollbar-width:none}
-.rkbar{flex:none;min-width:34px;min-height:28px;border-radius:8px;background:var(--fill);font-size:12px;font-weight:700;color:var(--l2)}
+.stinfo{min-width:72px;height:44px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:1fr 1fr;column-gap:5px;align-items:center;text-align:left;padding:2px 8px;border-radius:12px;background:var(--ink);color:var(--bg)}
+.stinfo b{grid-row:1/3;font-size:22px;line-height:1;letter-spacing:-.02em}
+.stinfo span{font-size:10px;opacity:.75;white-space:nowrap;align-self:end}
+.stinfo i{font-style:normal;font-size:11px;font-weight:700;opacity:.9;align-self:start}
+/* редактор клипа */
+.sthead{display:flex;align-items:center;gap:8px;flex:none;min-height:44px}
+.sttrdot{width:12px;height:12px;border-radius:50%;background:var(--c);flex:none}
+.sttitle{flex:1;min-width:0;display:flex;flex-direction:column;text-align:left}
+.sttitle b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sttitle span{font-size:12px;color:var(--l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sthead .seg{width:auto;flex:none}
+.sthead .stepper{flex:none}
+.stroll{flex:1;min-height:120px;position:relative;border-radius:14px;overflow:hidden;background:var(--cell);touch-action:none}
+.srcv{display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.staudio{flex:1;overflow:auto}
+.stcolors{display:flex;gap:10px;padding:8px 16px;flex-wrap:wrap}
+.stcol{width:36px;height:36px;border-radius:50%;background:var(--c)}
+.stcol.on{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--c)}
+.strange{flex:1;min-width:0;height:28px;accent-color:var(--tint)}
+.stproj .bksub{display:block}
+/* шаговый секвенсор ударных */
+.rack{flex:1;min-height:0;overflow:auto;scrollbar-width:none;border-radius:14px;background:var(--cell);padding:8px}
+.rkbars{display:flex;gap:4px;padding:0 0 8px 92px;overflow:auto;scrollbar-width:none}
+.rkbar{flex:none;min-width:36px;min-height:30px;border-radius:8px;background:var(--fill);font-size:12px;font-weight:700;color:var(--l2)}
 .rkbar.on{background:var(--ink);color:var(--bg)}
-.rkrows{display:flex;flex-direction:column;gap:3px}
-.rkrow{display:flex;align-items:stretch;gap:4px;height:40px}
-.rkrow.rk-drum{height:34px}
-.rklight{width:12px;flex:none;border-radius:4px;background:var(--c);opacity:.95;align-self:stretch;margin:6px 0}
-.rklight.off{opacity:.25}
-.rklight.solo{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--c)}
-.rkname{width:98px;flex:none;border-radius:9px;background:color-mix(in srgb,var(--c) 18%,var(--fill));text-align:left;padding:0 8px;overflow:hidden}
+.rkrows{display:flex;flex-direction:column;gap:4px}
+.rkrow{display:flex;align-items:stretch;gap:4px;height:46px}
+.rkname{width:88px;flex:none;border-radius:9px;background:color-mix(in srgb,var(--c) 18%,var(--fill));text-align:left;padding:0 8px;overflow:hidden}
 .rkname b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rkrow.rk-drum:not(.first) .rkname{background:color-mix(in srgb,var(--c) 9%,var(--fill))}
 .rkcells{flex:1;min-width:0;display:grid;grid-template-columns:repeat(var(--n),1fr);gap:3px;touch-action:none}
 .rkcells[hidden]{display:none}
 .rkc{display:block;border-radius:5px;background:var(--fill);min-width:0}
@@ -51,38 +55,7 @@
 .rkcells .rkc:nth-child(4n+1){margin-left:3px}
 .rkcells .rkc:first-child{margin-left:0}
 .rkc.on{background:var(--c)}
-.rkrow.rk-notes .rkc.on,.rkrow.rk-chords .rkc.on{background:color-mix(in srgb,var(--c) 70%,var(--fill))}
 .rkc.now{box-shadow:inset 0 0 0 2px var(--tint)}
-.rkloop{display:flex;align-items:center;padding:0 10px;border-radius:7px;background:color-mix(in srgb,var(--c) 30%,var(--fill));font-size:12px;color:var(--l2);white-space:nowrap;overflow:hidden}
-.stadd{display:flex;flex-wrap:wrap;gap:8px;padding:10px 2px 6px}
-/* плейлист: песня из паттернов лентой, занимает остаток окна */
-.stpl{flex:1;min-height:92px;display:flex;flex-direction:column;gap:4px;border-radius:14px;background:var(--cell);padding:6px}
-.stplhd{display:flex;align-items:center;justify-content:space-between;padding:0 4px;flex:none}
-.stpln{font-size:12px;color:var(--l2);letter-spacing:.04em;text-transform:uppercase}
-.stplsum{font-size:12px;color:var(--l2)}
-.stseq{display:flex;gap:4px;flex:1;min-height:60px;padding:0;scrollbar-width:none;align-items:flex-start}
-.stblk{position:relative;flex:none;height:60px;border-radius:9px;background:color-mix(in srgb,var(--c) 72%,var(--cell));color:#fff;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:5px 8px;overflow:hidden}
-.stblk b{font-size:16px;line-height:1.1}
-.stblk small{font-size:10px;opacity:.8;line-height:1}
-.stblk.now{box-shadow:inset 0 0 0 2px var(--tint)}
-.stplh{position:absolute;left:0;top:0;bottom:0;width:var(--ph,0%);background:rgba(255,255,255,.22);pointer-events:none}
-.stblk:not(.now) .stplh{display:none}
-.stseq .stpat.add{align-self:flex-start;height:60px}
-.stplempty{align-self:center;font-size:12px;color:var(--l2);padding:0 6px;white-space:normal;line-height:1.2}
-/* редактор дорожки */
-.sthead{display:flex;align-items:center;gap:8px;flex:none}
-.sttrdot{width:12px;height:12px;border-radius:50%;background:var(--c);flex:none}
-.sttitle{flex:1;min-width:0;display:flex;flex-direction:column;text-align:left}
-.sttitle b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sttitle span{font-size:12px;color:var(--l2)}
-.sthead .seg{width:auto;flex:none}
-.stroll{flex:1;min-height:120px;position:relative;border-radius:14px;overflow:hidden;background:var(--cell);touch-action:none}
-.srcv{display:block;touch-action:none;user-select:none;-webkit-user-select:none}
-.stcolors{display:flex;gap:10px;padding:8px 16px;flex-wrap:wrap}
-.stcol{width:36px;height:36px;border-radius:50%;background:var(--c)}
-.stcol.on{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--c)}
-.strange{flex:1;min-width:0;height:28px;accent-color:var(--tint)}
-.stproj .bksub{display:block}
 /* аккорды */
 .scwrap{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px}
 .scmode{flex:none;display:flex;flex-direction:column;gap:6px}
@@ -98,6 +71,6 @@
 .scdia .pill small{font-size:10px;opacity:.7;font-family:Georgia,serif}
 @container (min-width: 700px) {
   .rkname{width:150px}
-  .rkbars{padding-left:170px}
-  .rkrow{height:44px}
+  .rkbars{padding-left:154px}
+  .rkrow{height:50px}
 }
