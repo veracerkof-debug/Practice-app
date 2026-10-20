@@ -77,6 +77,8 @@
 :root[data-style="mono"] .hhdr span { text-transform: uppercase; letter-spacing: .2em; font-size: 15px; font-weight: 400; }
 :root[data-style="mono"] .hhdr .link { text-transform: uppercase; letter-spacing: .12em; font-size: 12px; color: var(--l2); }
 :root[data-style="mono"] .ftr, :root[data-style="mono"] .segcap { color: var(--l2); }
+/* только самое нужное: пояснения под группами и подписи сегментов не показываются (сообщения об ошибках — с inline-стилем — остаются) */
+:root[data-style="mono"] .ftr:not([style]), :root[data-style="mono"] .segcap, :root[data-style="mono"] .tcs2 { display: none; }
 
 /* ---------- группы и строки: белые карточки с тонкими разделителями ---------- */
 :root[data-style="mono"] .group { border-radius: 22px; border: 1px solid var(--sep); }

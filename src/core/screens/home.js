@@ -129,23 +129,22 @@ function quoteHTML(app, mono) {
   return '<div class="' + (mono ? 'mvo' : 'hvoice') + (hasMascot() ? '' : ' nomascot') + '" aria-live="polite">' + (hasMascot() ? '<button class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' : '') +
     '<p class="' + (mono ? 'mquote' : 'hquote') + '">' + pleaHTML(app, 'mplea') + esc(hello) + (q.text ? '. ' + esc(q.text) : '!') + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p></div>';
 }
-const mhead = (title, actions = '') => '<div class="mhd"><h2>' + title + '</h2><span class="mact">' + actions + '</span></div>';
+// «Минимал»: только самое нужное — у раздела нет заголовка, остаются действия (справа)
+const mhead = (title, actions = '') => (actions ? '<div class="mhd"><span class="mact">' + actions + '</span></div>' : '');
 
 function homeMonoHTML(app) {
   const st = app.store.state.settings, plain = !!st.toolsOnly, P = {};
   P.voice = '<div class="mvoice">' + quoteHTML(app, true) + '</div>';
   if (!plain) {
     const w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st), today = weekday(Date.now()), WD = weekdays();
-    P.week = mhead(t('home.week'), '<button class="mbtn" data-pp="' + (st.configured ? 'stats' : 'week') + '" aria-label="' + esc(t('home.stats')) + '">' + ARROW + '</button>') +
-      '<button class="mweek" data-pp="' + (st.configured ? 'stats' : 'week') + '"><span class="mbig num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</span>' +
+    P.week = '<button class="mweek" data-pp="' + (st.configured ? 'stats' : 'week') + '"><span class="mbig num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</span>' +
       '<span class="mof num">/ ' + fmtDur(goal) + '</span></button><div class="mline"><i style="width:' + Math.min(100, p * 100) + '%"></i></div>' +
       '<div class="mdays">' + WD.map((d, i) => '<span class="' + (w.per[i] > 0 ? 'done' : st.days[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '">' + d + '</span>').join('') + '</div>';
     if (isOn(st, 'mastery')) {
       // «Минимал»: лиг нет — только камень с дороги, который с часами занятий круглеет (src/ui/stone.js)
-      const all = app.store.sessions(), sec = leagueHours(app) * 3600, wr = wear(sec / 3600);
+      const all = app.store.sessions(), sec = leagueHours(app) * 3600;
       P.league = '<div class="mstone"><canvas data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title') + ', ' + fmtDur(sec)) + '"></canvas>' +
-        '<div class="mstxt"><span class="mslbl">' + t('stone.title') + '</span><span class="msval num">' + fmtDur(sec) + '</span><span class="mslbl">' + esc(t('stone.round', { p: Math.round(roundness(wr) * 100) })) + '</span>' +
-        '<span class="mslbl num">' + esc(kmText(sec / 3600)) + '</span></div></div>' +
+        '<div class="mstxt"><span class="msval num">' + fmtDur(sec) + '</span></div></div>' +
         (isOn(st, 'streak') && streakInfo(all, st).weeks ? '<div class="mtags"><button data-act="streak">' + esc(tn('streak.weeks', streakInfo(all, st).weeks)) + '</button></div>' : '');
     }
   }
@@ -161,7 +160,7 @@ function homeMonoHTML(app) {
     (rec.length ? '<div class="mlist">' + rec.map(({ s, st: ss }) => '<div class="mrow"><button data-song="' + s.id + '"><span class="mt">' + esc(s.title) + '</span>' +
     (!plain && ss.total ? '<span class="mm num">' + fmtDur(ss.total) + '</span>' : s.artist ? '<span class="mm">' + esc(s.artist) + '</span>' : '') + '</button>' +
     '<button class="mplay" data-play="' + s.id + '" aria-label="' + esc(t('home.playSong', { title: s.title })) + '">' + ARROW + '</button></div>').join('') + '</div>'
-    : '<p class="mempty">' + t('mono.noSongs') + '</p>');
+    : '');
   return '<div class="mono-home">' + topbar(logoHTML()) + blocks(st, P) + '</div>';
 }
 

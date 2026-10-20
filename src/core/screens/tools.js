@@ -28,12 +28,12 @@ function renderToolsNow(app, root) {
   const st = app.store.state.settings, T = toolsTab(st), list = T.shown.map(moduleById); // Библия — своя вкладка
   root.innerHTML = '<h1 class="vh">' + t('tools.title') + '</h1><div class="tgrid tgtop">' + list.map((m) => {
     let s2 = '';
-    try { s2 = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ }
+    if (st.uiStyle !== 'mono') { try { s2 = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ } } // «Минимал» — без строк состояния
     return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +
       esc(moduleName(m)) + '</span><span class="tcs2">' + esc(s2) + '</span></span></button>';
   }).join('') + '</div>' +
     (T.off.size ? '<div class="group" style="margin-top:16px"><button class="cell act" data-tools-hidden>' + esc(t('tools.hidden', { n: T.off.size })) + '</button></div>' : '') +
-    '<p class="ftr">' + t('tools.holdHint') + '</p>';
+    (st.uiStyle === 'mono' ? '' : '<p class="ftr">' + t('tools.holdHint') + '</p>');
   root.onclick = (e) => {
     const b = e.target.closest('[data-open-tool]');
     if (b) openToolView(app, b.dataset.openTool, () => renderTools(app, root));
