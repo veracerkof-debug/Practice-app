@@ -36,10 +36,23 @@ export function createMixerDrawer(app) {
     return '<div class="mxf mxm' + (off ? ' mu' : '') + '" style="--c:#646493"><button class="mxi" data-tama aria-pressed="' + !off + '" aria-label="' + esc(t(off ? 'tama.show' : 'tama.hide')) + '">' + mascotSVG(off ? 'sleep' : 'glad', { size: 30 }) + '</button></div>';
   };
   let hadTama = false;
-  const render = () => { hadTama = !!(app.tama && app.tama.here()); el.querySelector('.mxp').innerHTML = SRC.map(fader).join('') + tamaCol(); tick(); };
+  const loadCol = () => '<div class="mxf mxld" role="meter" aria-label="' + esc(t('snd.load')) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="' + esc(t('snd.load')) + '"><span class="mxv num" data-ldv>–</span><div class="mxt mxlt"><b style="height:0"></b></div><span class="mxll">' + esc(t('snd.loadShort')) + '</span></div>';
+  const render = () => { hadTama = !!(app.tama && app.tama.here()); el.querySelector('.mxp').innerHTML = SRC.map(fader).join('') + tamaCol() + loadCol(); tick(); showLoad(); };
+  // нагрузка звука: колонка-измеритель справа; язычок краснеет при перегрузке
+  const showLoad = () => {
+    const m = app.audio.load, col = el.querySelector('.mxld');
+    if (!m) return;
+    const v = m.value, pct = Math.min(150, Math.round(v * 100)), lvl = m.level;
+    el.classList.toggle('overload', lvl === 'high');
+    if (!col) return;
+    col.dataset.lvl = lvl; col.setAttribute('aria-valuenow', pct);
+    col.querySelector('[data-ldv]').textContent = m.ready ? pct : '–';
+    col.querySelector('.mxlt b').style.height = Math.min(100, pct) + '%';
+  };
   const setOpen = (o) => { open = o; el.classList.toggle('open', o); el.querySelector('.mxh').setAttribute('aria-expanded', o); if (o) render(); };
 
   function tick() {
+    showLoad();
     let any = false;
     SRC.forEach(([k]) => {
       const a = mixer.isActive(k);
@@ -119,6 +132,7 @@ export function createMixerDrawer(app) {
   mixer.subscribe(() => { if (!open) return; SRC.forEach(([k]) => { const x = el.querySelector('.mxx[data-fx="' + k + '"]'); if (x) x.classList.toggle('on', mixer.fxActive(k)); }); });
   document.addEventListener('pointerdown', (e) => { if (open && !el.contains(e.target)) setOpen(false); }, true);
   setInterval(tick, 350);
+  { const m = app.audio.load; if (m) m.subscribe(showLoad); }
   app.openMixer = () => setOpen(true);
   return { render };
 }

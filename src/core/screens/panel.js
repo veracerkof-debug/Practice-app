@@ -190,6 +190,8 @@ function weekHTML(app) {
     '<div class="hdr">' + t('snd.title') + '</div><div class="group"><div class="cellcol">' + seg('sndmode', [['fast', t('snd.fast')], ['bal', t('snd.bal')], ['smooth', t('snd.smooth')]], app.audio.mixer.state.mode, t('snd.mode')) + '</div>' +
     '<div class="cellcol">' + seg('sndperf', [['full', t('snd.full')], ['eco', t('snd.eco')]], app.audio.mixer.state.perf, t('snd.perf')) + '</div></div>' +
     '<p class="ftr">' + t('snd.hint') + '</p>' +
+    '<div class="group"><div class="cell"><span class="grow">' + t('snd.load') + '</span><span class="val num" data-sndload style="color:var(--ink)">' + (app.audio.load && app.audio.load.ready ? Math.round(app.audio.load.value * 100) + ' %' : '–') + '</span></div></div>' +
+    '<p class="ftr">' + t('snd.loadHint') + '</p>' +
     '<div class="hdr">' + t('week.days') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" aria-label="' + t('week.days') + '">' +
     WD.map((d, i) => '<button data-day="' + i + '" aria-pressed="' + !!st.days[i] + '">' + d + '</button>').join('') + '</div></div></div>' +
     '<p class="ftr">' + t('week.restHint') + '</p>' +
@@ -462,6 +464,8 @@ function rootHTML(app) {
 
 // Полноэкранная панель профиля; page — 'root' или ключ PAGES
 export function createPanel(app, onChange) {
+  // нагрузка звука в настройках — живая строка, пока она на экране
+  setInterval(() => { const el = document.querySelector('[data-sndload]'); if (!el) return; const m = app.audio.load; if (m && m.ready) el.textContent = Math.round(m.value * 100) + ' %'; }, 1000);
   let page = null, layer = null, input = null, lastPage = null;
   // Смена языка или вида: строки и стили меняются на месте — настройки остаются открытыми на той же странице
   const relang = () => { app.relang(); render(); onChange(); };
@@ -734,5 +738,3 @@ export function legalSheet(kind) {
   }
   sheet(() => body);
 }
-
-

@@ -132,6 +132,16 @@
 .mxx{width:40px;height:28px;border-radius:8px;background:#2C2C2E;color:#8D8D93;display:flex;align-items:center;justify-content:center}
 .mxx.on{background:var(--c);color:#fff}
 .mxx svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+/* измеритель нагрузки звука в микшере: столбик и процент; жёлтый от 70 %, красный от 90 %; язычок краснеет при перегрузке */
+.mxld{width:34px;--c:#5F8568}
+.mxld[data-lvl="warn"]{--c:#C9A227}
+.mxld[data-lvl="high"]{--c:#D9534F}
+.mxld .mxlt{width:34px}
+.mxld .mxlt::before{left:13px}
+.mxld .mxlt b{left:13px;transition:height .3s}
+.mxll{font-size:9px;color:#8D8D93;letter-spacing:.02em}
+#mixd.overload .mxh{background:#7A2E2A}
+#mixd.overload .mxh i{background:#F0A39E}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
 @keyframes blink{50%{opacity:.35}}
 @keyframes mxb{50%{height:4px}}

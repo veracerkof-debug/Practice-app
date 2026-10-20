@@ -34,7 +34,7 @@ import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
 import { toast, confirm } from '../ui/index.js';
-import { startLog } from './log.js';
+import { startLog, log } from './log.js';
 import { createBible } from './reading.js';
 import { APP_VERSION } from './report.js';
 import { crashOffer } from './screens/report.js';
@@ -149,6 +149,7 @@ export function boot(root) {
     return true;
   }
 
+  audio.onLoadLog = (m) => log('audio', m, 'w');
   const app = {
     store, device, audio, modules, pomodoro, stopwatch, sounding: soundingAudio, soundingAudio, files, confirmUpload,
     shared: createShared(),
