@@ -736,6 +736,9 @@ export function legalSheet(kind) {
       lic('ONNX Runtime Web', t('lic.ort.sub'), '<p>© Microsoft Corporation</p><p>' + t('lic.mit') + '</p>') +
       lic('demucs-web', t('lic.dw.sub'), '<p>© timcsy</p><p>' + t('lic.mit') + '</p>') +
       lic('HTDemucs', t('lic.dm.sub'), '<p>© Meta Platforms, Inc. ' + t('lic.andContrib') + '</p><p>' + t('lic.dm.text') + '</p>') +
+      lic('Basic Pitch', t('lic.bp.sub'), '<p>© Spotify AB</p><p>' + t('lic.bp.text') + '</p>') +
+      lic('TensorFlow.js', t('lic.tf.sub'), '<p>© Google LLC</p><p>' + t('lic.tf.text') + '</p>') +
+      lic('@tonejs/midi', t('lic.tm.sub'), '<p>© Yotam Mann</p><p>' + t('lic.mit') + '</p>') +
       lic('sql.js', t('lic.sqljs.sub'), '<p>© sql.js authors; SQLite — public domain</p><p>' + t('lic.mit') + '</p>') +
       lic('Capacitor', t('lic.cap.sub'), '<p>© Ionic ' + t('lic.andContrib') + '</p><p>' + t('lic.cap.text') + '</p>') +
       lic('Tauri', t('lic.tauri.sub'), '<p>© Tauri Programme within The Commons Conservancy</p><p>' + t('lic.tauri.text') + '</p>') +

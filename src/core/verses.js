@@ -227,7 +227,8 @@ export const CORE = {
 // Инструменты (по id модуля) и строки помодоро и секундомера
 export const MODS = { bible: 'lk24_27', metro: 'mt7_2', tuner: 'lk15_25', piano: 'ps150_3', glider: 'co1_14_7', theremin: 'ps89_17', drone: 'rev14_2',
   theory: 'ps89_12', audio: 'ps150_3', ear: 'rom10_17', notes: 'jn7_15', spectrum: 'mt26_5', timer: 'ps89_4', voice: 'deut31_19', looper: 'eccl1_6', studio: 'eph2_10',
-  stems: 'co1_14_7' }; // «Дорожки» — Διαστολή: «если не производят раздельных тонов» (διαστολὴν τοῖς φθόγγοις)
+  stems: 'co1_14_7', // «Дорожки» — Διαστολή: «если не производят раздельных тонов» (διαστολὴν τοῖς φθόγγοις)
+  transcribe: 'deut31_19' }; // «Снять ноты» — Γραφή: «напишите себе слова песни сей» (γράψατε τὰ ῥήματα τῆς ᾠδῆς)
 export const TIMER = { 'set.title': 'ps89_4', 'mode.pomo': 'ps89_4', 'mode.watch': 'num1_2', 'w.label': 'ps89_12',
   'ph.work': 'ps89_17', 'ph.short': 'mt11_29', 'ph.long': 'heb4_9' };
 // Эпиграф помодоро, секундомера и календаря
