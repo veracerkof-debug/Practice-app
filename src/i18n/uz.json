@@ -1539,6 +1539,10 @@
   "snd.eco": "Yengil",
   "snd.hint": "Kechikish: «Ishonchli» — katta bufer, sahnada uzilishsiz (standart); «Past» — klavishlar uchun eng tez javob, kuchsiz qurilmada shitirlashi mumkin. Sifat: «Studiya» — barcha ovozlar, pedlar unisoni, toʻrt reverberatsiya makoni (standart); «Yengil» — kuchsiz qurilmalar uchun: kamroq ovoz, soddaroq pedlar, bitta reverberatsiya, doim katta bufer.",
   "snd.later": "Bufer qayta ishga tushirilgandan keyin qoʻllanadi",
+  "snd.engine": "Havo tovushlari dvigateli",
+  "snd.wl": "Yangi",
+  "snd.nodes": "Avvalgi",
+  "snd.engineHint": "Yangisi pedlar, ibodat klavishlari, glayder va termenvoksni har notaga bitta tugun bilan hisoblaydi (sinov: protsessor uchun uch barobar arzon); avvalgisi — Web Audio tugunlari. Yangi notalarga taalluqli.",
   "snd.load": "Tovush yuklamasi",
   "snd.loadShort": "CPU",
   "snd.loadHint": "Tovush oqimi ajratilgan vaqtning qancha qismini tovush hisobiga sarflaydi: 70 % gacha — zaxira bor, 90 % dan — uzilishlar boʻlishi mumkin (kamroq ovoz, asbob, makon yoki «Yengil» sifat). Xuddi shu oʻlchagich miksher pardasida."

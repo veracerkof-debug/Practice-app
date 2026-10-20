@@ -1574,6 +1574,10 @@
   "snd.eco": "Lite",
   "snd.hint": "Latency: “Safe” — a large buffer, no dropouts on stage (default); “Low” — minimal response for playing keys, may crackle on a weak device. Quality: “Studio” — all voices, pad unison, four reverb spaces (default); “Lite” is for weak devices: fewer voices, simpler pads, one reverb, always a large buffer.",
   "snd.later": "The buffer applies after a restart",
+  "snd.engine": "Air sound engine",
+  "snd.wl": "New",
+  "snd.nodes": "Previous",
+  "snd.engineHint": "The new one computes pads, worship keys, glider and theremin in one node per note (trial: three times cheaper for the CPU); the previous one uses Web Audio nodes. Applies to new notes.",
   "snd.load": "Audio load",
   "snd.loadShort": "CPU",
   "snd.loadHint": "How much of the available time the audio thread spends computing sound: up to 70 % there is headroom, from 90 % dropouts are likely (fewer voices, instruments, spaces, or “Lite” quality). The same meter is in the mixer drawer."

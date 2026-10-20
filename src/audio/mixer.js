@@ -2,7 +2,7 @@
 // Состояние — объект device.mix (как в прототипе: { metro, piano, drone, audio, theory, mode, mute }).
 import { getContext, masterNode, reverbNode, directOut } from './context.js';
 import { createFxChain, normalizeFx, fxIsFlat } from './fx.js';
-import { setPerf, resolvePerf } from './perf.js';
+import { setPerf, resolvePerf, setEngine, ENGINES } from './perf.js';
 
 // Шины по контракту модуля. 'media' хранится в mix под ключом 'audio' (совместимость с прототипом)
 export const BUSES = ['metro', 'piano', 'glider', 'drone', 'media', 'theory'];
@@ -17,6 +17,7 @@ export function normalizeMix(mx) {
   if (!mx.mode) mx.mode = 'smooth';
   if (!mx.v2) { mx.v2 = 1; if (mx.mode === 'bal') mx.mode = 'smooth'; } // 2026-10: надёжность важнее задержки — большой буфер по умолчанию
   if (!['full', 'eco'].includes(mx.perf)) mx.perf = 'full'; // режим качества (perf.js): по умолчанию полный
+  if (!ENGINES.includes(mx.engine)) mx.engine = 'wl'; // движок воздушных голосов: worklet (по умолчанию) или узлы
   if (!mx.fx || typeof mx.fx !== 'object') mx.fx = {}; // эффекты шин (fx.js): ключ — как у громкости
   return mx;
 }
@@ -24,6 +25,7 @@ export function normalizeMix(mx) {
 export function createMixer(mx, { onChange = () => {} } = {}) {
   normalizeMix(mx);
   setPerf(resolvePerf(mx.perf));
+  setEngine(mx.engine);
   const nodes = {}, sends = {}, chains = {}, probes = {}, subs = new Set();
   let saveTm = 0;
   const saveLater = () => { clearTimeout(saveTm); saveTm = setTimeout(() => onChange(mx), 250); }; // правка эффектов — десятки раз в секунду при ведении точки
@@ -104,6 +106,8 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
 
     setPerf(level) { mx.perf = level; setPerf(resolvePerf(level)); onChange(mx); }, // голоса и пэды — сразу, буфер — при следующем запуске
     get perf() { return resolvePerf(mx.perf); },
+    setEngine(e) { mx.engine = ENGINES.includes(e) ? e : 'wl'; setEngine(mx.engine); onChange(mx); }, // новые ноты — сразу
+    get engine() { return mx.engine; },
     setMode(mode) {
       mx.mode = mode; // применится при следующем запуске (контекст уже создан)
       onChange(mx);

@@ -188,7 +188,8 @@ function weekHTML(app) {
     '<p class="ftr">' + t('presence.hint') + '</p>' +
     // звук: буфер (задержка против треска) и режим ресурсов (полный / экономный для слабых телефонов) — src/audio/perf.js
     '<div class="hdr">' + t('snd.title') + '</div><div class="group"><div class="cellcol">' + seg('sndmode', [['fast', t('snd.fast')], ['bal', t('snd.bal')], ['smooth', t('snd.smooth')]], app.audio.mixer.state.mode, t('snd.mode')) + '</div>' +
-    '<div class="cellcol">' + seg('sndperf', [['full', t('snd.full')], ['eco', t('snd.eco')]], app.audio.mixer.state.perf, t('snd.perf')) + '</div></div>' +
+    '<div class="cellcol">' + seg('sndperf', [['full', t('snd.full')], ['eco', t('snd.eco')]], app.audio.mixer.state.perf, t('snd.perf')) + '</div>' +
+    '<div class="cellcol">' + seg('sndengine', [['wl', t('snd.wl')], ['nodes', t('snd.nodes')]], app.audio.mixer.engine, t('snd.engine')) + '<div class="segcap">' + t('snd.engineHint') + '</div></div></div>' +
     '<p class="ftr">' + t('snd.hint') + '</p>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('snd.load') + '</span><span class="val num" data-sndload style="color:var(--ink)">' + (app.audio.load && app.audio.load.ready ? Math.round(app.audio.load.value * 100) + ' %' : '–') + '</span></div></div>' +
     '<p class="ftr">' + t('snd.loadHint') + '</p>' +
@@ -569,6 +570,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-seg="track"] [data-v]'))) { app.store.state.settings.trackMode = b.dataset.v; changed(); return; }
       if ((b = g('[data-seg="sndmode"] [data-v]'))) { app.audio.mixer.setMode(b.dataset.v); toast(t('snd.later')); render(); return; }
       if ((b = g('[data-seg="sndperf"] [data-v]'))) { app.audio.mixer.setPerf(b.dataset.v); toast(t('snd.later')); render(); return; }
+      if ((b = g('[data-seg="sndengine"] [data-v]'))) { app.audio.mixer.setEngine(b.dataset.v); render(); return; }
       if ((b = g('[data-seg="scale"] [data-v]'))) { app.store.state.settings.scale = b.dataset.v; changed(); return; }
       if ((b = g('[data-lang]'))) { app.store.state.settings.lang = b.dataset.lang; app.store.settingsChanged(); relang(); return; }
       if (g('[data-act="demo"]')) {

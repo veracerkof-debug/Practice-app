@@ -2,6 +2,7 @@
 // Создаётся лениво — браузер разрешает звук только после жеста пользователя.
 import { makeIR } from './waves.js';
 import { spaceOf, latencyFor } from './perf.js';
+import { loadAirWorklet } from './airsound.js';
 
 // Режим звука: 'fast' — быстрый отклик, 'bal' — баланс, 'smooth' — без треска
 const LATENCY = { fast: 'interactive', bal: 'balanced', smooth: 'playback' };
@@ -13,6 +14,7 @@ export function getContext(mode = 'bal') {
     const C = globalThis.AudioContext || globalThis.webkitAudioContext;
     if (!C) return null;
     try { ctx = new C({ latencyHint: LATENCY[latencyFor(mode)] || 'balanced' }); } catch { ctx = new C(); }
+    loadAirWorklet(ctx); // движок воздушных голосов (airsound.js) — грузится сразу, ноты до готовности идут узлами
     // Компрессор — только ловить пики, без пережатия: мягкое колено, низкая степень. У компрессора Web Audio есть
     // скрытое усиление (makeup): чем ниже порог, тем сильнее он поднимает всё и упирается в 0 dBFS — отсюда искажения
     // на большой громкости. Порог выше, а после него — запас (trim), чтобы выход не клиппило

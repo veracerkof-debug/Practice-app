@@ -3,7 +3,7 @@
 // драйв без передискретизации. Названия в интерфейсе: задержка «Низкая / Средняя / Надёжная», качество «Студийное / Облегчённое»;
 // по умолчанию всегда студийное (полное), автоподбора нет (autoPerf — только справочно).
 // Читается звуковыми модулями напрямую (без контекста): synth.js, airsound.js, context.js, fx.js.
-export const PERF = { level: 'full' };
+export const PERF = { level: 'full', engine: 'wl' }; // engine: 'wl' — воздушные голоса в AudioWorklet (airsound.js), 'nodes' — узлами Web Audio
 export const LEVELS = ['full', 'eco'];
 
 // Слабый телефон: меньше 4 ГБ памяти (браузер отдаёт округлённо, до 8) или не больше 4 ядер
@@ -14,6 +14,8 @@ export function autoPerf(nav = typeof navigator !== 'undefined' ? navigator : {}
 // Режим по настройке: только явный «облегчённый», всё остальное — полный (автоподбор не применяется: решение автора)
 export const resolvePerf = (want) => (want === 'eco' ? 'eco' : 'full');
 export const setPerf = (level) => { PERF.level = level === 'eco' ? 'eco' : 'full'; };
+export const ENGINES = ['wl', 'nodes'];
+export const setEngine = (e) => { PERF.engine = e === 'nodes' ? 'nodes' : 'wl'; };
 export const eco = () => PERF.level === 'eco';
 export const maxVoices = () => (eco() ? 10 : 22);      // голосов синтезатора
 export const uniCap = (n) => (eco() ? Math.min(n || 1, 1) : n); // унисон пэдов: в экономном — один голос

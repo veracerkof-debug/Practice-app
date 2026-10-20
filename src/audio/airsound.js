@@ -6,7 +6,7 @@
 // Цена: пэд — самый дорогой звук приложения (на один голос — унисон, октава, дыхание). Чтобы четыре источника звучали
 // разом и не захлёбывались: «плавание» — не генератор на каждый голос унисона (это была половина всех генераторов),
 // а автоматизация расстройки; дыхание — моно-шум; когда голосов уже много, новые берутся легче (унисон и мерцание меньше).
-import { uniCap } from './perf.js';
+import { uniCap, PERF } from './perf.js';
 import { partsWave, pinkNoise } from './waves.js';
 
 // Рецепты. parts — гармоники основы; uni — голосов в унисоне, det — их расстройка (центы), drift — «плавание» (центы);
@@ -25,6 +25,37 @@ export const AIR = {
 export const isAir = (k) => !!AIR[k];
 
 const rnd = (a, b) => a + Math.random() * (b - a);
+
+// Движок в AudioWorklet (wl/airvoice.worklet.js): один узел на ноту, весь звук внутри — вместо ~20 узлов.
+// Модуль грузится при создании контекста (context.js); пока не готов или выключен настройкой (perf.js: engine) —
+// голоса строятся узлами, как раньше. Снаружи интерфейс тот же: airVoice → { out, srcs, set }
+const WL = new WeakMap(); // контекст → 'loading' | 'ready' | 'none'
+export function loadAirWorklet(c) {
+  if (!c || !c.audioWorklet || WL.has(c)) return Promise.resolve(WL.get(c) === 'ready');
+  WL.set(c, 'loading');
+  return c.audioWorklet.addModule(new URL('./wl/airvoice.worklet.js', import.meta.url)).then(() => { WL.set(c, 'ready'); return true; }).catch((e) => { WL.set(c, 'none'); WL_ERR.set(c, String(e && e.message || e)); return false; });
+}
+const WL_ERR = new WeakMap();
+export const airWlState = (c) => (WL.get(c) || 'no') + (WL_ERR.get(c) ? ': ' + WL_ERR.get(c) : '');
+export const airEngine = (c) => (PERF.engine === 'wl' && WL.get(c) === 'ready' ? 'wl' : 'nodes');
+function airVoiceWl(c, dest, R, f, t, { width, bright, fade, vibIn, body, uni }) {
+  const n = uniCap(uni ? Math.min(uni, R.uni) : R.uni);
+  const node = new AudioWorkletNode(c, 'melete-airvoice', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { R, f, t, width, bright, fade, body, uni: n } });
+  const freq = node.parameters.get('freq'), vib = node.parameters.get('vib');
+  freq.value = f;
+  if (vibIn) vibIn.connect(vib);
+  node.connect(dest);
+  let stopped = false;
+  const src = { // то, что вызывающие останавливают, как генератор
+    stop(at = c.currentTime) {
+      if (stopped) return; stopped = true;
+      node.port.postMessage({ k: 'stop', t: at });
+      setTimeout(() => { try { node.disconnect(); } catch { /* */ } if (vibIn) { try { vibIn.disconnect(vib); } catch { /* */ } } }, Math.max(0, at - c.currentTime) * 1000 + 120);
+    },
+    disconnect() {}, addEventListener() {}, start() {},
+  };
+  return { out: node, srcs: [src], set(fq, tau = 0.03) { freq.setTargetAtTime(fq, c.currentTime, tau); } };
+}
 
 // Сколько воздушных голосов звучит сейчас (по всему приложению): считаем по концу первого генератора голоса
 let live = 0;
@@ -74,6 +105,7 @@ export const airOf = (kind, mul) => {
     drift: (B.drift || 0) * k('drift'), vib: B.vib && [B.vib[0], B.vib[1] * k('vib'), B.vib[2]], thump: (B.thump || 0) * k('hammer'), pingAmp: 0.55 * k('hammer') };
 };
 export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.5, vibIn = null, body = null, uni = 0, mul = null } = {}) {
+  if (airEngine(c) === 'wl') return airVoiceWl(c, dest, airOf(kind, mul), f, t, { width, bright, fade, vibIn, body, uni });
   const R = airOf(kind, mul), srcs = [], tr = [], tier = tierNow(); // tr — [параметр, множитель частоты, предел]
   const out = c.createGain(), lp = c.createBiquadFilter(), mix = c.createGain();
   lp.type = 'lowpass';
