@@ -14,7 +14,7 @@ export function deviceDefaults() {
     tuner: { a4: 440, tuning: 'g_std', customs: [] },
     ws: { layout: 'F', panes: ['metro', 'tuner', 'drone', 'circle'], focus: 0 },
     wsMap: {}, lastAudio: {}, ear: {}, rh: {}, ui: {},
-    mix: { metro: 1, piano: 0.9, drone: 1, audio: 1, mode: 'smooth', perf: 'auto' },
+    mix: { metro: 1, piano: 0.9, drone: 1, audio: 1, mode: 'smooth', perf: 'full' },
     tab: { scale: 1, prof: 'tab', fs: 15, sec: 'tabs' },
   };
 }

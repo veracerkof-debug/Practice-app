@@ -16,7 +16,7 @@ export function normalizeMix(mx) {
   if (!mx.mute) mx.mute = {};
   if (!mx.mode) mx.mode = 'smooth';
   if (!mx.v2) { mx.v2 = 1; if (mx.mode === 'bal') mx.mode = 'smooth'; } // 2026-10: надёжность важнее задержки — большой буфер по умолчанию
-  if (!['auto', 'full', 'eco'].includes(mx.perf)) mx.perf = 'auto'; // режим ресурсов (perf.js)
+  if (!['full', 'eco'].includes(mx.perf)) mx.perf = 'full'; // режим качества (perf.js): по умолчанию полный
   if (!mx.fx || typeof mx.fx !== 'object') mx.fx = {}; // эффекты шин (fx.js): ключ — как у громкости
   return mx;
 }

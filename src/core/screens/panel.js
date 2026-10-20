@@ -188,8 +188,8 @@ function weekHTML(app) {
     '<p class="ftr">' + t('presence.hint') + '</p>' +
     // звук: буфер (задержка против треска) и режим ресурсов (полный / экономный для слабых телефонов) — src/audio/perf.js
     '<div class="hdr">' + t('snd.title') + '</div><div class="group"><div class="cellcol">' + seg('sndmode', [['fast', t('snd.fast')], ['bal', t('snd.bal')], ['smooth', t('snd.smooth')]], app.audio.mixer.state.mode, t('snd.mode')) + '</div>' +
-    '<div class="cellcol">' + seg('sndperf', [['auto', t('snd.auto')], ['full', t('snd.full')], ['eco', t('snd.eco')]], app.audio.mixer.state.perf, t('snd.perf')) + '</div></div>' +
-    '<p class="ftr">' + t('snd.hint', { now: t(app.audio.mixer.perf === 'eco' ? 'snd.eco' : 'snd.full') }) + '</p>' +
+    '<div class="cellcol">' + seg('sndperf', [['full', t('snd.full')], ['eco', t('snd.eco')]], app.audio.mixer.state.perf, t('snd.perf')) + '</div></div>' +
+    '<p class="ftr">' + t('snd.hint') + '</p>' +
     '<div class="hdr">' + t('week.days') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" aria-label="' + t('week.days') + '">' +
     WD.map((d, i) => '<button data-day="' + i + '" aria-pressed="' + !!st.days[i] + '">' + d + '</button>').join('') + '</div></div></div>' +
     '<p class="ftr">' + t('week.restHint') + '</p>' +
