@@ -62,3 +62,11 @@
 .lpmain.row .lpbtn{width:min(26cqw,110px)}
 .lpmain.row .lplab{display:none}
 .lpmain.row .lptime{min-width:5ch}
+/* окно слоя */
+.lpedit{padding:0 4px}
+.lpeditcv{display:block;width:100%;height:96px;border-radius:12px;touch-action:none}
+.lpnudge{display:flex;align-items:center;justify-content:center;gap:2px;padding:6px 0 2px}
+.lpnudge .lpshv{min-width:72px}
+.lpfxl{width:96px;flex:none;font-size:14px}
+.lpfx{flex:1;min-width:0;height:36px;accent-color:var(--tint)}
+.lpfxv{width:52px;text-align:right;font-size:13px;color:var(--l2);flex:none}

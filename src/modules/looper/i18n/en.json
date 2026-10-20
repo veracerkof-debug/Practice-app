@@ -53,5 +53,15 @@
   "earlier": "Layer 10 ms earlier",
   "later": "Layer 10 ms later",
   "shiftReset": "Layer shift, ms; tap — reset",
-  "help.5": "Reels: four layers as spinning discs with the waveform, lanes with ±1 s shift — line up a headphone take exactly with the loop."
+  "help.5": "Reels: four layers as spinning discs with the waveform, lanes with ±1 s shift — line up a headphone take exactly with the loop.",
+  "layerEdit": "Layer {n}: bounds, shift, sound",
+  "editHint": "Loop window: drag the middle — shift, the corners — trim.",
+  "earlier1": "Layer 1 ms earlier",
+  "later1": "Layer 1 ms later",
+  "fx": "Layer sound",
+  "fx.lo": "Low",
+  "fx.mid": "Mid",
+  "fx.hi": "High",
+  "fx.comp": "Compression",
+  "fx.rev": "Reverb"
 }

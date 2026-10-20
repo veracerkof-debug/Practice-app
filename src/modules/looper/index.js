@@ -65,8 +65,8 @@ function view() {
     ui.icb('data-x="save"', I.save, t('save'), 'sm') + '</div>';
   if (reelsView()) {
     // «Катушки»: четыре кругляша — слои с волной по кругу, крутятся при игре; ниже — те же слои дорожками со сдвигом
-    const reels = '<div class="lpreels">' + Array.from({ length: REELS }, (_, i) => { const L = S.layers[i]; return '<div class="lpreel' + (L ? (L.mute ? ' muted' : '') : ' lpnone') + '" data-li="' + i + '"' + (L ? ' data-x="mute" data-i="' + i + '" role="button" aria-pressed="' + L.mute + '" aria-label="' + ui.esc(t(L.mute ? 'unmute' : 'mute')) + '"' : '') + '><canvas class="lpreelcv"></canvas><span class="lpreeln num">' + (i + 1) + '</span></div>'; }).join('') + '</div>';
-    const lanes = '<div class="lplanes">' + S.layers.map((L, i) => '<div class="lplane' + (L.mute ? ' muted' : '') + '" data-li="' + i + '"><span class="lpnum num">' + (i + 1) + '</span><canvas class="lplanecv" data-i="' + i + '"></canvas>' +
+    const reels = '<div class="lpreels">' + Array.from({ length: REELS }, (_, i) => { const L = S.layers[i]; return '<div class="lpreel' + (L ? (L.mute ? ' muted' : '') : ' lpnone') + '" data-li="' + i + '"' + (L ? ' data-x="edit" data-i="' + i + '" role="button" aria-label="' + ui.esc(t('layerEdit', { n: i + 1 })) + '"' : '') + '><canvas class="lpreelcv"></canvas><span class="lpreeln num">' + (i + 1) + '</span></div>'; }).join('') + '</div>';
+    const lanes = '<div class="lplanes">' + S.layers.map((L, i) => '<div class="lplane' + (L.mute ? ' muted' : '') + '" data-li="' + i + '"><span class="lpnum num">' + (i + 1) + '</span><canvas class="lplanecv" data-x="edit" data-i="' + i + '" role="button" aria-label="' + ui.esc(t('layerEdit', { n: i + 1 })) + '"></canvas>' +
       '<span class="lpshift">' + ui.icb('data-x="shl" data-i="' + i + '"', I.left, t('earlier'), 'sm plain') + '<button class="lpshv num" data-x="sh0" data-i="' + i + '" aria-label="' + ui.esc(t('shiftReset')) + '">' + (L.shift > 0 ? '+' : '') + L.shift + '</button>' + ui.icb('data-x="shr" data-i="' + i + '"', I.right, t('later'), 'sm plain') + '</span></div>').join('') +
       (S.layers.length ? '' : '<div class="lphint l2">' + ui.esc(t(s === 'idle' ? 'hint' : 'hintMore')) + '</div>') + '</div>';
     return '<div class="lpwrap reels ' + size + '">' + reels + lanes + '<div class="lpmain row">' + main + time + slots + '</div>' + bar + '</div>';
@@ -133,6 +133,80 @@ function tick() {
   if (S.state !== 'idle') raf = requestAnimationFrame(tick);
 }
 
+/* ---------- окно слоя: границы и сдвиг рукой, эквалайзер, компрессия, реверберация ---------- */
+
+// Вся запись слоя (с хвостом) лентой; окно петли на ней — вести за середину: сдвиг (мс), за края — обрезка.
+// Ручки ниже: ±1 и ±10 мс; ползунки — низ, середина, верх (дБ), сжатие и реверберация (0…100 %)
+function layerSheet(i) {
+  const { t, ui } = ctx, S0 = lp.state, L0 = S0.layers[i];
+  if (!L0) return;
+  const slider = (k, lab, min, max, step, v, fmtv) => '<div class="cell"><span class="lpfxl">' + ui.esc(lab) + '</span><input type="range" class="lpfx" data-fx="' + k + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v + '" aria-label="' + ui.esc(lab) + '"><b class="num lpfxv" data-fxv="' + k + '">' + fmtv(v) + '</b></div>';
+  const db = (v) => (v > 0 ? '+' : '') + Math.round(v) + ' dB', pc = (v) => Math.round(v * 100) + '%';
+  ui.sheet(() => { const L = lp.state.layers[i]; if (!L) return ui.snav(''); return ui.snav(t('layerN', { n: i + 1 })) +
+    '<div class="lpedit"><canvas class="lpeditcv" aria-label="' + ui.esc(t('editHint')) + '"></canvas><p class="ftr" style="margin:4px 0 0">' + ui.esc(t('editHint')) + '</p>' +
+    '<div class="lpnudge">' + ui.icb('data-nd="-10"', I.left, t('earlier'), 'sm plain') + ui.icb('data-nd="-1"', '−1', t('earlier1'), 'sm plain txt') + '<button class="lpshv num" data-nd="0" aria-label="' + ui.esc(t('shiftReset')) + '">' + (L.shift > 0 ? '+' : '') + L.shift + ' ms</button>' + ui.icb('data-nd="1"', '+1', t('later1'), 'sm plain txt') + ui.icb('data-nd="10"', I.right, t('later'), 'sm plain') + '</div></div>' +
+    '<div class="hdr">' + ui.esc(t('fx')) + '</div><div class="group">' + slider('lo', t('fx.lo'), -12, 12, 1, L.fx.lo, db) + slider('mid', t('fx.mid'), -12, 12, 1, L.fx.mid, db) + slider('hi', t('fx.hi'), -12, 12, 1, L.fx.hi, db) + slider('comp', t('fx.comp'), 0, 1, 0.05, L.fx.comp, pc) + slider('rev', t('fx.rev'), 0, 1, 0.05, L.fx.rev, pc) + '</div>' +
+    '<div class="group" style="margin-top:12px"><button class="cell" data-lmute><span class="grow">' + ui.esc(t(L.mute ? 'unmute' : 'mute')) + '</span></button><button class="cell danger center" data-lrm>' + ui.esc(t('removeLayer')) + '</button></div>'; },
+  (el, sh) => {
+    const cv = el.querySelector('.lpeditcv'), C = colors();
+    let drag = null, live = null; // live: { shift, a, b } во время ведения
+    const geom = () => { const S = lp.state, L = S.layers[i], [w, h] = fit(cv), lenMs = S.len * 1000, mg = L.margin, span = lenMs + 2 * mg; return { S, L, w, h, lenMs, mg, span, x: (ms) => ((ms + mg) / span) * w }; };
+    function draw() {
+      const G = geom(); if (!G.L) return;
+      const { L, w, h, lenMs, mg, x } = G, g = cv.getContext('2d'), sh0 = live ? live.shift : L.shift, a = live ? live.a : L.trim.a, b = live ? live.b : L.trim.b;
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = C.fill; g.fillRect(0, 0, w, h);
+      // запись: от 0 до len+хвост (отрицательный сдвиг берёт конец петли — слева пусто)
+      const N = Math.max(48, Math.floor(w / 3)), pk = lp.fullPeaks(i, N), x0 = x(0), x1 = x(lenMs + mg), bw = (x1 - x0) / N;
+      g.fillStyle = C.l2; g.globalAlpha = 0.5;
+      for (let k = 0; k < N; k++) { const v = pk ? pk[k] : 0, bh = Math.max(2, v * (h - 10)); g.fillRect(x0 + k * bw + bw * 0.2, (h - bh) / 2, bw * 0.6, bh); }
+      g.globalAlpha = 1;
+      // окно петли: [сдвиг, сдвиг + len]; внутри — обрезка a…b
+      const wx0 = x(sh0), wx1 = x(sh0 + lenMs), ta = wx0 + (wx1 - wx0) * a, tb = wx0 + (wx1 - wx0) * b;
+      g.fillStyle = C.tint; g.globalAlpha = 0.18; g.fillRect(wx0, 0, wx1 - wx0, h); g.globalAlpha = 0.32; g.fillRect(ta, 0, tb - ta, h); g.globalAlpha = 1;
+      g.strokeStyle = C.tint; g.lineWidth = 2; g.strokeRect(wx0 + 1, 1, wx1 - wx0 - 2, h - 2);
+      g.fillStyle = C.ink; [ta, tb].forEach((tx, k) => { g.beginPath(); g.moveTo(tx, h); g.lineTo(tx + (k ? -10 : 10), h); g.lineTo(tx, h - 12); g.closePath(); g.fill(); g.fillRect(tx - 1, 0, 2, h); });
+      // ход
+      if (G.S.state === 'play' || G.S.state === 'dub') { const px = wx0 + (wx1 - wx0) * G.S.pos; g.fillStyle = C.red; g.fillRect(px - 1, 0, 2, h); }
+    }
+    const pt = (e) => { const r = cv.getBoundingClientRect(), d = cv.width / r.width; return (e.clientX - r.left) * d; };
+    cv.addEventListener('pointerdown', (e) => {
+      const G = geom(); if (!G.L) return;
+      const { L, w, lenMs, span, x } = G, px = pt(e), wx0 = x(L.shift), wx1 = x(L.shift + lenMs), ta = wx0 + (wx1 - wx0) * L.trim.a, tb = wx0 + (wx1 - wx0) * L.trim.b;
+      const near = (v) => Math.abs(px - v) < 18 * (cv.width / cv.getBoundingClientRect().width);
+      drag = { id: e.pointerId, x0: px, kind: near(ta) ? 'a' : near(tb) ? 'b' : px >= wx0 && px <= wx1 ? 'shift' : null, shift: L.shift, a: L.trim.a, b: L.trim.b, msPx: span / w, win: wx1 - wx0 };
+      if (!drag.kind) { drag = null; return; }
+      cv.setPointerCapture(e.pointerId); e.preventDefault();
+    });
+    cv.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = pt(e) - drag.x0, L = lp.state.layers[i], lim = L.margin;
+      if (drag.kind === 'shift') live = { shift: Math.max(-lim, Math.min(lim, Math.round(drag.shift + dx * drag.msPx))), a: drag.a, b: drag.b };
+      else if (drag.kind === 'a') live = { shift: drag.shift, a: Math.max(0, Math.min(drag.b - 0.02, drag.a + dx / drag.win)), b: drag.b };
+      else live = { shift: drag.shift, a: drag.a, b: Math.max(drag.a + 0.02, Math.min(1, drag.b + dx / drag.win)) };
+      draw();
+    });
+    const up = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag, v = live; drag = null; live = null;
+      if (!v) return;
+      if (d.kind === 'shift') lp.shiftLayer(i, v.shift); else lp.trimLayer(i, v.a, v.b);
+      sh.update();
+    };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    el.addEventListener('input', (e) => { const k = e.target.dataset.fx; if (!k) return; const v = +e.target.value; lp.setFx(i, { [k]: v }); const b = el.querySelector('[data-fxv="' + k + '"]'); if (b) b.textContent = k === 'comp' || k === 'rev' ? pc(v) : db(v); });
+    el.addEventListener('click', (e) => {
+      let b;
+      if ((b = e.target.closest('[data-nd]'))) { const d = +b.dataset.nd, L = lp.state.layers[i]; if (!L) return; lp.shiftLayer(i, d === 0 ? 0 : L.shift + d); sh.update(); }
+      else if (e.target.closest('[data-lmute]')) { lp.toggleMute(i); sh.update(); }
+      else if (e.target.closest('[data-lrm]')) { lp.removeLayer(i); sh.close(); }
+    });
+    let r = 0;
+    const loop = () => { if (!el.isConnected) { cancelAnimationFrame(r); return; } draw(); r = requestAnimationFrame(loop); };
+    loop();
+  }, { onClose: render });
+}
+
 /* ---------- действия ---------- */
 
 const fail = (e) => {
@@ -196,6 +270,7 @@ function act(x, el) {
     case 'shl': lp.shiftLayer(i, (lp.state.layers[i].shift || 0) + SHIFT_STEP); render(); break;
     case 'shr': lp.shiftLayer(i, (lp.state.layers[i].shift || 0) - SHIFT_STEP); render(); break;
     case 'sh0': lp.shiftLayer(i, 0); render(); break;
+    case 'edit': layerSheet(i); break;
   }
 }
 

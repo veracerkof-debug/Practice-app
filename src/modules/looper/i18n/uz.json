@@ -51,5 +51,15 @@
   "earlier": "Qatlam 10 ms oldinga",
   "later": "Qatlam 10 ms keyinga",
   "shiftReset": "Qatlam siljishi, ms; bosish — nolga",
-  "help.5": "Gʻaltaklar: toʻrt qatlam toʻlqinli aylanalar, ±1 s siljishli yoʻlaklar — naushnikdagi yozuvni halqaga aniq moslash."
+  "help.5": "Gʻaltaklar: toʻrt qatlam toʻlqinli aylanalar, ±1 s siljishli yoʻlaklar — naushnikdagi yozuvni halqaga aniq moslash.",
+  "layerEdit": "Qatlam {n}: chegaralar, siljish, tovush",
+  "editHint": "Halqa oynasi: oʻrtasidan surish — siljish, burchaklaridan — kesish.",
+  "earlier1": "Qatlam 1 ms oldinga",
+  "later1": "Qatlam 1 ms keyinga",
+  "fx": "Qatlam tovushi",
+  "fx.lo": "Past",
+  "fx.mid": "Oʻrta",
+  "fx.hi": "Yuqori",
+  "fx.comp": "Siqish",
+  "fx.rev": "Reverberatsiya"
 }

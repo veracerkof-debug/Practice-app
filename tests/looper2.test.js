@@ -15,3 +15,11 @@ describe('лупер: сдвиг слоя и огибающая', () => {
     expect(p[0]).toBe(1); expect(p[3]).toBeCloseTo(0.2, 5);
   });
 });
+import { trimmed } from '../src/audio/looper.js';
+describe('лупер: обрезка', () => {
+  it('вне границ — тишина, края со спадом', () => {
+    const b = new Float32Array(1000).fill(1), t = trimmed(b, 0.2, 0.6, 10);
+    expect(t[100]).toBe(0); expect(t[400]).toBe(1); expect(t[700]).toBe(0); expect(t[200]).toBe(0); expect(t[205]).toBeCloseTo(0.5, 5);
+    expect(trimmed(b, 0, 1)).toBe(b);
+  });
+});
