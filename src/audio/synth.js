@@ -8,7 +8,7 @@ import { getContext, midiFreq, sendToHall } from './context.js';
 import { maxVoices } from './perf.js';
 import { synWave, noiseBuf } from './waves.js';
 import { airVoice } from './airsound.js';
-import { grandBuffer, grandPreload } from './grand.js';
+import { grandBuffer, grandPreload, grandRelease } from './grand.js';
 import { after, cancel } from './clock.js';
 
 // Встроенные пресеты; имена — ключи i18n synth.preset.<id>
@@ -140,10 +140,22 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
   };
 
   // Заглушить один голос (r — время затухания; fast — сразу)
+  // Звук отпускания клавиши (полный набор рояля): тихо, по силе нажатия, пока нота ещё звучала
+  const releaseNoise = (c, vo, t) => {
+    const b = grandRelease(c, vo.m);
+    if (!b || !vo.out) return;
+    try {
+      const src = c.createBufferSource(), g = c.createGain();
+      src.buffer = b; g.gain.value = 0.22 * (0.4 + 0.6 * vo.vel);
+      src.connect(g).connect(vo.out); src.start(t);
+      after(b.duration * 1000 + 100, () => { try { g.disconnect(); } catch { /* */ } });
+    } catch { /* */ }
+  };
   const offOne = (key, fast = false, at = 0) => {
     const vo = voices.get(key), c = vo && vo.g.context;
     if (!vo) return;
     const t = Math.max(c.currentTime, at || 0), r = fast ? 0.02 : vo.rel;
+    if (vo.grand && !fast && vo.g.gain.value > 0.05) releaseNoise(c, vo, t);
     try {
       vo.g.gain.cancelScheduledValues(t);
       vo.g.gain.setValueAtTime(Math.max(vo.g.gain.value, 0.0001), t);
@@ -169,7 +181,8 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     lp.type = 'lowpass';
     lp.Q.value = 0.4;
     lp.frequency.value = Math.min(20000, f * (3 + 70 * Math.pow(s.bright, 1.6) * (0.35 + 0.65 * v)) + 400);
-    const peak = 1.5 * (s.gain || 1) * (0.2 + 0.8 * Math.pow(v, 1.4)); // по громкости — как остальные звуки
+    // по громкости — как остальные звуки; у полного набора слои уже разной громкости — зависимость мягче
+    const peak = sm.layer ? 1.25 * (s.gain || 1) * (0.55 + 0.45 * v) : 1.5 * (s.gain || 1) * (0.2 + 0.8 * Math.pow(v, 1.4));
     g.gain.value = peak;
     let node = src.connect(lp);
     if (c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = Math.max(-0.45, Math.min(0.45, (m - 64) / 50)); node = node.connect(p); }
@@ -177,7 +190,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     src.start(t);
     const life = sm.buf.duration / src.playbackRate.value;
     const vo = { g, os: [src], rel: Math.max(0.03, s.rel), key, bus: busName, held: !!opts.hold, lp, main: [], m, f, kind: 'grand', peak, own: !!opts.patch,
-      opts, sig: sigOf(s), sustain: true, grand: true, vel: v, slot };
+      opts, sig: sigOf(s), sustain: true, grand: true, vel: v, slot, out };
     voices.set(key, vo);
     order.push(key);
     vo.timer = after(life * 1000 + 80, () => { if (voices.get(key) === vo) cleanup(key); });
@@ -198,7 +211,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     const out = slot ? strip(c, slot) : opts.out || bus; // out — свой узел (цепочка эффектов дорожки студии)
     if (kind === 'grand') {
       if (preC !== c) { preC = c; grandPreload(c); } // средние октавы — сразу, остальные — по мере игры
-      const sm = grandBuffer(c, m);
+      const sm = grandBuffer(c, m, opts.vel != null ? opts.vel : 0.3 + 0.65 * knobVal(s, 'touch'));
       if (sm) { grandVoice(c, m, key, opts, s, sm, out, busName, t, f, slot); return; }
       kind = 'piano'; // запись ещё не загрузилась — синтезированное пианино
     }

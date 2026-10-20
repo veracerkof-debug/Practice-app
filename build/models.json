@@ -7,6 +7,18 @@
       "sha256": "e5e425c17683f163a472462eb5f5a4ffcd11c31858d57fbd0833b012d8b88077",
       "bytes": 180534758,
       "what": "HTDemucs v4 (Meta, MIT) в ONNX со встроенными весами — разделение записи на вокал, ударные, бас, остальное (модуль «Дорожки»)"
+    },
+    {
+      "file": "public/models/piano/pack.json",
+      "url": "https://archive.org/download/SalamanderGrandPianoV3/SalamanderGrandPianoV3_OggVorbis.tar.bz2",
+      "sha256": "a55d06f027f52cc45585c402c0318dfe1dbae8e93faa05523aba09d7629364fd",
+      "bytes": 78010482,
+      "extract": {
+        "dir": "public/models/piano",
+        "from": "SalamanderGrandPianoV3_OggVorbis/ogg/",
+        "only": "^([A-G]#?[0-8]v([1-9]|1[0-6])|rel[0-9]+)\\.ogg$"
+      },
+      "what": "Salamander Grand Piano V3 (Alexander Holm, CC BY 3.0), Ogg Vorbis: 30 нот через малую терцию × 16 слоёв силы удара и 88 звуков отпускания — полный рояль (src/audio/grand.js); признак пакета — pack.json"
     }
   ]
 }
