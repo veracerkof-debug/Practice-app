@@ -45,7 +45,7 @@
   `songinfo.js` — поиск песни в MusicBrainz и тональность песни; `songanalyze.js` — темп и тональность по записи (анализ — `src/music/analyze.js`).
   `activity.js` — признаки занятия (касания, звук, микрофон по желанию) и проверки бездействия; `nosound.js` — уведомление «Звука нет».
   `share.js` — обмен с командой: файл `.melete` (песни, табы, сет-лист; формат — `docs/share-format.md`), экраны — `screens/share.js`;
-  `reminders.js` — напоминания о практике (уведомления телефона; лицо маскота — `notifymood.js`, картинки — `build/notifyicons.mjs`), `quotes.js` — слова маскота (стихи, истории музыкантов).
+  `stage.js` — сет-лист и сцена (настройки песен в сет-листе; экран — `screens/stage.js`); `reminders.js` — напоминания о практике (уведомления телефона; лицо маскота — `notifymood.js`, картинки — `build/notifyicons.mjs`), `quotes.js` — слова маскота (стихи, истории музыкантов).
   `folder.js` — папка Melete на устройстве (Data, Media, Tabs, PDF, Lyrics; синхронизация в обе стороны), `foldersync.js` — когда синхронизировать; Android — `FolderPlugin.java`.
   `appicon.js` — иконка приложения на выбор (рисунки — `src/ui/appicons.js`, PNG — `build/appicons.mjs`, Android — `IconPlugin.java` и activity-ярлыки `IconActivities.java`).
   `log.js` — технический журнал на устройстве (3 ч, без личного); `report.js` — отчёт о проблеме (отправляет человек через «Поделиться»).

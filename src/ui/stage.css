@@ -1,0 +1,47 @@
+/* Сцена (src/core/screens/stage.js): всегда тёмная — в зале темно; крупный текст, три большие кнопки внизу */
+.stage{position:fixed;inset:0;z-index:45;background:#0E0E10;color:#F4F1EA;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);user-select:none;-webkit-user-select:none}
+.stage button{color:inherit;-webkit-tap-highlight-color:transparent}
+.sgtop{flex:none;display:flex;align-items:center;gap:6px;padding:8px 8px 6px}
+.sgic{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.07)}
+.sgic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.sgic.txt{font-weight:700;font-size:15px}
+.sghead{flex:1;min-width:0;display:flex;flex-direction:column;padding:0 6px}
+.sghead b{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sghead span{font-size:13px;color:rgba(244,241,234,.6);font-variant-numeric:tabular-nums}
+.sgbeat{flex:none;width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.12);margin:0 6px}
+.sgbeat.on{animation:sgbeat .22s ease-out}
+.sgbeat.on.acc{animation-name:sgbeatacc}
+@keyframes sgbeat{from{background:#E8C27A;transform:scale(1.25)}to{background:rgba(255,255,255,.12);transform:none}}
+@keyframes sgbeatacc{from{background:#F28C6B;transform:scale(1.5)}to{background:rgba(255,255,255,.12);transform:none}}
+.sgtext{flex:1 1 auto;min-height:0;overflow:auto;padding:6px 18px 18px;-webkit-overflow-scrolling:touch;user-select:text;-webkit-user-select:text}
+.sgtext .lyr{white-space:pre;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;line-height:1.5;overflow:visible}
+.sgtext .chd{color:#E8C27A;font-weight:700}
+.sgbig{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:1.6em;font-weight:700;gap:8px}
+.sgbig small{font-size:.5em;font-weight:400;color:rgba(244,241,234,.6)}
+.sgchips{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px}
+.sgchip{min-height:40px;padding:0 14px;border-radius:20px;background:rgba(255,255,255,.07);font-size:15px;font-weight:600;color:rgba(244,241,234,.7);max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sgchip.on{background:#E8C27A;color:#1A1712}
+.sgnext{margin-left:auto;font-size:14px;color:rgba(244,241,234,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50vw}
+.sgbar{flex:none;display:flex;gap:10px;padding:6px 12px 14px}
+.sgbtn{flex:1;min-height:72px;border-radius:20px;background:rgba(255,255,255,.08);display:grid;place-items:center}
+.sgbtn svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.sgbtn.main{flex:1.6;background:#E8C27A;color:#1A1712}
+.sgbtn.main.on{background:#F28C6B}
+.sgbtn:disabled{opacity:.3}
+.sgbtn:active{transform:scale(.97)}
+/* горизонтально — кнопки справа столбцом, текст шире */
+@media (orientation:landscape) and (max-height:520px){
+  .stage{display:grid;grid-template-columns:1fr 132px;grid-template-rows:auto 1fr auto}
+  .sgtop{grid-column:1/-1}
+  .sgtext{grid-column:1}
+  .sgchips{grid-column:1;padding-top:2px}
+  .sgbar{grid-column:2;grid-row:2/4;flex-direction:column;padding:0 10px 10px 0}
+  .sgbtn{min-height:0}
+}
+/* в настройке сет-листа */
+.sgrow{gap:6px}
+.sgn{width:22px;color:var(--l2);text-align:center;flex:none}
+.sgitem{text-align:left;display:flex;flex-direction:column;min-width:0;padding:2px 0}
+.sgitem b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sgv{min-width:3ch;text-align:center;display:inline-block}

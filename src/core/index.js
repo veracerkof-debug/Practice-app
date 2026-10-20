@@ -239,6 +239,8 @@ export function boot(root) {
   initNoSound(app);
   // Сессия, начатая до перезагрузки страницы, продолжается
   session.resume();
+  // Сцена, открытая до сбоя или перезапуска, — снова на той же песне (файлы минусовок читаются из базы)
+  if (localStorage.getItem('melete.stage')) files.ready.then(() => import('./screens/stage.js')).then((m) => m.resumeStage(app)).catch(() => {});
   // «Назад» на Android закрывает открытое по очереди, а не всё приложение
   initBack(app);
   // Статус медиатеки и табов зависит от файлов, которые читаются из базы асинхронно
