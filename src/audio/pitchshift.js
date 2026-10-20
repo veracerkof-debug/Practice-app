@@ -1,4 +1,4 @@
-// Тональность записи без изменения скорости (медиатека: аудио и видео) — Signalsmith Stretch (MIT, WebAssembly
+// Тональность видео без изменения скорости (медиатека; звук идёт движком stretchplayer.js) — Signalsmith Stretch (MIT, WebAssembly
 // в AudioWorklet, без сети). Звук элемента <audio>/<video> идёт: элемент → сдвиг высоты → шина медиатеки.
 // Пока сдвиг 0 — узел обходится (звук без обработки и без задержки). Граф создаётся при первом сдвиге: элемент,
 // однажды подключённый к Web Audio, дальше звучит только через него — поэтому граф живёт, пока жив элемент.
@@ -19,7 +19,7 @@ export async function pitchShifter(el, dest) {
   }));
   g = {
     // полутоны и центы; 0 — обход
-    async set(semi = 0, cents = 0) {
+    async set(semi = 0, cents = 0, { formant = false } = {}) {
       const s = (+semi || 0) + (+cents || 0) / 100;
       cur = s;
       if (Math.abs(s) < 0.005) {
@@ -30,7 +30,7 @@ export async function pitchShifter(el, dest) {
       }
       const n = await load();
       if (cur !== s) return; // пока грузилось, сдвиг сменили
-      n.schedule({ semitones: s, formantCompensation: true });
+      n.schedule({ semitones: s, formantCompensation: !!formant });
       try { src.disconnect(dry); } catch { /* уже */ }
       try { src.disconnect(n); } catch { /* не был */ }
       src.connect(n);

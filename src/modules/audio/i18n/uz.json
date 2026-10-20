@@ -120,6 +120,8 @@
   "key.cents": "Sentlar — yozuv sozlamasiga moslash",
   "key.fromSong": "Qoʻshiq matnidagidek: {n}",
   "key.reset": "Siljitishsiz",
+  "key.formant": "Formantlarni saqlash",
+  "key.formantHint": "Ovoz uchun: tembr oʻzgarmaydi. Musiqada oʻchiring: aslining «sharpasi» eshitiladi",
   "key.hint": "Balandlik oʻzgaradi, tezlik — yoʻq. ±3 yarim tongacha deyarli sezilmaydi; katta siljishda ovoz biroz boshqacha eshitiladi.",
   "key.down": "Yarim ton pastga",
   "key.up": "Yarim ton yuqoriga",

@@ -121,6 +121,8 @@
   "key.cents": "Cents — match the recording’s tuning",
   "key.fromSong": "As in the song text: {n}",
   "key.reset": "No shift",
+  "key.formant": "Keep formants",
+  "key.formantHint": "For a voice: the timbre stays natural. Turn off for music: a “ghost” of the original is audible",
   "key.hint": "Pitch changes, speed does not. Up to ±3 semitones is nearly transparent; voices sound a little different on larger shifts.",
   "key.down": "Down a semitone",
   "key.up": "Up a semitone",

@@ -9,6 +9,7 @@ import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { fileSongs, inSong, linkSong } from '../../core/files.js';
 import { pitchShifter } from '../../audio/pitchshift.js';
+import { createStretchPlayer, stretchAvailable } from '../../audio/stretchplayer.js';
 import { fmtDur } from '../../core/format.js';
 import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
 
@@ -34,7 +35,10 @@ const MB = 1048576;
 
 /* ---------- плеер (один на приложение, играет и при закрытом окне) ---------- */
 
-const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0 };
+const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0, eng: null, engOn: false, engFor: null };
+// Что играет сейчас: звук — движок Signalsmith (src/audio/stretchplayer.js: скорость и тональность одним алгоритмом,
+// без <audio>-элемента), видео — элемент. Интерфейс у обоих как у медиа-элемента
+const pl = () => (AU.engOn ? AU.eng : AU.el);
 const ML = { q: '', sort: 'date', f: 'all', view: 'lib', sel: null }; // sel — выбранные файлы (Set id) в режиме выбора
 let dropped = null; // файлы, перетащенные в окно до того, как модуль открылся (src/core/drop.js)
 let host = null, ctx = null, size = 'full', input = null, uiTimer = 0, offs = [], app = null;
@@ -48,14 +52,16 @@ const style = () => (st().style === 'vinyl' && !ctx.mono ? 'vinyl' : 'wave'); //
 // Тональность записи (src/audio/pitchshift.js): у каждой записи своя — settings.pitch[id] = [полутоны, центы]
 const pitchOf = (t) => (t && (st().pitch || {})[t.id]) || [0, 0];
 const keyTxt = () => { const [p, c] = pitchOf(AU.cur); return p || c ? (p > 0 ? '+' : p < 0 ? '−' : '±') + Math.abs(p) + (c ? (c > 0 ? ' +' : ' −') + Math.abs(c) + '¢' : '') : '0'; };
+const formantOn = () => !!st().formant; // сохранять форманты (голос) — по умолчанию нет: на музыке слышен «призрак» оригинала
 async function applyPitch() {
   const [p, c] = pitchOf(AU.cur);
+  if (AU.engOn) { AU.eng.setPitch(p, c, formantOn()); return; }
   if (!AU.shift && !p && !c) return; // пока сдвига не было — звук идёт напрямую, без Web Audio
   if (!ctx.audio.unlock()) return;
   const dest = ctx.audio.bus('media');
   if (!AU.shift) { AU.shift = await pitchShifter(AU.el, dest); AU.el.volume = 1; } // громкость — у шины медиатеки
   try { if (dest.context.state !== 'running') await dest.context.resume(); } catch { /* по жесту */ }
-  await AU.shift.set(p, c);
+  await AU.shift.set(p, c, { formant: formantOn() });
 }
 function setPitch(p, c) {
   if (!AU.cur) return;
@@ -88,7 +94,9 @@ function keySheet() {
       '<div class="cellcol"><span>' + t('key.cents') + '</span>' + cents + '</div></div>' +
       '<div class="hdr">' + t('key.byRec') + '</div><div class="group"><div class="cellcol">' + det + '</div>' +
       (song && song.tr ? '<button class="cell act" data-ktr>' + t('key.fromSong', { n: sgn(song.tr) }) + '</button>' : '') +
-      '<button class="cell act" data-k0>' + t('key.reset') + '</button></div><p class="ftr">' + t('key.hint') + '</p>';
+      '<button class="cell act" data-k0>' + t('key.reset') + '</button></div>' +
+      '<div class="group"><button class="cell act" data-kform aria-pressed="' + formantOn() + '"><span class="grow">' + t('key.formant') + '<span class="bksub">' + t('key.formantHint') + '</span></span><span class="val">' + (formantOn() ? '✓' : '') + '</span></button></div>' +
+      '<p class="ftr">' + t('key.hint') + '</p>';
   };
   const center = (el) => { const r = el.querySelector('#kruler'), on = r && r.querySelector('[aria-pressed="true"]'); if (on) r.scrollLeft += on.getBoundingClientRect().left - r.getBoundingClientRect().left - (r.clientWidth - on.offsetWidth) / 2; };
   ui.sheet(body, (el, sh) => {
@@ -108,8 +116,9 @@ function keySheet() {
       const kv = el.querySelector('#kcv'); if (kv) kv.textContent = sgn(v) + '¢';
     });
     el.addEventListener('click', (e) => {
-      const [p, c] = pitchOf(tr), b = e.target.closest('[data-ks], [data-kcs], [data-ktr], [data-k0], [data-ktune]');
+      const [p, c] = pitchOf(tr), b = e.target.closest('[data-ks], [data-kcs], [data-ktr], [data-k0], [data-ktune], [data-kform]');
       if (!b) return;
+      if (b.hasAttribute('data-kform')) { st().formant = !formantOn(); ctx.store.save(); applyPitch().catch(() => {}); upd(); return; }
       if (b.dataset.ks != null) setPitch(+b.dataset.ks, c);
       else if (b.dataset.kcs != null) setPitch(p, c + +b.dataset.kcs);
       else if (b.hasAttribute('data-ktr')) setPitch(song.tr, c);
@@ -131,6 +140,41 @@ function holder() {
   return h;
 }
 const park = () => { if (AU.el && AU.el.parentNode !== holder()) holder().appendChild(AU.el); };
+
+// Одни обработчики на элемент и на движок
+const PLAY_EV = {
+  play: () => { loopStart(); if (document.querySelector('.mlist') && !document.activeElement?.hasAttribute?.('data-mlq')) render(); },
+  pause: () => { if (document.querySelector('.mlist') && !document.activeElement?.hasAttribute?.('data-mlq')) render(); },
+  ended: () => { if (host && host.querySelector('#vdisc') && !AU.loop) { try { pl().currentTime = 0; } catch { /* ignore */ } } },
+};
+// Движок звука: создаётся один раз, когда есть контекст (после первого жеста); запись t загружается в него.
+// Не вышло (нет AudioWorklet, не раскодировалось) — запись идёт элементом
+async function engineLoad(t) {
+  if (!stretchAvailable() || !ctx.audio.unlock()) return false;
+  try {
+    if (!AU.eng) {
+      const dest = ctx.audio.bus('media');
+      AU.eng = await createStretchPlayer(dest.context, dest);
+      ['play', 'pause', 'ended'].forEach((k) => AU.eng.addEventListener(k, PLAY_EV[k]));
+      AU.eng.addEventListener('loadedmetadata', () => { const x = AU.cur; if (x && !x.dur && AU.eng.duration) { x.dur = AU.eng.duration; ctx.files.save(x); } render(); });
+    }
+    AU.engFor = t;
+    await AU.eng.load(t.blob);
+    if (AU.engFor !== t || AU.cur !== t) return false; // пока грузили — выбрали другое
+    AU.eng.playbackRate = AU.rate;
+    AU.engOn = true;
+    try { if (!AU.el.paused) AU.el.pause(); AU.el.removeAttribute('src'); AU.el.load(); } catch { /* */ }
+    applyPitch().catch(() => {});
+    return true;
+  } catch (e) { ctx.logErr(e); return false; }
+}
+// Звук — в движок (сразу или при первом воспроизведении, когда появится контекст); видео — элемент
+async function routeTrack(t) {
+  if (isVideo(t) || !stretchAvailable()) return false;
+  if (await engineLoad(t)) return true;
+  if (AU.cur === t && !AU.el.getAttribute('src')) { AU.el.src = AU.url; AU.el.playbackRate = AU.rate; } // запасной путь — элемент
+  return false;
+}
 
 function ensureEl(c) {
   if (AU.el) return;
@@ -154,22 +198,20 @@ function ensureEl(c) {
   AU.el.addEventListener('fullscreenchange', () => { AU.el.controls = document.fullscreenElement === AU.el; if (!AU.el.controls) render(); });
   AU.el.addEventListener('webkitendfullscreen', () => render());
   AU.el.addEventListener('error', () => { if (AU.cur && ctx) ctx.ui.toast(ctx.t('cantPlay')); });
-  AU.el.addEventListener('play', () => { loopStart(); if (document.querySelector('.mlist') && !document.activeElement?.hasAttribute?.('data-mlq')) render(); });
-  AU.el.addEventListener('pause', () => { if (document.querySelector('.mlist') && !document.activeElement?.hasAttribute?.('data-mlq')) render(); });
-  AU.el.addEventListener('ended', () => { if (host && host.querySelector('#vdisc') && !AU.loop) { try { AU.el.currentTime = 0; } catch { /* ignore */ } } });
+  ['play', 'pause', 'ended'].forEach((k) => AU.el.addEventListener(k, PLAY_EV[k]));
   const vol = () => { AU.el.volume = AU.shift ? 1 : c.audio.mixer.elementVolume('media'); };
   vol();
   c.audio.mixer.subscribe(vol);
-  c.audio.mixer.probe('media', () => !!(AU.cur && !AU.el.paused));
+  c.audio.mixer.probe('media', () => !!(AU.cur && !pl().paused));
 }
 
 // Повтор A–B и тренер темпа, пока идёт воспроизведение
 function loopStart() {
   if (AU.raf) return;
   const tick = () => {
-    if (AU.el.paused) { AU.raf = 0; return; }
-    if (AU.loop && AU.b != null && AU.el.currentTime >= AU.b) {
-      AU.el.currentTime = AU.a || 0;
+    if (pl().paused) { AU.raf = 0; return; }
+    if (AU.loop && AU.b != null && pl().currentTime >= AU.b) {
+      pl().currentTime = AU.a || 0;
       if (AU.step && AU.rate < 1) {
         setRate(Math.min(1, AU.rate + 0.05));
         const rv = host && host.querySelector('#ratev');
@@ -189,21 +231,33 @@ function load(t) {
   if (AU.url) URL.revokeObjectURL(AU.url);
   AU.cur = t;
   AU.url = URL.createObjectURL(t.blob);
-  AU.el.src = AU.url;
+  if (AU.engOn) { AU.engOn = false; try { AU.eng.pause(); } catch { /* */ } }
   AU.el.defaultPlaybackRate = AU.rate;
   AU.el.playbackRate = AU.rate;
   AU.a = AU.b = null;
   AU.loop = false;
-  applyPitch().catch(() => {});
+  const viaEngine = !isVideo(t) && stretchAvailable() && ctx.audio.ready();
+  if (!viaEngine) AU.el.src = AU.url; // видео, нет движка или контекста ещё нет (до первого жеста): элемент, движок — при первом воспроизведении
+  if (!isVideo(t) && stretchAvailable()) routeTrack(t).then(() => render()).catch(() => {});
+  else applyPitch().catch(() => {});
 }
 
 function setRate(r) {
   AU.rate = Math.max(0.5, Math.min(1.5, Math.round(r * 100) / 100));
   AU.el.defaultPlaybackRate = AU.rate;
   AU.el.playbackRate = AU.rate;
+  if (AU.eng) AU.eng.playbackRate = AU.rate;
 }
 
-const playEl = () => { if (AU.shift) applyPitch().catch(() => {}); return AU.el.play().catch(() => ctx.ui.toast(ctx.t('cantPlay'))); };
+const playEl = async () => {
+  const t = AU.cur;
+  if (t && !AU.engOn && !isVideo(t) && stretchAvailable() && AU.engFor !== t) { // контекста не было при выборе — теперь жест есть
+    const at = AU.el.currentTime || 0;
+    if (await routeTrack(t)) { if (at) AU.eng.currentTime = at; }
+  }
+  if (AU.shift && !AU.engOn) applyPitch().catch(() => {});
+  return pl().play().catch(() => ctx.ui.toast(ctx.t('cantPlay')));
+};
 
 // Выбранный в этом месте файл (свободная практика или песня) ждёт готовым
 function autoAudio() {
@@ -212,7 +266,7 @@ function autoAudio() {
   const lid = (st().last || {})[audKey()], list = tracks();
   let t = list.find((x) => x.id === lid && (!sid || inSong(x, sid)));
   if (!t && sid) t = list.find((x) => inSong(x, sid));
-  if (t && t !== AU.cur) { try { if (!AU.el.paused) AU.el.pause(); } catch { /* ignore */ } load(t); }
+  if (t && t !== AU.cur) { try { if (!pl().paused) pl().pause(); } catch { /* ignore */ } load(t); }
 }
 
 /* ---------- волна ---------- */
@@ -253,7 +307,7 @@ async function queuePeaks() {
 }
 
 function wformHTML(cls) {
-  const t = AU.cur, d = AU.el.duration || 0, { t: tr } = ctx;
+  const t = AU.cur, d = pl().duration || 0, { t: tr } = ctx;
   if (!t.peaks) { computePeaks(t); return '<div class="wform ' + cls + ' wait" id="wform"><span class="l2">' + tr('waveWait') + '</span><i class="wfhead" id="wfhead"></i></div>'; }
   const flat = !t.peaks.length, pk = flat ? Array(120).fill(0.15) : t.peaks, N = pk.length;
   let p = '';
@@ -261,13 +315,13 @@ function wformHTML(cls) {
   const ax = d && AU.a != null ? (AU.a / d) * N : null, bx = d && AU.b != null ? (AU.b / d) * N : null;
   const mk = d ? (t.marks || []).map((m, i) => '<i class="wfm" style="left:' + (m.t / d) * 100 + '%"><b>' + (i + 1) + '</b></i>').join('') : '';
   return '<div class="wform ' + cls + (flat ? ' flat' : '') + '" id="wform" role="slider" tabindex="0" aria-label="' + tr('waveAria') + '" aria-valuemin="0" aria-valuemax="' + Math.round(d) +
-    '" aria-valuenow="' + Math.round(AU.el.currentTime) + '"><svg viewBox="0 0 ' + N + ' 100" preserveAspectRatio="none" aria-hidden="true"><defs><clipPath id="wfc"><rect id="wfclip" x="0" y="0" width="' +
-    (d ? (AU.el.currentTime / d) * N : 0) + '" height="100"/></clipPath></defs>' +
+    '" aria-valuenow="' + Math.round(pl().currentTime) + '"><svg viewBox="0 0 ' + N + ' 100" preserveAspectRatio="none" aria-hidden="true"><defs><clipPath id="wfc"><rect id="wfclip" x="0" y="0" width="' +
+    (d ? (pl().currentTime / d) * N : 0) + '" height="100"/></clipPath></defs>' +
     (ax != null ? '<rect class="wfloop" x="' + ax + '" y="0" width="' + ((bx != null ? bx : ax + 0.6) - ax) + '" height="100"/>' : '') +
     '<path class="wfbase" d="' + p + '"/><path class="wfplayed" d="' + p + '" clip-path="url(#wfc)"/></svg>' +
     (ax != null ? '<i class="wfh a" data-h="a" style="left:' + (ax / N) * 100 + '%"><b>A</b></i>' : '') +
     (bx != null ? '<i class="wfh b" data-h="b" style="left:' + (bx / N) * 100 + '%"><b>B</b></i>' : '') + mk +
-    '<i class="wfhead" id="wfhead" style="left:' + (d ? (AU.el.currentTime / d) * 100 : 0) + '%"></i></div>';
+    '<i class="wfhead" id="wfhead" style="left:' + (d ? (pl().currentTime / d) * 100 : 0) + '%"></i></div>';
 }
 
 // Класс размера волны (f, h2, s, q) — чтобы перерисовать её на том же месте
@@ -287,7 +341,7 @@ function artHTML(t, cls) {
     for (let i = 0; i < N; i++) { const v = pk[Math.floor(i * s)] || 0, hh = Math.max(1, v * 12); p += 'M' + (4 + i * 1.15).toFixed(2) + ' ' + (20 - hh).toFixed(1) + 'V' + (20 + hh).toFixed(1); }
   }
   return '<span class="mlart ' + (cls || '') + '" style="--h:' + hueOf(t.name) + '">' + (isVideo(t) ? I.film : pk ? '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="' + p + '"/></svg>' : ICON) +
-    (AU.cur && AU.cur.id === t.id && !AU.el.paused ? '<i class="eq"><b></b><b></b><b></b></i>' : '') + '</span>';
+    (AU.cur && AU.cur.id === t.id && !pl().paused ? '<i class="eq"><b></b><b></b><b></b></i>' : '') + '</span>';
 }
 
 // Окно видео: сам элемент вставляется после перерисовки (place). Нажатие — играть или пауза
@@ -296,7 +350,7 @@ const vidbox = (cls) => '<div class="vidbox ' + cls + '" data-x="aplay" aria-lab
 
 // Тайм-коды: «+ метка», метки (нажать — перейти), «все» — список с названиями и повтором
 function marksHTML() {
-  const { t } = ctx, ms = AU.cur.marks || [], k = currentMark(ms, AU.el.currentTime);
+  const { t } = ctx, ms = AU.cur.marks || [], k = currentMark(ms, pl().currentTime);
   return '<div class="chips nowrap amarks" role="group" aria-label="' + t('marks') + '"><button class="chip amadd" data-x="amadd" aria-label="' + t('markAdd') + '">' + I.flag + t('mark') + '</button>' +
     ms.map((m, i) => '<button class="chip amk' + (i === k ? ' on' : '') + '" data-x="amj" data-i="' + i + '" aria-label="' + esc(t('markGo', { n: i + 1, time: fmtT(m.t) })) + '"><b>' + (i + 1) + '</b>' +
       esc(m.name || fmtT(m.t)) + '</button>').join('') +
@@ -347,7 +401,7 @@ function libHTML() {
         return '<div class="mlrow' + (on ? ' cur' : '') + '"><button class="mlmain" data-x="mlsel" data-id="' + x.id + '" role="checkbox" aria-checked="' + on + '"><span class="mlchk' + (on ? ' on' : '') + '">' +
           (on ? ctx.ui.icons.check : '') + '</span>' + artHTML(x) + '<span class="mltxt"><b>' + esc(x.name) + '</b><small>' + info + '</small></span></button></div>';
       }
-      return '<div class="mlrow' + (cur ? ' cur' : '') + '"><button class="mlmain" data-x="mlplay" data-id="' + x.id + '" aria-label="' + t(cur && !AU.el.paused ? 'pauseX' : 'playX', { name: x.name }) +
+      return '<div class="mlrow' + (cur ? ' cur' : '') + '"><button class="mlmain" data-x="mlplay" data-id="' + x.id + '" aria-label="' + t(cur && !pl().paused ? 'pauseX' : 'playX', { name: x.name }) +
         '">' + artHTML(x) + '<span class="mltxt"><b>' + esc(x.name) + '</b><small>' + info +
         '</small></span></button><button class="ic sm plain mlmore" data-x="mlmenu" data-id="' + x.id + '" aria-label="' + t('fileActions', { name: x.name }) + '">' + I.more + '</button></div>';
     }).join('') + '</div>';
@@ -360,8 +414,8 @@ function libHTML() {
     h += '<div class="mlselbar"><button class="cell act" data-x="mlsong"' + n + '>' + t('toSongs') + '</button><button class="ic sm mldel" data-x="mldel" aria-label="' + t('delSel') + '"' + n + '>' + I.trash + '</button></div>';
   } else if (AU.cur) {
     h += '<div class="mlmini"><button class="mlmmain" data-x="mlopen" aria-label="' + t('openPlayer') + '">' + (isVideo(AU.cur) ? '<span class="vidbox mini"></span>' : artHTML(AU.cur, 'sm')) + '<span class="mltxt"><b>' + esc(AU.cur.name) +
-      '</b><small><span id="acur" class="num">' + fmtT(AU.el.currentTime) + '</span>' + (AU.rate !== 1 ? ' · ' + rateTxt() : '') + '</small></span></button><button class="bigplay mlpl" data-x="aplay" id="aplay" aria-label="' +
-      t('playPause') + '">' + (AU.el.paused ? I.play : I.pause) + '</button><i class="mlprog"><b id="mlprog" style="width:' + (AU.el.duration ? (AU.el.currentTime / AU.el.duration) * 100 : 0) + '%"></b></i></div>';
+      '</b><small><span id="acur" class="num">' + fmtT(pl().currentTime) + '</span>' + (AU.rate !== 1 ? ' · ' + rateTxt() : '') + '</small></span></button><button class="bigplay mlpl" data-x="aplay" id="aplay" aria-label="' +
+      t('playPause') + '">' + (pl().paused ? I.play : I.pause) + '</button><i class="mlprog"><b id="mlprog" style="width:' + (pl().duration ? (pl().currentTime / pl().duration) * 100 : 0) + '%"></b></i></div>';
   }
   return '<div class="mlwrap">' + h + '</div>';
 }
@@ -369,7 +423,7 @@ function libHTML() {
 function controls() {
   const { t } = ctx, ab = AU.b != null ? 'on' : AU.a != null ? 'a' : '';
   return {
-    play: '<button class="bigplay" data-x="aplay" id="aplay" aria-label="' + t('playPause') + '">' + (AU.el.paused ? I.play : I.pause) + '</button>',
+    play: '<button class="bigplay" data-x="aplay" id="aplay" aria-label="' + t('playPause') + '">' + (pl().paused ? I.play : I.pause) + '</button>',
     rate: icb('data-step="arate" data-d="-1"', I.minus, t('slower'), 'sm') + '<button class="ratev num" id="ratev" data-x="arate1" aria-label="' + t('rate1') + '">' + rateTxt() + '</button>' +
       icb('data-step="arate" data-d="1"', I.plus, t('faster'), 'sm'),
     // тональность без изменения скорости: ♭/♯ — полутон, нажатие на значение — шторка (полутоны, центы, сброс)
@@ -380,21 +434,21 @@ function controls() {
     abb: '<button class="ic txt' + (ab === 'on' ? ' act' : '') + '" data-x="aab" aria-pressed="' + (ab === 'on') + '" aria-label="' + t('ab') + '">' + (ab === 'a' ? 'B?' : 'A–B') + '</button>',
     stepb: '<button class="ic txt sm' + (AU.step ? ' act' : '') + '" data-x="astep" aria-pressed="' + AU.step + '" aria-label="' + t('stepUp') + '">+5%↻</button>',
     list: icb('data-x="alist"', I.list, t('files.btn')),
-    time: '<span id="acur" class="num">' + fmtT(AU.el.currentTime) + '</span>',
+    time: '<span id="acur" class="num">' + fmtT(pl().currentTime) + '</span>',
     sty: (cls) => (ctx.mono ? '' : icb('data-x="astyle"', I.disc, t('styleBtn'), cls)), // в «Минимале» вид закреплён
     back2: !curSong() && ML.view === 'player' ? '<button class="mlback" data-x="mllib">' + t('backLib') + '</button>' : '',
   };
 }
 
 function vinylHTML() {
-  const { t } = ctx, tr = AU.cur, d = AU.el.duration || 0, fr = d ? AU.el.currentTime / d : 0, R = 46, C = 2 * Math.PI * R, c = controls();
+  const { t } = ctx, tr = AU.cur, d = pl().duration || 0, fr = d ? pl().currentTime / d : 0, R = 46, C = 2 * Math.PI * R, c = controls();
   setTimeout(vinStart, 0);
   const disc = '<div class="vdisc" id="vdisc" style="--h:' + hueOf(tr.name) + '" role="group" aria-label="' + t('discAria') + '"><svg viewBox="0 0 100 100" class="vring" aria-hidden="true"><circle cx="50" cy="50" r="' + R +
     '" class="vtrk"/><path id="vab" class="vab" d=""/><g id="vabm"></g><circle cx="50" cy="50" r="' + R + '" class="vprog" id="vprog" stroke-dasharray="' + (C * fr).toFixed(1) + ' ' + C.toFixed(1) +
     '" transform="rotate(-90 50 50)"/></svg><span class="vrec"><i class="vgr"></i><span class="vlab"><b>' + esc(tr.name.slice(0, 18)) + '</b></span><i class="vhole"></i></span><span class="varm" style="transition:none;transform:rotate(' +
-    (!AU.el.paused || AU.el.currentTime > 0.05 ? 5 + 27 * fr : -6).toFixed(2) + 'deg)" aria-label="' + t('armAria') + '"></span><button class="vstate" data-x="aplay" aria-label="' + t('playPause') + '">' +
-    (!AU.el.paused ? I.pause : I.play) + '</button></div>';
-  const time = '<div class="vtime num"><span id="acur">' + fmtT(AU.el.currentTime) + '</span> / ' + fmtT(d) + '</div>';
+    (!pl().paused || pl().currentTime > 0.05 ? 5 + 27 * fr : -6).toFixed(2) + 'deg)" aria-label="' + t('armAria') + '"></span><button class="vstate" data-x="aplay" aria-label="' + t('playPause') + '">' +
+    (!pl().paused ? I.pause : I.play) + '</button></div>';
+  const time = '<div class="vtime num"><span id="acur">' + fmtT(pl().currentTime) + '</span> / ' + fmtT(d) + '</div>';
   if (size === 'strip') return '<div class="srow2 vstrip">' + disc + '<div class="sgrow" style="min-width:0;text-align:left"><div class="aname">' + esc(tr.name) + '</div>' + time + '</div><div class="vrow tight">' + c.rate + '</div></div>';
   if (size === 'quarter') return '<div class="vq vqv">' + disc + time + '<div class="vrow tight">' + c.rate + '</div></div>';
   return '<div class="vwrap ' + size + '">' + c.back2 + '<div class="vtop"><div class="aname sgrow" style="text-align:left">' + esc(tr.name) + '</div>' + c.sty('sm') + '</div><div class="vbody">' + disc +
@@ -415,7 +469,7 @@ function playerHTML() {
     return '<div class="aempty"><div class="aeico">' + ICON + '</div><div class="aet">' + t(sid ? 'songEmpty' : 'emptyLib') + '</div><div class="ael">' + t('emptyText') + '</div><div class="group aeg">' +
       '<button class="cell act" data-x="aadd">' + t('upload') + '</button>' + (all.length && sid ? '<button class="cell act" data-x="apick">' + t('pickFromLib') + '</button>' : '') + '</div></div>';
   }
-  const c = controls(), d = AU.el.duration || 0, name = '<div class="aname">' + esc(AU.cur.name) + '</div>';
+  const c = controls(), d = pl().duration || 0, name = '<div class="aname">' + esc(AU.cur.name) + '</div>';
   if (isVideo(AU.cur)) return videoHTML(c, name, all, sid);
   if (size === 'quarter') return '<div class="vq">' + name + wformHTML('q') + '<div class="l2" style="font-size:12px">' + c.time + '</div>' + c.play + '<div class="vrow tight">' + c.rate + '</div></div>';
   if (size === 'strip') {
@@ -439,7 +493,7 @@ const atimes = (c, d) => '<div class="num l2 atimes">' + c.time + '<span>' + (AU
 
 // Видео: картинка вместо волны и винила, под ней — шкала с A–B и метками
 function videoHTML(c, name, all, sid) {
-  const d = AU.el.duration || 0, sf = sid ? all.filter((x) => inSong(x, sid)) : [];
+  const d = pl().duration || 0, sf = sid ? all.filter((x) => inSong(x, sid)) : [];
   const head = sf.length > 1 ? '<div class="chips nowrap afiles">' + sf.map((x) => '<button class="chip' + (x.id === AU.cur.id ? ' on' : '') + '" data-x="aload2" data-id="' + x.id + '">' + esc(x.name) + '</button>').join('') + '</div>' : name;
   if (size === 'strip') return '<div class="srow2 vidstrip">' + vidbox('s') + '<div class="sgrow" style="min-width:0;text-align:left">' + name + '<div class="l2 num vst">' + c.time + ' / ' + fmtT(d) + '</div></div>' + c.back + c.play + '</div>';
   if (size === 'quarter') return '<div class="vq vidq">' + vidbox('q') + wformHTML('s') + '<div class="srow2" style="flex:none">' + c.play + '<span class="l2 num" style="font-size:12px">' + c.time + '</span></div></div>';
@@ -469,26 +523,26 @@ function place() {
 
 function uiTick() {
   if (!host || !AU.cur) return;
-  const q = (s) => host.querySelector(s), d = AU.el.duration;
+  const q = (s) => host.querySelector(s), d = pl().duration;
   const mp = q('#mlprog');
-  if (mp && d) mp.style.width = (AU.el.currentTime / d) * 100 + '%';
+  if (mp && d) mp.style.width = (pl().currentTime / d) * 100 + '%';
   const wh = q('#wfhead');
   if (wh && d) {
-    const fr = AU.el.currentTime / d;
+    const fr = pl().currentTime / d;
     wh.style.left = fr * 100 + '%';
     const cl = q('#wfclip');
     if (cl) cl.setAttribute('width', fr * ((AU.cur.peaks || []).length || 120));
     const wf = q('#wform');
-    if (wf) wf.setAttribute('aria-valuenow', Math.round(AU.el.currentTime));
+    if (wf) wf.setAttribute('aria-valuenow', Math.round(pl().currentTime));
   }
   const c1 = q('#acur');
-  if (c1) c1.textContent = fmtT(AU.el.currentTime);
+  if (c1) c1.textContent = fmtT(pl().currentTime);
   const mks = host.querySelectorAll('.amk');
-  if (mks.length) { const k = currentMark(AU.cur.marks, AU.el.currentTime); mks.forEach((b, i) => b.classList.toggle('on', i === k)); }
+  if (mks.length) { const k = currentMark(AU.cur.marks, pl().currentTime); mks.forEach((b, i) => b.classList.toggle('on', i === k)); }
   const c2 = q('#adur');
   if (c2) c2.textContent = fmtT(d);
   const ap = q('#aplay');
-  if (ap) { const w = AU.el.paused ? 'p' : 's'; if (ap.dataset.st !== w) { ap.dataset.st = w; ap.innerHTML = AU.el.paused ? I.play : I.pause; } }
+  if (ap) { const w = pl().paused ? 'p' : 's'; if (ap.dataset.st !== w) { ap.dataset.st = w; ap.innerHTML = pl().paused ? I.play : I.pause; } }
 }
 
 /* ---------- винил ---------- */
@@ -504,7 +558,7 @@ function vinLoop() {
   if (!d) { VIN.raf = 0; return; }
   const now = performance.now(), dt = VIN.t ? (now - VIN.t) / 1000 : 0;
   VIN.t = now;
-  const rec = d.querySelector('.vrec'), arm = d.querySelector('.varm'), dur = AU.el.duration || 0, fr = dur ? AU.el.currentTime / dur : 0, ct = AU.el.currentTime;
+  const rec = d.querySelector('.vrec'), arm = d.querySelector('.varm'), dur = pl().duration || 0, fr = dur ? pl().currentTime / dur : 0, ct = pl().currentTime;
   // перемотка назад (повтор A–B) — пластинка быстро крутится обратно
   if (!VIN.drag && VIN.lt != null && ct < VIN.lt - 0.25) {
     VIN.rw = (VIN.rw || 0) - Math.min(420, ((VIN.lt - ct) / 1.8) * 360);
@@ -513,10 +567,10 @@ function vinLoop() {
   VIN.lt = ct;
   if (VIN.rw) { const s = VIN.rw * Math.min(1, dt * 3.2); VIN.ang = (VIN.ang + s + 3600) % 360; VIN.rw -= s; if (Math.abs(VIN.rw) < 1) VIN.rw = 0; }
   // 33⅓ оборота: один оборот за 1,8 с, с учётом скорости
-  const target = !VIN.drag && AU.cur && !AU.el.paused ? 360 / (1.8 / AU.rate) : 0;
+  const target = !VIN.drag && AU.cur && !pl().paused ? 360 / (1.8 / AU.rate) : 0;
   VIN.w = (VIN.w || 0) + (target - (VIN.w || 0)) * Math.min(1, dt * (target ? 2.2 : 3.2));
   if (!VIN.drag) VIN.ang = (VIN.ang + dt * VIN.w) % 360;
-  d.classList.toggle('playing', !AU.el.paused);
+  d.classList.toggle('playing', !pl().paused);
   const key = (AU.a == null ? '-' : AU.a.toFixed(2)) + '|' + (AU.b == null ? '-' : AU.b.toFixed(2)) + '|' + dur.toFixed(1);
   if (d.dataset.abk !== key && dur) {
     d.dataset.abk = key;
@@ -548,9 +602,9 @@ function vinLoop() {
   if (pg && dur) { const C = 2 * Math.PI * 46; pg.setAttribute('stroke-dasharray', (C * fr).toFixed(1) + ' ' + C.toFixed(1)); }
   if (rec) rec.style.transform = 'rotate(' + VIN.ang.toFixed(2) + 'deg)';
   if (arm && arm.style.transition === 'none') { if (arm.dataset.f) arm.style.transition = ''; else arm.dataset.f = 1; }
-  if (arm && !VIN.arm) { const on = !AU.el.paused || AU.el.currentTime > 0.05; arm.style.transform = 'rotate(' + (on ? 5 + 27 * fr : -6) + 'deg)'; }
+  if (arm && !VIN.arm) { const on = !pl().paused || pl().currentTime > 0.05; arm.style.transform = 'rotate(' + (on ? 5 + 27 * fr : -6) + 'deg)'; }
   const sb = d.querySelector('.vstate');
-  if (sb) { const p = !AU.el.paused; if (sb.dataset.p !== String(p)) { sb.dataset.p = String(p); sb.innerHTML = p ? I.pause : I.play; } }
+  if (sb) { const p = !pl().paused; if (sb.dataset.p !== String(p)) { sb.dataset.p = String(p); sb.innerHTML = p ? I.pause : I.play; } }
   VIN.raf = requestAnimationFrame(vinLoop);
 }
 function vinStart() { if (!VIN.raf) { VIN.t = 0; VIN.raf = requestAnimationFrame(vinLoop); } }
@@ -569,7 +623,7 @@ function trackRow(x, sid, mode) {
 async function removeTrack(x) {
   const { t, ui } = ctx;
   if (!(await ui.confirm(t('delTitle', { name: x.name }), t('delText'), t('delete')))) return;
-  if (AU.cur && AU.cur.id === x.id) { AU.el.pause(); AU.cur = null; }
+  if (AU.cur && AU.cur.id === x.id) { pl().pause(); AU.cur = null; }
   await ctx.files.remove(x.id);
   render();
 }
@@ -664,7 +718,7 @@ function marksSheet() {
   if (!x) return;
   const body = () => {
     const ms = x.marks || [];
-    return ui.snav(t('marks')) + '<div class="group"><button class="cell act" data-mk="add">' + t('markAddAt', { time: fmtT(AU.el.currentTime) }) + '</button></div>' +
+    return ui.snav(t('marks')) + '<div class="group"><button class="cell act" data-mk="add">' + t('markAddAt', { time: fmtT(pl().currentTime) }) + '</button></div>' +
       (ms.length ? '<div class="group">' + ms.map((m, i) => '<div class="cell mkrow"><button class="mkt num" data-mk="go" data-i="' + i + '" aria-label="' + esc(t('markGo', { n: i + 1, time: fmtT(m.t) })) + '"><b>' + (i + 1) +
         '</b>' + fmtT(m.t) + '</button><input class="inp left grow" data-mn="' + i + '" maxlength="40" placeholder="' + esc(t('markName')) + '" aria-label="' + esc(t('markNameN', { n: i + 1 })) + '" value="' + esc(m.name || '') + '">' +
         '<button class="ic txt sm" data-mk="loop" data-i="' + i + '" aria-label="' + t('markLoop') + '">A–B</button><button class="ic sm" data-mk="del" data-i="' + i + '" aria-label="' + t('markDel') + '" style="color:var(--red)">' + I.minus + '</button></div>').join('') + '</div>' : '') +
@@ -692,7 +746,7 @@ function marksSheet() {
 function markAdd() {
   const x = AU.cur;
   if (!x) return;
-  const r = addMark(x.marks, AU.el.currentTime);
+  const r = addMark(x.marks, pl().currentTime);
   x.marks = r.marks;
   if (r.added) ctx.files.save(x); else render();
   ctx.ui.toast(ctx.t(r.added ? 'markAdded' : 'markExists', { n: r.i + 1, time: fmtT(x.marks[r.i].t) }));
@@ -700,16 +754,16 @@ function markAdd() {
 function seekMark(i) {
   const m = AU.cur && (AU.cur.marks || [])[i];
   if (!m) return;
-  AU.el.currentTime = m.t;
+  pl().currentTime = m.t;
   render();
 }
 function loopMark(i) {
   if (!AU.cur || !AU.cur.marks || !AU.cur.marks[i]) return;
-  const [a, b] = markSpan(AU.cur.marks, i, AU.el.duration || AU.cur.dur || 0);
+  const [a, b] = markSpan(AU.cur.marks, i, pl().duration || AU.cur.dur || 0);
   if (!(b > a)) return;
   AU.a = a; AU.b = b; AU.loop = true;
-  AU.el.currentTime = a;
-  if (AU.el.paused) playEl();
+  pl().currentTime = a;
+  if (pl().paused) playEl();
   render();
 }
 
@@ -736,7 +790,7 @@ async function removeSelected() {
   const { t, ui, tn } = ctx, xs = [...ML.sel].map((id) => ctx.files.get(id)).filter(Boolean);
   if (!xs.length || !(await ui.confirm(t('delSelTitle', { files: tn('files', xs.length) }), t('delText'), t('delete')))) return;
   for (const x of xs) {
-    if (AU.cur && AU.cur.id === x.id) { AU.el.pause(); AU.cur = null; }
+    if (AU.cur && AU.cur.id === x.id) { pl().pause(); AU.cur = null; }
     await ctx.files.remove(x.id);
   }
   ML.sel = null;
@@ -822,14 +876,14 @@ async function onFile(e) {
 function act(a, el) {
   const { t, ui } = ctx;
   switch (a) {
-    case 'aplay': if (AU.el.paused) playEl(); else AU.el.pause(); break;
-    case 'aback': AU.el.currentTime = Math.max(0, AU.el.currentTime - 5); break;
-    case 'afwd': AU.el.currentTime = Math.min(AU.el.duration || 0, AU.el.currentTime + 5); break;
+    case 'aplay': if (pl().paused) playEl(); else pl().pause(); break;
+    case 'aback': pl().currentTime = Math.max(0, pl().currentTime - 5); break;
+    case 'afwd': pl().currentTime = Math.min(pl().duration || 0, pl().currentTime + 5); break;
     case 'aab': // A — B — сброс
       if (AU.b != null) { AU.a = AU.b = null; AU.loop = false; }
-      else if (AU.a == null) AU.a = AU.el.currentTime;
-      else if (AU.el.currentTime > AU.a) { AU.b = AU.el.currentTime; AU.loop = true; }
-      else AU.a = AU.el.currentTime;
+      else if (AU.a == null) AU.a = pl().currentTime;
+      else if (pl().currentTime > AU.a) { AU.b = pl().currentTime; AU.loop = true; }
+      else AU.a = pl().currentTime;
       if (host.querySelector('#vdisc')) {
         // Пластинку не перерисовываем (она крутится), но волну под ней — да: иначе на ней остаются старые A и B
         const ab = AU.b != null ? 'on' : AU.a != null ? 'a' : '';
@@ -849,7 +903,7 @@ function act(a, el) {
     case 'mlplay': {
       const x = ctx.files.get(el.dataset.id);
       if (!x) break;
-      if (AU.cur && AU.cur.id === x.id) AU.el.paused ? playEl() : AU.el.pause();
+      if (AU.cur && AU.cur.id === x.id) pl().paused ? playEl() : pl().pause();
       else { load(x); playEl(); }
       render();
       break;
@@ -908,22 +962,22 @@ function bind() {
   on(host, 'pointerdown', (e) => {
     const w = e.target.closest('#wform');
     if (!w || !AU.cur) return;
-    const r = w.getBoundingClientRect(), d = AU.el.duration || 0;
+    const r = w.getBoundingClientRect(), d = pl().duration || 0;
     if (!d) return;
     e.preventDefault();
     const x = e.clientX - r.left, near = (k) => AU[k] != null && Math.abs((AU[k] / d) * r.width - x) < 18, h = near('b') ? 'b' : near('a') ? 'a' : null;
     wf = { pid: e.pointerId, r, d, h };
     // Нажатие рядом с меткой — точно на метку
     const mi = h ? -1 : nearMark(AU.cur.marks, (x / r.width) * d, (12 / r.width) * d);
-    if (mi >= 0) { AU.el.currentTime = AU.cur.marks[mi].t; wf = null; }
-    else if (!h) AU.el.currentTime = Math.max(0, Math.min(d, (x / r.width) * d));
+    if (mi >= 0) { pl().currentTime = AU.cur.marks[mi].t; wf = null; }
+    else if (!h) pl().currentTime = Math.max(0, Math.min(d, (x / r.width) * d));
   }, true);
   on(window, 'pointermove', (e) => {
     if (!wf || e.pointerId !== wf.pid) return;
     const tt = Math.max(0, Math.min(wf.d, ((e.clientX - wf.r.left) / wf.r.width) * wf.d));
     if (wf.h === 'a') AU.a = Math.min(tt, AU.b != null ? AU.b - 0.2 : tt);
     else if (wf.h === 'b') AU.b = Math.max(tt, (AU.a || 0) + 0.2);
-    else AU.el.currentTime = tt;
+    else pl().currentTime = tt;
     if (wf.h) { const w = host.querySelector('#wform'); if (w) w.outerHTML = wformHTML(wfCls(w)); }
   }, { passive: true });
   const wfUp = (e) => { if (wf && e.pointerId === wf.pid) wf = null; };
@@ -933,8 +987,8 @@ function bind() {
   on(host, 'keydown', (e) => {
     if (e.target.classList.contains('vidbox') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); act('aplay', e.target); return; }
     if (e.target.id !== 'wform') return;
-    if (e.key === 'ArrowRight') { AU.el.currentTime = Math.min(AU.el.duration || 0, AU.el.currentTime + 5); e.preventDefault(); }
-    if (e.key === 'ArrowLeft') { AU.el.currentTime = Math.max(0, AU.el.currentTime - 5); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { pl().currentTime = Math.min(pl().duration || 0, pl().currentTime + 5); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { pl().currentTime = Math.max(0, pl().currentTime - 5); e.preventDefault(); }
   });
   // Винил: нажать — играть/пауза, крутить — перемотка; тонарм — выбрать место
   on(host, 'pointerdown', (e) => {
@@ -943,7 +997,7 @@ function bind() {
     e.preventDefault();
     const r = d.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     if (e.target.closest('.varm')) { VIN.arm = { id: e.pointerId, r }; return; }
-    VIN.drag = { id: e.pointerId, cx, cy, rad: r.width / 2, x0: e.clientX, y0: e.clientY, a: Math.atan2(e.clientY - cy, e.clientX - cx), was: !AU.el.paused, px: 0, seek: 0, started: false };
+    VIN.drag = { id: e.pointerId, cx, cy, rad: r.width / 2, x0: e.clientX, y0: e.clientY, a: Math.atan2(e.clientY - cy, e.clientX - cx), was: !pl().paused, px: 0, seek: 0, started: false };
   }, true);
   on(window, 'pointermove', (e) => {
     if (VIN.drag && e.pointerId === VIN.drag.id) {
@@ -955,15 +1009,15 @@ function bind() {
       if (da < -Math.PI) da += 2 * Math.PI;
       g.a = a;
       if (g.px < 8 || dist < g.rad * 0.18) return;
-      if (!g.started) { g.started = true; VIN.w = 0; if (g.was) AU.el.pause(); }
+      if (!g.started) { g.started = true; VIN.w = 0; if (g.was) pl().pause(); }
       const deg = (da * 180) / Math.PI;
       VIN.ang = (VIN.ang + deg + 360) % 360;
       g.seek += (deg / 360) * 1.8;
       const now = performance.now();
-      if (AU.cur && AU.el.duration && (!g.ts || now - g.ts > 40)) { g.ts = now; AU.el.currentTime = Math.max(0, Math.min(AU.el.duration - 0.05, AU.el.currentTime + g.seek)); g.seek = 0; }
-    } else if (VIN.arm && e.pointerId === VIN.arm.id && AU.el.duration) {
+      if (AU.cur && pl().duration && (!g.ts || now - g.ts > 40)) { g.ts = now; pl().currentTime = Math.max(0, Math.min(pl().duration - 0.05, pl().currentTime + g.seek)); g.seek = 0; }
+    } else if (VIN.arm && e.pointerId === VIN.arm.id && pl().duration) {
       const r = VIN.arm.r, px = r.left + r.width * 0.94, py = r.top + r.height * 0.051, ang = (Math.atan2(e.clientX - px, e.clientY - py) * -180) / Math.PI, fr = Math.max(0, Math.min(1, (ang - 5) / 27));
-      AU.el.currentTime = fr * AU.el.duration;
+      pl().currentTime = fr * pl().duration;
       const arm = host.querySelector('#vdisc .varm');
       if (arm) arm.style.transform = 'rotate(' + (5 + 27 * fr) + 'deg)';
     }
@@ -972,9 +1026,9 @@ function bind() {
     if (VIN.drag && e.pointerId === VIN.drag.id) {
       const g = VIN.drag;
       VIN.drag = null;
-      if (!g.started) g.was ? AU.el.pause() : playEl();
+      if (!g.started) g.was ? pl().pause() : playEl();
       else {
-        if (g.seek && AU.el.duration) AU.el.currentTime = Math.max(0, Math.min(AU.el.duration - 0.05, AU.el.currentTime + g.seek));
+        if (g.seek && pl().duration) pl().currentTime = Math.max(0, Math.min(pl().duration - 0.05, pl().currentTime + g.seek));
         if (g.was) playEl();
       }
     }
@@ -1023,7 +1077,7 @@ export default {
     clearInterval(uiTimer);
     offs.splice(0).forEach((f) => (typeof f === 'function' ? f() : null));
     if (input) { input.remove(); input = null; }
-    if (AU.el && !ctx.session) AU.el.pause();
+    if (AU.el && !ctx.session) pl().pause();
     park();
     cancelAnimationFrame(VIN.raf);
     VIN.raf = 0;
