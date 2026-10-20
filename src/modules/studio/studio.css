@@ -48,3 +48,36 @@
   .sttr{flex-wrap:nowrap}
   .sttrvol{flex:0 1 160px}
 }
+/* паттерны и плейлист (как в FL Studio: фишки паттернов, песня — их ряд) */
+.stpats{flex:none;display:flex;align-items:center;gap:8px}
+.stpats>.seg{width:auto;flex:none}
+.stchips{display:flex;gap:6px;flex:1;min-width:0;padding:4px 2px;scrollbar-width:none}
+.stpat{flex:none;min-width:44px;min-height:40px;padding:0 10px;border-radius:12px;background:var(--fill);font-weight:700;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
+.stpat small{font-weight:500;font-size:11px;color:var(--l2)}
+.stpat.on{background:var(--tint);color:var(--on-tint)}
+.stpat.on small{color:inherit;opacity:.8}
+.stpat.add{min-width:40px;color:var(--l2)}
+.stpat.add svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.stpat.sm{min-height:32px;min-width:32px;padding:0 8px;font-size:13px;border-radius:9px}
+.stchips.sm{flex:0 1 auto;max-width:40%}
+.stpat.now{box-shadow:inset 0 0 0 2px var(--tint)}
+.stpat.lifting{transform:scale(1.04);box-shadow:0 6px 18px rgba(0,0,0,.2);z-index:2}
+.stsong{flex:none;display:flex;align-items:center;gap:8px}
+.stsongn{font-size:12px;color:var(--l2);flex:none}
+.stseq{display:flex;gap:4px;flex:1;min-width:0;padding:4px 2px;scrollbar-width:none;border-radius:12px;background:var(--cell)}
+.stseq .stpat{min-width:36px;background:color-mix(in srgb,var(--tint) 22%,var(--cell));color:var(--ink)}
+.stseq .stpat.add{background:transparent}
+/* ударные: сетка шестнадцатых */
+.sdwrap{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:4px;scrollbar-width:none;touch-action:pan-y}
+.sdbars{display:flex;gap:6px;padding:2px 0 4px 78px;overflow:auto;scrollbar-width:none;flex:none}
+.sdrow{display:flex;align-items:stretch;gap:6px;flex:1;min-height:48px;max-height:96px}
+.sdname{width:72px;flex:none;border-radius:10px;background:var(--fill);font-size:13px;font-weight:600;text-align:left;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sdcells{flex:1;min-width:0;display:grid;grid-template-columns:repeat(var(--n),1fr);gap:3px;touch-action:none}
+.sdcells[hidden]{display:none}
+.sdcells .sdc:nth-child(4n+1){margin-left:3px}
+.sdcells .sdc:first-child{margin-left:0}
+.sdc{display:block;border-radius:5px;background:var(--cell);min-width:0}
+.sdc.beat{background:color-mix(in srgb,var(--ink) 9%,var(--cell))}
+.sdc.on{background:var(--c)}
+.sdc.now{box-shadow:inset 0 0 0 2px var(--tint)}
+.sttop .ic[disabled]{opacity:.35}

@@ -1,9 +1,10 @@
 // Проект студии → MusicXML (открывается в «Табах и нотах» через alphaTab и в любой нотной программе).
-// Каждая дорожка нот и аккордов — партия; аккорды разворачиваются как при проигрывании. Длительности — по
+// Песня целиком (плейлист; пустой — текущий паттерн). Каждая дорожка нот и аккордов — партия; аккорды
+// разворачиваются как при проигрывании; ударные и петли не идут. Длительности — по
 // сетке 1/16 доли (divisions = 4 на четверть); одновременные ноты — аккорд (<chord/>), пустоты — паузы.
 // У каждой ноты <voice> — без него alphaTab не отрисовывает партию.
 // Чистые функции, без DOM.
-import { trackNotes, beatsOf, chordName } from './project.js';
+import { songNotes, songBeats, chordName, curPattern } from './project.js';
 import { keyLabel } from './transpose.js';
 
 const DIV = 4; // делений на четверть
@@ -33,16 +34,16 @@ function pitchXML(m, flats) {
 
 // Партия: ноты дорожки по тактам. Нота через тактовую черту делится на части с лигой; одновременно начинающиеся
 // ноты — аккорд (<chord/>), длина аккорда — по самой длинной
-export function partXML(tr, p, { flats = false } = {}) {
-  const beatDiv = DIV * (4 / p.den), barDiv = beatDiv * p.num, end = barDiv * p.bars, segs = [];
-  trackNotes(tr, p).forEach((n) => {
+export function partXML(tr, p, { flats = false, notes = songNotes(p).filter((n) => n.tr === tr), bars = Math.ceil(songBeats(p) / p.num) } = {}) {
+  const beatDiv = DIV * (4 / p.den), barDiv = beatDiv * p.num, end = barDiv * bars, segs = [];
+  notes.forEach((n) => {
     let s = Math.round(n.t * beatDiv), e = Math.min(end, Math.round((n.t + n.d) * beatDiv));
     while (s < e) { const b1 = (Math.floor(s / barDiv) + 1) * barDiv, x = Math.min(e, b1); segs.push({ s, e: x, m: n.m, from: s > Math.round(n.t * beatDiv), cont: x < e }); s = x; }
   });
   segs.sort((a, b) => a.s - b.s || a.m - b.m);
   const rests = (d) => splitDur(d).map(([v, type]) => '<note><rest/><duration>' + v + '</duration><voice>1</voice><type>' + type + '</type></note>').join('');
-  const bars = [];
-  for (let b = 0; b < p.bars; b++) {
+  const out = [];
+  for (let b = 0; b < bars; b++) {
     const b0 = b * barDiv, b1 = b0 + barDiv;
     let x = '<measure number="' + (b + 1) + '">';
     if (b === 0) x += '<attributes><divisions>' + DIV + '</divisions><key><fifths>' + fifthsOf(p.key) + '</fifths><mode>' + (p.key.minor ? 'minor' : 'major') + '</mode></key><time><beats>' + p.num + '</beats><beat-type>' + p.den + '</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>' +
@@ -63,21 +64,21 @@ export function partXML(tr, p, { flats = false } = {}) {
       at = e;
     }
     if (at < b1) x += rests(b1 - at);
-    bars.push(x + '</measure>');
+    out.push(x + '</measure>');
   }
-  return bars.join('');
+  return out.join('');
 }
 
-// Весь проект → текст MusicXML (partwise). Дорожки звука (петли) не идут
+// Весь проект → текст MusicXML (partwise): песня по плейлисту. Ударные и дорожки звука (петли) не идут
 export function projectXML(p, { title = '', trackName = (tr, i) => tr.name || 'Track ' + (i + 1) } = {}) {
-  const flats = fifthsOf(p.key) < 0, parts = p.tracks.filter((tr) => tr.kind === 'notes' || tr.kind === 'chords');
+  const flats = fifthsOf(p.key) < 0, parts = p.tracks.filter((tr) => tr.kind === 'notes' || tr.kind === 'chords'), all = songNotes(p), bars = Math.ceil(songBeats(p) / p.num);
   const list = parts.map((tr, i) => '<score-part id="P' + (i + 1) + '"><part-name>' + esc(trackName(tr, i)) + '</part-name></score-part>').join('');
-  const body = parts.map((tr, i) => '<part id="P' + (i + 1) + '">' + partXML(tr, p, { flats }) + '</part>').join('');
+  const body = parts.map((tr, i) => '<part id="P' + (i + 1) + '">' + partXML(tr, p, { flats, notes: all.filter((n) => n.tr === tr), bars }) + '</part>').join('');
   return '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">\n' +
     '<score-partwise version="4.0"><work><work-title>' + esc(title || p.name || '') + '</work-title></work><identification><encoding><software>Melete</software></encoding></identification>' +
     '<part-list>' + list + '</part-list>' + body + '</score-partwise>';
 }
 
-// Подпись аккордов проекта строкой (для названия файла и текста): «C F G Am»
-export const chordLine = (tr, p) => (tr.chords || []).map((c) => chordName(c.pc, c.type, p.key.minor)).join(' ');
+// Подпись аккордов дорожки в текущем паттерне строкой (для названия файла и текста): «C F G Am»
+export const chordLine = (tr, p) => (((curPattern(p).data[tr.id] || {}).chords) || []).map((c) => chordName(c.pc, c.type, p.key.minor)).join(' ');
 export { keyLabel };
