@@ -54,6 +54,26 @@ const V = {
     cs: 'И҆́мже бо сꙋдо́мъ сꙋ́дите, сꙋ́дѧтъ ва́мъ: и҆ въ ню́же мѣ́рꙋ мѣ́рите, возмѣ́ритсѧ ва́мъ.',
     en: 'For with whatever judgment you judge, you will be judged; and with whatever measure you measure, it will be measured to you.', enRef: 'Matt 7:2',
     uz: 'Sizlar boshqalarni qanday hukm qilsangizlar, Xudo ham sizlarni xuddi shunday hukm qiladi. Sizlar boshqalarni hukm qilganda qanday oʻlchovdan foydalansangizlar, Xudo ham sizni hukm qilganda xuddi oʻshanday oʻlchovdan foydalanadi.', uzRef: 'Matto 7:2' },
+  eccl1_6: { ref: 'Еккл 1:6', gr: 'πορεύεται πρὸς νότον καὶ κυκλοῖ πρὸς βορρᾶν· κυκλοῖ κυκλῶν πορεύεται τὸ πνεῦμα, καὶ ἐπὶ κύκλους αὐτοῦ ἐπιστρέφει τὸ πνεῦμα.',
+    ru: 'Идёт ветер к югу, и переходит к северу, кружится, кружится на ходу своём, и возвращается ветер на круги свои.',
+    cs: 'И҆́детъ къ ю҆́гꙋ и҆ ѡ҆бхо́дитъ къ сѣ́верꙋ, ѡ҆бхо́дитъ ѡ҆́крестъ, и҆́детъ дꙋ́хъ и҆ на крꙋ́ги своѧ̑ ѡ҆браща́етсѧ дꙋ́хъ.',
+    en: 'The wind goes toward the south, and turns around to the north. It turns around continually as it goes, and the wind returns again to its courses.', enRef: 'Ecclesiastes 1:6',
+    uz: 'Shamol janubga esadi, shimolga buriladi, aylanib-aylanib esaveradi, yana oʻz yoʻliga qaytadi.', uzRef: 'Voiz 1:6' },
+  deut31_19: { ref: 'Втор 31:19', gr: 'καὶ νῦν γράψατε τὰ ῥήματα τῆς ᾠδῆς ταύτης καὶ διδάξετε αὐτὴν τοὺς υἱοὺς Ισραηλ… ἵνα γένηταί μοι ἡ ᾠδὴ αὕτη εἰς μαρτύριον ἐν υἱοῖς Ισραηλ.',
+    ru: 'Итак напишите себе слова песни сей, и научи ей сынов Израилевых, и вложи её в уста их, чтобы песнь сия была Мне свидетельством на сынов Израилевых.',
+    cs: 'И҆ нн҃ѣ напиши́те словеса̀ пѣ́сни сеѧ̀, и҆ наꙋчи́те є҆́й сы́ны і҆и҃лєвы… да бꙋ́детъ мнѣ̀ пѣ́снь сїѧ̀ во свидѣ́телство въ сынѣ́хъ і҆и҃левыхъ.',
+    en: 'Now therefore write this song for yourselves, and teach it to the children of Israel. Put it in their mouths, that this song may be a witness for me against the children of Israel.', enRef: 'Deuteronomy 31:19',
+    uz: 'Endi bu qoʻshiqni yozib olinglar, Isroil xalqiga oʻrgatinglar, ular yoddan kuylasin, toki bu qoʻshiq Isroil xalqiga qarshi Mening guvohim boʻlsin.', uzRef: 'Qonunlar 31:19' },
+  lev19_36: { ref: 'Лев 19:36', gr: 'ζυγὰ δίκαια καὶ στάθμια δίκαια καὶ χοῦς δίκαιος ἔσται ὑμῖν· ἐγώ εἰμι κύριος ὁ θεὸς ὑμῶν.',
+    ru: 'Да будут у вас весы верные, гири верные, ефа верная и гин верный. Я Господь, Бог ваш.',
+    cs: 'Мѣ̑рила пра́вєдна и҆ вѣ́сы пра́вєдны и҆ мѣ́ра пра́ведна да бꙋ́детъ въ ва́съ: а҆́зъ є҆́смь гдⷭ҇ь бг҃ъ ва́шъ.',
+    en: 'You shall have just balances, just weights, a just ephah, and a just hin. I am Yahweh your God.', enRef: 'Leviticus 19:36',
+    uz: 'Tarozilaringiz toʻgʻri, toshlaringiz toʻgʻri, oʻlchovlaringiz toʻgʻri boʻlsin. Men Egangiz Xudoman.', uzRef: 'Levilar 19:36' },
+  eph2_10: { ref: 'Еф 2:10', gr: 'αὐτοῦ γάρ ἐσμεν ποίημα, κτισθέντες ἐν Χριστῷ Ἰησοῦ ἐπὶ ἔργοις ἀγαθοῖς οἷς προητοίμασεν ὁ θεὸς ἵνα ἐν αὐτοῖς περιπατήσωμεν.',
+    ru: 'Ибо мы — Его творение, созданы во Христе Иисусе на добрые дела, которые Бог предназначил нам исполнять.',
+    cs: 'Тогѡ́ бо є҆смы̀ творе́нїе, созда́ни во хрⷭ҇тѣ̀ і҆и҃сѣ на дѣла̀ бл҃га̑ѧ, ꙗ҆̀же пре́жде ᲂу҆гото́ва бг҃ъ, да въ ни́хъ хо́димъ.',
+    en: 'For we are his workmanship, created in Christ Jesus for good works, which God prepared before that we would walk in them.', enRef: 'Ephesians 2:10',
+    uz: 'Biz Xudoning ijodimiz, Iso Masih orqali yaxshi ishlar qilish uchun yaratilganmiz. Xudo bu ishlarni biz uchun oldindan tayyorlab qoʻygan.', uzRef: 'Efesliklar 2:10' },
   eph5_19: { ref: 'Еф 5:19', gr: 'λαλοῦντες ἑαυτοῖς ἐν ψαλμοῖς καὶ ὕμνοις καὶ ᾠδαῖς πνευματικαῖς, ᾄδοντες καὶ ψάλλοντες ἐν τῇ καρδίᾳ ὑμῶν τῷ κυρίῳ.',
     ru: 'Назидая самих себя псалмами, и славословиями, и песнопениями духовными, поя и воспевая в сердцах ваших Господу.',
     cs: 'Глаго́люще себѣ̀ во ѱалмѣ́хъ и҆ пѣ́нїихъ и҆ пѣ́снехъ дꙋхо́вныхъ, воспѣва́юще и҆ пою́ще въ сердца́хъ ва́шихъ гдⷭ҇еви.',
@@ -200,13 +220,13 @@ export const CORE = {
   'panel.title': 'ps72_26', 'page.me': 'ps39_8', 'page.week': 'phil3_14', 'week.title': 'lev23_15',
   'page.stats': 'num1_2', 'stats.title': 'num1_2', 'page.look': 'lk3_22', 'look.title': 'lk3_22',
   'page.data': 'mt6_21', 'data.title': 'mt6_21', 'page.tabs': 'ps23_7', 'tabs.title': 'ps23_7',
-  'page.notif': 'co1_15_52', 'mix.title': 'ps150_3', 'stone.title': 'rev2_17',
+  'page.notif': 'co1_15_52', 'mix.title': 'lev19_36', 'stone.title': 'rev2_17',
   'rank.title': 'tim1_3_13', 'streak.title': 'rom5_3', 'mastery.title': 'ps110_10', 'tos.title': 'gen1_1',
   'lay.title': 'co1_14_40', 'track.title': 'eccl3_1', 'mono.title': 'jn7_24',
 };
 // Инструменты (по id модуля) и строки помодоро и секундомера
 export const MODS = { bible: 'lk24_27', metro: 'mt7_2', tuner: 'lk15_25', piano: 'ps150_3', glider: 'co1_14_7', theremin: 'ps89_17', drone: 'rev14_2',
-  theory: 'ps89_12', audio: 'rom10_17', notes: 'jn7_15', spectrum: 'mt26_5', timer: 'ps89_4', voice: 'eph5_19', looper: 'eph5_19', studio: 'ps150_3' };
+  theory: 'ps89_12', audio: 'ps150_3', ear: 'rom10_17', notes: 'jn7_15', spectrum: 'mt26_5', timer: 'ps89_4', voice: 'deut31_19', looper: 'eccl1_6', studio: 'eph2_10' };
 export const TIMER = { 'set.title': 'ps89_4', 'mode.pomo': 'ps89_4', 'mode.watch': 'num1_2', 'w.label': 'ps89_12',
   'ph.work': 'ps89_17', 'ph.short': 'mt11_29', 'ph.long': 'heb4_9' };
 // Эпиграф помодоро, секундомера и календаря

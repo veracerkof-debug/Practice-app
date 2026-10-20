@@ -5,6 +5,7 @@ import './ear.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
+import el from './i18n/el.json';
 import { SH, MAJI, MAJ_NAMES, MIN_NAMES, spell, mName } from '../../music/notes.js';
 import { SCALES } from '../../music/theory.js';
 import {
@@ -532,8 +533,8 @@ function bind() {
 export default {
   id: 'ear',
   order: 60,
-  name: { ru: ru.name, uz: uz.name, en: en.name },
-  i18n: { ru, uz, en },
+  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
+  i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#34C759',
   // В прототипе тренажёр открывался только целиком; компактные виды для четверти и полосы — не сделаны (см. DECISIONS.md)
