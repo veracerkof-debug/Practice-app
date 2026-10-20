@@ -1,0 +1,48 @@
+/* Лупер: большая кнопка-кольцо на всё окно, слои полосками, петли и управление одной полосой внизу */
+.lpwrap{flex:1;min-height:0;display:flex;flex-direction:column;gap:clamp(6px,2cqh,14px);container-type:size}
+.lpmain{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.lpbtn{position:relative;width:min(70cqw,52cqh,300px);aspect-ratio:1;border-radius:50%;background:var(--cell);color:var(--ink);display:grid;place-items:center;box-shadow:0 6px 24px rgba(0,0,0,.12);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.lpbtn svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.lptrack{fill:none;stroke:var(--fill);stroke-width:6}
+.lpring{fill:none;stroke:var(--tint);stroke-width:6;stroke-linecap:round;transition:none}
+.lpbtn.rec .lpring,.lpbtn.dub .lpring{stroke:#D9534F}
+.lpic{position:relative;z-index:1;display:grid;place-items:center}
+.lpic svg{position:static;width:min(22cqw,16cqh,88px);height:min(22cqw,16cqh,88px);transform:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.lpbtn.idle .lpic{color:#D9534F}
+.lpbtn.rec .lpic,.lpbtn.dub .lpic{color:#D9534F;animation:lpblink 1s ease-in-out infinite}
+.lpbtn.play .lpic{color:var(--tint)}
+.lpbtn.idle .lpic svg path{fill:currentColor}
+.lpcount{font-size:min(26cqw,20cqh,110px);font-weight:300;line-height:1;color:var(--tint)}
+@keyframes lpblink{50%{opacity:.35}}
+.lplab{position:absolute;bottom:14%;left:0;right:0;text-align:center;font-size:clamp(11px,3.2cqmin,15px);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--l2)}
+.lptime{font-size:clamp(14px,4.5cqmin,22px);color:var(--l2);min-height:1.3em}
+.lphint{text-align:center;font-size:14px;padding:0 14px;flex:none}
+.lplayers{flex:none;display:flex;flex-direction:column;gap:6px;max-height:36cqh;overflow:auto;padding:0 4px;scrollbar-width:none}
+.lplayer{display:flex;align-items:center;gap:8px}
+.lplayer.muted .lpvol{opacity:.4}
+.lpm{width:40px;height:40px;border-radius:50%;background:var(--fill);color:var(--ink);display:grid;place-items:center;flex:none}
+.lpm svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lplayer.muted .lpm{color:var(--l2)}
+.lpnum{width:18px;color:var(--l2);font-size:13px;text-align:center}
+.lpvol{flex:1;min-width:0;height:40px;accent-color:var(--tint)}
+.lpslots{display:flex;gap:6px;justify-content:center;flex:none}
+.lpslot{width:44px;height:40px;border-radius:12px;background:var(--fill);color:var(--l2);font-weight:700;font-size:15px}
+.lpslot.has{color:var(--ink);box-shadow:inset 0 -3px 0 var(--tint)}
+.lpslot.on{background:var(--tint);color:var(--on-tint)}
+.lpbar{display:flex;justify-content:space-evenly;flex:none;padding-bottom:2px}
+.lpbar .ic.on{background:var(--tint);color:var(--on-tint)}
+.lpn{font-size:13px;color:var(--l2)}
+/* маленькие окна */
+.lpwrap.quarter .lpbtn{width:min(44cqw,60cqh,160px)}
+.lpwrap.quarter .lplab{display:none}
+.lpwrap.quarter .lplayers{max-height:30cqh}
+.lpstrip{flex:1;display:flex;align-items:center;gap:12px;padding:0 6px}
+.lpstrip .lpbtn{width:auto;height:84cqh;aspect-ratio:1;box-shadow:none}
+.lpstrip .lplab{display:none}
+.lpstrip .lpic svg{width:50%;height:50%}
+@container (min-aspect-ratio: 1.3/1) {
+  .lpwrap.full,.lpwrap.half{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr auto auto;column-gap:14px}
+  .lpwrap.full .lpmain,.lpwrap.half .lpmain{grid-row:1/4}
+  .lpwrap.full .lpbtn,.lpwrap.half .lpbtn{width:min(44cqw,74cqh,300px)}
+  .lpwrap.full .lplayers,.lpwrap.half .lplayers{max-height:none;flex:1;min-height:0}
+}
