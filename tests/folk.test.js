@@ -5,7 +5,7 @@ import { mName } from '../src/music/notes.js';
 
 describe('народные лады', () => {
   it('у каждого лада — тоника 0, ступени по возрастанию внутри октавы', () => {
-    expect(FOLK_IDS.length).toBe(19);
+    expect(FOLK_IDS.length).toBe(16);
     FOLK.forEach(([, list]) => list.forEach(([, c]) => {
       expect(c[0]).toBe(0);
       c.forEach((v, i) => { if (i) expect(v).toBeGreaterThan(c[i - 1]); expect(v).toBeLessThan(1200); });
@@ -17,6 +17,16 @@ describe('народные лады', () => {
     expect(neighbors(63.7, pcs)).toEqual([63.5, 65]);
     expect(snapPitch(63.6, 'note', pcs)).toBe(63.5);
     expect(snapPitch(64.4, 'note', pcs)).toBe(65);
+  });
+  it('один лад разных традиций — одна строка; прежний выбор ведёт к общему', () => {
+    expect(folkCents('shur')).toEqual(folkCents('bayati'));
+    expect(folkCents('thijaz')).toEqual(folkCents('hijaz'));
+    expect(folkCents('trast')).toEqual(folkCents('just'));
+    const all = FOLK.flatMap(([, l]) => l);
+    for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+      const [a, x] = all[i], [b, y] = all[j];
+      if (x.length === y.length) expect(Math.max(...x.map((v, k) => Math.abs(v - y[k]))), a + ' ' + b).toBeGreaterThan(21);
+    }
   });
   it('тоника сдвигает лад, свой лад чистится', () => {
     expect(allowedPcs({ scale: 'slendro', root: 2 }).map((x) => +x.toFixed(2))).toEqual([2, 4.4, 6.8, 9.2, 11.6]);

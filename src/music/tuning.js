@@ -17,7 +17,7 @@ export const TUNINGS = [
 
 // Точность: допуск в центах
 export const TOL = { strict: 2, normal: 5, soft: 10 };
-export const STYLES = ['needle', 'strobe', 'bar', 'ring'];
+export const STYLES = ['needle', 'strobe']; // вид тюнера: стрелка или стробоскоп («Полоса» и «Кольцо» убраны, 10.2026)
 
 // Значения по умолчанию (прототип: TUC())
 export function normalizeTuner(t) {

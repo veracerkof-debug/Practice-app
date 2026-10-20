@@ -1,7 +1,7 @@
 // Профиль и настройки (полноэкранная панель): статистика, неделя и цель, оформление, данные, функции;
-// поддержать разработчика, правовые тексты, соглашение при первом запуске.
+// чат в Telegram, правовые тексты, соглашение при первом запуске.
 // Перенесено из legacy/practice.html (panelRoot, renderPanel, PPAGES, weekHTML, lookHTML, dataHTML, featHTML, statsHTML,
-// barsSVG, hbars, legalSheet, donateSheet, doExport, импорт копии).
+// barsSVG, hbars, legalSheet, doExport, импорт копии).
 import { Capacitor } from '@capacitor/core';
 import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
@@ -61,7 +61,9 @@ const PAGES = {
 const PLAIN_HIDE = ['stats', 'week', 'notif', 'mascot'];
 // «Сообщить о проблеме» — лист со строчками журнала
 const BUG = '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 14h7M9 17h4"/></svg>';
-const HEART = '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
+// Чат тестеров и обсуждения (Telegram) — открывается только по нажатию, в браузере или приложении Telegram
+const TG_CHAT = 'https://t.me/+qP8rC1tAkvU1MjYy';
+const PLANE = '<svg viewBox="0 0 24 24"><path d="M21 4 3 11.2l6.3 2.3L18 7.5l-6.8 7.4V20l3.4-3.6 4 3L21 4z"/></svg>';
 const VERSION = APP_VERSION;
 
 /* ---------- статистика ---------- */
@@ -439,7 +441,7 @@ function rootHTML(app) {
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
     '<div class="group" style="margin-top:20px">' + Object.entries(PAGES).filter(([k]) => !plain || !PLAIN_HIDE.includes(k)).map(([k, [c, ic]]) => '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t('page.' + k + '.sub') + '</span></span>' + CHEV + '</button>').join('') + '</div>' +
-    '<div class="group" style="margin-top:20px"><button class="cell" data-act="donate"><span class="ticon" style="' + iconBg(app.store.state.settings, 'pink') + '">' + HEART + '</span><span class="grow">' + t('panel.donate') + '</span>' + CHEV + '</button>' +
+    '<div class="group" style="margin-top:20px"><a class="cell" href="' + TG_CHAT + '" target="_blank" rel="noopener"><span class="ticon" style="' + iconBg(app.store.state.settings, 'blue') + '">' + PLANE + '</span><span class="grow">' + t('panel.tg') + '<span class="psub">' + t('panel.tgSub') + '</span></span>' + CHEV + '</a>' +
       '<button class="cell" data-act="report"><span class="ticon" style="' + iconBg(app.store.state.settings, 'graphite') + '">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button></div>' +
     '<div class="group" style="margin-top:12px">' + ['about', 'tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + ' · ' + t(Capacitor.isNativePlatform() ? 'panel.kindApk' : import.meta.env.MODE === 'showcase' ? 'panel.kindShow' : 'panel.kindWeb') + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
@@ -610,7 +612,7 @@ export function createPanel(app, onChange) {
         });
         return;
       }
-      app.shellAct(e); // общие действия: ударный режим, поддержать, правовые тексты
+      app.shellAct(e); // общие действия: ударный режим, правовые тексты
     });
     layer.addEventListener('change', (e) => {
       const d = e.target.dataset;
@@ -683,14 +685,8 @@ function importBackup(app, input, done) {
   r.readAsText(f);
 }
 
-/* ---------- поддержать, правовые тексты, соглашение ---------- */
+/* ---------- правовые тексты, соглашение ---------- */
 
-export function donateSheet() {
-  sheet(() => snav(t('donate.title')) + '<div class="prohero"><div class="pav" style="color:#A95E72">' + HEART.replace('<svg', '<svg style="width:40px;height:40px;fill:currentColor"') + '</div><p class="l2" style="text-align:center;margin:10px 16px 0">' + t('donate.text') + '</p></div>' +
-    '<div class="dongrid">' + [['1 $', 'coffee'], ['3 $', 'strings'], ['5 $', 'pick']].map(([a, k]) => '<button class="donb" data-don="' + a + '"><b>' + a + '</b><span>' + t('donate.' + k) + '</span></button>').join('') +
-    '</div><p class="ftr" style="text-align:center">' + t('donate.later') + '</p>',
-  (el) => el.addEventListener('click', (e) => { if (e.target.closest('[data-don]')) toast(t('donate.thanks')); }));
-}
 
 const ruOnly = () => (getLang() === 'ru' ? '' : '<p class="ftr">' + t('legal.ruOnly') + '</p>');
 

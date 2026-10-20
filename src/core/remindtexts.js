@@ -3,6 +3,7 @@
 // «Алекс, сегодня практика…».
 import { quoteAt, dayIndex, setsOf } from './quotes.js';
 import { remindOf } from './reminders.js';
+import { notifyIcon as iconOf } from './notifymood.js';
 import { getLang, mascotGender } from '../i18n/index.js';
 
 const T = {
@@ -122,7 +123,7 @@ const PUSHY_N = {
 const pushyOf = (L, lang) => (mascotGender() === 'm' ? { ...L.pushy, ...(PUSHY_M[lang] || PUSHY_M.ru) } : mascotGender() === 'none' ? { ...L.pushy, ...(PUSHY_N[lang] || PUSHY_N.ru) } : L.pushy);
 const lowerFirst = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 
-// Текст напоминания: { i, ts, n, slot, mode } + язык, наборы слов, свои сборники, имя (если обращение по имени)
+// Текст напоминания (без подписи источника цитаты — в уведомлении она лишняя): { i, ts, n, slot, mode } + язык, наборы слов, свои сборники, имя (если обращение по имени)
 export function remindText({ i = 0, ts = Date.now(), slot = 'lead:60', mode = 'classic', tone }, { lang = 'ru', sets = true, books = [], name = '' } = {}) {
   const L = T[lang] || T.ru, d = dayIndex(ts);
   let title, body;
@@ -144,14 +145,14 @@ export function remindText({ i = 0, ts = Date.now(), slot = 'lead:60', mode = 'c
   else if (slot === 'after') [title, body] = L.after;
   else if (slot === 'call' || slot.startsWith('soon:')) {
     const q = quoteAt(d * 3 + i, lang, sets, books);
-    title = slot === 'call' ? L.call : L.soon(+slot.split(':')[1]); body = q.text + (q.ref ? ' — ' + q.ref : '');
+    title = slot === 'call' ? L.call : L.soon(+slot.split(':')[1]); body = q.text;
   }
   else {
     const m = +String(slot).split(':')[1] || 60, q = quoteAt(d * 3 + i, lang, sets, books);
-    title = L.lead(m); body = q.text + (q.ref ? ' — ' + q.ref : '');
+    title = L.lead(m); body = q.text;
   }
   if (name) title = name + ', ' + lowerFirst(title);
-  return { title, body };
+  return { title, body, icon: iconOf(slot, mode, mascotGender()) };
 }
 
 // Строка навязчивой Мелеты для главной: по времени суток (утро → перед обедом → днём → перед ужином → вечер)
@@ -160,6 +161,7 @@ export function pleaLine(h, lang = 'ru') {
   return (h < 12 ? P.morning : h < 15 ? P.lunch : h < 18 ? P.afternoon : h < 20 ? P.dinner : P.late)[0];
 }
 export const PUSHY_TEXTS = T;
+export { NOTIFY_MOODS, notifyIcon } from './notifymood.js';
 
 // Язык, наборы и обращение — из настроек
 export function remindCtx(settings, lang = getLang()) {

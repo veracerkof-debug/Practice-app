@@ -35,7 +35,6 @@
 .needle.ok path,.needle.ok circle:not(.hub){fill:#5F8568}
 
 /* полоса */
-.tbarw{width:100%;display:flex;align-items:center;padding:0 4px}
 .tbar{display:flex;align-items:center;gap:8px;width:100%}
 .tbfs{font-size:20px;font-weight:600;color:var(--l3);transition:color .2s;width:14px}
 .tbar.flat .tbfs:first-child,.tbar.sharp .tbfs:last-child{color:var(--tint)}
@@ -53,21 +52,6 @@
 .tbar.sm .tbm{width:16px;height:16px;margin:-8px 0 0 -8px}
 .tbar.sm .tbtick{display:none}
 .tbar.sm .tbfs{font-size:14px;width:10px}
-
-/* кольцо */
-.tringw{position:relative;height:100%;aspect-ratio:1;max-width:100%}
-.tring{width:100%;height:100%;display:block}
-.trtrack{fill:none;stroke:var(--fill);stroke-width:10}
-.trsoft{fill:none;stroke:rgba(52,199,89,.2);stroke-width:10}
-.trzone{fill:none;stroke:#5F8568;stroke-width:10;stroke-linecap:round;opacity:.55;transition:opacity .25s}
-.tringw.ok .trzone{opacity:1}
-.trdev{fill:none;stroke:var(--tint);stroke-width:4;stroke-linecap:round;opacity:.7}
-.trzero{stroke:var(--ink);stroke-width:2;stroke-linecap:round}
-.trdot circle{fill:var(--tint);stroke:var(--cell);stroke-width:3;transition:fill .25s}
-.trdot.ok circle{fill:#5F8568}
-.tringw.ok .trtrack{stroke:color-mix(in srgb,#5F8568 22%,var(--fill))}
-.tringin{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
-.tringin .tnoteW{font-size:clamp(40px,15cqmin,104px)}
 
 /* стробоскоп-панорама */
 .tpano{position:relative;width:100%;height:min(100%,170px);min-height:90px;border-radius:16px;background:var(--fill);overflow:hidden}
@@ -111,10 +95,6 @@
 .tsi.needle i:first-child{position:absolute;left:50%;bottom:0;width:2px;height:26px;background:var(--tint);transform:rotate(18deg);transform-origin:bottom}
 .tsi.strobe{border-radius:6px;background:linear-gradient(var(--fill),var(--fill)) top/100% 55% no-repeat,repeating-linear-gradient(90deg,var(--ink) 0 5px,transparent 5px 10px) bottom/100% 40% no-repeat;opacity:.7}
 .tsi.strobe i:first-child{position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--tint)}
-.tsi.bar{height:10px;margin-top:10px;border-radius:5px;background:var(--fill2)}
-.tsi.bar i:first-child{position:absolute;left:58%;top:-3px;width:16px;height:16px;border-radius:50%;background:var(--tint)}
-.tsi.ring{width:30px;border:3px solid var(--l3);border-radius:50%}
-.tsi.ring i:first-child{position:absolute;top:-6px;left:16px;width:10px;height:10px;border-radius:50%;background:var(--tint)}
 .tclean.half .thz{display:none}
 .tclean.half.beg .tvis{max-height:none}
 .tclean.half .tmode{display:none}

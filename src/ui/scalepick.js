@@ -1,14 +1,14 @@
 // Выбор лада в настройках глайдера и терменвокса: обычные лады, народные (с микроинтервалами) по традициям
 // и свой лад — ступени в центах. attr — атрибут списка (data-gsc / data-tsc): модуль сам ставит s.scale по change.
 import { SCALE_TYPES } from '../music/theory.js';
-import { FOLK, folkCents, cleanCustom } from '../music/folk.js';
+import { FOLK, folkCents, cleanCustom, folkId } from '../music/folk.js';
 import { esc } from './index.js';
 
 // Название лада для подписей
-export const scaleLabel = (t, id) => (id === 'custom' ? t('folk.custom') : folkCents(id) ? t('folk.' + id) : t('scale.' + id));
+export const scaleLabel = (t, id) => (id === 'custom' ? t('folk.custom') : folkCents(id) ? t('folk.' + folkId(id)) : t('scale.' + id));
 
 export function scaleSelectHTML(t, s, attr) {
-  const o = (v, n) => '<option value="' + v + '"' + (s.scale === v ? ' selected' : '') + '>' + esc(n) + '</option>';
+  const cur = folkId(s.scale), o = (v, n) => '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + esc(n) + '</option>';
   return '<select class="sortsel glsel" ' + attr + ' aria-label="' + esc(t('notes')) + '">' + o('chrom', t('chrom')) +
     '<optgroup label="' + esc(t('folkg.west')) + '">' + SCALE_TYPES.map((k) => o(k, t('scale.' + k))).join('') + '</optgroup>' +
     FOLK.map(([g, list]) => '<optgroup label="' + esc(t('folkg.' + g)) + '">' + list.map(([id]) => o(id, t('folk.' + id))).join('') + '</optgroup>').join('') +

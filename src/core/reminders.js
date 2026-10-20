@@ -139,7 +139,11 @@ export async function openExactSettings() {
   if (P && P.changeExactNotificationSetting) { try { await P.changeExactNotificationSetting(); } catch { /* нет экрана */ } }
 }
 
-// Пересчитать расписание. texts({ i, ts, n, slot, mode }) → { title, body } — текст напоминания (маскот, цитаты)
+// Уведомление из текста: { title, body, icon } → поля плагина. Значок в строке состояния — монохромное лицо маскота
+// (res/drawable/ic_stat_melete.xml), большая картинка — маскот с лицом по поводу (icon, remindtexts.js: notifyIcon)
+const note = ({ title, body, icon }) => ({ title, body, smallIcon: 'ic_stat_melete', iconColor: '#9C7242', ...(icon ? { largeIcon: icon } : {}) });
+
+// Пересчитать расписание. texts({ i, ts, n, slot, mode }) → { title, body, icon } — текст напоминания (маскот, цитаты)
 export async function reschedule(state, texts, now = Date.now()) {
   const { P } = await plugin();
   if (!P) return 0;
@@ -153,7 +157,7 @@ export async function reschedule(state, texts, now = Date.now()) {
     await channels(P);
     const mode = remindOf(st).mode, exact = await exactAllowed();
     await P.schedule({
-      notifications: list.map((x, i) => ({ id: ID0 + i, ...texts({ i, ts: x.ts, n: x.n, slot: x.slot, mode, tone: x.tone }), schedule: { at: new Date(x.ts), allowWhileIdle: true },
+      notifications: list.map((x, i) => ({ id: ID0 + i, ...note(texts({ i, ts: x.ts, n: x.n, slot: x.slot, mode, tone: x.tone })), schedule: { at: new Date(x.ts), allowWhileIdle: true },
         channelId: CHANNELS[x.tone || mode] || CHANNELS.classic, autoCancel: true, isExactNotification: exact })),
     });
     log('remind', 'запланировано ' + list.length + (exact ? ', точно' : ', приблизительно') + ', первое — ' + new Date(list[0].ts).toLocaleString());
@@ -173,7 +177,7 @@ export async function rescheduleEvents(list) {
     if (!(await P.checkPermissions().then((p) => p.display === 'granted').catch(() => false))) { log('remind', 'события: уведомления не разрешены', 'w'); return 0; }
     if (Capacitor.getPlatform() === 'android') await P.createChannel({ id: EV_CH, name: 'Melete · календарь', importance: 4, visibility: 1, vibration: true }).catch(() => {});
     const exact = await exactAllowed();
-    await P.schedule({ notifications: list.slice(0, EV_N).map((x, i) => ({ id: EV0 + i, title: x.title, body: x.body, schedule: { at: new Date(x.ts), allowWhileIdle: true },
+    await P.schedule({ notifications: list.slice(0, EV_N).map((x, i) => ({ id: EV0 + i, ...note({ title: x.title, body: x.body }), schedule: { at: new Date(x.ts), allowWhileIdle: true },
       channelId: EV_CH, autoCancel: true, isExactNotification: exact })) });
     log('remind', 'события: запланировано ' + Math.min(EV_N, list.length));
     return list.length;
@@ -199,7 +203,7 @@ export async function remindTest(texts, mode = 'classic', slot = 'lead:60', tone
   if (!(await remindPermission())) return 'denied';
   await channels(P);
   try {
-    await P.schedule({ notifications: [{ id: ID_TEST, ...texts({ i: 0, ts: Date.now(), n: 0, slot, mode, tone }), channelId: CHANNELS[tone || mode] || CHANNELS.classic, autoCancel: true, isExactNotification: false }] });
+    await P.schedule({ notifications: [{ id: ID_TEST, ...note(texts({ i: 0, ts: Date.now(), n: 0, slot, mode, tone })), channelId: CHANNELS[tone || mode] || CHANNELS.classic, autoCancel: true, isExactNotification: false }] });
     log('remind', 'проверка показана');
     return 'ok';
   } catch (e) { log('remind', 'проверка не показалась: ' + errText(e), 'e'); return 'fail'; }

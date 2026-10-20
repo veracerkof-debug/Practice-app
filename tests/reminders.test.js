@@ -110,10 +110,11 @@ describe('настроение Мелеты', () => {
 
 describe('наборы цитат', () => {
   it('по умолчанию и выбор', () => {
-    expect(setsOf({})).toEqual(['classic', 'rock']);
-    expect(setsOf({ church: true })).toContain('bible');
+    expect(setsOf({})).toEqual(['meme']);
+    expect(setsOf({ church: true })).toEqual(['meme']);
+    expect(setsOf({ church: true, qsets: ['bible'] })).toEqual(['bible']);
     expect(setsOf({ qsets: ['meme', 'xx'] })).toEqual(['meme']);
-    expect(setsOf({ qsets: [] })).toEqual(['classic', 'rock']);
+    expect(setsOf({ qsets: [] })).toEqual(['meme']);
   });
   it('каждый набор не пуст и отдаёт только свои цитаты', () => {
     for (const k of QSETS) {
@@ -129,7 +130,8 @@ describe('наборы цитат', () => {
   });
 });
 
-import { remindText, pleaLine, PUSHY_TEXTS } from '../src/core/remindtexts.js';
+import { remindText, pleaLine, PUSHY_TEXTS, notifyIcon } from '../src/core/remindtexts.js';
+import { existsSync } from 'node:fs';
 describe('характеры Мелеты', () => {
   const at = (h) => new Date(2026, 9, 14, h, 0).getTime(), days = [1, 1, 1, 1, 1, 0, 0];
   it('навязчивая давит в течение дня, без уведомлений — спокойна', () => {
@@ -144,6 +146,14 @@ describe('характеры Мелеты', () => {
     expect(remindText({ slot: 'lead:5', mode: 'classic' }, { lang: 'ru' }).title).toBe('Пора доставать инструмент');
     expect(remindText({ slot: 'lead:5', mode: 'classic' }, { lang: 'ru', name: 'Алекс' }).title).toBe('Алекс, пора доставать инструмент');
     expect(remindText({ slot: 'morning', mode: 'pushy' }, { lang: 'en' }).title).toMatch(/Good morning/);
+    // без подписи источника; маскот с лицом по поводу — картинка есть в res/drawable-nodpi
+    const q = remindText({ slot: 'lead:60', mode: 'classic' }, { lang: 'ru', sets: ['classic'] });
+    expect(q.body).not.toMatch(/ — /);
+    for (const [slot, mode] of [['lead:60', 'classic'], ['lead:5', 'pushy'], ['after', 'classic'], ['late', 'pushy'], ['soon:15', 'classic'], ['abs', 'custom']]) {
+      const ic = remindText({ slot, mode }, { lang: 'ru' }).icon;
+      expect(existsSync('android/app/src/main/res/drawable-nodpi/' + ic + '.png'), slot).toBe(true);
+    }
+    expect(notifyIcon('after', 'classic', 'none')).toBe('');
     expect(pleaLine(13)).toBe(PUSHY_TEXTS.ru.pushy.lunch[0]);
     for (const l of ['ru', 'uz', 'en']) expect(Object.keys(PUSHY_TEXTS[l].pushy).length).toBe(8);
     Object.values(PUSHY_TEXTS.ru.pushy).flat().concat(PUSHY_TEXTS.ru.five).forEach((x) => expect(x).not.toMatch(/(^|\s)(ты|вы|тебя|вас|тебе|вам)(\s|[,.!?…]|$)/i));

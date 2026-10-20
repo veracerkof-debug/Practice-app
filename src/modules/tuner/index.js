@@ -61,20 +61,11 @@ function gaugeSVG() {
   return s + '<g id="tneedle" class="needle"><path d="M150 46 L154 156 Q150 162 146 156 Z"/><circle cx="150" cy="160" r="8"/><circle cx="150" cy="160" r="3" class="hub"/></g></svg>';
 }
 
-// Полоса: шкала центов, зона допуска, бегунок
+// Полоса (маленькие окна: четверть и полоска): шкала центов, зона допуска, бегунок
 function barHTML(cls = '') {
   const T = tol();
   return '<div class="tbar ' + cls + '" aria-hidden="true"><span class="tbfs">♭</span><div class="tbtrack"><i class="tbsoft" style="width:' + (T + 10) + '%"></i><i class="tbzone" style="width:' + T + '%"></i>' +
     [-40, -30, -20, -10, 10, 20, 30, 40].map((c) => '<i class="tbtick" style="left:' + (50 + c / 1) + '%"></i>').join('') + '<i class="tbmid"></i><i class="tbm" id="tbarm"></i></div><span class="tbfs">♯</span></div>';
-}
-
-// Кольцо: ±50 центов на ±90°; дуга от верха до точки показывает отклонение
-function ringHTML() {
-  const T = tol();
-  return '<div class="tringw" id="tringw"><svg viewBox="0 0 200 200" class="tring" aria-hidden="true"><circle cx="100" cy="100" r="84" class="trtrack"/>' +
-    '<path d="' + arcD(100, 100, 84, -90 - (T + 10) * 1.8, -90 + (T + 10) * 1.8) + '" class="trsoft"/><path d="' + arcD(100, 100, 84, -90 - T * 1.8, -90 + T * 1.8) + '" class="trzone"/>' +
-    '<path id="trdev" class="trdev" d=""/><line x1="100" y1="8" x2="100" y2="26" class="trzero"/><g id="tringdot" class="trdot"><circle cx="100" cy="16" r="9"/></g></svg>' +
-    '<div class="tringin">' + noteHTML() + '</div></div>';
 }
 
 // Стробоскоп-панорама: сверху лента нот едет под неподвижной меткой, снизу полосы бегут в сторону фальши
@@ -100,17 +91,17 @@ function micNote() {
 }
 
 function view() {
-  const { t, ui } = ctx, s = st(), tn = tuning(), style = ctx.mono ? 'bar' : s.style; // «Минимал» — шкала
+  const { t, ui } = ctx, s = st(), tn = tuning(), style = s.style; // стрелка или стробоскоп
   const cents = '<div id="tcent" class="tcent" aria-live="polite">' + t('play') + '</div>';
   const hz = '<div id="thz" class="thz num">' + t('hzNone') + '</div>';
   if (size === 'quarter') return '<div class="tq">' + noteHTML() + barHTML('sm') + cents + micNote() + '</div>';
   if (size === 'strip') return '<div class="ts">' + noteHTML() + '<div class="tsmid">' + barHTML('sm') + cents + '</div>' + micNote() + '</div>';
-  const vis = style === 'ring' ? ringHTML() : style === 'strobe' ? strobeHTML() : style === 'bar' ? '<div class="tbarw">' + barHTML() + '</div>' : '<div class="tgw">' + gaugeSVG() + '</div>';
+  const vis = style === 'strobe' ? strobeHTML() : '<div class="tgw">' + gaugeSVG() + '</div>';
   // в половине окна — короткое напоминание, чтобы шкале хватило места
   const warn = tn ? '<div class="twarn" role="note">' + WARN + '<span>' + t(size === 'half' ? 'warnShort' : 'warn') + '</span></div>' : '';
   const mode = '<div class="tmode">' + ui.esc(tn ? t('beginner') + ' · ' + tuningName(tn) : t('chromatic')) + ' · ' + t('hz', { f: s.a4 }) + '</div>';
   return '<div class="tclean ' + size + ' st-' + style + (tn ? ' beg' : '') + '">' + ui.icb('data-x="tset"', ui.icons.gear, t('settings'), 'sm tgear') + warn +
-    '<div class="tvis">' + vis + '</div>' + (style === 'ring' ? '' : noteHTML()) + cents + hz + (tn ? stringsHTML(tn) : '') + micNote() + mode + '</div>';
+    '<div class="tvis">' + vis + '</div>' + noteHTML() + cents + hz + (tn ? stringsHTML(tn) : '') + micNote() + mode + '</div>';
 }
 
 function render() {
@@ -225,17 +216,6 @@ function frame(now) {
     b.classList.toggle('flat', on && !ok && R.cents < 0);
     b.classList.toggle('sharp', on && !ok && R.cents > 0);
   });
-  const dot = q('tringdot');
-  if (dot) {
-    const ang = D.c * 1.8;
-    dot.setAttribute('transform', 'rotate(' + ang.toFixed(2) + ' 100 100)');
-    dot.classList.toggle('ok', ok);
-    dot.style.opacity = (0.35 + 0.65 * D.a).toFixed(2);
-    const dev = q('trdev');
-    if (dev) dev.setAttribute('d', Math.abs(ang) > 0.5 && on ? arcD(100, 100, 72, -90, -90 + ang) : '');
-    const w = q('tringw');
-    if (w) w.classList.toggle('ok', ok);
-  }
   drawPano(dt, ok, on);
   if (mic || D.a > 0.01 || Math.abs(D.c) > 0.05) raf = requestAnimationFrame(frame);
 }
@@ -342,8 +322,7 @@ function settingsSheet() {
       '<div class="group" style="margin-top:4px"><div class="cell"><span class="grow">' + t('beginner') + '</span>' + ui.sw('tbeg', s.beginner, t('beginner')) + '</div>' +
       (s.beginner ? '<button class="cell" data-tpk><span class="grow">' + t('set.tuning') + '</span><span class="val">' + ui.esc(tn ? tuningName(tn) : t('set.noTuning')) + '</span>' + ui.icons.chev + '</button>' : '') + '</div>' +
       '<p class="ftr">' + t(s.beginner ? 'set.begOn' : 'set.begOff') + '</p>' +
-      (ctx.mono ? '<div class="hdr">' + t('set.view') + '</div><p class="ftr" style="margin-top:0">' + t('monoFixed', { v: t('style.bar') }) + '</p>' :
-      '<div class="hdr">' + t('set.view') + '</div><div class="tstys" role="group" aria-label="' + t('set.view') + '">' +
+      ('<div class="hdr">' + t('set.view') + '</div><div class="tstys" role="group" aria-label="' + t('set.view') + '">' +
       STYLES.map((k) => '<button class="tsty' + (s.style === k ? ' on' : '') + '" data-tsty="' + k + '" aria-pressed="' + (s.style === k) + '"><span class="tsi ' + k +
         '"><i></i><i></i><i></i></span><b>' + t('style.' + k) + '</b></button>').join('') + '</div>') +
       '<div class="hdr">' + t('set.sens') + '</div><div class="group"><div class="cellcol">' + ui.seg('tsens', Object.keys(SENS).map((k) => [k, t('sens.' + k)]), s.sens || 'normal', t('set.sens')) +

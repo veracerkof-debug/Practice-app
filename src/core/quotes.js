@@ -216,7 +216,7 @@ export const CALLS = {
 
 // Наборы цитат (выбор человека в «Функциях»): рок и джаз, классика, Библия, христианские авторы, цитатник
 export const QSETS = ['rock', 'classic', 'bible', 'faith', 'meme'];
-// По умолчанию: классика и рок; в церковном режиме — ещё Библия и христианские авторы
+// По умолчанию — только цитатник маскота (шуточный, свой); остальные наборы включают сами
 // Свои сборники (settings.quoteBooks, из файла .melete / от нейросети) — наборы 'own:<id>'
 const ownIds = (settings) => (settings.quoteBooks || []).map((b) => 'own:' + b.id);
 // Библия и христианские цитаты — только в церковном режиме: без него приложение полностью светское
@@ -225,7 +225,7 @@ export const qsetsFor = (settings = {}) => QSETS.filter((k) => settings.church |
 export const setsOf = (settings = {}) => {
   const ok = [...qsetsFor(settings), ...ownIds(settings)];
   const v = Array.isArray(settings.qsets) ? settings.qsets.filter((k) => ok.includes(k)) : null;
-  return v && v.length ? v : settings.church ? ['bible', 'faith', 'classic', 'rock'] : ['classic', 'rock'];
+  return v && v.length ? v : ['meme'];
 };
 
 // Цитаты выбранных наборов по кругу — вперемешку, чтобы подряд не шли из одного набора
@@ -244,7 +244,7 @@ const POOLS = {};
 // i-я цитата на языке lang из наборов sets (массив; true/false — как раньше: церковный режим или нет) → { text, ref? }.
 // books — свои сборники (settings.quoteBooks)
 export function quoteAt(i, lang = 'ru', sets = true, books = []) {
-  if (!Array.isArray(sets)) sets = setsOf({ church: !!sets });
+  if (!Array.isArray(sets)) sets = sets ? ['bible', 'faith', 'classic', 'rock'] : ['classic', 'rock']; // прежний вид: церковный режим или нет
   const key = sets.join(',') + '|' + books.map((b) => b.id + ':' + b.items.length).join(','), all = POOLS[key] || (POOLS[key] = pool(sets, books));
   if (!all.length) return { text: '' };
   const q = all[((i % all.length) + all.length) % all.length];
@@ -262,5 +262,5 @@ export const dayIndex = (ts = Date.now()) => Math.floor((ts - new Date(ts).getTi
 // Текст уведомления: заголовок — зов маскота, текст — цитата (напоминания по характеру — src/core/remindtexts.js)
 export function notifyText(i, at, lang = 'ru', sets = true, books = []) {
   const calls = CALLS[lang] || CALLS.ru, d = dayIndex(at), q = quoteAt(d * 3 + i, lang, sets, books);
-  return { title: calls[(d + i) % calls.length], body: q.text + (q.ref ? ' — ' + q.ref : '') };
+  return { title: calls[(d + i) % calls.length], body: q.text };
 }

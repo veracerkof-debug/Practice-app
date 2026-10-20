@@ -15,7 +15,7 @@ import { renderTools, openToolView, toolsTab, setToolsTab } from './tools.js';
 import { reportSheet } from './report.js';
 import { songImportMenu } from './songimport.js';
 import { shareSheet, shareMenu } from './share.js';
-import { createPanel, donateSheet, legalSheet, unverifiedSheet } from './panel.js';
+import { createPanel, legalSheet, unverifiedSheet } from './panel.js';
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
 import { onboarding, langGate, askName } from './onboard.js';
 import { logoHTML } from '../../ui/logo.js';
@@ -136,7 +136,6 @@ export function createShell(app, root) {
     else if (d.pp) panel.open(d.pp);
     else if (d.act === 'libman') libManager(app, render);
     else if (d.act === 'quickedit') quickEdit(app, render);
-    else if (d.act === 'donate') donateSheet();
     // чтение дня: Библия — на нужной главе
     else if (d.act === 'bible') {
       if (d.key) { const [code, ch] = d.key.split('.'); app.bible.setPos({ code, ch: +ch, y: 0 }); }
