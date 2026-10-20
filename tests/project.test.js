@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newProject, newTrack, newData, newClip, normalizeProject, toggleNote, moveNote, resizeNote, setChord, chordAt, expandChords, diatonicChords, chordName, projectEvents, dataBeats, songBeats, songBars, songNotes, clipNotes, countOf, toggleStep, stepOn, drumNotes, addClip, dupClip, moveClip, resizeClip, trimClipStart, splitClip, removeClip, clipAt, clipsOf, isEmptyProject, CLIPS_MAX, setRegion, loopOf, setMark, removeMark, markAt, clipCopy, pasteClip, quantizeNotes, addPlayedNote, setAutoPoint, removeAutoPoint, autoAt, joinClips } from '../src/music/project.js';
+import { newProject, newTrack, newData, newClip, normalizeProject, toggleNote, moveNote, resizeNote, setChord, chordAt, expandChords, diatonicChords, chordName, projectEvents, dataBeats, songBeats, songBars, songNotes, clipNotes, countOf, toggleStep, stepOn, drumNotes, addClip, dupClip, moveClip, resizeClip, trimClipStart, splitClip, removeClip, clipAt, clipsOf, isEmptyProject, CLIPS_MAX, setRegion, loopOf, setMark, removeMark, markAt, clipCopy, pasteClip, quantizeNotes, addPlayedNote, setAutoPoint, removeAutoPoint, autoAt, joinClips, projectFromStems } from '../src/music/project.js';
 
 describe('студия: проект', () => {
   it('новый проект: дорожки, клипов нет, песня — 4 такта', () => {
@@ -176,5 +176,10 @@ describe('студия: проект', () => {
     expect(joinClips(p, a, far)).toBe(null); // не рядом
     const j = joinClips(p, a, b);
     expect([j.len, j.data.bars, j.data.steps.kick, j.data.steps.snare, p.clips.length]).toEqual([12, 3, [0], [20, 36], 2]); // кусок b повторён
+  });
+  it('проект из дорожек: четыре дорожки-записи, клипы на всю длину целыми тактами', () => {
+    const p = projectFromStems('Песня.wav', [{ part: 'vocals', fileId: 'a', dur: 10 }, { part: 'drums', fileId: 'b', dur: 10 }, { part: 'bass', fileId: 'c', dur: 10 }, { part: 'other', fileId: 'd', dur: 10 }], { songId: 's1' });
+    expect([p.name, p.bpm, p.songId, p.tracks.map((t) => t.kind + ':' + t.name)]).toEqual(['Песня', 90, 's1', ['audio:vocals', 'audio:drums', 'audio:bass', 'audio:other']]);
+    expect(p.clips.map((c) => [c.at, c.len, c.data.fileId])).toEqual([[0, 16, 'a'], [0, 16, 'b'], [0, 16, 'c'], [0, 16, 'd']]); // 10 с при 90 bpm = 15 долей → 4 такта
   });
 });

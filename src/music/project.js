@@ -441,6 +441,20 @@ export function projectTracks(p, { swing = true } = {}) {
     notes: all.filter((n) => n.tr === tr).map((n) => ({ t: n.t + sw(n.t), d: n.d, m: n.m, v: Math.min(1, n.v * tr.vol * (n.gain || 1)) })),
   }));
 }
+// Разделённая запись (модуль «Дорожки») → проект: четыре дорожки-записи, у каждой клип на всю длину (темп 90,
+// длина — целыми тактами). stems — [{ part, fileId, dur, name? }]: name — подпись дорожки на языке интерфейса, иначе ключ части
+export function projectFromStems(name, stems, { songId = null, bpm = 90 } = {}) {
+  const p = newProject({ name: String(name || '').replace(/\.[a-z0-9]+$/i, '').slice(0, 40), bpm, songId });
+  p.tracks = [];
+  const colors = { vocals: '#A95E72', drums: '#B5533C', bass: '#567198', other: '#5F8568' };
+  stems.forEach((s, i) => {
+    const tr = newTrack('audio', i, { name: String(s.name || s.part).slice(0, 30), color: colors[s.part] || COLORS[i % COLORS.length] });
+    p.tracks.push(tr);
+    const beats = Math.max(p.num, Math.ceil((s.dur || 1) / secPerBeat(p) / p.num - 1e-6) * p.num);
+    p.clips.push(newClip(p, tr, 0, beats, { fileId: s.fileId, off: 0 }));
+  });
+  return normalizeProject(p);
+}
 // Чужая песня (из .mid или файла студии: { name, bpm, num, den, key?, tracks: [{ name, drums, program?, notes: [{ t, d, m, v }] }] },
 // время — в долях проекта) → наш проект: дорожка — один клип на всю её длину (кусок = вся партия, до 64 тактов на клип,
 // дальше — следующий клип)

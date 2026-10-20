@@ -40,6 +40,10 @@ jobs:
       - name: Тесты
         run: npm test
 
+      # Тяжёлые модели (build/models.json): скачиваются с проверкой sha256, в репозитории их нет
+      - name: Модели
+        run: npm run models
+
       # beforeBuildCommand в tauri.conf.json собирает веб-часть (npm run build)
       - name: Сборка установщика
         run: npx tauri build --ci

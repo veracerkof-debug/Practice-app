@@ -1,0 +1,12 @@
+{
+  "_": "Тяжёлые модели для APK и Windows (DECISIONS: размер и тяжёлые модули). В репозиторий не кладутся: скачиваются перед сборкой (build/fetch-models.mjs) и проверяются по sha256; в веб-сборку не идут",
+  "models": [
+    {
+      "file": "public/models/demucs/htdemucs_embedded.onnx",
+      "url": "https://huggingface.co/timcsy/demucs-web-onnx/resolve/main/htdemucs_embedded.onnx",
+      "sha256": "e5e425c17683f163a472462eb5f5a4ffcd11c31858d57fbd0833b012d8b88077",
+      "bytes": 180534758,
+      "what": "HTDemucs v4 (Meta, MIT) в ONNX со встроенными весами — разделение записи на вокал, ударные, бас, остальное (модуль «Дорожки»)"
+    }
+  ]
+}

@@ -733,6 +733,9 @@ export function legalSheet(kind) {
       lic(t('lic.verses.title'), t('lic.verses.sub'), '<p>' + t('lic.verses.text') + '</p>') +
       lic('fflate', t('lic.fflate.sub'), '<p>© Arjun Barrett</p><p>' + t('lic.mit') + '</p>') +
       lic('Signalsmith Stretch', t('lic.stretch.sub'), '<p>© Signalsmith Audio Ltd</p><p>' + t('lic.mit') + '</p>') +
+      lic('ONNX Runtime Web', t('lic.ort.sub'), '<p>© Microsoft Corporation</p><p>' + t('lic.mit') + '</p>') +
+      lic('demucs-web', t('lic.dw.sub'), '<p>© timcsy</p><p>' + t('lic.mit') + '</p>') +
+      lic('HTDemucs', t('lic.dm.sub'), '<p>© Meta Platforms, Inc. ' + t('lic.andContrib') + '</p><p>' + t('lic.dm.text') + '</p>') +
       lic('sql.js', t('lic.sqljs.sub'), '<p>© sql.js authors; SQLite — public domain</p><p>' + t('lic.mit') + '</p>') +
       lic('Capacitor', t('lic.cap.sub'), '<p>© Ionic ' + t('lic.andContrib') + '</p><p>' + t('lic.cap.text') + '</p>') +
       lic('Tauri', t('lic.tauri.sub'), '<p>© Tauri Programme within The Commons Conservancy</p><p>' + t('lic.tauri.text') + '</p>') +
