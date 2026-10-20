@@ -1,11 +1,12 @@
-// Проигрыватель проекта студии: ноты клипов — синтезатором пианино (свой звук у дорожки), ударные — drums.js,
+// Проигрыватель проекта студии: ноты клипов — синтезатором пианино (свой звук у дорожки) или сэмплером (запись из
+// медиатеки по нотам — скорость воспроизведения от ноты root; записи раскодируются заранее), ударные — drums.js,
 // клипы-записи — записью из медиатеки с нужной секунды. Режимы: песня по кругу (вся или петля region), один клип по
 // кругу (правка в редакторе), один проход (сведение). Планировщик как у метронома: просыпается каждые 25 мс и
 // выставляет всё, что начнётся в ближайшие 300 мс, точно по времени контекста. Свинг — задержка слабых восьмых.
 // Отсчёт перед стартом (такты клика), уровни дорожек для микшера (анализаторы только пока микшер открыт). Без DOM.
 import { getContext } from './context.js';
 import { presetOf } from './synth.js';
-import { songNotes, secPerBeat, clipById, trackOf, loopOf } from '../music/project.js';
+import { songNotes, secPerBeat, clipById, trackOf, loopOf, autoAt } from '../music/project.js';
 import { clickVoice, clickNoise } from './metronome.js';
 import { drumHit } from './drums.js';
 import { createFxChain } from './fx.js';
@@ -22,6 +23,27 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
   const cache = { key: '', notes: [], loop: { a: 0, b: 1 } };
   const bufs = new Map(); // fileId → AudioBuffer | Promise
   let audioSrcs = [];
+  // Запись из медиатеки — буфером (один раз); сразу — если уже раскодирована, иначе обещание
+  const bufOf = (fileId) => {
+    let b = bufs.get(fileId);
+    if (b === undefined) { const r = getFile(fileId); if (!r || !r.blob) return null; b = r.blob.arrayBuffer().then((ab) => c.decodeAudioData(ab)).then((ab) => { bufs.set(fileId, ab); return ab; }).catch(() => null); bufs.set(fileId, b); }
+    return b;
+  };
+  const readyBuf = (fileId) => { const b = bufOf(fileId); return b && !(b instanceof Promise) ? b : null; };
+  // Сэмплер: нота — запись со скоростью по высоте; огибающая 5 мс / 30 мс; стоп в конце ноты (или в конце записи)
+  function sampleNote(buf, out, tr, m, at, dur, v) {
+    const src = c.createBufferSource(), g = c.createGain(), root = (tr.sample && tr.sample.root) || 60;
+    src.buffer = buf; src.playbackRate.value = Math.pow(2, (m - root) / 12);
+    const end = at + Math.min(dur, buf.duration / src.playbackRate.value);
+    g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(v, at + 0.005);
+    g.gain.setValueAtTime(v, Math.max(at + 0.005, end - 0.03)); g.gain.linearRampToValueAtTime(0, end);
+    src.connect(g).connect(out);
+    src.start(at); src.stop(end + 0.01);
+    audioSrcs.push(src);
+    return src;
+  }
+  // Записи сэмплеров проекта — раскодировать заранее (к старту и к пробе)
+  const prime = (p) => p.tracks.forEach((tr) => { if (tr.inst === 'sample' && tr.sample && tr.sample.fileId) bufOf(tr.sample.fileId); });
   // Цепочка эффектов и панорама на каждую дорожку (fx.js): создаются один раз и живут, пока дорожка есть в проекте;
   // ноты и удары дорожки идут в цепочку, она — в панораму — в шину теории (записи — в шину медиа)
   const chains = new Map(); // trackId → { chain, fx, pan, an, c }
@@ -33,10 +55,10 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     let x = chains.get(tr.id);
     if (!x || x.c !== c) {
       if (x) x.chain.dispose();
-      const chain = createFxChain(c, tr.fx), pan = c.createStereoPanner ? c.createStereoPanner() : c.createGain();
+      const chain = createFxChain(c, tr.fx), pan = c.createStereoPanner ? c.createStereoPanner() : c.createGain(), auto = c.createGain();
       if (pan.pan) pan.pan.value = tr.pan || 0;
-      chain.output.connect(pan).connect(mixer.bus(tr.kind === 'audio' ? 'media' : 'theory'));
-      chains.set(tr.id, (x = { chain, fx: tr.fx, pan, an: null, c }));
+      chain.output.connect(auto).connect(pan).connect(mixer.bus(tr.kind === 'audio' ? 'media' : 'theory'));
+      chains.set(tr.id, (x = { chain, fx: tr.fx, pan, auto, an: null, c }));
       if (metersOn) meterOn(x);
     } else if (x.fx !== tr.fx) { x.fx = tr.fx; x.chain.set(tr.fx); } // правка в шторке дорожки — новый объект
     return x.chain.input;
@@ -78,6 +100,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
         if (n.t >= inLoop + 1 || n.t >= loop.b) break;
         const at = beatT + (n.t - inLoop + swingOf(p, n.t)) * spb, out = trackOut(p, n.tr), g = n.tr.vol * (n.gain || 1);
         if (n.drum) { drumHit(c, out, n.drum, at, n.v * g); continue; }
+        if (n.tr.inst === 'sample') { const buf = n.tr.sample && n.tr.sample.fileId && readyBuf(n.tr.sample.fileId); if (buf) sampleNote(buf, out, n.tr, n.m, at, n.d * spb, n.v * g); continue; }
         const key = 'sq' + seq++, patch = presetOf(n.tr.inst) || presetOf('piano');
         synth.on(n.m, key, { bus: 'theory', out, patch: { ...patch, gain: (patch.gain || 1) * g }, vel: n.v, at });
         live.set(key, setTimeout(() => { live.delete(key); synth.off(key, false, at + n.d * spb); }, Math.max(0, (at + n.d * spb - c.currentTime) * 1000 - 60)));
@@ -100,8 +123,8 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     const clips = (fc ? [fc] : p.clips).filter((cl) => { const tr = trackOf(p, cl); return tr && tr.kind === 'audio' && cl.data.fileId && !tr.mute && (!solo || tr.solo) && (!cl.mute || fc); });
     for (const cl of clips) {
       const tr = trackOf(p, cl);
-      let b = bufs.get(cl.data.fileId);
-      if (!b) { const r = getFile(cl.data.fileId); if (!r || !r.blob) continue; b = r.blob.arrayBuffer().then((ab) => c.decodeAudioData(ab)).catch(() => null); bufs.set(cl.data.fileId, b); }
+      let b = bufOf(cl.data.fileId);
+      if (!b) continue;
       b = await b;
       if (!b || !playing || t0 !== myT0) continue;
       const out = trackOut(p, tr), off = Math.min(cl.data.off || 0, b.duration - 0.01), span = Math.max(0.01, b.duration - off), vol = tr.vol * (cl.gain == null ? 1 : cl.gain);
@@ -126,10 +149,32 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     }
   }
   const stopAudio = () => { audioSrcs.forEach((s) => { try { s.stop(); s.disconnect(); } catch { /* */ } }); audioSrcs = []; };
+  // Автоматизация: огибающие громкости (множитель) и панорамы дорожки — прямыми между точками, по окнам петли;
+  // от текущего места — значение сейчас, дальше — точки. Без точек — как ручки
+  function scheduleAuto(p) {
+    const spb = secPerBeat(p), now = c.currentTime, b0 = Math.max(0, (now - t0) / spb), ws = windows(p);
+    p.tracks.forEach((tr) => {
+      const x = chains.get(tr.id) || (trackOut(p, tr), chains.get(tr.id)), a = tr.auto || {};
+      [['vol', x.auto.gain, 1], ['pan', x.pan.pan, tr.pan || 0]].forEach(([k, param, def]) => {
+        if (!param) return;
+        param.cancelScheduledValues(now);
+        const pts = a[k];
+        if (!pts || !pts.length) { param.setValueAtTime(def, now); return; }
+        param.setValueAtTime(autoAt(pts, songBeat(b0, plan(p).loop), def), now);
+        ws.forEach((w) => {
+          const tw = (sb) => t0 + (w.at + (sb - w.s0)) * spb; // время доли песни sb в этом окне
+          if (tw(w.s0) > now) param.setValueAtTime(autoAt(pts, w.s0, def), tw(w.s0));
+          pts.forEach((q) => { if (q.t > w.s0 && q.t < w.s1 && tw(q.t) > now) param.linearRampToValueAtTime(q.v, tw(q.t)); });
+          if (tw(w.s1) > now) param.linearRampToValueAtTime(autoAt(pts, w.s1, def), tw(w.s1));
+        });
+      });
+    });
+  }
+  const resetAuto = () => chains.forEach((x) => { const now = x.c.currentTime; x.auto.gain.cancelScheduledValues(now); x.auto.gain.setValueAtTime(1, now); if (x.pan.pan) { x.pan.pan.cancelScheduledValues(now); } });
   // записи спланированы на несколько кругов: по истечении — заново (таймер по кругу)
   let audioTm = 0;
   const loopSec = (p) => { const { loop } = plan(p); return (loop.b - loop.a) * secPerBeat(p); };
-  const scheduleAudio = (p) => { clearTimeout(audioTm); startAudio(p); if (mode.once) return; const ms = loopSec(p) * 1000; audioTm = setTimeout(() => { if (playing) { stopAudioLater(); mode.from = plan(p).loop.a; scheduleAudio(p); } }, ms * (PASSES - 1)); };
+  const scheduleAudio = (p) => { clearTimeout(audioTm); startAudio(p); scheduleAuto(p); if (mode.once) return; const ms = loopSec(p) * 1000; audioTm = setTimeout(() => { if (playing) { stopAudioLater(); mode.from = plan(p).loop.a; scheduleAudio(p); } }, ms * (PASSES - 1)); };
   const stopAudioLater = () => { const old = audioSrcs; audioSrcs = []; old.forEach((s) => { try { s.stop(c.currentTime + loopSec(getProject())); } catch { /* */ } }); };
 
   const api = {
@@ -167,6 +212,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       t0 = c.currentTime + 0.05 + lead * spb - from * spb;
       nextBeat = Math.floor(from);
       playing = true;
+      prime(p);
       if (lead) for (let i = 0; i < lead; i++) clickVoice(c, mixer.bus('metro'), t0 + (from - lead + i) * spb, i % p.num === 0 ? 3 : 1, 'click', noise || (noise = clickNoise(c)));
       sched();
       timer = setInterval(sched, TICK);
@@ -178,7 +224,9 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       if (mode.whole) { mode.whole = false; cache.key = ''; }
       playing = false;
       stopAudio();
-      live.forEach((tm, key) => { clearTimeout(tm); synth.off(key, true); });
+      resetAuto();
+      { const p = getProject(); if (p) p.tracks.forEach((tr) => { const x = chains.get(tr.id); if (x && x.pan.pan) x.pan.pan.setValueAtTime(tr.pan || 0, x.c.currentTime); }); }
+      live.forEach((tm, key) => { if (tm && tm.stop) { try { tm.stop(); } catch { /* */ } } else { clearTimeout(tm); synth.off(key, true); } });
       live.clear();
     },
     toggle(fromBeat = 0) { return playing ? (api.stop(), false) : api.start(fromBeat); },
@@ -188,15 +236,30 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       if (!c) return null;
       const p = getProject(), out = p ? trackOut(p, tr) : mixer.bus('theory');
       if (tr.kind === 'drums') { drumHit(c, out, m, c.currentTime, vel + 0.1); return null; }
+      if (tr.inst === 'sample') { // сэмплер: сразу, если запись готова; иначе раскодировать и сыграть, когда будет
+        const id = tr.sample && tr.sample.fileId; if (!id) return null;
+        const play = (buf) => { if (!buf) return; const src = sampleNote(buf, out, tr, m, c.currentTime, hold ? 60 : 0.6, vel); if (hold) { const k = 'sqs' + seq++; live.set(k, src); return k; } };
+        const b = bufOf(id);
+        if (!b) return null;
+        if (b instanceof Promise) { b.then(play); return null; }
+        return play(b);
+      }
       const key = 'sqa' + seq++, patch = presetOf(tr.inst) || presetOf('piano');
       synth.on(m, key, { bus: 'theory', out, patch, vel });
       if (!hold) setTimeout(() => synth.off(key), 350);
       return key;
     },
-    release(key) { if (key) synth.off(key); },
+    release(key) {
+      if (!key) return;
+      const src = live.get(key);
+      if (src && src.stop) { live.delete(key); try { src.stop(c.currentTime + 0.03); } catch { /* */ } return; } // нота сэмплера
+      synth.off(key);
+    },
     // Эффекты и панорама дорожки изменены (шторка, микшер): применить к живой цепочке сразу
     setTrackFx(tr, fx) { tr.fx = fx; const x = chains.get(tr.id); if (x) { x.fx = fx; x.chain.set(fx); } },
-    setTrackPan(tr, v) { tr.pan = v; const x = chains.get(tr.id); if (x && x.pan.pan) x.pan.pan.setTargetAtTime(v, x.c.currentTime, 0.02); },
+    setTrackPan(tr, v) { tr.pan = v; const x = chains.get(tr.id); if (x && x.pan.pan && !(playing && tr.auto && tr.auto.pan)) x.pan.pan.setTargetAtTime(v, x.c.currentTime, 0.02); },
+    // Точки автоматизации изменились (плейлист): пересчитать огибающие на ходу
+    autoChanged() { if (playing) scheduleAuto(getProject()); },
     // Уровни дорожек для микшера: включить анализаторы (только пока микшер открыт), level(trId) → 0…1 (пик)
     meters(on) { metersOn = !!on; chains.forEach((x) => (on ? meterOn(x) : meterOff(x))); },
     level(trId) {

@@ -171,5 +171,21 @@
   "mix.masterHint": "buses and effects of the whole app",
   "mixdown": "Mix down to WAV",
   "mixdownName": "mixdown",
-  "mixdownDone": "Mixed down — file in the library"
+  "mixdownDone": "Mixed down — file in the library",
+  "inst.sample": "Sampler — own recording",
+  "tr.root": "Root note",
+  "tr.rootHint": "Which note the recording is as is; others play faster or slower.",
+  "tr.sampleHint": "A library recording becomes the track sound: every note is the same recording, higher or lower.",
+  "auto.vol": "Volume automation",
+  "auto.pan": "Pan automation",
+  "auto.hint": "Tap on the track — point, drag — move, hold — remove; track icon — done",
+  "clip.join": "Join with the next",
+  "clip.normalize": "Normalize recording",
+  "clip.reverse": "Reverse recording",
+  "clip.processing": "Processing…",
+  "clip.normalized": "norm.",
+  "clip.reversed": "reversed",
+  "stems": "Stems — each track to WAV",
+  "stemsStep": "Stem {i} of {n}: {name}",
+  "stemsDone": "Done: {n} stems in the library"
 }

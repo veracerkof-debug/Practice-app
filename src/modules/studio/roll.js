@@ -2,6 +2,7 @@
 // горизонтали, высоты по вертикали, ноты — плашки цвета дорожки.
 // Жесты: касание пустого места — нота (длина — сетка), удержание ноты — убрать, вести ноту — переместить,
 // вести за правый край — длина, вести по пустому — прокрутка, щипок — масштаб по горизонтали.
+// Внизу — полоса силы нот (как в FL Studio Mobile): столбик у каждой ноты, вести по полосе — сила (0,05…1).
 // Линия хода — при проигрывании. Без зависимости от модуля: получает проект, паттерн, ячейку и обратные вызовы.
 import { toggleNote, noteAt, moveNote, resizeNote, NOTE_LO, NOTE_HI } from '../../music/project.js';
 import { pinch } from '../../ui/gestures.js';
@@ -9,7 +10,7 @@ const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch {
 
 const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 const BLACK = [1, 3, 6, 8, 10];
-const HOLD_MS = 450, KEYW = 36; // ширина клавиш слева
+const HOLD_MS = 450, KEYW = 36, LANE = 30; // ширина клавиш слева, высота полосы силы внизу
 
 // host — элемент под холст; get() → { p, total (длина куска в долях), d, tr, grid }; on: { change(), audition(m) }
 export function createRoll(host, get, on) {
@@ -23,9 +24,10 @@ export function createRoll(host, get, on) {
   const total = () => get().total;
   const mOfY = (y) => NOTE_HI - Math.floor((y + V.y) / V.rowH);
   const tOfX = (x) => (x - KEYW + V.x) / V.pxb;
+  const GH = () => H - LANE; // высота сетки (без полосы силы)
   const clampView = () => {
     V.x = Math.max(0, Math.min(Math.max(0, total() * V.pxb - (W - KEYW) + 40), V.x));
-    V.y = Math.max(0, Math.min(rows * V.rowH - H, V.y));
+    V.y = Math.max(0, Math.min(rows * V.rowH - GH(), V.y));
   };
 
   function size() {
@@ -43,7 +45,7 @@ export function createRoll(host, get, on) {
     g.clearRect(0, 0, W, H);
     clampView();
     // ряды: чёрные клавиши темнее
-    for (let m = mOfY(0); m >= mOfY(H) && m >= NOTE_LO; m--) {
+    for (let m = mOfY(0); m >= mOfY(GH()) && m >= NOTE_LO; m--) {
       const y = (NOTE_HI - m) * V.rowH - V.y;
       g.fillStyle = BLACK.includes(m % 12) ? C.fill : C.cell;
       g.fillRect(KEYW, y, W - KEYW, V.rowH);
@@ -72,10 +74,22 @@ export function createRoll(host, get, on) {
       if (w > 30) { g.fillStyle = '#fff'; g.font = '11px system-ui'; g.fillText(NAMES[n.m % 12], x + 6, y + V.rowH - 7); }
       g.restore();
     });
+    // полоса силы: столбик у каждой ноты (выбранная при ведении — ярче)
+    const ly = GH();
+    g.fillStyle = C.bg; g.fillRect(KEYW, ly, W - KEYW, LANE);
+    g.strokeStyle = C.sep; g.beginPath(); g.moveTo(KEYW, ly + 0.5); g.lineTo(W, ly + 0.5); g.stroke();
+    g.save(); g.beginPath(); g.rect(KEYW, ly, W - KEYW, LANE); g.clip();
+    d.notes.forEach((n) => {
+      const x = KEYW + n.t * V.pxb - V.x, w = Math.max(3, Math.min(n.d * V.pxb - 2, 10)), h = Math.max(2, (n.v == null ? 0.8 : n.v) * (LANE - 6));
+      if (x + w < KEYW || x > W) return;
+      g.fillStyle = tr.color; g.globalAlpha = drag && drag.vel && drag.n === n ? 1 : 0.7;
+      g.fillRect(x + 1, ly + LANE - 3 - h, w, h);
+    });
+    g.globalAlpha = 1; g.restore();
     // ход
     if (V.pos >= 0) { const x = KEYW + V.pos * V.pxb - V.x; g.strokeStyle = C.tint; g.lineWidth = 2; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
     // клавиши слева: белые светлые, чёрные тёмные, нажатая — акцентом; до каждой октавы — подпись
-    for (let m = mOfY(0); m >= mOfY(H) && m >= NOTE_LO; m--) {
+    for (let m = mOfY(0); m >= mOfY(GH()) && m >= NOTE_LO; m--) {
       const y = (NOTE_HI - m) * V.rowH - V.y, black = BLACK.includes(m % 12);
       g.fillStyle = V.key === m ? C.tint : black ? C.ink : C.bg;
       g.fillRect(0, y, KEYW - 2, V.rowH);
@@ -92,17 +106,29 @@ export function createRoll(host, get, on) {
     if (!e.isPrimary) { drag = null; return; }
     const { d, grid } = get(), q = pt(e), t = tOfX(q.x), m = mOfY(q.y);
     cv.setPointerCapture(e.pointerId);
-    if (q.x < KEYW) { drag = { id: e.pointerId, keys: true }; pressKey(m); return; } // клавиши: услышать высоту, вести — по соседним
+    if (q.x < KEYW && q.y < GH()) { drag = { id: e.pointerId, keys: true }; pressKey(m); return; } // клавиши: услышать высоту, вести — по соседним
+    if (q.y >= GH()) { // полоса силы: нота под пальцем (ближайшая по началу) — сила по высоте
+      const near = d.notes.filter((x) => t >= x.t - 0.1 && t < x.t + x.d).sort((a, b2) => Math.abs(a.t - t) - Math.abs(b2.t - t))[0];
+      drag = { id: e.pointerId, vel: true, n: near || null };
+      if (near) setVel(near, q.y);
+      return;
+    }
     const n = noteAt(d, Math.floor(t / grid) * grid, m);
     const edge = n && KEYW + (n.t + n.d) * V.pxb - V.x - q.x < 14 && n.d * V.pxb > 24;
     drag = { id: e.pointerId, x0: q.x, y0: q.y, n, edge, moved: false, t0: n ? n.t : 0, m0: n ? n.m : 0, d0: n ? n.d : 0, vx: V.x, vy: V.y, t, m, grid, d };
     clearTimeout(holdT);
     if (n) holdT = setTimeout(() => { if (drag && !drag.moved && drag.n === n) { d.notes.splice(d.notes.indexOf(n), 1); buzz(); drag = null; on.change(); draw(); } }, HOLD_MS);
   });
+  const setVel = (n, y) => { n.v = Math.max(0.05, Math.min(1, Math.round((1 - (y - GH() - 3) / (LANE - 6)) * 20) / 20)); draw(); };
   cv.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
     const q = pt(e);
     if (drag.keys) { pressKey(mOfY(q.y)); return; }
+    if (drag.vel) { // вести по полосе: сила ноты под пальцем (можно вести по нескольким)
+      const { d } = get(), t = tOfX(q.x), near = d.notes.filter((x) => t >= x.t - 0.1 && t < x.t + x.d).sort((a, b2) => Math.abs(a.t - t) - Math.abs(b2.t - t))[0];
+      if (near) { drag.n = near; setVel(near, q.y); }
+      return;
+    }
     const dx = q.x - drag.x0, dy = q.y - drag.y0;
     if (!drag.moved && Math.hypot(dx, dy) > 6) { drag.moved = true; clearTimeout(holdT); }
     if (!drag.moved) return;
@@ -118,6 +144,7 @@ export function createRoll(host, get, on) {
     const dr = drag;
     drag = null;
     if (dr.keys) { V.key = -1; draw(); return; }
+    if (dr.vel) { if (dr.n) on.change(); draw(); return; }
     if (!dr.moved) {
       if (dr.n) return; // короткое касание ноты — ничего (убрать — удержанием)
       const { d, grid } = get(), t = Math.floor(dr.t / grid) * grid;

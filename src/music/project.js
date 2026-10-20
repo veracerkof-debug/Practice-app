@@ -9,12 +9,16 @@
 //   запись  { fileId, off, fadeIn, fadeOut } — запись из медиатеки с секунды off, по кругу на длину клипа; затухания в долях.
 // Время всегда в долях: смена темпа ничего не двигает. Свинг — отдельное число проекта (0…1).
 // Петля region { a, b } — играть по кругу этот отрезок песни (доли); маркеры marks [{ t, name }] — места в песне.
+// Автоматизация дорожки auto { vol: [{ t, v }], pan: [{ t, v }] } — точки по песне (доли), между ними — прямая:
+// vol — множитель к фейдеру (0…1, 1 — как фейдер), pan — панорама (−1…1); без точек — как ручки.
 // Старые проекты (паттерны × дорожки и плейлист из паттернов, 2026-10) переезжают в клипы при нормализации.
 import { uid } from '../core/time.js';
 import { CHORDS, keyInfo } from './theory.js';
 import { MAJ_NAMES, MIN_NAMES } from './notes.js';
 
-export const INSTRUMENTS = ['piano', 'wfelt', 'wkpad', 'wair', 'wlight', 'wwarm', 'wchoir', 'wflute', 'organ', 'fmep', 'abass', 'bell', 'sine'];
+export const INSTRUMENTS = ['piano', 'wfelt', 'wkpad', 'wair', 'wlight', 'wwarm', 'wchoir', 'wflute', 'organ', 'fmep', 'abass', 'bell', 'sine', 'sample'];
+// Сэмплер: звук дорожки 'sample' — запись из медиатеки (tr.sample = { fileId, root }) по нотам: высота — скорость
+// воспроизведения относительно ноты root (C4 = 60), длина — пока держится нота или пока не кончится запись
 export const COLORS = ['#567198', '#5F8568', '#B5533C', '#9C7242', '#646493', '#A95E72', '#3E8C8C', '#8E8E93'];
 export const KINDS = ['notes', 'chords', 'drums', 'audio'];
 export const MODES = ['hold', 'rhythm', 'arp'];
@@ -72,6 +76,10 @@ export function normalizeProject(p) {
   p.tracks = (p.tracks || []).filter((t) => t && t.id).map((t) => {
     t.vol = Math.max(0, Math.min(1.5, +t.vol || 0)); t.oct = Math.max(-2, Math.min(2, Math.round(+t.oct || 0))); t.pan = Math.max(-1, Math.min(1, +t.pan || 0));
     if (!INSTRUMENTS.includes(t.inst)) t.inst = 'piano';
+    t.auto = normalizeAuto(t.auto, SONG_BARS_MAX * p.num);
+    if (!t.auto) delete t.auto;
+    t.sample = t.inst === 'sample' ? { fileId: (t.sample && t.sample.fileId) || null, root: Math.max(24, Math.min(96, Math.round(+(t.sample && t.sample.root) || 60))) } : undefined;
+    if (t.sample === undefined) delete t.sample;
     if (t.fx && typeof t.fx !== 'object') delete t.fx; // эффекты дорожки (src/audio/fx.js), полный вид — там
     if (!KINDS.includes(t.kind)) t.kind = 'notes';
     if (t.kind === 'chords') { if (!MODES.includes(t.mode)) t.mode = 'hold'; t.arp = { dir: ARP_DIRS.includes(t.arp && t.arp.dir) ? t.arp.dir : 'up', step: [1, 0.5, 0.25].includes(t.arp && t.arp.step) ? t.arp.step : 0.5 }; }
@@ -125,6 +133,73 @@ function migrate(p) {
     off += len;
   });
   p.tracks.forEach((tr) => { if (tr.kind === 'audio' && tr.fileId) { p.clips.push(newClip(p, tr, 0, Math.max(p.num, off), { fileId: tr.fileId, off: 0 })); } delete tr.fileId; });
+}
+
+/* ---------- автоматизация ---------- */
+
+export const AUTO_KINDS = ['vol', 'pan'], AUTO_MAX = 64;
+const autoRange = (kind) => (kind === 'pan' ? [-1, 1] : [0, 1]);
+// Точки в порядок: числа, границы, без двух в одной доле; пусто — null
+export function normalizeAuto(a, maxT) {
+  if (!a || typeof a !== 'object') return null;
+  const out = {};
+  AUTO_KINDS.forEach((k) => {
+    const [lo, hi] = autoRange(k), seen = new Set();
+    const pts = (Array.isArray(a[k]) ? a[k] : []).filter((q) => q && Number.isFinite(+q.t) && Number.isFinite(+q.v)).map((q) => ({ t: Math.max(0, Math.min(maxT, Math.round(+q.t * 64) / 64)), v: Math.max(lo, Math.min(hi, Math.round(+q.v * 100) / 100)) }))
+      .sort((x, y) => x.t - y.t).filter((q) => { if (seen.has(q.t)) return false; seen.add(q.t); return true; }).slice(0, AUTO_MAX);
+    if (pts.length) out[k] = pts;
+  });
+  return Object.keys(out).length ? out : null;
+}
+// Значение в доле t: между точками — прямая, до первой и после последней — крайняя; без точек — def
+export function autoAt(pts, t, def) {
+  if (!pts || !pts.length) return def;
+  if (t <= pts[0].t) return pts[0].v;
+  const last = pts[pts.length - 1];
+  if (t >= last.t) return last.v;
+  for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i]; if (t <= b.t) return a.v + (b.v - a.v) * ((t - a.t) / Math.max(1e-9, b.t - a.t)); }
+  return last.v;
+}
+// Поставить точку (в той же доле — заменить); по сетке
+export function setAutoPoint(tr, kind, t, v, grid = 1) {
+  const [lo, hi] = autoRange(kind), T = snapBeat(t, grid), pts = ((tr.auto = tr.auto || {})[kind] = (tr.auto[kind] || []).filter((q) => Math.abs(q.t - T) > 1e-6));
+  if (pts.length >= AUTO_MAX) return null;
+  const q = { t: T, v: Math.max(lo, Math.min(hi, Math.round(v * 100) / 100)) };
+  pts.push(q); pts.sort((x, y) => x.t - y.t);
+  return q;
+}
+export function removeAutoPoint(tr, kind, q) {
+  if (!tr.auto || !tr.auto[kind]) return;
+  tr.auto[kind] = tr.auto[kind].filter((x) => x !== q);
+  if (!tr.auto[kind].length) delete tr.auto[kind];
+  if (!Object.keys(tr.auto).length) delete tr.auto;
+}
+export const autoPointAt = (tr, kind, t, tol) => (tr.auto && tr.auto[kind] ? tr.auto[kind].find((q) => Math.abs(q.t - t) <= tol) || null : null);
+
+// Склеить два соседних клипа одной дорожки в один (кусок — обе партии подряд; записи не склеиваются)
+export function joinClips(p, a, b) {
+  const tr = trackOf(p, a);
+  if (!tr || b.tr !== a.tr || tr.kind === 'audio') return null;
+  const [x, y] = a.at <= b.at ? [a, b] : [b, a];
+  if (Math.abs(x.at + x.len - y.at) > 1e-6) return null;
+  const bars = Math.ceil((x.len + y.len) / p.num - 1e-6);
+  if (bars > BARS_MAX) return null;
+  const d = newData(tr.kind, bars), shift = (c, off) => {
+    if (tr.kind === 'drums') { const per = dataBeats(p, c.data), steps = c.len / STEP; DRUMS.forEach((l) => (c.data.steps[l] || []).forEach((i) => { for (let o = 0; o < c.len - 1e-6; o += per) { const k = Math.round((o + i * STEP) / STEP); if (k < steps) setStep(d, l, Math.round(off / STEP) + k, true); } })); }
+    else if (tr.kind === 'chords') clipNotesRaw(p, c).forEach((q) => d.chords.push({ ...q, t: q.t + off }));
+    else clipNotes(p, tr, c).forEach((n) => d.notes.push({ t: n.t - c.at + off, d: n.d, m: n.m - 12 * (tr.oct || 0), v: n.v }));
+  };
+  shift(x, 0); shift(y, x.len);
+  if (tr.kind === 'chords') d.chords.sort((q, r) => q.t - r.t);
+  x.data = normalizeData(p, tr, d); x.len = x.len + y.len;
+  removeClip(p, y);
+  return x;
+}
+// Аккорды клипа по всей его длине (кусок повторяется), от начала клипа
+function clipNotesRaw(p, c) {
+  const per = dataBeats(p, c.data), out = [];
+  for (let off = 0; off < c.len - 1e-6; off += per) c.data.chords.forEach((q) => { if (q.t + off < c.len) out.push({ ...q, t: q.t + off, d: Math.min(q.d, c.len - off - q.t) }); });
+  return out;
 }
 
 /* ---------- клипы на таймлайне ---------- */
@@ -326,7 +401,7 @@ export function projectEvents(p, onlyClip = null) {
 /* ---------- обмен со студиями (DAW): дорожки проекта и проект из чужой песни ---------- */
 
 // Инструмент General MIDI для звука дорожки (в чужой студии зазвучит похоже)
-export const GM_PROGRAM = { piano: 0, wfelt: 0, wkpad: 4, wair: 89, wlight: 88, wwarm: 89, wchoir: 52, wflute: 73, organ: 19, fmep: 5, abass: 33, bell: 14, sine: 80 };
+export const GM_PROGRAM = { piano: 0, wfelt: 0, wkpad: 4, wair: 89, wlight: 88, wwarm: 89, wchoir: 52, wflute: 73, organ: 19, fmep: 5, abass: 33, bell: 14, sine: 80, sample: 0 };
 // Звук дорожки по инструменту General MIDI (чужая песня → наш звук)
 export function instOfProgram(pr) {
   if (pr == null) return 'piano';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newProject, newTrack, newData, newClip, normalizeProject, toggleNote, moveNote, resizeNote, setChord, chordAt, expandChords, diatonicChords, chordName, projectEvents, dataBeats, songBeats, songBars, songNotes, clipNotes, countOf, toggleStep, stepOn, drumNotes, addClip, dupClip, moveClip, resizeClip, trimClipStart, splitClip, removeClip, clipAt, clipsOf, isEmptyProject, CLIPS_MAX, setRegion, loopOf, setMark, removeMark, markAt, clipCopy, pasteClip, quantizeNotes, addPlayedNote } from '../src/music/project.js';
+import { newProject, newTrack, newData, newClip, normalizeProject, toggleNote, moveNote, resizeNote, setChord, chordAt, expandChords, diatonicChords, chordName, projectEvents, dataBeats, songBeats, songBars, songNotes, clipNotes, countOf, toggleStep, stepOn, drumNotes, addClip, dupClip, moveClip, resizeClip, trimClipStart, splitClip, removeClip, clipAt, clipsOf, isEmptyProject, CLIPS_MAX, setRegion, loopOf, setMark, removeMark, markAt, clipCopy, pasteClip, quantizeNotes, addPlayedNote, setAutoPoint, removeAutoPoint, autoAt, joinClips } from '../src/music/project.js';
 
 describe('студия: проект', () => {
   it('новый проект: дорожки, клипов нет, песня — 4 такта', () => {
@@ -161,5 +161,20 @@ describe('студия: проект', () => {
     expect(d.notes.find((n) => n.m === 64)).toEqual({ t: 0, d: 0.25, m: 64, v: 0.9 }); // почти конец круга — на начало
     addPlayedNote(d, total, 1.1, 0.9, 64, 0.5, 0.5);
     expect(d.notes.find((n) => n.t === 1 && n.m === 64).d).toBe(1);
+  });
+  it('автоматизация: точки по сетке, прямая между ними, крайние — за краями; склейка клипов — кусок подряд', () => {
+    const p = newProject(), tr = p.tracks[0];
+    setAutoPoint(tr, 'vol', 0.3, 1, 0.5); setAutoPoint(tr, 'vol', 4, 0, 1); setAutoPoint(tr, 'pan', 2, -3, 1);
+    expect(tr.auto.vol).toEqual([{ t: 0.5, v: 1 }, { t: 4, v: 0 }]);
+    expect(tr.auto.pan).toEqual([{ t: 2, v: -1 }]);
+    expect([autoAt(tr.auto.vol, 0, 1), autoAt(tr.auto.vol, 2.25, 1), autoAt(tr.auto.vol, 9, 1), autoAt(null, 3, 0.7)]).toEqual([1, 0.5, 0, 0.7]);
+    removeAutoPoint(tr, 'pan', tr.auto.pan[0]);
+    expect(tr.auto.pan).toBe(undefined);
+    expect(normalizeProject(p).tracks[0].auto.vol.length).toBe(2);
+    const a = addClip(p, tr, 0, 4, newData('drums', 1)), b = addClip(p, tr, 4, 8, newData('drums', 1)), far = addClip(p, tr, 16, 4, newData('drums', 1));
+    toggleStep(a.data, 'kick', 0); toggleStep(b.data, 'snare', 4);
+    expect(joinClips(p, a, far)).toBe(null); // не рядом
+    const j = joinClips(p, a, b);
+    expect([j.len, j.data.bars, j.data.steps.kick, j.data.steps.snare, p.clips.length]).toEqual([12, 3, [0], [20, 36], 2]); // кусок b повторён
   });
 });

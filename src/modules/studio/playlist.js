@@ -7,15 +7,18 @@
 // касание линейки — играть отсюда; вести по линейке — петля (отрезок по кругу), вести край петли — изменить,
 // удержать линейку — меню (маркер, снять петлю); щипок — масштаб. Касание значка дорожки — её меню, «+» внизу — новая дорожка.
 // Без зависимости от модуля: получает проект и обратные вызовы.
-import { clipsOf, trackOf, songBars, moveClip, resizeClip, trimClipStart, dataBeats, chordName, setRegion, DRUMS } from '../../music/project.js';
+import { clipsOf, trackOf, songBars, moveClip, resizeClip, trimClipStart, dataBeats, chordName, setRegion, setAutoPoint, removeAutoPoint, autoPointAt, autoAt, DRUMS } from '../../music/project.js';
 import { pinch } from '../../ui/gestures.js';
 const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch { /* нет вибрации */ } };
 
 const HEAD = 56, RULER = 30, ROW = 64, GAP = 3, EDGE = 16, HOLD_MS = 450, MIN_BARS = 8;
 
-// host — элемент под холст; get() → { p, names(tr) → имя, fileName(id), peaks(id) → Float32Array|null };
+// Автоматизация (get().auto = { tr, kind }): поверх ряда дорожки — огибающая; касание — точка, вести — сдвинуть,
+// удержать — убрать; значок этой дорожки — выйти.
+// host — элемент под холст; get() → { p, names(tr) → имя, fileName(id), peaks(id) → Float32Array|null, auto };
 // on: { open(clip), menu(clip, x, y), track(tr, x, y), addTrack(x, y), create(tr, beat), empty(tr, beat, x, y) — удержание пустого
-//       места (новый клип, вставить), seek(beat), ruler(beat, x, y) — удержание линейки, region() — петля изменена, change() }
+//       места (новый клип, вставить), seek(beat), ruler(beat, x, y) — удержание линейки, region() — петля изменена, change(),
+//       autoChange() — точки автоматизации изменились, autoExit() — выйти из автоматизации }
 export function createPlaylist(host, get, on) {
   const cv = document.createElement('canvas'), g = cv.getContext('2d');
   cv.className = 'plcv';
@@ -106,6 +109,21 @@ export function createPlaylist(host, get, on) {
       g.globalAlpha = 1;
     });
     g.restore();
+    // автоматизация дорожки: ряд затемнён, огибающая линией с точками
+    const A = get().auto, atr = A && p.tracks.find((t) => t.id === A.tr);
+    if (atr) {
+      const i = p.tracks.indexOf(atr), y = yOf(i), pts = (atr.auto && atr.auto[A.kind]) || [], def = A.kind === 'pan' ? (atr.pan || 0) : 1;
+      const yv = (v) => y + GAP + (A.kind === 'pan' ? (1 - v) / 2 : 1 - v) * (ROW - GAP * 2);
+      g.save(); g.beginPath(); g.rect(HEAD, RULER, W - HEAD, H - RULER); g.clip();
+      g.fillStyle = C.bg; g.globalAlpha = 0.55; g.fillRect(HEAD, y, W - HEAD, ROW); g.globalAlpha = 1;
+      g.strokeStyle = C.tint; g.lineWidth = 2; g.beginPath();
+      const b0 = bOf(HEAD), b1 = bOf(W);
+      g.moveTo(HEAD, yv(autoAt(pts, b0, def)));
+      pts.forEach((q) => g.lineTo(xOf(q.t), yv(q.v)));
+      g.lineTo(W, yv(autoAt(pts, b1, def))); g.stroke();
+      pts.forEach((q) => { const xx = xOf(q.t); if (xx < HEAD - 8 || xx > W + 8) return; g.fillStyle = C.bg; g.beginPath(); g.arc(xx, yv(q.v), 7, 0, Math.PI * 2); g.fill(); g.fillStyle = C.tint; g.beginPath(); g.arc(xx, yv(q.v), 5, 0, Math.PI * 2); g.fill(); });
+      g.restore();
+    }
     // ход и курсор
     const px = xOf(V.pos >= 0 ? V.pos : V.cursor);
     if (px >= HEAD && px <= W) { g.strokeStyle = V.pos >= 0 ? C.red : C.tint; g.lineWidth = 2; g.beginPath(); g.moveTo(px, RULER); g.lineTo(px, H); g.stroke(); }
@@ -140,6 +158,7 @@ export function createPlaylist(host, get, on) {
       g.globalAlpha = dim ? 0.4 : 1;
       g.fillStyle = tr.color; rr(6, y + GAP, HEAD - 12, ROW - GAP * 2, 10); g.fill();
       icon(tr.kind, 6 + (HEAD - 12) / 2 - 11, y + ROW / 2 - 11, 22, 'rgba(255,255,255,.95)');
+      if (atr === tr) { g.fillStyle = C.tint; g.beginPath(); g.arc(HEAD - 12, y + GAP + 6, 6, 0, Math.PI * 2); g.fill(); }
       if (tr.solo) { g.fillStyle = '#fff'; g.font = '700 9px system-ui'; g.fillText('S', 11, y + ROW - 9); }
       g.globalAlpha = 1;
     });
@@ -198,9 +217,19 @@ export function createPlaylist(host, get, on) {
       holdT = setTimeout(() => { if (drag && !drag.moved) { buzz(); drag = null; on.ruler(Math.max(0, Math.round(b / snap()) * snap()), e.clientX, e.clientY); } }, HOLD_MS);
       return;
     }
-    if (q.x < HEAD) { // колонка дорожек: дорожка или «+»
-      const i = rowOf(q.y), tr = P().tracks[i];
-      if (tr) on.track(tr, e.clientX, e.clientY); else if (i === P().tracks.length) on.addTrack(e.clientX, e.clientY);
+    if (q.x < HEAD) { // колонка дорожек: дорожка или «+»; в автоматизации — её значок выходит
+      const i = rowOf(q.y), tr = P().tracks[i], A = get().auto;
+      if (tr && A && A.tr === tr.id) on.autoExit(); else if (tr) on.track(tr, e.clientX, e.clientY); else if (i === P().tracks.length) on.addTrack(e.clientX, e.clientY);
+      return;
+    }
+    const A = get().auto, atr = A && P().tracks.find((t) => t.id === A.tr);
+    if (atr && P().tracks[rowOf(q.y)] === atr) { // огибающая: точка под пальцем — вести или удержать; пусто — новая точка
+      const y = yOf(P().tracks.indexOf(atr)), vOf = (yy) => { const f = Math.max(0, Math.min(1, (yy - y - GAP) / (ROW - GAP * 2))); return A.kind === 'pan' ? 1 - f * 2 : 1 - f; };
+      const b = bOf(q.x), tol = 8 / V.pxb, pt0 = autoPointAt(atr, A.kind, b, tol);
+      drag = { id: e.pointerId, x0: q.x, y0: q.y, auto: true, q: pt0 || setAutoPoint(atr, A.kind, b, vOf(q.y), snap()), vOf, moved: false };
+      if (!pt0) on.autoChange();
+      if (pt0) holdT = setTimeout(() => { if (drag && !drag.moved) { buzz(); removeAutoPoint(atr, A.kind, pt0); drag = null; on.autoChange(); draw(); } }, HOLD_MS);
+      draw();
       return;
     }
     const h = hit(q), now = performance.now();
@@ -222,6 +251,15 @@ export function createPlaylist(host, get, on) {
     if (!drag.moved && Math.hypot(dx, dy) > 6) { drag.moved = true; clearTimeout(holdT); }
     if (!drag.moved) return;
     if (drag.ruler) { setRegion(p, drag.b0, bOf(q.x), snap()); draw(); return; }
+    if (drag.auto) { // точка: новое место по сетке и значение; занятая доля — обходится
+      const A = get().auto, atr = p.tracks.find((t) => t.id === A.tr), qq = drag.q;
+      if (!atr || !qq) return;
+      const T = Math.max(0, Math.round(bOf(q.x) / snap()) * snap()), busy = (atr.auto[A.kind] || []).some((z) => z !== qq && Math.abs(z.t - T) < 1e-6);
+      if (!busy) qq.t = T;
+      qq.v = Math.round(drag.vOf(q.y) * 100) / 100;
+      atr.auto[A.kind].sort((a, b2) => a.t - b2.t);
+      draw(); return;
+    }
     const c = drag.c;
     if (!c) { V.x = drag.vx - dx; V.y = drag.vy - dy; draw(); return; }
     const grid = snap(), h = drag.h;
@@ -237,7 +275,8 @@ export function createPlaylist(host, get, on) {
     if (!drag || e.pointerId !== drag.id) return;
     clearTimeout(holdT);
     const d = drag; drag = null;
-    if (d.ruler) {
+    if (d.auto) { on.autoChange(); }
+    else if (d.ruler) {
       if (d.moved) on.region();
       else { V.cursor = Math.max(0, Math.floor(bOf(d.x0) / P().num) * P().num); on.seek(V.cursor); }
     } else if (d.c) { if (d.moved) { p0fix(); on.change(); } else on.open(d.c); }

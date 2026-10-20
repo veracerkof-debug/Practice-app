@@ -168,5 +168,21 @@
   "mix.masterHint": "butun ilova shinalari va effektlari",
   "mixdown": "WAV ga yigʻish",
   "mixdownName": "yigʻma",
-  "mixdownDone": "Yigʻildi — fayl mediatekada"
+  "mixdownDone": "Yigʻildi — fayl mediatekada",
+  "inst.sample": "Sempler — oʻz yozuvi",
+  "tr.root": "Yozuv notasi",
+  "tr.rootHint": "Yozuv qaysi notaga mos keladi; qolganlari tezroq yoki sekinroq chalinadi.",
+  "tr.sampleHint": "Mediatekadagi yozuv yoʻlak tovushiga aylanadi: har bir nota — oʻsha yozuv, balandroq yoki pastroq.",
+  "auto.vol": "Ovoz avtomatlashtirish",
+  "auto.pan": "Panorama avtomatlashtirish",
+  "auto.hint": "Yoʻlakka bosish — nuqta, surish — koʻchirish, ushlab turish — olib tashlash; yoʻlak belgisi — tayyor",
+  "clip.join": "Keyingisi bilan birlashtirish",
+  "clip.normalize": "Yozuvni normallashtirish",
+  "clip.reverse": "Yozuvni teskari qilish",
+  "clip.processing": "Ishlanmoqda…",
+  "clip.normalized": "norm.",
+  "clip.reversed": "teskari",
+  "stems": "Stemlar — har bir yoʻlak WAV ga",
+  "stemsStep": "Stem {i} / {n}: {name}",
+  "stemsDone": "Tayyor: mediatekada {n} ta stem"
 }
