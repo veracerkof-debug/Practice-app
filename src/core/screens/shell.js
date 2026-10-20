@@ -21,7 +21,15 @@ import { onboarding, langGate, askName } from './onboard.js';
 import { logoHTML } from '../../ui/logo.js';
 import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
-import { dragSort } from '../../ui/hold.js';
+import { dragSort, onHold, holdMenu } from '../../ui/hold.js';
+
+// Значки меню песни (удержание строки в списке)
+const SM = {
+  play: '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>',
+  edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+  share: '<svg viewBox="0 0 24 24"><path d="M12 15V4M8 7.5 12 3.5l4 4M6 11H5v9h14v-9h-1"/></svg>',
+  del: '<svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13"/></svg>',
+};
 
 export function createShell(app, root) {
   const tabsNow = () => visibleTabs(app.store.state.settings, tabIds(app.store.state.settings));
@@ -186,6 +194,17 @@ export function createShell(app, root) {
     skip: (e) => !!e.target.closest('[data-open-tool], canvas'),
     onStill: (b) => homeBlockMenu(app, b, render, () => panel.open('homes')),
     onDrop: (ids) => { const st = app.store.state.settings, L = homeLayout(st); L.order = [...ids, ...L.order.filter((k) => !ids.includes(k))]; setHomeLayout(st, L); app.store.settingsChanged(); render(); },
+  });
+  // Песня в списке: удержание — меню (играть, изменить, отправить, удалить), как у значков приложений в телефоне
+  onHold(root, 'button.stile3[data-song]', (b) => {
+    const id = b.dataset.song, s = app.store.songById(id);
+    if (!s) return;
+    holdMenu(b, [
+      { icon: SM.play, label: t('song.play'), run: () => app.startSession('song', id) },
+      { icon: SM.edit, label: t('song.edit'), run: () => songForm(app, id, (nid) => go('library', nid)) },
+      { icon: SM.share, label: t('share.title'), run: () => shareSheet(app, { songIds: [id] }) },
+      { icon: SM.del, label: t('song.delete'), danger: true, run: () => confirm(t('song.delTitle', { title: s.title }), t('song.delText'), t('song.delYes')).then((ok) => { if (ok) { deleteSong(app.store, id); render(); } }) },
+    ], s.title);
   });
   // Правка главной: щипок двумя пальцами по блоку — больше (развести) или меньше (свести)
   const pinch = new Map();

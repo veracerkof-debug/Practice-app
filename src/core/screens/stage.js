@@ -15,6 +15,7 @@ import { itemOf, setItem, moveSong, setSongs, tracksOf, barSec, resumeOk, chords
 import { saveEvent, liveEvents } from '../calendar.js';
 import { metroForSession } from '../session.js';
 import { logErr } from '../log.js';
+import { swipe, pinch } from '../../ui/gestures.js';
 
 const RESUME = 'melete.stage';
 const I = {
@@ -253,6 +254,7 @@ export function openStage(app, evId, i = 0) {
     audio.metro.cfg = metro0;
     Object.assign(app.device.drone, drone0);
     removeEventListener('resize', onResize);
+    offG.forEach((f) => f());
     if (S.el) { S.el.removeEventListener('click', onClick); S.el.remove(); S.el = null; }
     try { localStorage.removeItem(RESUME); } catch { /* */ }
     document.documentElement.classList.remove('onstage');
@@ -269,6 +271,11 @@ export function openStage(app, evId, i = 0) {
   document.documentElement.classList.add('onstage');
   S.offBeat = audio.metro.onBeat(beat);
   addEventListener('resize', onResize);
+  // жесты: смахнуть влево — следующая песня, вправо — прошлая (длинное уверенное движение — случайно не сработает);
+  // щипок по тексту — размер шрифта (как A− и A+)
+  const offG = [swipe(S.el, { min: 110, left: () => go(1), right: () => go(-1), ok: (e) => !e.target.closest('.sgbar, .sgchips, .sgtop') }),
+    pinch(S.el, { min: 14, max: 64, ok: (e) => !!e.target.closest('.sgtext'), get: () => S.fs,
+      set: (v, live) => { S.fs = v; fit(); if (!live) try { sessionStorage.setItem('melete.stage.fs', v); } catch { /* */ } } })];
   S.i = Math.max(0, Math.min(list().length - 1, i));
   remember();
   render();

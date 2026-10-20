@@ -1,5 +1,6 @@
 // Вкладка «Календарь»: месяц (с днём под сеткой), неделя по часам, список ближайших. События — репетиции, уроки,
 // концерты, записи, дедлайны и цели по песням; типы и цвета свободные. Экспорт в .ics для других календарей.
+import { swipe } from '../../ui/gestures.js';
 import '../../ui/calendar.css';
 import { epigraphHTML } from './verses.js';
 import { refText } from '../bible.js';
@@ -242,6 +243,12 @@ export function bindCalendar(app, main, cv, rerender) {
     const r = col.getBoundingClientRect(), h = Math.max(0, Math.min(23, Math.floor((e.clientY - r.top) / ROW)));
     eventForm(app, null, { day: +col.dataset.wcol, hour: h }, rerender);
   };
+  // неделя — смахнуть влево-вправо: следующая или прошлая (вертикальная прокрутка часов не мешает)
+  const wk = main.querySelector('#cwscroll');
+  if (wk && !wk.dataset.sw) {
+    wk.dataset.sw = '1';
+    swipe(wk, { left: () => { cv.anim = 'r'; cv.sel = addDays(cv.sel, 7); rerender(); }, right: () => { cv.anim = 'l'; cv.sel = addDays(cv.sel, -7); rerender(); } });
+  }
   const g = main.querySelector('.calgrid');
   if (g) {
     let x0 = null;

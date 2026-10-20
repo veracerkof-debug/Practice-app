@@ -10,6 +10,7 @@ import { lyricsHTML, chordsIn, degreesIn } from '../../music/lyrics.js';
 import { tonicIsMinor } from '../../music/degrees.js';
 import { detectKey, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
 import { isPdf, openPdf, createPdfView, closePdfDoc, sniffPdf } from './pdf.js';
+import { pinch } from '../../ui/gestures.js';
 // Шрифт нот и звуковой банк — файлы проекта, никаких CDN
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
 import SONIVOX from '@coderline/alphatab/soundfont/sonivox.sf3?url';
@@ -562,7 +563,7 @@ function act(a, el) {
     case 'ntr': { const s = curSong(); if (s) { updCur({ tr: s.tr + +el.dataset.d }); render(); } break; }
     case 'nlib': libSheet(); break;
     case 'npick': st().textPick = { id: el.dataset.id, sess: (ctx.session && ctx.session.songId) || null }; ctx.store.save(); render(); break;
-    case 'nfs': st().fs = Math.max(11, Math.min(26, (st().fs || 15) + +el.dataset.d)); ctx.store.save(); render(); break;
+    case 'nfs': st().fs = Math.max(11, Math.min(40, (st().fs || 15) + +el.dataset.d)); ctx.store.save(); render(); break;
     case 'nedit': lyricsEdit(); break;
     case 'nkey': keySheet(); break;
     case 'nview': st().view = viewOf() === 'degrees' ? 'chords' : 'degrees'; ctx.store.save(); render(); break;
@@ -630,6 +631,9 @@ export default {
     const click = (e) => { const x = e.target.closest('[data-x]'); if (x) act(x.dataset.x, x); };
     host.addEventListener('click', click);
     offs.push(() => host.removeEventListener('click', click));
+    // текст с аккордами: щипок двумя пальцами — размер шрифта (как кнопки A− и A+)
+    offs.push(pinch(host, { min: 11, max: 40, ok: (e) => !!e.target.closest('.lyr'), get: () => st().fs || 15,
+      set: (v, live) => { st().fs = v; const l = host.querySelector('.lyr'); if (l) l.style.fontSize = v + 'px'; if (!live) ctx.store.save(); } }));
     // Громкость табов — шина медиатеки
     offs.push(c.audio.mixer.subscribe(() => { if (AT.api && ATP.sf) AT.api.masterVolume = vol(); }));
     if (!ATP.probed) { ATP.probed = true; c.audio.mixer.probe('media', () => ATP.playing); }
