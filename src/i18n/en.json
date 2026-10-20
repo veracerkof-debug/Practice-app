@@ -1519,5 +1519,6 @@
   "pg.help": "Help and data",
   "panel.kindWin": "desktop version: data is stored in this app",
   "lic.tauri.sub": "Windows app · version 2",
-  "lic.tauri.text": "Distributed under the MIT and Apache License 2.0 (github.com/tauri-apps/tauri), together with the tauri-plugin-dialog and tauri-plugin-fs modules (saving files on the computer) and @tauri-apps/api. The window uses the system WebView2 (Microsoft Edge)."
+  "lic.tauri.text": "Distributed under the MIT and Apache License 2.0 (github.com/tauri-apps/tauri), together with the tauri-plugin-dialog and tauri-plugin-fs modules (saving files on the computer) and @tauri-apps/api. The window uses the system WebView2 (Microsoft Edge).",
+  "nav.studio": "Studio"
 }

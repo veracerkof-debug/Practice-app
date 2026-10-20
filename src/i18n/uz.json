@@ -1484,5 +1484,6 @@
   "pg.help": "Yordam va maʼlumotlar",
   "panel.kindWin": "kompyuter versiyasi: maʼlumotlar shu ilovada saqlanadi",
   "lic.tauri.sub": "Windows uchun ilova · 2 versiya",
-  "lic.tauri.text": "MIT va Apache License 2.0 litsenziyalari boʻyicha tarqatiladi (github.com/tauri-apps/tauri); u bilan birga — tauri-plugin-dialog va tauri-plugin-fs modullari (kompyuterda fayllarni saqlash) va @tauri-apps/api. Oyna tizimdagi WebView2 (Microsoft Edge) orqali koʻrsatiladi."
+  "lic.tauri.text": "MIT va Apache License 2.0 litsenziyalari boʻyicha tarqatiladi (github.com/tauri-apps/tauri); u bilan birga — tauri-plugin-dialog va tauri-plugin-fs modullari (kompyuterda fayllarni saqlash) va @tauri-apps/api. Oyna tizimdagi WebView2 (Microsoft Edge) orqali koʻrsatiladi.",
+  "nav.studio": "Studiya"
 }

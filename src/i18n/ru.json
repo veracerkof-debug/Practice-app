@@ -1540,5 +1540,6 @@
   "pg.help": "Помощь и данные",
   "panel.kindWin": "версия для компьютера: данные хранятся в этом приложении",
   "lic.tauri.sub": "Приложение для Windows · версия 2",
-  "lic.tauri.text": "Распространяется по лицензиям MIT и Apache License 2.0 (github.com/tauri-apps/tauri); вместе с ним — модули tauri-plugin-dialog и tauri-plugin-fs (сохранение файлов на компьютере) и @tauri-apps/api. Окно показывает системный WebView2 (Microsoft Edge)."
+  "lic.tauri.text": "Распространяется по лицензиям MIT и Apache License 2.0 (github.com/tauri-apps/tauri); вместе с ним — модули tauri-plugin-dialog и tauri-plugin-fs (сохранение файлов на компьютере) и @tauri-apps/api. Окно показывает системный WebView2 (Microsoft Edge).",
+  "nav.studio": "Студия"
 }

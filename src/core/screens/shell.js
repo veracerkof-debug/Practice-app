@@ -5,7 +5,7 @@ import { t } from '../../i18n/index.js';
 import { confirm, toast } from '../../ui/index.js';
 import { deleteSong } from '../library.js';
 import { addDemo, removeDemo } from '../demo.js';
-import { TAB_ICONS, tabIds } from './common.js';
+import { TAB_ICONS, tabIds, TAB_MODULES } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule } from '../modules.js';
 import { visibleTabs } from '../settings.js';
@@ -44,17 +44,18 @@ export function createShell(app, root) {
     tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + ' aria-label="' + t('nav.' + k) + '" title="' + t('nav.' + k) + '">' + TAB_ICONS[k] + '</button>').join('');
   };
 
-  // Вкладка «Библия» (церковный режим): модуль на всё окно над вкладками; остаётся открытым, пока выбрана вкладка
-  let bible = null;
-  const unmountBible = () => { if (bible) { bible.unmount(); bible = null; } main.classList.remove('wbible'); };
-  function renderBible() {
-    if (bible && main.contains(bible.host)) return;
+  // Вкладки-модули («Библия» в церковном режиме, «Студия»): модуль на всё окно над вкладками; остаётся открытым,
+  // пока выбрана вкладка
+  let tabMod = null;
+  const unmountBible = () => { if (tabMod) { tabMod.unmount(); tabMod = null; } main.classList.remove('wbible'); };
+  function renderTabModule(id) {
+    if (tabMod && tabMod.id === id && main.contains(tabMod.host)) return;
     unmountBible();
     main.onclick = null;
     main.classList.add('wbible');
     main.innerHTML = '<div class="toolhost btab"></div>';
     const host = main.firstElementChild;
-    bible = { host, ...mountModule(app, moduleById('bible'), host, 'full') };
+    tabMod = { id, host, ...mountModule(app, moduleById(id), host, 'full') };
   }
 
   // «Минимал» без текста: рабочие экраны рисуются без слов (i18n: bareScope)
@@ -65,7 +66,7 @@ export function createShell(app, root) {
     leagueCheck(app);
     renderTabs();
     document.documentElement.style.setProperty('--tabh', tabs.parentElement.offsetHeight + 'px');
-    if (view.tab === 'bible') { renderBible(); return; }
+    if (TAB_MODULES[view.tab]) { renderTabModule(TAB_MODULES[view.tab]); return; }
     unmountBible();
     if (view.tab === 'tools') { renderTools(app, main); return; }
     main.onclick = null;

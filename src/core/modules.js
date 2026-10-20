@@ -10,7 +10,7 @@ import { log, logErr } from './log.js';
 import { epigraphHTML } from './screens/verses.js';
 import { gemSec } from './profile.js';
 import { gemOf } from './mastery.js';
-import { firstHelp } from './help.js';
+import { firstHelp, showHelp } from './help.js';
 import { guardOpen, guardClose } from './guard.js';
 
 export const SIZES = ['full', 'half', 'quarter', 'strip'];
@@ -147,6 +147,8 @@ export function makeCtx(app, mod) {
     },
     // Открыть другой инструмент (например, пианино с подсветкой гаммы)
     openTool: (id) => app.openTool && app.openTool(id),
+    // инструкция модуля (для вкладок-модулей, у которых нет шапки с «?»)
+    help: () => showHelp(app, mod),
     // Настройки другого модуля — только чтение (копия)
     peek: (id) => JSON.parse(JSON.stringify(app.device[id] || {})),
     shared: app.shared,
