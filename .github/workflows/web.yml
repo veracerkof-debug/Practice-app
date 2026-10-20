@@ -1,7 +1,8 @@
 # Веб-версия Melete — для знакомства, с любого телефона и компьютера (iPhone, Android, браузер):
 # https://veracerkof-debug.github.io/Practice-app/  (демонстрация с выдуманным музыкантом — …/Practice-app/show/)
 # Собирается при каждом пуше и выкладывается в ветку gh-pages (Settings → Pages → Deploy from a branch → gh-pages).
-# Это отдельная от APK версия: без напоминаний, папки и управления звуком из шторки; данные — только в браузере.
+# Это отдельная от APK версия: без напоминаний, папки и управления звуком из шторки; данные — только в браузере
+# (постоянное хранилище и service worker — src/core/webmemory.js, public/sw.js: работает без сети, ставится на главный экран).
 name: Web version (GitHub Pages)
 
 on:

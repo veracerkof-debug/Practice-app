@@ -28,6 +28,7 @@ import { initBackground } from './background.js';
 import { initPlayer } from './player.js';
 import { initGuard } from './guard.js';
 import { initDrop } from './drop.js';
+import { initWebMemory } from './webmemory.js';
 import { initScreenOn } from './screenon.js';
 import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
@@ -232,6 +233,7 @@ export function boot(root) {
   setTimeout(webHello, 2500);
   initGuard(app);
   initDrop(app); // файлы, перетащенные в окно
+  initWebMemory(app); // веб-версия: постоянное хранилище и работа без сети (service worker)
   initScreenOn(app); // экран не гаснет, пока приложение открыто
   // после возврата из копии — файлы демо-набора, которые добавила проверка, убрать (если набора не было)
   if (restored && !store.state.settings.demo) removeDemoFiles(app).catch(() => {});
