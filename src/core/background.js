@@ -18,7 +18,7 @@ export const bgAsk = { battery: () => KA && KA.askBattery(), notify: () => KA &&
 // Что сейчас идёт — строка для уведомления; null — ничего
 // Лицо маскота для уведомления (картинки mn_<f|m>_<лицо>.png — build/notifyicons.mjs); '' — без маскота
 export function busyFace(app) {
-  const g = mascotOf(app.settings);
+  const g = mascotOf(app.store.state.settings);
   if (g === 'none') return '';
   const mood = app.active ? (app.active.pausedAt ? 'wait' : 'focus') : app.audio.metro.running ? 'calm' : app.soundingAudio() ? 'sing' : 'wait';
   return 'mn_' + g + '_' + mood;
