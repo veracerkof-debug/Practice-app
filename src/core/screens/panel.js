@@ -702,6 +702,7 @@ export function legalSheet(kind) {
       lic('alphaTab', t('lic.at.sub'), '<p>© CoderLine (Daniel Kuschny) ' + t('lic.andContrib') + '</p><p>' + t('lic.at.text') + '</p><p>' + t('lic.at.inner') + '</p>') +
       lic('Bravura', t('lic.brav.sub'), '<p>Copyright © 2013, Steinberg Media Technologies GmbH (http://www.steinberg.net/), with Reserved Font Name "Bravura".</p><p>This Font Software is licensed under the SIL Open Font License, Version 1.1.</p><pre>' + esc(OFL_TEXT) + '</pre>') +
       lic('SONiVOX EAS', t('lic.sv.sub'), '<p>' + t('lic.sv.text') + '</p>') +
+      lic('Salamander Grand Piano V3', t('lic.sal.sub'), '<p>© Alexander Holm.</p><p>' + t('lic.sal.text') + '</p>') +
       lic('Comfortaa', t('lic.cg.sub'), '<p>Copyright 2011 The Comfortaa Project Authors (github.com/alexeiva/comfortaa), with Reserved Font Name "Comfortaa".</p><p>' + t('lic.cg.text') + '</p>') +
       lic('GFS Didot', t('lic.didot.sub'), '<p>Copyright © Greek Font Society (greekfontsociety-gfs.gr).</p><p>' + t('lic.cg.text') + '</p>') +
       lic('Ponomar', t('lic.pon.sub'), '<p>Copyright 2025 The Ponomar Project Authors (github.com/slavonic/Ponomar).</p><p>' + t('lic.pon.text') + '</p>') +

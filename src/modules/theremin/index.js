@@ -14,7 +14,7 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { PRESETS as SYN, WORSHIP } from '../../audio/synth.js';
+import { PRESETS as SYN, WORSHIP, presetOf } from '../../audio/synth.js';
 import { mName, SH } from '../../music/notes.js';
 import { scaleSelectHTML, folkInfoHTML, folkAct } from '../../ui/scalepick.js';
 import { microLabel } from '../../music/folk.js';
@@ -122,7 +122,7 @@ const cfg = () => {
 const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const save = () => ctx.store.save();
 const rangeTxt = (s) => mName(s.lo) + '–' + mName(s.lo + s.width);
-const patch = (s) => (s.sound === 'app' ? ctx.audio.pianoPatch() : SYN[s.sound] || SYN.sine);
+const patch = (s) => (s.sound === 'app' ? ctx.audio.pianoPatch() : presetOf(s.sound) || SYN.sine);
 
 /* ---------- разметка ---------- */
 

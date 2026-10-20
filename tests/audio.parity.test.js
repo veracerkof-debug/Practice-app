@@ -111,10 +111,14 @@ describe('звук: синтезатор, пэды, микшер, настрой
   });
   it('патч пианино по умолчанию', () => {
     const d = loadDevice(memStorage({ [LS_T]: JSON.stringify(stored) }));
+    // прототип выбирал «Пэд»; пэд убран (10.2026) — вместо него воздушный пэд, без прочих полей прежнего звука
     const { n, ...proto } = clone(L.SP());
-    expect(pianoPatch(d.piano)).toEqual(proto);
-    expect(Object.keys(PRESETS)).toEqual(['piano', 'wfelt', 'wkpad', 'wair', 'wlight', 'wwarm', 'wchoir', 'wflute', 'epiano', 'organ', 'sine', 'pad', 'bell', 'fmep', 'abass', 'strings', 'wshimmer', 'wswell', 'wkeys']);
-    // прототип + воздушный набор для поклонения (сразу за пианино) + три классических синтезаторных звука + прежний набор для поклонения
+    expect(proto.preset).toBe('pad');
+    const p = pianoPatch(d.piano);
+    expect(p.preset).toBe('wair');
+    expect(p.air).toBe('air');
+    expect(Object.keys(PRESETS)).toEqual(['piano', 'wfelt', 'wkpad', 'wair', 'wlight', 'wwarm', 'wchoir', 'wflute', 'organ', 'sine', 'bell', 'fmep', 'abass']);
+    // рояль (записи) + воздушный набор для поклонения + орган, синус, колокол + FM-пиано и аналоговый бас
   });
   it('пэды: значения по умолчанию, ноты, тампура', () => {
     const d = loadDevice(memStorage({ [LS_T]: JSON.stringify(stored) }));

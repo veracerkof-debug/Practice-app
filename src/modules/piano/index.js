@@ -8,7 +8,7 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { pianoPatch, PRESETS } from '../../audio/synth.js';
+import { pianoPatch, pianoLayer, PRESETS } from '../../audio/synth.js';
 import { synBody, synBind, synthSheet } from './synth-panel.js';
 import { kbHTML, lastWhite } from '../../ui/keyboard.js';
 import { mName } from '../../music/notes.js';
@@ -227,12 +227,13 @@ export default {
   onPure() { requestAnimationFrame(layout); },
   rotate: (c) => { const p = c.store.all(); return p.rot && innerHeight > innerWidth ? (p.rotDir === 'l' ? 'l' : 'r') : null; },
   status(c) {
-    const p = c.store.all(), s = pianoPatch(p);
-    const sound = s.name || c.t('pre.' + (PRESETS[s.preset] ? s.preset : 'piano'));
+    const p = c.store.all(), nm = (s) => s.name || c.t('pre.' + (PRESETS[s.preset] ? s.preset : 'piano')), L = pianoLayer(p);
+    const sound = nm(pianoPatch(p)) + (L ? ' + ' + nm(L) : '');
     return c.t('status', { range: mName(12 * (p.oct + 1)), sound });
   },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
+    if (ctx.audio.synth.preload) ctx.audio.synth.preload(); // записи рояля — заранее, пока смотрят на клавиши
     render();
     bind();
     ro = new ResizeObserver(() => layout());

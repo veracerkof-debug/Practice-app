@@ -530,6 +530,8 @@
   "lic.brav.sub": "Music font (SMuFL)",
   "lic.sv.sub": "Sound bank for tab playback",
   "lic.sv.text": "Copyright © 2004–2006 Sonic Network Inc. Distributed under the Apache License 2.0 (apache.org/licenses/LICENSE-2.0). The bank is used unmodified as shipped with alphaTab.",
+  "lic.sal.sub": "Grand piano recordings for the “Grand piano” sound",
+  "lic.sal.text": "Licensed under Creative Commons Attribution 3.0 (creativecommons.org/licenses/by/3.0). Changes: notes every minor third from a reduced set, mono, shortened, level-matched, compressed to MP3.",
   "lic.snd.title": "Sounds and graphics",
   "lic.snd.text": "All app sounds (metronome, piano, drone, pads, clicks) are synthesized in real time and use no third-party recordings; tabs use the SONiVOX bank listed above. Icons and illustrations were drawn for the app. Music theory facts (scales, chords, tunings, tempo names) are common knowledge.",
   "tos.title": "Before you start",

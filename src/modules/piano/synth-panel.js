@@ -1,6 +1,8 @@
-// Панель звука пианино: пресеты, «ретро-синтезатор» с ручками и осциллограммой, режим звука, мини-клавиатура.
+// Панель звука пианино: два слоя («Звук» и «Слой»), пресеты, «ретро-синтезатор» с ручками и осциллограммой,
+// режим звука, мини-клавиатура. Касание пресета — звук выбранного слоя, удержание — второй слой (повторное удержание
+// того же — убрать слой). Ручки — свои у каждого звука (synth.js: knobsOf), ниже — громкость и эквалайзер слоя.
 // Перенесено из legacy/practice.html (synBody, synBind, knobSVG, knobBind, scopeStart, mkbHTML, mkbBind).
-import { PRESETS, PATCH_KEYS, PATCH_EXTRA, PATCH_RANGE, pianoPatch, applyPreset } from '../../audio/synth.js';
+import { PRESETS, PATCH_RANGE, KNOB_DEF, MIX_KNOBS, knobsOf, knobVal, presetOf, pianoPatch, pianoLayer, applyPreset } from '../../audio/synth.js';
 import { harmAmp } from '../../audio/waves.js';
 import { presetRow, promptName, presetManager } from '../../ui/presets.js';
 
@@ -12,14 +14,26 @@ function fmt(ctx, k, v) {
   const { t, num } = ctx;
   if (k === 'att') return v >= 1000 ? t('u.s', { n: num(v / 1000, 1) }) : t('u.ms', { n: Math.round(v) });
   if (k === 'dec' || k === 'rel') return t('u.s', { n: num(+v, 2) });
+  if (k.startsWith('eq')) return (v > 0.05 ? '+' : '') + num(Math.round(v * 2) / 2, 1) + ' dB';
+  if (k === 'fmi' || k === 'res') return num(Math.round(v * 10) / 10, 1);
   return Math.round(v * 100) + '%';
 }
+
+// Название ручки: у некоторых звуков та же ручка значит своё (у рояля «яркость» — крышка, у органа «тембр» — регистры)
+function labelOf(ctx, s, k) {
+  const L = s.kind === 'grand' ? { bright: 'lid', rel: 'damp' } : s.air ? { cho: 'width' } : s.kind === 'organ' ? { tone: 'draw', cho: 'leslie' } :
+    s.partials ? { dec: 'ring' } : s.fenv != null ? { bright: 'cutoff' } : {};
+  return ctx.t('k.' + (L[k] || k));
+}
+
+// Какой слой правит панель: 'main' | 'layer'
+let slot = 'main';
 
 const angle = (p) => -225 + p * 270;
 const pt = (d, r = 22) => [30 + r * Math.cos((d * Math.PI) / 180), 30 + r * Math.sin((d * Math.PI) / 180)];
 
-function knobSVG(ctx, k, v) {
-  const [min, max] = PATCH_RANGE[k], p = (v - min) / (max - min), a = angle(p), lab = ctx.t('k.' + k);
+function knobSVG(ctx, k, v, lab = ctx.t('k.' + k)) {
+  const [min, max] = PATCH_RANGE[k], p = (v - min) / (max - min), a = angle(p);
   const [x0, y0] = pt(-225), [x1, y1] = pt(a), [xe, ye] = pt(45);
   return '<div class="knob" data-kn="' + k + '" data-min="' + min + '" data-max="' + max + '" role="slider" tabindex="0" aria-label="' + lab +
     '" aria-valuemin="' + min + '" aria-valuemax="' + max + '" aria-valuenow="' + v + '" aria-valuetext="' + fmt(ctx, k, v) + '" title="' + ctx.t('k.reset') +
@@ -228,21 +242,29 @@ function mkbBind(ctx, root, rerender, offs) {
 
 /* ---------- панель ---------- */
 
+const store = (ctx) => ctx.store.all();
+const activeOf = (ctx) => { const P = store(ctx), L = pianoLayer(P); if (slot === 'layer' && !L) slot = 'main'; return slot === 'layer' ? L : pianoPatch(P); };
+const nameOf = (ctx, s) => (s ? s.name || (PRESETS[s.preset] ? ctx.t('pre.' + s.preset) : '') : '');
+
 export function synBody(ctx, inline) {
-  const { t, ui } = ctx, s = pianoPatch(ctx.store.all()), mode = ctx.audio.mixer.state.mode;
-  const kn = (k) => knobSVG(ctx, k, s[k]);
+  const { t, ui } = ctx, P = store(ctx), main = pianoPatch(P), L = pianoLayer(P), s = activeOf(ctx), mode = ctx.audio.mixer.state.mode;
+  const kn = (k) => knobSVG(ctx, k, knobVal(s, k), labelOf(ctx, s, k));
   const builtins = Object.keys(PRESETS).map((k) => [k, t('pre.' + k)]);
-  const name = s.name || (PRESETS[s.preset] ? t('pre.' + s.preset) : '');
+  const tab = (id, label, on) => '<button class="slt' + (on ? ' on' : '') + '" data-slot="' + id + '" aria-pressed="' + on + '">' + label + '</button>';
+  // слои: «Звук · Рояль» и «Слой · Воздух ×» (или «＋ Слой»); удержание пресета — тоже слой
+  const slots = '<div class="slots" role="group" aria-label="' + ui.esc(t('slot.hint')) + '">' +
+    tab('main', '<small>' + t('slot.main') + '</small>' + ui.esc(nameOf(ctx, main)), slot === 'main') +
+    (L ? tab('layer', '<small>' + t('slot.layer') + '</small>' + ui.esc(nameOf(ctx, L)), slot === 'layer') +
+      '<button class="sltx" data-slotdel aria-label="' + ui.esc(t('slot.del')) + '" title="' + ui.esc(t('slot.del')) + '">×</button>'
+      : '<button class="slt add" data-slotadd title="' + ui.esc(t('slot.hint')) + '">＋ ' + t('slot.layer') + '</button>') + '</div>';
   // встроенная панель — всегда над клавишами, без заголовка и закрытия: пресеты, экран и ручки на всю высоту
-  return (inline ? '' : ui.snav(t('syn.title'))) +
+  return (inline ? '' : ui.snav(t('syn.title'))) + slots +
     presetRow(ctx.presets('piano'), s.preset, builtins) +
     '<div class="retro' + (inline ? ' inl' : '') + '"><i class="scr tl"></i><i class="scr tr"></i><i class="scr bl"></i><i class="scr br"></i>' +
-    '<div class="rhead"><b>PRACTICE · SYN-1</b><span class="led"></span></div><div class="lcd"><canvas class="scopec" aria-hidden="true"></canvas><span class="sclab"></span><span class="lcdn">' +
-    ui.esc(name) + '</span></div>' +
-    '<div class="rsec osc"><span class="rt">OSC</span><div class="krow">' + kn('tone') + kn('cho') + '</div></div>' +
-    '<div class="rsec"><span class="rt">FILTER</span><div class="krow">' + kn('bright') + '</div></div>' +
-    '<div class="rsec"><span class="rt">SPACE</span><div class="krow">' + kn('rev') + '</div></div>' +
-    '<div class="rsec wide"><span class="rt">ENVELOPE</span><div class="krow">' + kn('att') + kn('dec') + kn('sus') + kn('rel') + '</div></div></div>' +
+    '<div class="rhead"><b>MELETE · SYN-1</b><span class="led"></span></div><div class="lcd"><canvas class="scopec" aria-hidden="true"></canvas><span class="sclab"></span><span class="lcdn">' +
+    ui.esc(nameOf(ctx, s)) + '</span></div>' +
+    '<div class="rsec wide"><span class="rt">' + t(slot === 'layer' ? 'sec.layer' : 'sec.sound') + '</span><div class="krow">' + knobsOf(s).map(kn).join('') + '</div></div>' +
+    '<div class="rsec wide"><span class="rt">MIX</span><div class="krow">' + MIX_KNOBS.map(kn).join('') + '</div></div></div>' +
     (inline ? '' : '<div class="hdr">' + t('mode') + '</div><div class="group"><div class="cellcol">' +
       ui.seg('amode', [['fast', t('mode.fast')], ['bal', t('mode.bal')], ['smooth', t('mode.smooth')]], mode, t('mode')) + '</div></div><p class="ftr">' + t('mix.ftr') +
       '</p><div style="height:120px"></div><div class="mkdock">' + mkbHTML(ctx) + '</div>');
@@ -250,35 +272,90 @@ export function synBody(ctx, inline) {
 
 // Привязать панель к root. rerender() перерисовывает её; onClose — закрыть встроенную панель
 export function synBind(ctx, root, inline, { rerender, onClose, onChange = () => {} }) {
-  const s = pianoPatch(ctx.store.all()), offs = [];
+  const offs = [], P = store(ctx);
   let stopScope = () => {};
-  const startScope = () => { stopScope(); stopScope = scopeStart(ctx, root.querySelector('.scopec'), () => pianoPatch(ctx.store.all())); };
+  const startScope = () => { stopScope(); stopScope = scopeStart(ctx, root.querySelector('.scopec'), () => activeOf(ctx)); };
   setTimeout(startScope, 40);
   // звучащие (и удержанные Hold) ноты слышат правку сразу
   const live = () => { if (ctx.audio.synth && ctx.audio.synth.refresh) ctx.audio.synth.refresh(); };
-  const re = () => { rerender(); startScope(); onChange(); live(); };
-  knobBind(ctx, root, (k) => s[k], (k, v, reset) => {
-    if (reset) { s[k] = (PRESETS[s.preset] || PRESETS.piano)[k]; re(); ctx.store.save(); return; }
+  // перерисовка без прыжков: ряд пресетов и сама панель остаются там, где их прокрутили
+  const re = () => {
+    const row = root.querySelector('.prow'), x = row ? row.scrollLeft : 0, y = root.scrollTop;
+    rerender();
+    const r2 = root.querySelector('.prow');
+    if (r2) r2.scrollLeft = x;
+    root.scrollTop = y;
+    startScope(); onChange(); live();
+  };
+  knobBind(ctx, root, (k) => knobVal(activeOf(ctx), k), (k, v, reset) => {
+    const s = activeOf(ctx);
+    if (reset) {
+      const pre = presetOf(s.preset) || {};
+      if (MIX_KNOBS.includes(k)) s[k] = KNOB_DEF[k]; else if (k === 'fmi') delete s.fmi; else s[k] = pre[k] != null ? pre[k] : KNOB_DEF[k];
+      re(); ctx.store.save(); return;
+    }
     s[k] = v;
     live();
   }, offs);
   if (!inline) mkbBind(ctx, root, () => { const d = root.querySelector('.mkdock'); if (d) d.innerHTML = mkbHTML(ctx); }, offs);
+  // звук слоя: встроенный пресет или свой (★)
+  const setSound = (target, b) => {
+    if (b.dataset.bpre) applyPreset(target, b.dataset.bpre);
+    else {
+      const p = ctx.presets('piano').get(b.dataset.upre);
+      if (!p) return;
+      const keep = {};
+      MIX_KNOBS.forEach((k) => { if (target[k] != null) keep[k] = target[k]; });
+      Object.keys(target).forEach((k) => delete target[k]);
+      Object.assign(target, p.data, keep, { preset: p.id, name: p.name });
+    }
+  };
+  const idOf = (b) => b.dataset.bpre || b.dataset.upre;
+  // удержание пресета — второй слой; удержание того, что уже слоем, — убрать слой
+  let lp = null, longDone = false;
+  const holdLayer = (b) => {
+    longDone = true;
+    if (navigator.vibrate) try { navigator.vibrate(12); } catch { /* нет вибрации */ }
+    const L = pianoLayer(P);
+    if (L && L.preset === idOf(b)) { P.layer = null; slot = 'main'; ctx.ui.toast(ctx.t('slot.off')); }
+    else { P.layer = L || { vol: 0.7 }; setSound(P.layer, b); slot = 'layer'; ctx.ui.toast(ctx.t('slot.on', { name: nameOf(ctx, P.layer) })); }
+    ctx.store.save();
+    re();
+  };
+  const onDown = (e) => {
+    const b = e.target.closest('[data-bpre], [data-upre]');
+    clearTimeout(lp);
+    longDone = false;
+    if (!b) return;
+    const x0 = e.clientX, y0 = e.clientY;
+    lp = setTimeout(() => holdLayer(b), 480);
+    const cancel = (ev) => { if (ev.type !== 'pointermove' || Math.hypot(ev.clientX - x0, ev.clientY - y0) > 10) { clearTimeout(lp); off(); } };
+    const off = () => { ['pointermove', 'pointerup', 'pointercancel'].forEach((n) => window.removeEventListener(n, cancel)); };
+    ['pointermove', 'pointerup', 'pointercancel'].forEach((n) => window.addEventListener(n, cancel));
+  };
+  root.addEventListener('pointerdown', onDown);
+  offs.push(() => { root.removeEventListener('pointerdown', onDown); clearTimeout(lp); });
+  const noMenu = (e) => { if (e.target.closest('[data-bpre], [data-upre]')) e.preventDefault(); };
+  root.addEventListener('contextmenu', noMenu);
+  offs.push(() => root.removeEventListener('contextmenu', noMenu));
   const onClick = (e) => {
     const g = (x) => e.target.closest(x);
     let b;
+    if (longDone && g('[data-bpre], [data-upre]')) { longDone = false; return; } // это было удержание
     if (g('[data-psclose]')) { onClose && onClose(); return; }
-    if ((b = g('[data-bpre]'))) {
-      applyPreset(s, b.dataset.bpre);
-      ctx.store.all().sound = b.dataset.bpre === 'pad' ? 'pad' : 'piano';
+    if ((b = g('[data-slot]'))) { slot = b.dataset.slot; re(); return; }
+    if (g('[data-slotadd]')) { P.layer = applyPreset({ vol: 0.7 }, 'wair'); slot = 'layer'; ctx.store.save(); re(); ctx.ui.toast(ctx.t('slot.on', { name: nameOf(ctx, P.layer) })); return; }
+    if (g('[data-slotdel]')) { P.layer = null; slot = 'main'; ctx.store.save(); re(); ctx.ui.toast(ctx.t('slot.off')); return; }
+    if ((b = g('[data-bpre], [data-upre]'))) {
+      setSound(activeOf(ctx), b);
+      if (slot === 'main') P.sound = 'piano';
       ctx.store.save();
       re();
-    } else if ((b = g('[data-upre]'))) {
-      const p = ctx.presets('piano').get(b.dataset.upre);
-      if (p) { PATCH_EXTRA.forEach((k) => { if (k !== 'kind') delete s[k]; }); Object.assign(s, p.data, { preset: p.id, name: p.name }); ctx.store.save(); re(); }
     } else if (g('[data-psave]')) {
+      const s = activeOf(ctx);
       promptName(ctx.t('pre.new'), s.name ? s.name + ' 2' : ctx.t('pre.default'), (v) => {
         const data = {};
-        PATCH_KEYS.concat(PATCH_EXTRA).forEach((k) => { if (s[k] != null) data[k] = s[k]; });
+        Object.keys(s).forEach((k) => { if (!['preset', 'name', ...MIX_KNOBS].includes(k) && s[k] != null) data[k] = s[k]; });
         const id = ctx.presets('piano').add(v, data);
         s.preset = id;
         s.name = v;

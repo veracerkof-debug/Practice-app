@@ -111,17 +111,28 @@
 .psyn .krow{flex-wrap:nowrap;justify-content:space-evenly}
 .psyn .knob{width:auto;min-width:0;padding:0;flex:1}
 .psyn .knob svg{width:clamp(30px,15cqh,52px);height:clamp(30px,15cqh,52px)}
-.psyn .kl,.psyn .kx{font-size:clamp(8.5px,3.2cqh,10px);white-space:nowrap}
+.psyn .kl,.psyn .kx{font-size:clamp(8.5px,3.2cqh,10px);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .retro.inl .scr{display:none}
 .pk.txt2{min-width:52px;font-size:14px;font-weight:700}
+/* слои: «Звук» и «Слой» — над пресетами; удержание пресета тоже ставит слой */
+.slots{display:flex;gap:6px;margin:0 0 6px;flex:none}
+.slt{flex:1 1 0;min-width:0;min-height:40px;border-radius:12px;background:var(--fill);color:var(--ink);font-size:14px;font-weight:600;padding:2px 10px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.slt small{font-size:10px;font-weight:500;color:var(--l2);text-transform:uppercase;letter-spacing:.04em;line-height:1.1}
+.slt.on{background:var(--tint);color:var(--on-tint)}
+.slt.on small{color:inherit;opacity:.8}
+.slt.add{align-items:center;color:var(--tint);background:none;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tint) 45%,transparent)}
+.sltx{flex:none;width:40px;min-height:40px;border-radius:12px;background:var(--fill);color:var(--l2);font-size:20px;line-height:1}
 /* панель широкая и низкая (телефон горизонтально) — все ручки в одну строку, без экрана */
 @container (min-aspect-ratio: 2/1) {
-  .psyn .retro.inl{grid-template-columns:2fr 1fr 1fr 4fr;grid-template-rows:minmax(0,1fr);align-items:stretch}
+  .psyn .retro.inl{grid-template-columns:3fr 2fr;grid-template-rows:minmax(0,1fr);align-items:stretch}
   .psyn .retro.inl .rhead,.psyn .retro.inl .lcd{display:none}
   .psyn .retro.inl .rsec.osc,.psyn .retro.inl .rsec.wide{grid-column:auto}
   .psyn .retro.inl .rsec{display:flex;flex-direction:column;justify-content:center}
-  .psyn .knob svg{width:clamp(28px,30cqh,52px);height:clamp(28px,30cqh,52px)}
+  .psyn .knob svg{width:clamp(24px,24cqh,48px);height:clamp(24px,24cqh,48px)}
   .psyn .kl,.psyn .kx{font-size:clamp(8.5px,6cqh,10px)}
+  .psyn .rt{display:none}
+  .slots .slt,.slots .sltx{min-height:34px}
+  .slots .slt{flex-direction:row;align-items:center;gap:6px}
 }
 /* Полный экран (src/core/pure.js): клавиатура на весь экран — без панели, последней ноты и эффектов */
 :is(.tview.pure,.pfull) .pbar,:is(.tview.pure,.pfull) .lastnote,:is(.tview.pure,.pfull) .psyn,:is(.tview.pure,.pfull) .hlp{display:none!important}

@@ -20,6 +20,7 @@ export function wave(c, name) {
 
 // Амплитуда i-й гармоники синтезатора по типу и «тембру» (0…1)
 export function harmAmp(kind, tone, i) {
+  if (kind === 'grand') kind = 'piano'; // рояль (записи) в синтезаторных голосах глайдера — синтезированным пианино
   const pw = 4 - tone * 3.2;
   if (i === 1) return 1;
   if (kind === 'organ') return [1, 2, 3, 4, 6, 8, 10, 12, 16].includes(i) ? (1 / Math.pow(i, 0.55)) * (i <= 4 || tone > 0.4 ? 1 : 0.2) : 0;

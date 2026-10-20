@@ -2,7 +2,7 @@
 // Создаётся один раз ядром; модулям отдаётся через ctx.audio (см. MODULE_SPEC.md).
 import { getContext, peekContext, now, midiFreq, masterNode, addTap, installUnlock } from './context.js';
 import { createMixer } from './mixer.js';
-import { createSynth, pianoPatch, playChord, playSeq, PRESETS } from './synth.js';
+import { createSynth, pianoPatch, pianoLayer, playChord, playSeq, presetOf } from './synth.js';
 import { createDrone } from './drone.js';
 import { createMetronome } from './metronome.js';
 import { openMic } from './mic.js';
@@ -13,7 +13,7 @@ import { openMic } from './mic.js';
 export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro, save = () => {} }) {
   const a4 = () => device.tuner.a4 || 440;
   const mixer = createMixer(device.mix, { onChange: save });
-  const synth = createSynth({ mixer, getPatch: () => pianoPatch(device.piano), getA4: a4 });
+  const synth = createSynth({ mixer, getPatch: () => pianoPatch(device.piano), getLayer: () => pianoLayer(device.piano), getA4: a4 });
   const drone = createDrone({ mixer, getSettings: () => device.drone, getA4: a4 });
   const metro = createMetronome({ mixer, cfg: metroCfg, onTempo, onBpmChange, onSave: saveMetro });
   mixer.probe('piano', () => synth.active('piano'));
@@ -96,12 +96,12 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     // Короткая нота; opts: { bus = 'theory', dur = 0.9, preset — встроенный звук синтезатора (piano, organ, bell…) }
     playNote(midi, { bus = 'theory', dur = 0.9, preset = null } = {}) {
       const k = 'n' + n++;
-      synth.on(midi, k, { bus, patch: preset ? PRESETS[preset] || PRESETS.piano : null });
+      synth.on(midi, k, { bus, patch: preset ? presetOf(preset) || presetOf('piano') : null });
       setTimeout(() => synth.off(k), dur * 1000);
     },
     // opts.preset — встроенный звук синтезатора (как у playNote)
-    playChord: (midis, opts = {}) => playChord(synth, midis, { ...opts, patch: opts.preset ? PRESETS[opts.preset] || null : null }),
-    playSeq: (midis, opts = {}) => playSeq(synth, midis, { ...opts, patch: opts.preset ? PRESETS[opts.preset] || null : null }),
+    playChord: (midis, opts = {}) => playChord(synth, midis, { ...opts, patch: opts.preset ? presetOf(opts.preset) : null }),
+    playSeq: (midis, opts = {}) => playSeq(synth, midis, { ...opts, patch: opts.preset ? presetOf(opts.preset) : null }),
     chime,
     refTone,
     analyser,

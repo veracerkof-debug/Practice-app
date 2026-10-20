@@ -25,10 +25,19 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 // Один голос (нота). dest — куда звучать; f — частота; t — начало.
 // opts: width (ширина, 0…1,5), bright (×фильтр), fade — за сколько секунд вступает мерцание,
 //       vibIn — узел вибрато «от руки» (центы, подключается к расстройке), body — { decay, floor }: основа гаснет сама,
-//       uni — не больше стольких голосов в унисоне (лёгкий вариант для созвучий из многих нот)
+//       uni — не больше стольких голосов в унисоне (лёгкий вариант для созвучий из многих нот),
+//       mul — ручки звука (множители рецепта, 1 — как задумано): breath — дыхание, shim — мерцание, drift — плавание,
+//       vib — вибрато, hammer — удар молоточка
 // → { set(f, tau), srcs (что остановить), out }
-export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.5, vibIn = null, body = null, uni = 0 } = {}) {
-  const R = AIR[kind] || AIR.air, srcs = [], tr = []; // tr — [параметр, множитель частоты, предел]
+export const airOf = (kind, mul) => {
+  const B = AIR[kind] || AIR.air;
+  if (!mul) return B;
+  const k = (x) => (mul[x] == null ? 1 : +mul[x]);
+  return { ...B, breath: (B.breath || 0) * k('breath'), chiff: (B.chiff || 0) * k('breath'), oct: (B.oct || 0) * k('shim'), fifth: (B.fifth || 0) * k('shim'),
+    drift: (B.drift || 0) * k('drift'), vib: B.vib && [B.vib[0], B.vib[1] * k('vib'), B.vib[2]], thump: (B.thump || 0) * k('hammer'), pingAmp: 0.55 * k('hammer') };
+};
+export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.5, vibIn = null, body = null, uni = 0, mul = null } = {}) {
+  const R = airOf(kind, mul), srcs = [], tr = []; // tr — [параметр, множитель частоты, предел]
   const out = c.createGain(), lp = c.createBiquadFilter(), mix = c.createGain();
   lp.type = 'lowpass';
   lp.Q.value = 0.3;
@@ -114,7 +123,7 @@ export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.
   if (R.ping) {
     const { g } = osc(1, partsWave(c, R.ping), 0, 0, 0);
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.55, t + 0.004);
+    g.gain.linearRampToValueAtTime(R.pingAmp ?? 0.55, t + 0.004);
     g.gain.setTargetAtTime(0, t + 0.01, 0.14);
   }
   const noise = (amt, to) => {
