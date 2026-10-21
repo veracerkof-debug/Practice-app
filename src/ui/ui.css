@@ -24,7 +24,7 @@ button.cell:active{background:var(--fill)}
 .round svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
 .seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;gap:2px;width:100%}
 .cell>.seg{width:auto;flex:1 1 55%;min-width:0} /* рядом с подписью — делит строку, не ложится поверх */
-.seg button{flex:1;min-height:32px;border-radius:7px;font-size:14px;font-weight:500;padding:0 6px;white-space:nowrap}
+.seg button{flex:1;min-width:0;min-height:32px;border-radius:7px;font-size:14px;font-weight:500;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* min-width:0 — длинная подпись не раздвигает ряд шире экрана */
 .seg button[aria-pressed="true"]{background:var(--cell);box-shadow:0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
 .sw{position:relative;width:51px;height:31px;flex:none}
 .sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
