@@ -6,6 +6,7 @@
 // loadParts(blobs, gains), setMix(gains), события loadedmetadata / play / pause / ended / error.
 // Раскодированные дорожки держатся как Int16 (вдвое меньше float); в узлы уходят куски по 2 с с запасом 1,2 с.
 import { isHeld } from './context.js';
+import { every, cancel } from './clock.js'; // планировщик кусков — на тиках звукового потока, не засыпает при погашенном экране
 const CHUNK_SEC = 2, AHEAD = 1.2, TICK_MS = 250;
 const toI16 = (f) => { const o = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const v = f[i]; o[i] = v >= 1 ? 32767 : v <= -1 ? -32768 : (v * 32767) | 0; } return o; };
 
@@ -44,7 +45,7 @@ export async function createBufferPlayer(c, dest) {
         const startAt = Math.max(c.currentTime, at), skip = startAt > at ? (startAt - at) * rate : 0; // кусок, начавшийся «в прошлом», — с нужного места
         if (skip < n / c.sampleRate) src.start(startAt, skip);
         live.push(src);
-        if (first && s0 + n >= len) { const my = gen; src.onended = () => { if (my !== gen || !playing) return; playing = false; pos = len; ended = true; clearInterval(timer); timer = 0; fire('ended'); fire('pause'); }; }
+        if (first && s0 + n >= len) { const my = gen; src.onended = () => { if (my !== gen || !playing) return; playing = false; pos = len; ended = true; cancel(timer); timer = 0; fire('ended'); fire('pause'); }; }
         first = false;
       }
       nextChunk++;
@@ -56,14 +57,14 @@ export async function createBufferPlayer(c, dest) {
     basePos = Math.max(0, Math.min(len, samples)); baseT = c.currentTime + 0.02;
     nextChunk = Math.floor(basePos / CH);
     schedule();
-    if (!timer) timer = setInterval(schedule, TICK_MS);
+    if (!timer) timer = every(TICK_MS, schedule);
   }
   async function decode(blob) {
     const buf = await c.decodeAudioData(await blob.arrayBuffer());
     const n = buf.numberOfChannels;
     return { L: toI16(buf.getChannelData(0)), R: toI16(buf.getChannelData(Math.min(1, n - 1))), len: buf.length };
   }
-  function reset() { stopLive(); playing = false; pos = 0; ended = false; clearInterval(timer); timer = 0; }
+  function reset() { stopLive(); playing = false; pos = 0; ended = false; cancel(timer); timer = 0; }
 
   Object.defineProperties(p, {
     currentTime: { get: () => curSamples() / c.sampleRate, set(t) { const s = Math.max(0, Math.min(len, (+t || 0) * c.sampleRate)); ended = false; if (playing) startFrom(s); else pos = s; } },
@@ -110,7 +111,7 @@ export async function createBufferPlayer(c, dest) {
     startFrom(pos);
     fire('play');
   };
-  p.pause = () => { if (!playing) return; pos = curSamples(); playing = false; stopLive(); clearInterval(timer); timer = 0; fire('pause'); };
+  p.pause = () => { if (!playing) return; pos = curSamples(); playing = false; stopLive(); cancel(timer); timer = 0; fire('pause'); };
   p.dispose = () => { reset(); for (const k of Object.keys(nodes)) { try { nodes[k].disconnect(); } catch { /* */ } } nodes = {}; parts = {}; };
   return p;
 }
