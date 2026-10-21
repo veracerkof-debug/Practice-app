@@ -37,7 +37,7 @@ export function createMixerDrawer(app) {
   };
   let hadTama = false;
   const loadCol = () => '<div class="mxf mxld" role="meter" aria-label="' + esc(t('snd.load')) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="' + esc(t('snd.load')) + '"><span class="mxv num" data-ldv>–</span><div class="mxt mxlt"><b style="height:0"></b></div><span class="mxll">' + esc(t('snd.loadShort')) + '</span></div>';
-  const render = () => { hadTama = !!(app.tama && app.tama.here()); el.querySelector('.mxp').innerHTML = SRC.map(fader).join('') + tamaCol() + loadCol(); tick(); showLoad(); };
+  const render = () => { hadTama = !!(app.tama && app.tama.here()); el.querySelector('.mxp').innerHTML = SRC.map(fader).join('') + loadCol() + tamaCol(); tick(); showLoad(); };
   // нагрузка звука: колонка-измеритель справа; язычок краснеет при перегрузке
   const showLoad = () => {
     const m = app.audio.load, col = el.querySelector('.mxld');

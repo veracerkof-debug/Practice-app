@@ -22,7 +22,7 @@ for (const g of ['f', 'm']) for (const mood of NOTIFY_MOODS) {
 }
 // Уведомление «Идёт занятие» (KeepAliveService): лицо без кружка, линии цветом акцента — читается и на светлой,
 // и на тёмной шторке → mn_<f|m>_<лицо>.png
-const BARE = ['calm', 'sing', 'wait', 'focus'];
+const BARE = ['calm', 'sing', 'wait', 'focus', 'calmB', 'singB', 'waitB', 'focusB']; // …B — кадр моргания (глаза закрыты)
 const bare = (svg) => '<!doctype html><meta charset="utf-8"><style>:root{--ink:#9C7242;--cell:transparent;--sep:transparent;--tint:#9C7242}html,body{margin:0;background:transparent}' + css +
   '.mascot .ms{stroke-width:3.8}.mascot .mt{stroke-width:2.8}.box{width:' + PX + 'px;height:' + PX + 'px}.box svg{display:block;width:100%;height:100%}</style><div class="box">' + svg + '</div>';
 for (const g of ['f', 'm']) for (const mood of BARE) {

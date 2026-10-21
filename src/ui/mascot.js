@@ -62,6 +62,8 @@ export const MOODS = {
   sing: ['brMhi', 'eyes', 'nose', 'mO', 'note'], // поёт
   wink: ['brM', 'wink', 'nose', 'mSmirk'], // подмигивает
   grow: ['brM', 'eyes', 'nose', 'mCalm', 'delta'], // рост к прошлой неделе
+  // кадры моргания для уведомления (build/notifyicons.mjs, KeepAliveService): те же лица с закрытыми глазами
+  calmB: ['brM', 'eyesShut', 'nose', 'mCalm'], singB: ['brMhi', 'eyesShut', 'nose', 'mO', 'note'], waitB: ['brM', 'eyesShut', 'nose', 'mSmirk'], focusB: ['brFlat', 'eyesShut', 'noseBob', 'mFlat'],
 };
 
 // Вариант маскота (settings.mascot): 'f' — Мелета: бантик-завиток (как флажок восьмой) и ресницы;

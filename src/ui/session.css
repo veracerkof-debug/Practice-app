@@ -133,12 +133,12 @@
 .mxx.on{background:var(--c);color:#fff}
 .mxx svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 /* измеритель нагрузки звука в микшере: столбик и процент; жёлтый от 70 %, красный от 90 %; язычок краснеет при перегрузке */
-.mxld{width:34px;--c:#5F8568}
+.mxld{width:40px;--c:#5F8568;justify-content:flex-end}
 .mxld[data-lvl="warn"]{--c:#C9A227}
 .mxld[data-lvl="high"]{--c:#D9534F}
-.mxld .mxlt{width:34px}
-.mxld .mxlt::before{left:13px}
-.mxld .mxlt b{left:13px;transition:height .3s}
+.mxld .mxlt{width:40px}
+.mxld .mxlt::before{left:16px}
+.mxld .mxlt b{left:16px;transition:height .3s}
 .mxll{font-size:9px;color:#8D8D93;letter-spacing:.02em}
 #mixd.overload .mxh{background:#7A2E2A}
 #mixd.overload .mxh i{background:#F0A39E}
@@ -153,8 +153,9 @@
    поэтому высота задаётся явно — иначе таймер сжимался в полоску */
 .pomohost{height:min(72vh,620px);min-height:360px;display:flex;flex-direction:column;margin-top:4px}
 /* маскот в шторке микшера: убрать с экрана / вернуть (src/core/screens/mixer.js) */
-.mxm{justify-content:flex-end;margin-left:4px;padding-left:8px;border-left:1px solid rgba(255,255,255,.12)}
-.mxm .mxi{padding:0;background:transparent;overflow:visible}
+/* маскот — последний столбец, как кнопка инструмента: та же ширина, тот же нижний ряд */
+.mxm{width:40px;justify-content:flex-end;margin-left:2px;padding-left:6px;border-left:1px solid rgba(255,255,255,.12)}
+.mxm .mxi{width:34px;height:34px;padding:0;background:transparent;overflow:visible;display:flex;align-items:center;justify-content:center}
 .mxm .mxi svg{width:34px;height:34px;fill:revert-layer;stroke:revert-layer;stroke-width:revert-layer}
 .mxm.mu .mxi{background:transparent;opacity:.55}
 /* Значки окон сессии: открытый в окне — цветной, в фокусе — в цветной капсуле; остальные приглушены */

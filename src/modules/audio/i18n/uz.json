@@ -93,7 +93,6 @@
   "markAdded": "{n}-belgi: {time}",
   "markExists": "Bu yerda allaqachon {n}-belgi bor ({time})",
   "marksN": "taym-kodlar: {n}",
-  "select": "Fayllarni tanlash",
   "selAll": "Hammasi",
   "selNone": "Bekor qilish",
   "selN": "Tanlandi: {n}",
@@ -194,5 +193,6 @@
   "stems.improve": "Takomillashtirish · ≈ {t}",
   "stems.ver": "Yoʻlaklar versiyasi",
   "stems.verStd": "Birinchi",
-  "stems.verHq": "Takomillashgan"
+  "stems.verHq": "Takomillashgan",
+  "holdSelect": "Qatorni ushlab turish — bir nechtasini tanlash"
 }

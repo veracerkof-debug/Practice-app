@@ -10,7 +10,9 @@ import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.graphics.BitmapFactory;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.widget.RemoteViews;
 import androidx.core.app.NotificationCompat;
@@ -31,6 +33,20 @@ public class KeepAliveService extends Service {
     static volatile String lastTitle = "Melete", lastText = "", lastIcon = "";
     static final int ACCENT = 0xFF9C7242; // цвет акцента приложения (src/styles/tokens.css)
     static volatile boolean running = false;
+    // Моргание: лицо в уведомлении живое — раз в несколько секунд на миг закрытые глаза (кадр mn_<f|m>_<лицо>B);
+    // два обновления уведомления без звука и без всплытия (setOnlyAlertOnce) — экран и батарею не трогает
+    static final long BLINK_EVERY = 6500, BLINK_MS = 180;
+    static volatile boolean blink = false;
+    private final Handler ui = new Handler(Looper.getMainLooper());
+    private final Runnable blinker = new Runnable() {
+        @Override public void run() {
+            if (!running) return;
+            blink = !blink;
+            if (blink && faceId(KeepAliveService.this, lastIcon + "B") == 0) { blink = false; ui.postDelayed(this, BLINK_EVERY); return; }
+            refresh(KeepAliveService.this);
+            ui.postDelayed(this, blink ? BLINK_MS : BLINK_EVERY);
+        }
+    };
 
     private static PendingIntent action(Context c, String a, int code) {
         Intent i = new Intent(c, KeepAliveService.class).setAction(a);
@@ -46,8 +62,10 @@ public class KeepAliveService extends Service {
     static Notification build(Context c, String title, String text, String icon) {
         Intent open = c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
         PendingIntent pi = open == null ? null : PendingIntent.getActivity(c, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        int face = faceId(c, icon);
-        // В духе приложения: значок «Μ» логотипа в строке состояния, цвет акцента, лицо маскота без кружка — крупной картинкой
+        int face = faceId(c, blink ? icon + "B" : icon);
+        if (face == 0) face = faceId(c, icon);
+        // В духе приложения: в строке состояния — лицо маскота одним цветом (ic_stat_melete), цвет акцента,
+        // лицо маскота без кружка — крупной картинкой; оно моргает (blinker)
         NotificationCompat.Builder b = new NotificationCompat.Builder(c, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_melete)
             .setColor(ACCENT)
@@ -55,6 +73,7 @@ public class KeepAliveService extends Service {
             .setContentText(text)
             .setOngoing(true)
             .setSilent(true)
+            .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(pi);
@@ -106,8 +125,10 @@ public class KeepAliveService extends Service {
             ch.setSound(null, null);
             nm.createNotificationChannel(ch);
         }
-        lastTitle = title; lastText = text; lastIcon = icon; running = true;
+        lastTitle = title; lastText = text; lastIcon = icon; running = true; blink = false;
         Notification note = build(this, title, text, icon);
+        ui.removeCallbacks(blinker);
+        if (!icon.isEmpty()) ui.postDelayed(blinker, BLINK_EVERY);
         if (Build.VERSION.SDK_INT >= 29) startForeground(NOTE_ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
         else startForeground(NOTE_ID, note);
         // процессор не засыпает при погасшем экране, пока идёт занятие (не дольше 6 часов на всякий случай)
@@ -125,6 +146,7 @@ public class KeepAliveService extends Service {
     @Override
     public void onDestroy() {
         running = false;
+        ui.removeCallbacks(blinker);
         if (lock != null && lock.isHeld()) lock.release();
         lock = null;
         if (Build.VERSION.SDK_INT >= 24) stopForeground(STOP_FOREGROUND_REMOVE); else stopForeground(true);

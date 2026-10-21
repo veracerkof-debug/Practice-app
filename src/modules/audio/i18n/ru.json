@@ -95,7 +95,6 @@
   "markAdded": "Метка {n} на {time}",
   "markExists": "Здесь уже есть метка {n} ({time})",
   "marksN": "тайм-кодов: {n}",
-  "select": "Выбрать файлы",
   "selAll": "Все",
   "selNone": "Снять",
   "selN": "Выбрано: {n}",
@@ -197,5 +196,6 @@
   "stems.improve": "Улучшить · ≈ {t}",
   "stems.ver": "Версия дорожек",
   "stems.verStd": "Первая",
-  "stems.verHq": "Улучшенная"
+  "stems.verHq": "Улучшенная",
+  "holdSelect": "Удержать строку — выбрать несколько"
 }

@@ -9,6 +9,7 @@ import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { fileSongs, inSong, linkSong } from '../../core/files.js';
 import { SH, FL } from '../../music/notes.js';
+import { onHold } from '../../ui/hold.js';
 import { parseChord } from '../../audio/mirpost.js';
 import { pitchShifter } from '../../audio/pitchshift.js';
 import { createStretchPlayer, stretchAvailable } from '../../audio/stretchplayer.js';
@@ -45,7 +46,7 @@ const MB = 1048576;
 
 /* ---------- плеер (один на приложение, играет и при закрытом окне) ---------- */
 
-const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0, eng: null, engP: null, engOn: false, engFor: null, partsFor: null, loadP: null, loadKey: '' };
+const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0, eng: null, engP: null, engOn: false, engFor: null, partsFor: null, loadP: null, loadKey: '', noEngine: false };
 // Дорожки записи (src/core/jobs.js: файлы с stem.src — эта запись); набор — выбранный режим (st().pmode[id]),
 // иначе режим с наибольшим числом дорожек; версия — выбранная (st().pver[id]: 'hq' | 'std'), иначе улучшенная, если есть
 const PART_ORDER = ['vocals', 'inst', 'drums', 'bass', 'guitar', 'piano', 'other'];
@@ -325,7 +326,7 @@ const PLAY_EV = {
 // Движок звука: создаётся один раз, когда есть контекст (после первого жеста); запись t загружается в него.
 // Не вышло (нет AudioWorklet, не раскодировалось) — запись идёт элементом
 async function engineLoad(t) {
-  if (!stretchAvailable() || !ctx.audio.unlock()) return false;
+  if (!stretchAvailable() || AU.noEngine || !ctx.audio.unlock()) return false;
   try {
     // Движок создаётся один раз, даже если выбор записи и нажатие «играть» пришли одновременно (иначе два движка
     // на одной шине и гонка загрузок — на телефоне кончалась тишиной)
@@ -358,7 +359,7 @@ async function engineLoad(t) {
 }
 // Звук — в движок (сразу или при первом воспроизведении, когда появится контекст); видео — элемент
 async function routeTrack(t) {
-  if (isVideo(t) || !stretchAvailable()) return false;
+  if (isVideo(t) || !stretchAvailable() || AU.noEngine) return false;
   if (await engineLoad(t)) return true;
   if (AU.cur === t && !AU.el.getAttribute('src')) { AU.el.src = AU.url; AU.el.playbackRate = AU.rate; } // запасной путь — элемент
   return false;
@@ -450,6 +451,19 @@ const playEl = async () => {
   soundCheck(t);
   return r;
 };
+// Движок молчит (сторож ниже) — дальше в этом запуске звук идёт медиа-элементом с того же места; сдвиг высоты —
+// прежним путём (pitchShifter). В журнал — предупреждение: по отчёту видно, что на устройстве движок не звучит
+function engineFallback(t, why) {
+  const at = pl().currentTime, was = !pl().paused;
+  AU.noEngine = true;
+  try { AU.eng.pause(); } catch { /* */ }
+  AU.engOn = false; AU.engFor = null; AU.partsFor = null;
+  try { AU.el.src = AU.url; AU.el.playbackRate = AU.rate; AU.el.currentTime = at; } catch { /* */ }
+  if (was) AU.el.play().catch(() => {});
+  if (AU.shift) applyPitch().catch(() => {});
+  ctx.log('движок молчит (' + why + ') — звук через элемент', 'w');
+  render();
+}
 // Сторож тишины — в журнал: через 2,5 с игры замеряется уровень на выходе приложения (после компрессора); тишина при
 // играющем плеере — предупреждение с подробностями (путь, контекст, шина) — для отчёта о проблеме
 let SC = { an: null, buf: null, id: '' };
@@ -466,7 +480,10 @@ function soundCheck(t) {
       let e = 0, bad = 0; for (const v of SC.buf) { if (!Number.isFinite(v)) bad++; e += v * v; }
       const db = Math.round(20 * Math.log10(Math.sqrt(e / SC.buf.length) + 1e-9));
       const info = (AU.engOn ? 'движок' : 'элемент') + ', ' + tp.ctx.state + ', шина ' + ctx.audio.mixer.value('media') + ', ' + Math.round(pl().currentTime * 10) / 10 + ' с, ' + (t.type || '?');
-      if (db < -60 || bad) ctx.log('играет ' + t.name + ', а на выходе тишина (' + db + ' дБ' + (bad ? ', NaN' : '') + '): ' + info, 'w');
+      if (db < -60 || bad) {
+        ctx.log('играет ' + t.name + ', а на выходе тишина (' + db + ' дБ' + (bad ? ', NaN' : '') + '): ' + info, 'w');
+        if (AU.engOn && !AU.noEngine) engineFallback(t, db + ' дБ'); // движок молчит на этом устройстве — звук элементом, до перезапуска
+      }
       else ctx.log('играет ' + t.name + ': ' + db + ' дБ, ' + info);
     } catch (e) { ctx.logErr(e); }
   }, 2500);
@@ -593,7 +610,7 @@ function libHTML() {
   let h = '<div class="medlib"><div class="mlhead">' + (sel
     ? '<button class="link mlsall" data-x="mlsall">' + t(allOn ? 'selNone' : 'selAll') + '</button><b class="mlselt" aria-live="polite">' + t('selN', { n: sel.size }) + '</b><button class="link b" data-x="mlseloff">' + t('done') + '</button>'
     : '<label class="mlsearch">' + I.search + '<input type="search" data-mlq placeholder="' + t('search') + '" aria-label="' + t('search') + '" value="' + esc(ML.q) + '"></label>' +
-      (all.length > 1 ? icb('data-x="mlselon"', I.sel, t('select'), 'sm') : '') + icb('data-x="aadd"', I.plus, t('addFile'), 'sm')) + '</div>' +
+      icb('data-x="aadd"', I.plus, t('addFile'), 'sm')) + '</div>' +
     '<div class="mlbar"><div class="mlfil" role="group">' + [['all', t('f.all')], ['songs', t('f.songs')], ['free', t('f.free')]].map(([k, n]) => '<button class="' + (ML.f === k ? 'on' : '') +
       '" data-x="mlf" data-v="' + k + '" aria-pressed="' + (ML.f === k) + '">' + n + '</button>').join('') + '</div><select class="sortsel" data-mls aria-label="' + t('sort') + '">' +
     [['date', t('s.date')], ['name', t('s.name')], ['dur', t('s.dur')], ['size', t('s.size')]].map(([v, l]) => '<option value="' + v + '"' + (ML.sort === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div>';
@@ -623,7 +640,7 @@ function libHTML() {
     }).join('') + '</div>';
     h += midiHTML;
   }
-  if (all.length) h += '<p class="ftr" style="text-align:center">' + tn('files', all.length) + (totd ? ' · ' + fmtDur(totd) : '') + ' · ' + t('onDevice', { mb: ctx.num(tot / MB, 1) }) + '</p>';
+  if (all.length) h += '<p class="ftr" style="text-align:center">' + tn('files', all.length) + (totd ? ' · ' + fmtDur(totd) : '') + ' · ' + t('onDevice', { mb: ctx.num(tot / MB, 1) }) + (all.length > 1 && !sel ? '<br>' + t('holdSelect') : '') + '</p>';
   h += '</div>';
   if (sel) {
     const n = sel.size ? '' : ' disabled';
@@ -1142,7 +1159,6 @@ function act(a, el) {
     case 'mmplay': { const x = ctx.files.get(el.dataset.id); if (x) ctx.midi.play(x); break; }
     case 'mmmenu': midiMenu(el.dataset.id); break;
     case 'mlf': ML.f = el.dataset.v; render(); break;
-    case 'mlselon': ML.sel = new Set(); render(); break;
     case 'mlseloff': ML.sel = null; render(); break;
     case 'mlsel': { const id = el.dataset.id; ML.sel.has(id) ? ML.sel.delete(id) : ML.sel.add(id); render(); break; }
     case 'mlsall': {
@@ -1169,6 +1185,8 @@ function act(a, el) {
 
 function bind() {
   const on = (el, ev, fn, o) => { el.addEventListener(ev, fn, o); offs.push(() => el.removeEventListener(ev, fn, o)); };
+  // удержание строки — выбор нескольких файлов (вместо отдельной кнопки); дальше — касания по строкам
+  onHold(host, '.mlmain[data-x="mlplay"], .mlmain[data-x="mlsel"]', (el) => { if (!ML.sel) ML.sel = new Set(); ML.sel.add(el.dataset.id); render(); });
   on(host, 'click', (e) => {
     const s = e.target.closest('[data-step="arate"]');
     if (s) { setRate(AU.rate + +s.dataset.d * 0.05); const rv = host.querySelector('#ratev'); if (rv) rv.textContent = rateTxt(); return; }

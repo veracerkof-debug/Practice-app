@@ -94,7 +94,6 @@
   "markAdded": "Mark {n} at {time}",
   "markExists": "There’s already mark {n} here ({time})",
   "marksN": "timecodes: {n}",
-  "select": "Select files",
   "selAll": "All",
   "selNone": "None",
   "selN": "Selected: {n}",
@@ -195,5 +194,6 @@
   "stems.improve": "Refine · ≈ {t}",
   "stems.ver": "Stem version",
   "stems.verStd": "First",
-  "stems.verHq": "Refined"
+  "stems.verHq": "Refined",
+  "holdSelect": "Hold a row to select several"
 }
