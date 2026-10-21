@@ -9,6 +9,13 @@
       "what": "HTDemucs v4 (Meta, MIT) в ONNX со встроенными весами — разделение записи на вокал, ударные, бас, остальное (модуль «Дорожки»)"
     },
     {
+      "file": "public/models/demucs/htdemucs_6s.onnx",
+      "url": "https://huggingface.co/Andremi/audioweb-models/resolve/main/demucs_htdemucs_6s_s78_fp16w_ca.onnx",
+      "sha256": "05079e586874d966ceb1b8bca286f38f78d5602ed2c51d475a4092839891e0d5",
+      "bytes": 55439704,
+      "what": "HTDemucs 6s (Meta, MIT; ONNX с STFT снаружи, fp16, Andremi/audioweb-models) — шесть дорожек: ударные, бас, остальное, вокал, гитара, клавиши (модуль «Дорожки», режим «6»)"
+    },
+    {
       "file": "public/models/piano/pack.json",
       "url": "https://archive.org/download/SalamanderGrandPianoV3/SalamanderGrandPianoV3_OggVorbis.tar.bz2",
       "sha256": "a55d06f027f52cc45585c402c0318dfe1dbae8e93faa05523aba09d7629364fd",

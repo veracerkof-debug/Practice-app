@@ -446,7 +446,7 @@ export function projectTracks(p, { swing = true } = {}) {
 export function projectFromStems(name, stems, { songId = null, bpm = 90 } = {}) {
   const p = newProject({ name: String(name || '').replace(/\.[a-z0-9]+$/i, '').slice(0, 40), bpm, songId });
   p.tracks = [];
-  const colors = { vocals: '#A95E72', drums: '#B5533C', bass: '#567198', other: '#5F8568' };
+  const colors = { vocals: '#A95E72', drums: '#B5533C', bass: '#567198', other: '#5F8568', guitar: '#9C7242', piano: '#646493', inst: '#5F8568' };
   stems.forEach((s, i) => {
     const tr = newTrack('audio', i, { name: String(s.name || s.part).slice(0, 30), color: colors[s.part] || COLORS[i % COLORS.length] });
     p.tracks.push(tr);

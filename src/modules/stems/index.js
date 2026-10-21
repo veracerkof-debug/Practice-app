@@ -8,7 +8,7 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import './stems.css';
-import { separate, estimateSec, stemsThreads, stemPeaks, PARTS } from '../../audio/stems.js';
+import { separate, estimateSec, stemsThreads, stemPeaks, MODES, PARTS_OF, ALL_PARTS, stemEmpty, stemLevelDb } from '../../audio/stems.js';
 import { encodeWav } from '../../audio/voicefx.js';
 import { projectFromStems } from '../../music/project.js';
 
@@ -20,18 +20,22 @@ const I = {
 
 let host = null, ctx = null, onClick = null;
 // идущее разделение (одно на всё приложение, переживает закрытие окна): { src (запись), job, stage, frac, t0, est }
-let R = null, last = null; // last — { src, stems: [записи] } для экрана «готово»
+let R = null, last = null; // last — { src, stems: [записи], absent: [части, которых в записи нет] } для экрана «готово»
+const mode = () => (MODES.includes(ctx.store.get('mode')) ? ctx.store.get('mode') : '4');
+const byOrder = (a, b) => ALL_PARTS.indexOf(a.stem.part) - ALL_PARTS.indexOf(b.stem.part);
 
 const fmtT = (sec) => { const m = Math.floor(sec / 60), s = Math.round(sec % 60); return m ? m + ' ' + ctx.t('min') + (s ? ' ' + s + ' ' + ctx.t('sec') : '') : s + ' ' + ctx.t('sec'); };
 const sources = () => ctx.files.list('audio').filter((r) => !r.stem).sort((a, b) => (b.created || 0) - (a.created || 0));
-const stemsOf = (id) => ctx.files.list('audio').filter((r) => r.stem && r.stem.src === id);
+const stemsOf = (id) => ctx.files.list('audio').filter((r) => r.stem && r.stem.src === id).sort(byOrder);
 
 function listHTML() {
-  const { t, ui } = ctx, L = sources(), done = L.filter((r) => stemsOf(r.id).length === 4), todo = L.filter((r) => stemsOf(r.id).length !== 4);
+  const { t, ui } = ctx, L = sources(), m = mode(), done = L.filter((r) => stemsOf(r.id).length), todo = L.filter((r) => !stemsOf(r.id).some((x) => (x.stem.mode || '4') === m));
   const row = (r, extra = '') => '<button class="cell" data-src="' + r.id + '"><span class="grow">' + ui.esc(r.name) + '<span class="bksub">' + ui.esc((r.dur ? fmtT(r.dur) : '') + extra) + '</span></span>' + ui.icons.chev + '</button>';
-  return '<div class="smwrap"><div class="smlist">' +
-    (todo.length ? '<div class="hdr">' + ui.esc(t('pick')) + '</div><div class="group">' + todo.map((r) => row(r, r.dur ? ' · ≈ ' + fmtT(estimateSec(r.dur)) : '')).join('') + '</div>' : '') +
-    (done.length ? '<div class="hdr">' + ui.esc(t('done.title')) + '</div><div class="group">' + done.map((r) => '<button class="cell" data-done="' + r.id + '"><span class="grow">' + ui.esc(r.name) + '<span class="bksub">' + ui.esc(PARTS.map((p) => t('part.' + p)).join(' · ')) + '</span></span>' + ui.icons.chev + '</button>').join('') + '</div>' : '') +
+  // режим: сколько дорожек — 2 (вокал и инструментал), 4, 6 (ещё гитара и клавиши)
+  const seg = '<div class="group"><div class="cellcol">' + ui.seg('smmode', MODES.map((k) => [k, t('mode.' + k)]), m, t('mode.title')) + '<div class="segcap">' + ui.esc(t('mode.hint.' + m)) + '</div></div></div>';
+  return '<div class="smwrap"><div class="smlist">' + seg +
+    (todo.length ? '<div class="hdr">' + ui.esc(t('pick')) + '</div><div class="group">' + todo.map((r) => row(r, r.dur ? ' · ≈ ' + fmtT(estimateSec(r.dur, m)) : '')).join('') + '</div>' : '') +
+    (done.length ? '<div class="hdr">' + ui.esc(t('done.title')) + '</div><div class="group">' + done.map((r) => '<button class="cell" data-done="' + r.id + '"><span class="grow">' + ui.esc(r.name) + '<span class="bksub">' + ui.esc(stemsOf(r.id).map((x) => t('part.' + x.stem.part)).join(' · ')) + '</span></span>' + ui.icons.chev + '</button>').join('') + '</div>' : '') +
     (L.length ? '' : '<p class="ftr">' + ui.esc(t('empty')) + '</p>') + '</div></div>';
 }
 function runHTML() {
@@ -43,7 +47,8 @@ function runHTML() {
 }
 function doneHTML() {
   const { t, ui } = ctx;
-  return '<div class="smwrap"><div class="smlist"><div class="hdr">' + ui.esc(last.src.name) + '</div><div class="smparts">' + last.stems.map((r) => '<div class="smpart"><b>' + ui.esc(t('part.' + r.stem.part)) + '</b><span>' + ui.esc(fmtT(r.dur || 0)) + '</span></div>').join('') + '</div>' +
+  return '<div class="smwrap"><div class="smlist"><div class="hdr">' + ui.esc(last.src.name) + '</div><div class="smparts">' + last.stems.map((r) => '<div class="smpart"><b>' + ui.esc(t('part.' + r.stem.part)) + '</b><span>' + ui.esc(fmtT(r.dur || 0) + (r.stem.db != null ? ' · ' + Math.round(r.stem.db) + ' dB' : '')) + '</span></div>').join('') + '</div>' +
+    (last.absent && last.absent.length ? '<p class="ftr">' + ui.esc(t('absent', { list: last.absent.map((p) => t('part.' + p)).join(', ') })) + '</p>' : '') +
     '<div class="group" style="margin-top:14px"><button class="cell act center b" data-x="studio">' + I.studio + ' ' + ui.esc(t('toStudio')) + '</button><button class="cell center" data-x="back">' + ui.esc(t('pick')) + '</button></div></div></div>';
 }
 function render() {
@@ -55,8 +60,9 @@ function render() {
 async function start(r) {
   const { t } = ctx;
   if (R) return;
-  R = { src: r, stage: 'load', frac: 0, t0: Date.now(), est: estimateSec(r.dur || 60) };
-  R.job = separate(r.blob, { onStage: (stage, frac) => { if (!R) return; if (stage !== R.stage) { R.stage = stage; R.t0 = Date.now(); } R.frac = frac; render(); } });
+  const m = mode();
+  R = { src: r, stage: 'load', frac: 0, t0: Date.now(), est: estimateSec(r.dur || 60, m) };
+  R.job = separate(r.blob, { mode: m, onStage: (stage, frac) => { if (!R) return; if (stage !== R.stage) { R.stage = stage; R.t0 = Date.now(); } R.frac = frac; render(); } });
   render();
   let res;
   try { res = await R.job.promise; } catch (e) {
@@ -66,18 +72,23 @@ async function start(r) {
     ctx.logErr(e); ctx.ui.toast(t(/model|wasm|fetch|onnx/i.test(String(e && e.message)) ? 'err.load' : 'err.fail'));
     return;
   }
-  // в медиатеку: четыре WAV, имена «исходник — Вокал.wav», волна и длительность как у записей
-  const stems = [], base = r.name.replace(/\.[a-z0-9]+$/i, ''), at = Date.now();
+  // в медиатеку: WAV на дорожку, имена «исходник — Вокал.wav», волна и длительность как у записей; прежний набор этого
+  // режима заменяется; дорожки, которых в записи нет (тише микса на 25 дБ), не сохраняются — о них говорит итог
+  const stems = [], absent = [], base = r.name.replace(/\.[a-z0-9]+$/i, ''), at = Date.now(), parts = PARTS_OF[m];
   try {
-    for (const part of PARTS) {
-      const s = res[part], ch = [s.left, s.right], wav = encodeWav(ch, res.sr);
-      const rec = { id: 'sm' + at.toString(36) + part[0], name: base + ' — ' + t('part.' + part) + '.wav', size: wav.length, type: 'audio/wav', kind: 'audio', songs: r.songs || [], created: at + PARTS.indexOf(part),
-        blob: new Blob([wav], { type: 'audio/wav' }), dur: res.dur, peaks: stemPeaks(ch), stem: { src: r.id, part } };
+    for (const old of stemsOf(r.id).filter((x) => (x.stem.mode || '4') === m)) await ctx.files.remove(old.id);
+    for (const part of parts) {
+      const s = res.parts[part];
+      if (!s) continue;
+      if (stemEmpty(s, res.mix)) { absent.push(part); continue; }
+      const ch = [s.left, s.right], wav = encodeWav(ch, res.sr);
+      const rec = { id: 'sm' + at.toString(36) + part.slice(0, 2), name: base + ' — ' + t('part.' + part) + '.wav', size: wav.length, type: 'audio/wav', kind: 'audio', songs: r.songs || [], created: at + parts.indexOf(part),
+        blob: new Blob([wav], { type: 'audio/wav' }), dur: res.dur, peaks: stemPeaks(ch), stem: { src: r.id, part, mode: m, db: Math.round(stemLevelDb(s, res.mix) * 10) / 10 } };
       await ctx.files.add(rec);
       stems.push(rec);
     }
   } catch (e) { ctx.logErr(e); R = null; render(); ctx.ui.toast(t('err.fail')); return; }
-  R = null; last = { src: r, stems };
+  R = null; last = { src: r, stems, absent };
   render();
   ctx.ui.toast(t('saved'));
 }
@@ -94,16 +105,17 @@ export default {
   i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#6E5A8E',
-  heavy: true, heavyMb: 180, // модель в сборке; в веб-версии — заглушка
+  heavy: true, heavyMb: 235, // модели (180 + 55 МБ) в сборке; в веб-версии — заглушка
   sizes: ['full', 'half'],
-  status(c) { const n = c.files.list('audio').filter((r) => r.stem).length / 4; return n ? c.tn('stemsDone', Math.floor(n)) : c.t('st.idle'); },
+  status(c) { const n = new Set(c.files.list('audio').filter((r) => r.stem).map((r) => r.stem.src)).size; return n ? c.tn('stemsDone', n) : c.t('st.idle'); },
   mount(el, c) {
     host = el; ctx = c;
     render();
     onClick = (e) => {
       let b;
       if ((b = e.target.closest('[data-src]'))) { const r = c.files.get(b.dataset.src); if (r && r.blob) start(r); return; }
-      if ((b = e.target.closest('[data-done]'))) { const r = c.files.get(b.dataset.done); if (r) { last = { src: r, stems: PARTS.map((p) => stemsOf(r.id).find((x) => x.stem.part === p)).filter(Boolean) }; render(); } return; }
+      if ((b = e.target.closest('[data-done]'))) { const r = c.files.get(b.dataset.done); if (r) { last = { src: r, stems: stemsOf(r.id), absent: [] }; render(); } return; }
+      if ((b = e.target.closest('[data-seg="smmode"] [data-v]'))) { c.store.set('mode', b.dataset.v); render(); return; }
       if ((b = e.target.closest('[data-x]'))) {
         if (b.dataset.x === 'cancel' && R) R.job.cancel();
         else if (b.dataset.x === 'studio' && last) toStudio();

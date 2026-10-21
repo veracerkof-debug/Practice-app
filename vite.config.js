@@ -68,7 +68,7 @@ function ortAssets(mode) {
     },
   };
 }
-// Веб-версия без тяжёлого: рабочий поток разделения на дорожки подменяется пустышкой (ONNX Runtime и demucs-web в сборку
+// Веб-версия без тяжёлого: рабочий поток разделения на дорожки подменяется пустышкой (ONNX Runtime и demucs.js в сборку
 // не попадают), модель из public/models/ после сборки удаляется (public/ копируется целиком)
 const lightWeb = (mode) => {
   let out = 'dist';
@@ -88,7 +88,7 @@ export default defineConfig(({ mode }) => ({
   define: { __WEB_BUILD__: mode === 'web', __BUILD_TIME__: Date.now(), __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version) },
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
   plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), showcase(mode), lightWeb(mode), ortAssets(mode)],
-  // onnxruntime-web грузит свои .wasm сам (ort/…), предсборка Vite ему не нужна; demucs-web — чистый ES-модуль
+  // onnxruntime-web грузит свои .wasm сам (ort/…), предсборка Vite ему не нужна
   optimizeDeps: { exclude: ['@mediapipe/tasks-vision', 'onnxruntime-web'] },
   // MediaPipe не собирается заранее: иначе в режиме разработки вырезка статистики (build/mediapipe.js) не сработает
   // воркеры alphaTab сжимаются так же, как основной код

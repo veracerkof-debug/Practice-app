@@ -42,6 +42,7 @@ export async function createStretchPlayer(c, dest) {
   // Запись (Blob) → в узел; старое вычищается. Вернёт длительность
   p.load = async (blob) => {
     const my = ++gen;
+    parts = null; gains = {};
     playing = false; pos = 0; posAt = now(); ended = false;
     node.schedule({ active: false });
     await node.dropBuffers();
@@ -77,6 +78,66 @@ export async function createStretchPlayer(c, dest) {
     fire('pause');
   };
   // Сдвиг высоты: полутоны и центы; formant — сохранять форманты (для голоса)
+  // Дорожки записи (stems) с громкостью каждой: parts — { имя: Blob }, gains — { имя: 0…1.5 }. Раскодированные дорожки
+  // держатся в памяти как Int16 (в два раза меньше float), смесь считается по кускам в 30 с и уходит в узел переносом;
+  // setMix — пересведение на месте: положение и ход сохраняются (пауза на доли секунды)
+  let parts = null, gains = {}, mixTm = 0;
+  const toI16 = (f) => { const o = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const v = f[i]; o[i] = v >= 1 ? 32767 : v <= -1 ? -32768 : (v * 32767) | 0; } return o; };
+  async function pushMix(my) {
+    const names = Object.keys(parts), len = parts[names[0]].len, STEP = c.sampleRate * 30;
+    for (let s0 = 0; s0 < len; s0 += STEP) {
+      const n = Math.min(STEP, len - s0), L = new Float32Array(n), R = new Float32Array(n);
+      for (const k of names) {
+        const g = (gains[k] == null ? 1 : gains[k]) / 32767, P = parts[k];
+        if (!g) continue;
+        for (let i = 0; i < n; i++) { L[i] += P.L[s0 + i] * g; R[i] += P.R[s0 + i] * g; }
+      }
+      await node.addBuffers([L, R]);
+      if (my !== gen) return false;
+    }
+    return true;
+  }
+  p.loadParts = async (blobs, g = {}) => {
+    const my = ++gen;
+    playing = false; pos = 0; posAt = now(); ended = false;
+    node.schedule({ active: false });
+    await node.dropBuffers();
+    const next = {};
+    let len = 0;
+    for (const k of Object.keys(blobs)) {
+      let buf;
+      try { buf = await c.decodeAudioData(await blobs[k].arrayBuffer()); } catch (e) { if (my === gen) fire('error'); throw e; }
+      if (my !== gen) return 0;
+      const CH = Math.min(2, buf.numberOfChannels);
+      next[k] = { L: toI16(buf.getChannelData(0)), R: toI16(buf.getChannelData(CH - 1)), len: buf.length };
+      len = Math.max(len, buf.length);
+    }
+    for (const k of Object.keys(next)) if (next[k].len < len) { // выровнять длины
+      const P = next[k], L = new Int16Array(len), R = new Int16Array(len); L.set(P.L); R.set(P.R); next[k] = { L, R, len };
+    }
+    parts = next; gains = { ...g };
+    if (!(await pushMix(my))) return 0;
+    dur = len / c.sampleRate;
+    await refreshLatency();
+    fire('loadedmetadata');
+    return dur;
+  };
+  p.setMix = (g) => {
+    gains = { ...gains, ...g };
+    if (!parts) return;
+    clearTimeout(mixTm);
+    mixTm = setTimeout(async () => {
+      const my = ++gen, was = playing, at = cur();
+      playing = false; node.schedule({ active: false });
+      await node.dropBuffers();
+      if (my !== gen || !parts) return;
+      if (!(await pushMix(my))) return;
+      pos = at; posAt = now();
+      if (was) { playing = true; sched({ active: true, input: at, rate, semitones: semi, formantCompensation: formant }); }
+    }, 150);
+  };
+  p.hasParts = () => !!parts;
+  p.dropParts = () => { parts = null; gains = {}; };
   p.setPitch = (s = 0, cents = 0, f = false) => { semi = (+s || 0) + (+cents || 0) / 100; formant = !!f; sched({ semitones: semi, formantCompensation: formant }); };
   p.latency = () => lat;
   p.destroy = () => { gen++; try { node.schedule({ active: false }); node.disconnect(); } catch { /* */ } };

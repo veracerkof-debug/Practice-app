@@ -12,22 +12,30 @@ import java.nio.FloatBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
-// Разделение записи на дорожки нативным ONNX Runtime (все ядра), модель HTDemucs в сборке timcsy/demucs-web-onnx
-// (STFT снаружи). Чистая Java без Android — то же, что demucs-web (src/audio/stems.worker.js) делает в WebAssembly:
-// сегменты по 7,8 с с перекрытием 1/4, спектрограмма (Ханн 4096, шаг 1024, отражённые поля), входы «input» (волна)
-// и «x» (спектр), выходы — волна и комплексная маска → обратное STFT, сумма, склейка окном. Вход — два файла
-// float32 LE (левый, правый), выход — четыре файла float32 LE с чередованием каналов (drums, bass, other, vocals).
+// Разделение записи на дорожки нативным ONNX Runtime (все ядра), модели HTDemucs «STFT снаружи»: четыре дорожки
+// (timcsy/demucs-web-onnx: входы «input» волна и «x» спектр [1,4,2048,336] — L re, L im, R re, R im) и шесть
+// (Andremi/audioweb-models: «mix» и «spec» [1,2,2048,336,2] — канал, бин, кадр, re/im); раскладка берётся из формы
+// второго входа, число дорожек — из формы выхода. Чистая Java без Android — то же, что src/audio/demucs.js делает
+// в WebAssembly: сегменты по 7,8 с с перекрытием 1/4, спектрограмма (Ханн 4096, шаг 1024, отражённые поля), выходы —
+// волна и комплексная маска → обратное STFT, сумма, склейка окном. Вход — два файла float32 LE (левый, правый),
+// выход — по файлу float32 LE с чередованием каналов на дорожку (порядок — как у модели).
 // Память: один сегмент за раз, готовые куски пишутся в файл сразу — песня любой длины не держится в куче.
 public final class Demucs {
     public static final int SR = 44100, N = 343980, FFT = 4096, HOP = 1024, BINS = 2048, FRAMES = 336;
     public static final int STRIDE = (int) Math.floor(N * 0.75);
-    public static final String[] PARTS = { "drums", "bass", "other", "vocals" };
+    public static final String[] PARTS4 = { "drums", "bass", "other", "vocals" };
+    public static final String[] PARTS6 = { "drums", "bass", "other", "vocals", "guitar", "piano" };
+    public static String[] partsOf(int n) { return n == 6 ? PARTS6 : PARTS4; }
 
     public interface Progress { void at(double frac); }
 
     private final OrtEnvironment env;
     private final OrtSession session;
+    private final String waveName, specName;
+    private final boolean interleaved; // спектр [1,2,2048,336,2] (6 дорожек) против [1,4,2048,336]
     private volatile boolean cancelled = false;
+    private int stems = 4; // известно после первого сегмента (по форме выхода)
+    public int stems() { return stems; }
 
     public Demucs(String modelPath, int threads) throws Exception {
         env = OrtEnvironment.getEnvironment();
@@ -38,6 +46,13 @@ public final class Demucs {
         o.setCPUArenaAllocator(false); // без арены: память возвращается после каждого сегмента (иначе растёт до гигабайт)
         o.setMemoryPatternOptimization(false);
         session = env.createSession(modelPath, o);
+        String w = null, sp = null; boolean il = false;
+        for (Map.Entry<String, ai.onnxruntime.NodeInfo> e : session.getInputInfo().entrySet()) {
+            long[] d = ((ai.onnxruntime.TensorInfo) e.getValue().getInfo()).getShape();
+            if (d.length == 3) w = e.getKey(); else { sp = e.getKey(); il = d.length == 5; }
+        }
+        if (w == null || sp == null) throw new Exception("model inputs");
+        waveName = w; specName = sp; interleaved = il;
     }
 
     public void cancel() { cancelled = true; }
@@ -85,8 +100,9 @@ public final class Demucs {
         return o;
     }
 
-    // Спектр канала как в demucs-web: поля 1536/1620, центрирование 2048, кадры 2…337, бины 0…2047 → spec[c][b][f]
-    private static void spectrum(float[] ch, float[] spec, int reOff, int imOff, float[] re, float[] im) {
+    // Спектр канала: поля 1536/1620, центрирование 2048, кадры 2…337, бины 0…2047. Раскладка — через смещения и шаг:
+    // планарная (reOff/imOff — начала плоскостей re и im, stride 1) или чередование (re и im рядом, stride 2)
+    private static void spectrum(float[] ch, float[] spec, int reOff, int imOff, int stride, float[] re, float[] im) {
         int le = (N + HOP - 1) / HOP, pad = (HOP / 2) * 3, padRight = pad + le * HOP - N;
         float[] x = reflectPad(reflectPad(ch, pad, padRight), FFT / 2, FFT / 2);
         float scale = (float) (1.0 / Math.sqrt(FFT));
@@ -94,7 +110,7 @@ public final class Demucs {
             int start = (f + 2) * HOP;
             for (int i = 0; i < FFT; i++) { re[i] = x[start + i] * hann[i]; im[i] = 0; }
             fft(re, im, false);
-            for (int b = 0; b < BINS; b++) { spec[reOff + b * FRAMES + f] = re[b] * scale; spec[imOff + b * FRAMES + f] = im[b] * scale; }
+            for (int b = 0; b < BINS; b++) { int k = (b * FRAMES + f) * stride; spec[reOff + k] = re[b] * scale; spec[imOff + k] = im[b] * scale; }
         }
     }
 
@@ -137,15 +153,13 @@ public final class Demucs {
         float[] wave = new float[2 * N], spec = new float[4 * BINS * FRAMES];
         float[] re = new float[FFT], im = new float[FFT], acc = new float[(FRAMES + 3) * HOP + FFT], wsum = new float[acc.length];
         float[] seg = new float[N]; // одна дорожка, один канал после суммы ветвей
-        float[][][] sum = new float[4][2][N]; // накопление с окном для текущего сегмента (перекрытие с предыдущим)
+        float[][][] sum = null; // накопление с окном для текущего сегмента (перекрытие с предыдущим); размер — по числу дорожек
         float[] wt = new float[N];
         byte[] tmp = new byte[N * 4];
         byte[] outBytes = new byte[STRIDE * 8];
-        RandomAccessFile[] outs = new RandomAccessFile[4];
+        RandomAccessFile[] outs = null;
         try (RandomAccessFile fl = new RandomAccessFile(inL, "r"); RandomAccessFile fr = new RandomAccessFile(inR, "r")) {
-            for (int k = 0; k < 4; k++) outs[k] = new RandomAccessFile(new File(outDir, PARTS[k] + ".f32"), "rw");
-            for (int k = 0; k < 4; k++) outs[k].setLength(0);
-            long[] shape1 = { 1, 2, N }, shape2 = { 1, 4, BINS, FRAMES };
+            long[] shape1 = { 1, 2, N }, shape2 = interleaved ? new long[] { 1, 2, BINS, FRAMES, 2 } : new long[] { 1, 4, BINS, FRAMES };
             int idx = 0;
             for (long start = 0; start < total; start += STRIDE, idx++) {
                 if (cancelled) throw new Exception("cancel");
@@ -155,30 +169,35 @@ public final class Demucs {
                 readSeg(fr, start, len, seg, tmp);
                 float[] right = new float[N]; System.arraycopy(seg, 0, right, 0, N);
                 System.arraycopy(left, 0, wave, 0, N); System.arraycopy(right, 0, wave, N, N);
-                spectrum(left, spec, 0, BINS * FRAMES, re, im);
-                spectrum(right, spec, 2 * BINS * FRAMES, 3 * BINS * FRAMES, re, im);
+                if (interleaved) { spectrum(left, spec, 0, 1, 2, re, im); spectrum(right, spec, 2 * BINS * FRAMES, 2 * BINS * FRAMES + 1, 2, re, im); }
+                else { spectrum(left, spec, 0, BINS * FRAMES, 1, re, im); spectrum(right, spec, 2 * BINS * FRAMES, 3 * BINS * FRAMES, 1, re, im); }
                 Map<String, OnnxTensor> feeds = new HashMap<>();
                 FloatBuffer timeOut, freqOut;
                 try (OnnxTensor t1 = OnnxTensor.createTensor(env, FloatBuffer.wrap(wave), shape1);
                      OnnxTensor t2 = OnnxTensor.createTensor(env, FloatBuffer.wrap(spec), shape2)) {
-                    feeds.put(session.getInputNames().iterator().next(), t1);
-                    for (String n : session.getInputNames()) if (!feeds.containsKey(n)) feeds.put(n, t2);
+                    feeds.put(waveName, t1); feeds.put(specName, t2);
                     try (OrtSession.Result r = session.run(feeds)) {
                         FloatBuffer tb = null, fb = null;
                         for (Map.Entry<String, OnnxValue> e : r) {
                             OnnxTensor t = (OnnxTensor) e.getValue();
                             long[] d = t.getInfo().getShape();
-                            if (d.length == 4 && d[2] == 2) tb = t.getFloatBuffer(); else if (d.length == 5 && d[2] == 4) fb = t.getFloatBuffer();
+                            if (d.length == 4 && d[2] == 2) { tb = t.getFloatBuffer(); stems = (int) d[1]; } else if (d.length == 5 && d[2] == 4) fb = t.getFloatBuffer();
                         }
                         if (tb == null) throw new Exception("no time output");
                         timeOut = tb; freqOut = fb;
                     }
                 }
+                if (sum == null) {
+                    sum = new float[stems][2][N];
+                    outs = new RandomAccessFile[stems];
+                    String[] parts = partsOf(stems);
+                    for (int k = 0; k < stems; k++) { outs[k] = new RandomAccessFile(new File(outDir, parts[k] + ".f32"), "rw"); outs[k].setLength(0); }
+                }
                 // окно склейки: подъём и спад по половине шага
                 float half = STRIDE * 0.5f;
                 for (int i = 0; i < len; i++) wt[i] += Math.min(Math.min(i / half, (len - i) / half), 1f);
                 int trackStride = 4 * BINS * FRAMES;
-                for (int k = 0; k < 4; k++) {
+                for (int k = 0; k < stems; k++) {
                     for (int ch = 0; ch < 2; ch++) {
                         int tOff = (k * 2 + ch) * N;
                         for (int i = 0; i < N; i++) seg[i] = timeOut.get(tOff + i);
@@ -190,7 +209,7 @@ public final class Demucs {
                 // готово всё до начала следующего сегмента — в файл; остаток сдвигаем к началу
                 int done = (int) Math.min(STRIDE, total - start);
                 ByteBuffer bb = ByteBuffer.wrap(outBytes).order(ByteOrder.LITTLE_ENDIAN);
-                for (int k = 0; k < 4; k++) {
+                for (int k = 0; k < stems; k++) {
                     bb.clear();
                     float[] l = sum[k][0], rr = sum[k][1];
                     for (int i = 0; i < done; i++) { float w = wt[i] > 0 ? wt[i] : 1f; bb.putFloat(l[i] / w); bb.putFloat(rr[i] / w); }
@@ -201,7 +220,7 @@ public final class Demucs {
                 if (progress != null) progress.at((idx + 1) / (double) segs);
             }
         } finally {
-            for (RandomAccessFile o : outs) if (o != null) try { o.close(); } catch (Exception e) { /* ignore */ }
+            if (outs != null) for (RandomAccessFile o : outs) if (o != null) try { o.close(); } catch (Exception e) { /* ignore */ }
         }
     }
 }

@@ -21,7 +21,7 @@ import java.io.OutputStream;
 // На время счёта — частичный wake lock: экран можно гасить, приложение не закрывать.
 @CapacitorPlugin(name = "Stems")
 public class StemsPlugin extends Plugin {
-    private static final String MODEL = "models/demucs/htdemucs_embedded.onnx";
+    private static final String MODEL4 = "models/demucs/htdemucs_embedded.onnx", MODEL6 = "models/demucs/htdemucs_6s.onnx";
     private FileOutputStream[] ins = new FileOutputStream[2];
     private volatile Demucs job = null;
     private volatile boolean busy = false;
@@ -63,6 +63,7 @@ public class StemsPlugin extends Plugin {
     public void run(PluginCall call) {
         if (busy) { call.reject("busy"); return; }
         busy = true;
+        final String modelAsset = "6".equals(call.getString("model", "4")) ? MODEL6 : MODEL4;
         final File d = dir();
         try { closeIns(); } catch (Exception e) { busy = false; call.reject(e.getMessage()); return; }
         final long total = new File(d, "in0.f32").length() / 4;
@@ -74,16 +75,17 @@ public class StemsPlugin extends Plugin {
             try {
                 PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
                 if (pm != null) { lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "melete:stems"); lock.acquire(3 * 60 * 60 * 1000L); }
-                File model = modelFile(ctx);
+                File model = modelFile(ctx, modelAsset);
                 int threads = Math.max(1, Math.min(8, Runtime.getRuntime().availableProcessors()));
                 dm = new Demucs(model.getAbsolutePath(), threads);
                 job = dm;
                 File out = new File(d, "out");
                 dm.separate(new File(d, "in0.f32"), new File(d, "in1.f32"), total, out, (f) -> { JSObject p = new JSObject(); p.put("f", f); notifyListeners("progress", p); });
                 JSObject files = new JSObject();
-                for (String part : Demucs.PARTS) files.put(part, new File(out, part + ".f32").getAbsolutePath());
+                for (String part : Demucs.partsOf(dm.stems())) files.put(part, new File(out, part + ".f32").getAbsolutePath());
                 JSObject r = new JSObject();
                 r.put("files", files);
+                r.put("stems", dm.stems());
                 r.put("total", total);
                 r.put("threads", threads);
                 call.resolve(r);
@@ -125,15 +127,15 @@ public class StemsPlugin extends Plugin {
     }
 
     // Модель — файл в files/models (из assets один раз; размер сверяется, чтобы обновление приложения подменило файл)
-    private static File modelFile(Context ctx) throws Exception {
-        File dst = new File(ctx.getFilesDir(), MODEL);
+    private static File modelFile(Context ctx, String rel) throws Exception {
+        File dst = new File(ctx.getFilesDir(), rel);
         long size;
-        try (InputStream in = ctx.getAssets().open("public/" + MODEL)) { size = in.available(); }
+        try (InputStream in = ctx.getAssets().open("public/" + rel)) { size = in.available(); }
         if (dst.isFile() && dst.length() > 0 && (size <= 0 || dst.length() == size)) return dst;
         File parent = dst.getParentFile();
         if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new Exception("mkdir");
         File tmp = new File(dst.getPath() + ".part");
-        try (InputStream in = ctx.getAssets().open("public/" + MODEL); OutputStream out = new FileOutputStream(tmp)) {
+        try (InputStream in = ctx.getAssets().open("public/" + rel); OutputStream out = new FileOutputStream(tmp)) {
             byte[] buf = new byte[1 << 16];
             int n;
             while ((n = in.read(buf)) > 0) out.write(buf, 0, n);

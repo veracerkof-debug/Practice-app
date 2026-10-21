@@ -3,7 +3,7 @@
 // • Android — нативный ONNX Runtime на всех ядрах (плагин Stems: StemsPlugin.java, Demucs.java) — WebView не даёт
 //   WebAssembly больше одного потока, нативно в разы быстрее; запись уходит в плагин файлом, дорожки читаются
 //   из кэша по Capacitor.convertFileSrc;
-// • Windows и браузер — ONNX Runtime Web (WebAssembly; с изоляцией — в несколько потоков, иначе в один) и demucs-web
+// • Windows и браузер — ONNX Runtime Web (WebAssembly; с изоляцией — в несколько потоков, иначе в один) и свой движок demucs.js
 //   (STFT, окна, склейка) в своём рабочем потоке (stems.worker.js), интерфейс не замирает.
 // Ход — по сегментам (~8 с записи), отмена — между сегментами.
 import { Capacitor, registerPlugin } from '@capacitor/core';
@@ -13,24 +13,53 @@ const Native = Capacitor.isNativePlatform() ? registerPlugin('Stems') : null;
 export const stemsNative = () => !!Native;
 
 const SR = 44100;
-export const PARTS = ['vocals', 'drums', 'bass', 'other'];
+// Режимы: '2' — вокал и инструментал (из четырёх дорожек: остальное суммируется), '4' — вокал, ударные, бас,
+// остальное (модель htdemucs, 180 МБ), '6' — ещё гитара и клавиши (htdemucs_6s, 55 МБ, fp16). Порядок — как показывать
+export const MODES = ['2', '4', '6'];
+export const PARTS_OF = { '2': ['vocals', 'inst'], '4': ['vocals', 'drums', 'bass', 'other'], '6': ['vocals', 'drums', 'bass', 'guitar', 'piano', 'other'] };
+export const PARTS = PARTS_OF['4'];
+export const ALL_PARTS = ['vocals', 'inst', 'drums', 'bass', 'guitar', 'piano', 'other'];
+const modelOf = (mode) => (mode === '6' ? 'models/demucs/htdemucs_6s.onnx' : 'models/demucs/htdemucs_embedded.onnx');
+// Дорожка «пуста» (в записи этого инструмента нет), если её энергия ниже микса на столько дБ
+export const EMPTY_DB = -25;
+export function stemLevelDb(part, mix) {
+  let e = 0, m = 0;
+  for (let i = 0; i < mix.left.length; i += 2) { e += part.left[i] * part.left[i] + part.right[i] * part.right[i]; m += mix.left[i] * mix.left[i] + mix.right[i] * mix.right[i]; }
+  return m > 0 ? 10 * Math.log10(Math.max(1e-12, e / m)) : -99;
+}
+export const stemEmpty = (part, mix) => stemLevelDb(part, mix) < EMPTY_DB;
+// Из дорожек модели (drums, bass, other, vocals[, guitar, piano]) — дорожки режима: '2' складывает всё, кроме вокала
+export function partsForMode(raw, mode) {
+  const out = {};
+  if (mode === '2') {
+    out.vocals = raw.vocals;
+    const n = raw.vocals.left.length, left = new Float32Array(n), right = new Float32Array(n);
+    for (const k of Object.keys(raw)) if (k !== 'vocals') for (let i = 0; i < n; i++) { left[i] += raw[k].left[i]; right[i] += raw[k].right[i]; }
+    out.inst = { left, right };
+    return out;
+  }
+  for (const k of PARTS_OF[mode]) if (raw[k]) out[k] = raw[k];
+  return out;
+}
 
 // Потоков для счёта: нативно — все ядра (до 8); WebAssembly с изоляцией (Windows) — до 4, иначе один
 export const stemsThreads = () => (Native ? Math.max(1, Math.min(8, navigator.hardwareConcurrency || 4)) : globalThis.crossOriginIsolated ? Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1)) : 1);
 // Оценка времени (с) для записи длиной dur с: нативно на 4 ядрах ×1,25 (телефон — с запасом), WebAssembly на 4 потоках
 // ×1,9, на одном ×4,5
-export const estimateSec = (dur) => Math.round(dur * (Native ? 2 : stemsThreads() > 1 ? 2.5 : 5.5));
+export const estimateSec = (dur, mode = '4') => Math.round(dur * (Native ? 2 : stemsThreads() > 1 ? 2.5 : 5.5) * (mode === '6' ? 1.5 : 1));
 
-let worker = null, ready = null;
-// Рабочий поток с моделью (stems.worker.js): создаётся один раз, модель грузится один раз
-function engine(onLoad = () => {}) {
-  if (ready) return ready;
+let worker = null, ready = null, readyModel = '';
+// Рабочий поток с моделью (stems.worker.js): создаётся один раз на модель, модель грузится один раз; другая модель — заново
+function engine(model, onLoad = () => {}) {
+  if (ready && readyModel === model) return ready;
+  if (worker) { try { worker.terminate(); } catch { /* */ } worker = null; ready = null; }
+  readyModel = model;
   worker = new Worker(new URL('./stems.worker.js', import.meta.url), { type: 'module' });
   ready = new Promise((res, rej) => {
     const h = (e) => { const m = e.data; if (m.k === 'load') onLoad(m.f); else if (m.k === 'ready') { worker.removeEventListener('message', h); res(worker); } else if (m.k === 'error') { worker.removeEventListener('message', h); rej(new Error(m.msg)); } };
     worker.addEventListener('message', h);
     worker.addEventListener('error', (e) => rej(new Error(e.message || 'worker')), { once: true });
-    worker.postMessage({ k: 'init', wasmPaths: new URL('ort/', document.baseURI).href, modelUrl: new URL('models/demucs/htdemucs_embedded.onnx', document.baseURI).href, threads: stemsThreads() });
+    worker.postMessage({ k: 'init', wasmPaths: new URL('ort/', document.baseURI).href, modelUrl: new URL(model, document.baseURI).href, threads: stemsThreads() });
   }).catch((e) => { try { worker.terminate(); } catch { /* */ } worker = null; ready = null; throw e; });
   return ready;
 }
@@ -64,7 +93,7 @@ async function readPart(path, total) {
   for (let i = 0; i < n; i++) { left[i] = il[2 * i]; right[i] = il[2 * i + 1]; }
   return { left, right };
 }
-function separateNative(blob, onStage) {
+function separateNative(blob, onStage, mode) {
   let cancelled = false, running = false, sub = null;
   const isCancelled = () => cancelled;
   const run = (async () => {
@@ -79,11 +108,11 @@ function separateNative(blob, onStage) {
       onStage('separate', 0);
       sub = await Native.addListener('progress', ({ f }) => onStage('separate', Math.min(1, f || 0)));
       running = true;
-      const { files, total } = await Native.run();
+      const { files, total } = await Native.run({ model: mode === '6' ? '6' : '4' });
       running = false;
-      const parts = {};
-      for (const k of PARTS) parts[k] = await readPart(files[k], total);
-      return { ...parts, dur, sr: SR };
+      const raw = {};
+      for (const k of Object.keys(files)) raw[k] = await readPart(files[k], total);
+      return { parts: partsForMode(raw, mode), mix: { left, right }, dur, sr: SR };
     } finally {
       running = false;
       if (sub) sub.remove();
@@ -93,25 +122,26 @@ function separateNative(blob, onStage) {
   return { promise: run, cancel() { cancelled = true; if (running) Native.cancel().catch(() => {}); } };
 }
 
-// Разделить: blob → { vocals: { left, right }, … }; onStage('load' | 'decode' | 'separate', доля 0…1); cancel() — прервать
-export function separate(blob, { onStage = () => {} } = {}) {
-  if (Native) return separateNative(blob, onStage);
+// Разделить: blob → { parts: { vocals: { left, right }, … }, mix, dur, sr }; onStage('load' | 'decode' | 'separate', доля 0…1);
+// mode — '2' | '4' | '6'; cancel() — прервать
+export function separate(blob, { onStage = () => {}, mode = '4' } = {}) {
+  if (Native) return separateNative(blob, onStage, mode);
   let cancelled = false;
   const run = (async () => {
     onStage('load', 0);
-    const w = await engine((f) => onStage('load', f));
+    const w = await engine(modelOf(mode), (f) => onStage('load', f));
     if (cancelled) throw new Error('cancel');
     onStage('decode', 0);
     const { left, right, dur } = await decodeStereo(blob);
     if (cancelled) throw new Error('cancel');
     onStage('separate', 0);
-    const parts = await new Promise((res, rej) => {
+    const raw = await new Promise((res, rej) => {
       const h = (e) => { const m = e.data; if (m.k === 'progress') onStage('separate', m.f); else if (m.k === 'done') { w.removeEventListener('message', h); res(m.parts); } else if (m.k === 'error') { w.removeEventListener('message', h); rej(new Error(m.msg)); } };
       w.addEventListener('message', h);
       const L = new Float32Array(left), R = new Float32Array(right); // копии — исходный буфер остаётся у вызывающего
       w.postMessage({ k: 'run', left: L, right: R }, [L.buffer, R.buffer]);
     });
-    return { ...parts, dur, sr: SR };
+    return { parts: partsForMode(raw, mode), mix: { left, right }, dur, sr: SR };
   })();
   return { promise: run, cancel() { cancelled = true; if (worker) worker.postMessage({ k: 'cancel' }); } };
 }
