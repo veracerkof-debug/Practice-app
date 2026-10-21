@@ -1096,7 +1096,7 @@
   "lic.stretch.sub": "Changing the key of recordings in the media library without changing speed",
   "lic.sqljs.sub": "Reading EasyWorship databases when importing songs",
   "lic.mit": "MIT License: use, modification and distribution are free with the copyright notice kept.",
-  "lic.ort.sub": "Running the stem separation model (WebAssembly) · version 1.30",
+  "lic.ort.sub": "Running the stem separation model: Android — native library 1.31 on all cores, Windows — WebAssembly 1.30",
   "lic.dw.sub": "Preparing audio for the model: spectrograms, windows, stitching · version 1.0.2",
   "lic.dm.sub": "Model separating a recording into vocals, drums, bass and other (“Stems” module)",
   "lic.dm.text": "HTDemucs v4 model from facebookresearch/demucs (MIT license), ONNX file (htdemucs_embedded.onnx, 180 MB) from the timcsy/demucs-web-onnx build. Runs only on the device; not in the web version.",

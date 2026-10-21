@@ -733,7 +733,7 @@ export function legalSheet(kind) {
       lic(t('lic.verses.title'), t('lic.verses.sub'), '<p>' + t('lic.verses.text') + '</p>') +
       lic('fflate', t('lic.fflate.sub'), '<p>© Arjun Barrett</p><p>' + t('lic.mit') + '</p>') +
       lic('Signalsmith Stretch', t('lic.stretch.sub'), '<p>© Signalsmith Audio Ltd</p><p>' + t('lic.mit') + '</p>') +
-      lic('ONNX Runtime Web', t('lic.ort.sub'), '<p>© Microsoft Corporation</p><p>' + t('lic.mit') + '</p>') +
+      lic('ONNX Runtime', t('lic.ort.sub'), '<p>© Microsoft Corporation</p><p>' + t('lic.mit') + '</p>') +
       lic('demucs-web', t('lic.dw.sub'), '<p>© timcsy</p><p>' + t('lic.mit') + '</p>') +
       lic('HTDemucs', t('lic.dm.sub'), '<p>© Meta Platforms, Inc. ' + t('lic.andContrib') + '</p><p>' + t('lic.dm.text') + '</p>') +
       lic('Basic Pitch', t('lic.bp.sub'), '<p>© Spotify AB</p><p>' + t('lic.bp.text') + '</p>') +

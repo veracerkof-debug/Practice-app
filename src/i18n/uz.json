@@ -1066,7 +1066,7 @@
   "lic.stretch.sub": "Media kutubxonadagi yozuvlar tonalligini tezlikni oʻzgartirmasdan oʻzgartirish",
   "lic.sqljs.sub": "Qoʻshiqlarni import qilishda EasyWorship bazalarini oʻqish",
   "lic.mit": "MIT litsenziyasi: mualliflik huquqi haqidagi xabar saqlansa, foydalanish, oʻzgartirish va tarqatish erkin.",
-  "lic.ort.sub": "Yoʻlaklarga ajratish modelini bajarish (WebAssembly) · versiya 1.30",
+  "lic.ort.sub": "Yoʻlaklarga ajratish modelini bajarish: Android — barcha yadrolarda nativ kutubxona 1.31, Windows — WebAssembly 1.30",
   "lic.dw.sub": "Model uchun tovushni tayyorlash: spektrogrammalar, oynalar, ulash · versiya 1.0.2",
   "lic.dm.sub": "Yozuvni vokal, zarbli, bas va qolganiga ajratish modeli («Yoʻlaklar» moduli)",
   "lic.dm.text": "facebookresearch/demucs loyihasidagi HTDemucs v4 modeli (MIT litsenziyasi), ONNX fayl (htdemucs_embedded.onnx, 180 MB) timcsy/demucs-web-onnx toʻplamidan. Faqat qurilmada bajariladi; veb-versiyada modul yoʻq.",

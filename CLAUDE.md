@@ -102,7 +102,7 @@
 - **Тяжёлые модули** (`heavy: true`, DECISIONS «Размер и тяжёлые модули»): модели и банки звуков встраиваются в APK и Windows,
   в веб-сборке (`vite build --mode web`) вместо модуля — заглушка ядра. Модели в репозиторий не кладутся: `build/models.json` +
   `npm run models` (скачивание с проверкой sha256 перед сборкой, `public/models/` в `.gitignore`). Первый такой модуль —
-  «Дорожки» (`src/modules/stems`, движок `src/audio/stems.js`: HTDemucs в ONNX Runtime Web, файлы `ort/…` в сборке).
+  «Дорожки» (`src/modules/stems`, движок `src/audio/stems.js`: HTDemucs; Android — нативный ONNX Runtime на всех ядрах через плагин `Stems` (`StemsPlugin.java`, `Demucs.java`), Windows и dev — ONNX Runtime Web, файлы `ort/…` в сборке).
   «Снять ноты» (`src/modules/transcribe`, движок `src/audio/transcribe.js`: Basic Pitch в TensorFlow.js, модель 0,9 МБ в `public/bp/`) — не тяжёлый, есть и в вебе.
 - **Две сборки**: `prod` (Google Play/F-Droid — только встроенные модули, без отладки) и
   `dev` (отдельный applicationId и иконка «DEV»: загрузка внешних модулей, живая перезагрузка,
