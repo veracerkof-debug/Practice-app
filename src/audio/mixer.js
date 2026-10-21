@@ -5,8 +5,9 @@ import { createFxChain, normalizeFx, fxIsFlat } from './fx.js';
 import { setPerf, resolvePerf, setEngine, ENGINES, VERBS, setVerb, defaultVerb } from './perf.js';
 
 // Шины по контракту модуля. 'media' хранится в mix под ключом 'audio' (совместимость с прототипом)
-export const BUSES = ['metro', 'piano', 'glider', 'drone', 'media', 'theory'];
-const KEY = { metro: 'metro', piano: 'piano', glider: 'glider', drone: 'drone', media: 'audio', theory: 'theory' };
+// looper — лупер (слои и монитор), notes — табы и ноты (alphaTab играет своим звуком: шина зеркалит громкость и выключение в masterVolume)
+export const BUSES = ['metro', 'piano', 'glider', 'drone', 'media', 'looper', 'notes', 'theory'];
+const KEY = { metro: 'metro', piano: 'piano', glider: 'glider', drone: 'drone', media: 'audio', looper: 'looper', notes: 'notes', theory: 'theory' };
 export const mixKey = (bus) => KEY[bus] || bus;
 
 export const MIX_MAX = 1.5;

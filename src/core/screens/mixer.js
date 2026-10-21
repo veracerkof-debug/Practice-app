@@ -12,7 +12,7 @@ import { openFx } from './fx.js';
 
 const FX_ICON = '<svg viewBox="0 0 24 24"><path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="14" r="2.5" fill="currentColor"/><circle cx="12" cy="8" r="2.5" fill="currentColor"/><circle cx="19" cy="16" r="2.5" fill="currentColor"/></svg>';
 
-const SRC = [['metro', '#9C7242', 'metro'], ['piano', '#646493', 'piano'], ['glider', '#866B9D', 'glider'], ['drone', '#548591', 'drone'], ['media', '#A95E72', 'audio'], ['theory', '#5F8568', 'theory']];
+const SRC = [['metro', '#9C7242', 'metro'], ['piano', '#646493', 'piano'], ['glider', '#866B9D', 'glider'], ['drone', '#548591', 'drone'], ['media', '#A95E72', 'audio'], ['looper', '#7D8A4C', 'looper'], ['notes', '#8A6A4A', 'notes'], ['theory', '#5F8568', 'theory']];
 
 export function createMixerDrawer(app) {
   const mixer = app.audio.mixer;

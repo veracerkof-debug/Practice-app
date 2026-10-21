@@ -603,6 +603,8 @@
   "mix.piano": "Piano",
   "mix.drone": "Pads and drone",
   "mix.media": "Media",
+  "mix.looper": "Looper",
+  "mix.notes": "Tabs and notes",
   "mix.theory": "Theory and ear",
   "sub.drone": "Pads",
   "feat.modules": "Modules",

@@ -73,7 +73,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
     if (!c) throw new Error('nosound');
     if (!out || out.context !== c) {
       out = c.createGain();
-      out.connect(mixer.bus('media'));
+      out.connect(mixer.bus('looper')); // своя шина в шторке микшера
     }
     return c;
   }

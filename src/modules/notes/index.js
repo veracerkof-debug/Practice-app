@@ -291,7 +291,7 @@ function attach() {
 
 /* ---------- воспроизведение табулатуры (звуковой банк SONiVOX) ---------- */
 
-const vol = () => Math.min(1, ctx.audio.mixer.elementVolume('media'));
+const vol = () => Math.min(1, ctx.audio.mixer.elementVolume('notes')); // шина «Табы и ноты» в шторке микшера (alphaTab играет своим звуком)
 
 function playerSetup() {
   const api = AT.api;
@@ -759,7 +759,7 @@ export default {
       set: (v, live) => { st().fs = v; const l = host.querySelector('.lyr'); if (l) l.style.fontSize = v + 'px'; if (!live) ctx.store.save(); } }));
     // Громкость табов — шина медиатеки
     offs.push(c.audio.mixer.subscribe(() => { if (AT.api && ATP.sf) AT.api.masterVolume = vol(); }));
-    if (!ATP.probed) { ATP.probed = true; c.audio.mixer.probe('media', () => ATP.playing); }
+    if (!ATP.probed) { ATP.probed = true; c.audio.mixer.probe('notes', () => ATP.playing); } // шина «Табы и ноты»: подсветка в шторке и в уведомлении
     offs.push(c.files.subscribe(() => { if (!AT.cur || AT.state === 'error' || st().sec !== (isDaw(AT.cur) ? 'midi' : 'tabs')) render(); }));
     c.files.ready.then(() => {
       // последний открытый файл (табы или ноты) открывается сам, с того же места
