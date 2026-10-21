@@ -28,7 +28,7 @@ const I = {
   x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
 };
 const evOf = (app, id) => liveEvents(app.store.state).find((e) => e.id === id) || null;
-const audioFiles = (app) => (app.files ? app.files.list('audio') : []);
+const audioFiles = (app) => (app.files ? app.files.list('audio').filter((r) => !r.stem) : []); // без дорожек разделения
 const safe = (what, fn) => { try { return fn(); } catch (e) { logErr('stage', e); toast(t('stage.err', { what: t('stage.' + what) })); return null; } };
 
 /* ---------- настройка сет-листа ---------- */

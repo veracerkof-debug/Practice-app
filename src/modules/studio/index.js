@@ -32,7 +32,7 @@ import { keyLabel } from '../../music/transpose.js';
 import { mName } from '../../music/notes.js';
 
 // значок студии: плейлист — три дорожки с клипами разной длины и бегунок
-const ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="9" height="4" rx="1.3"/><rect x="14" y="4.5" width="7" height="4" rx="1.3"/><rect x="6" y="10" width="12" height="4" rx="1.3"/><rect x="3" y="15.5" width="6" height="4" rx="1.3"/><rect x="11" y="15.5" width="10" height="4" rx="1.3"/><path d="M9.5 2.5v19" style="stroke-width:1.4"/></svg>';
+const ICON = '<svg viewBox="0 0 24 24"><circle cx="7" cy="9" r="4.6"/><circle cx="17" cy="9" r="4.6"/><circle cx="7" cy="9" r="1.2" style="fill:currentColor;stroke:none"/><circle cx="17" cy="9" r="1.2" style="fill:currentColor;stroke:none"/><path d="M3.6 15.5 7 13.6M20.4 15.5 17 13.6M4.5 19.5h15"/></svg>'; // катушки: студия звукозаписи
 const I = {
   play: '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" style="fill:currentColor"/></svg>',
   stop: '<svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" style="fill:currentColor"/></svg>',
@@ -182,7 +182,7 @@ function render() {
         toggleOct: (d) => { st().m0 = Math.max(OCT_LO, Math.min(OCT_HI, m0() + 12 * d)); ctx.store.save(); render(); } });
   }
   if (V.view === 'mix') offMix = mixerBind(host, p, seq, { vol: (tr, v) => { seq.setTrackVol(tr, v); p.updatedAt = Date.now(); }, pan: (tr, v) => seq.setTrackPan(tr, v), save: () => save(),
-    mute: (tr) => { tr.mute = !tr.mute; save(); render(); }, solo: (tr) => { tr.solo = !tr.solo; save(); render(); }, fx: (tr) => trackSheet(tr), sound: (tr) => trackSheet(tr), master: () => { if (ctx.openMixer) ctx.openMixer(); } });
+    mute: (tr) => { seq.setTrackMute(tr, !tr.mute); save(); render(); }, solo: (tr) => { seq.setTrackSolo(tr, !tr.solo); save(); render(); }, fx: (tr) => trackSheet(tr), sound: (tr) => trackSheet(tr), master: () => { if (ctx.openMixer) ctx.openMixer(); } });
   const rh = host.querySelector('#stroll');
   if (rh) {
     roll = createRoll(rh, () => { const c = clip(); return { p: proj(), total: dataBeats(proj(), c.data), tr: ctrack(), d: c.data, grid: grid() }; }, { change: () => save(), audition: (m) => seq.audition(ctrack(), m) });
@@ -271,7 +271,7 @@ function clipMenu(anchor, c) {
     { icon: I.paste, label: t('clip.copy'), run: () => { clipBuf = clipCopy(p, c); ctx.ui.toast(t('clip.copied')); } },
     ...(cur > c.at && cur < c.at + c.len ? [{ icon: I.cut, label: t('clip.split'), run: () => { if (splitClip(p, c, cur, 1)) { save(); render(); } } }] : []),
     { icon: I.loop, label: t('clip.loopHere'), run: () => { setRegion(p, c.at, c.at + c.len, 0.25); save(); render(); } },
-    { icon: I.mutec, label: t(c.mute ? 'clip.unmute' : 'clip.mute'), run: () => { c.mute = !c.mute; save(); render(); } },
+    { icon: I.mutec, label: t(c.mute ? 'clip.unmute' : 'clip.mute'), run: () => { c.mute = !c.mute; save(); seq.audioChanged(); render(); } },
     { icon: I.vol, label: t('clip.gain'), run: () => clipSheet(c) },
     ...(tr.kind === 'notes' ? [{ icon: I.tune, label: t('clip.quantize'), run: () => { quantizeNotes(c.data, grid(), dataBeats(p, c.data)); save(); render(); } }] : []),
     ...(tr.kind !== 'audio' && clipAt(p, tr, c.at + c.len) ? [{ icon: I.copy, label: t('clip.join'), run: () => { if (joinClips(p, c, clipAt(p, tr, c.at + c.len))) { save(); render(); } else ctx.ui.toast(t('clip.max')); } }] : []),
@@ -305,8 +305,8 @@ function clipSheet(c) {
     (audio ? '<div class="hdr">' + ui.esc(t('clip.fades')) + '</div><div class="group"><div class="cell"><span class="grow">' + ui.esc(t('clip.fadeIn')) + '</span>' + stepF('fadeIn', c.data.fadeIn || 0) + '</div><div class="cell"><span class="grow">' + ui.esc(t('clip.fadeOut')) + '</span>' + stepF('fadeOut', c.data.fadeOut || 0) + '</div></div><p class="ftr">' + ui.esc(t('clip.fadesHint')) + '</p>' : ''),
   (el, sh) => {
     el.addEventListener('input', (e) => { if (e.target.matches('[data-cg]')) { c.gain = +e.target.value; p.updatedAt = Date.now(); el.querySelector('label b').textContent = Math.round(c.gain * 100) + '%'; } });
-    el.addEventListener('change', (e) => { if (e.target.matches('[data-cg]')) save(); });
-    el.addEventListener('click', (e) => { const b = e.target.closest('[data-fd]'); if (!b) return; const k = b.dataset.fd; c.data[k] = Math.max(0, Math.min(c.len, (c.data[k] || 0) + +b.dataset.d * 0.5)); save(); sh.update(); });
+    el.addEventListener('change', (e) => { if (e.target.matches('[data-cg]')) { save(); seq.audioChanged(); } });
+    el.addEventListener('click', (e) => { const b = e.target.closest('[data-fd]'); if (!b) return; const k = b.dataset.fd; c.data[k] = Math.max(0, Math.min(c.len, (c.data[k] || 0) + +b.dataset.d * 0.5)); save(); seq.audioChanged(); sh.update(); });
   }, { onClose: render });
 }
 // Звук, октава, громкость, цвет и эффекты дорожки — одной шторкой
@@ -350,8 +350,8 @@ function trackMenu(anchor, tr) {
   const { t, ui } = ctx, p = proj(), i = p.tracks.indexOf(tr);
   const move = (d) => { const j = i + d; if (j < 0 || j >= p.tracks.length) return; p.tracks.splice(i, 1); p.tracks.splice(j, 0, tr); save(); render(); };
   holdMenu(anchor, [
-    { icon: I.mute, label: t(tr.mute ? 'unmute' : 'mute'), run: () => { tr.mute = !tr.mute; save(); render(); } },
-    { icon: I.solo, label: t(tr.solo ? 'soloOff' : 'solo'), run: () => { tr.solo = !tr.solo; save(); render(); } },
+    { icon: I.mute, label: t(tr.mute ? 'unmute' : 'mute'), run: () => { seq.setTrackMute(tr, !tr.mute); save(); render(); } },
+    { icon: I.solo, label: t(tr.solo ? 'soloOff' : 'solo'), run: () => { seq.setTrackSolo(tr, !tr.solo); save(); render(); } },
     { icon: I.vol, label: t('tr.sound'), run: () => trackSheet(tr) },
     { icon: I.mix, label: t('auto.vol'), run: () => { V.auto = { tr: tr.id, kind: 'vol' }; V.view = 'song'; render(); ctx.ui.toast(t('auto.hint')); } },
     { icon: I.mix, label: t('auto.pan'), run: () => { V.auto = { tr: tr.id, kind: 'pan' }; V.view = 'song'; render(); ctx.ui.toast(t('auto.hint')); } },
@@ -379,7 +379,7 @@ function createClip(tr, beat) {
 function openClip(c) { V.cid = c.id; V.view = 'clip'; V.bar = 0; render(); }
 // Запись для сэмплера дорожки (или ряда ударных — opts.set): любая запись медиатеки; после выбора — снова шторка дорожки
 function samplePicker(tr, opts = null) {
-  const { t, ui } = ctx, L = ctx.files.list('audio').slice().sort((a, b) => (b.created || 0) - (a.created || 0));
+  const { t, ui } = ctx, L = ctx.files.list('audio').filter((r) => !r.stem).sort((a, b) => (b.created || 0) - (a.created || 0)); // дорожки разделения — не отдельные записи
   const cur = opts ? opts.cur : tr.sample.fileId;
   let picked = false;
   ui.sheet(() => ui.snav(opts ? opts.title : t('inst.sample')) + '<div class="group">' + (opts && opts.none ? '<button class="cell" data-file=""><span class="grow">' + ui.esc(t('tr.kitSynth')) + '</span>' + (!cur ? ui.icons.check : '') + '</button>' : '') +
@@ -390,7 +390,7 @@ function samplePicker(tr, opts = null) {
 }
 // Запись для клипа: аудио из медиатеки (сведение лупера — первым); длина клипа — по записи
 function filePicker(c) {
-  const { t, ui } = ctx, p = proj(), L = ctx.files.list('audio').slice().sort((a, b) => (b.created || 0) - (a.created || 0));
+  const { t, ui } = ctx, p = proj(), L = ctx.files.list('audio').filter((r) => !r.stem).sort((a, b) => (b.created || 0) - (a.created || 0));
   ui.sheet(() => ui.snav(t('tr.pickFile')) + (L.length ? '<div class="group">' + L.map((r) => '<button class="cell" data-file="' + r.id + '"><span class="grow">' + ui.esc(r.name) + '<span class="bksub">' + (r.dur ? Math.round(r.dur) + ' s' : '') + '</span></span>' + (c.data.fileId === r.id ? ui.icons.check : '') + '</button>').join('') + '</div>'
     : '<p class="ftr">' + ui.esc(t('tr.noAudio')) + '</p>') + '<p class="ftr">' + ui.esc(t('tr.audioHint')) + '</p>',
   (el, sh) => el.addEventListener('click', (e) => {

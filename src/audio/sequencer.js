@@ -66,10 +66,14 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       chains.set(tr.id, (x = { chain, fx: tr.fx, pan, auto, vol, an: null, c }));
       if (metersOn) meterOn(x);
     } else if (x.fx !== tr.fx) { x.fx = tr.fx; x.chain.set(tr.fx); } // правка в шторке дорожки — новый объект
-    const v = tr.vol == null ? 1 : tr.vol;
+    const v = gainOf(p, tr);
     if (Math.abs(x.vol.gain.value - v) > 1e-4) x.vol.gain.setTargetAtTime(v, c.currentTime, 0.02);
     return x.chain.input;
   }
+  // громкость дорожки с учётом выключения и соло: выключенная (или не соло при чьём-то соло) — 0 на узле vol, записи и
+  // уже звучащие ноты глохнут сразу, а при включении звучат с того же места — без перезапуска
+  const gainOf = (p, tr) => (tr.mute || (p.tracks.some((t) => t.solo) && !tr.solo) ? 0 : tr.vol == null ? 1 : tr.vol);
+  const refreshGains = (p) => p.tracks.forEach((tr) => { const x = chains.get(tr.id); if (x) x.vol.gain.setTargetAtTime(gainOf(p, tr), x.c.currentTime, 0.02); });
   const meterOn = (x) => { if (x.an) return; const an = x.c.createAnalyser(); an.fftSize = 512; an.smoothingTimeConstant = 0.5; x.pan.connect(an); x.an = an; x.buf = new Float32Array(an.fftSize); };
   const meterOff = (x) => { if (!x.an) return; try { x.pan.disconnect(x.an); } catch { /* */ } x.an = null; };
 
@@ -126,8 +130,8 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     return out;
   }
   async function startAudio(p) {
-    const solo = p.tracks.some((t) => t.solo), fc = focusClip(p), spb = secPerBeat(p), myT0 = t0;
-    const clips = (fc ? [fc] : p.clips).filter((cl) => { const tr = trackOf(p, cl); return tr && tr.kind === 'audio' && cl.data.fileId && !tr.mute && (!solo || tr.solo) && (!cl.mute || fc); });
+    const fc = focusClip(p), spb = secPerBeat(p), myT0 = t0;
+    const clips = (fc ? [fc] : p.clips).filter((cl) => { const tr = trackOf(p, cl); return tr && tr.kind === 'audio' && cl.data.fileId && (!cl.mute || fc); }); // mute/solo дорожки — узлом vol
     for (const cl of clips) {
       const tr = trackOf(p, cl);
       let b = bufOf(cl.data.fileId);
@@ -188,7 +192,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     get playing() { return playing; },
     // что по кругу: id клипа (редактор) или null — вся песня
     get focus() { return focus; },
-    set focus(id) { const was = playing; if (was) api.stop(); focus = id || null; if (was) api.start(); },
+    set focus(id) { id = id || null; if (id === focus) return; const was = playing; if (was) api.stop(); focus = id; if (was) api.start(); }, // тот же — без перезапуска (render() ставит его при каждой перерисовке)
     set click(v) { click = !!v; },
     get click() { return click; },
     get context() { return c; },
@@ -265,7 +269,12 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     // Эффекты и панорама дорожки изменены (шторка, микшер): применить к живой цепочке сразу
     setTrackFx(tr, fx) { tr.fx = fx; const x = chains.get(tr.id); if (x) { x.fx = fx; x.chain.set(fx); } },
     // громкость дорожки — сразу, на ходу (узел vol), и в проект
-    setTrackVol(tr, v) { tr.vol = v; const x = chains.get(tr.id); if (x) x.vol.gain.setTargetAtTime(v, x.c.currentTime, 0.02); },
+    setTrackVol(tr, v) { tr.vol = v; const p = getProject(); const x = chains.get(tr.id); if (x && p) x.vol.gain.setTargetAtTime(gainOf(p, tr), x.c.currentTime, 0.02); },
+    // выключение и соло — на ходу: громкости всех дорожек узлами, новые ноты выключенных не планируются
+    setTrackMute(tr, on) { tr.mute = !!on; cache.key = ''; const p = getProject(); if (p && c) refreshGains(p); },
+    setTrackSolo(tr, on) { tr.solo = !!on; cache.key = ''; const p = getProject(); if (p && c) refreshGains(p); },
+    // клипы-записи изменились (выключение клипа, громкость, затухания, файл): перепланировать записи с того же места
+    audioChanged() { const p = getProject(); if (!playing || !p) return; cache.key = ''; cancel(audioTm); stopAudio(); scheduleAudio(p); },
     setTrackPan(tr, v) { tr.pan = v; const x = chains.get(tr.id); if (x && x.pan.pan && !(playing && tr.auto && tr.auto.pan)) x.pan.pan.setTargetAtTime(v, x.c.currentTime, 0.02); },
     // Точки автоматизации изменились (плейлист): пересчитать огибающие на ходу
     autoChanged() { if (playing) scheduleAuto(getProject()); },

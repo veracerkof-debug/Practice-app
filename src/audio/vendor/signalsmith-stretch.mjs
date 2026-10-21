@@ -1,5 +1,5 @@
 // Signalsmith Stretch 1.3.2 (MIT, © Signalsmith Audio Ltd) — копия пакета signalsmith-stretch с тремя правками Melete
-// (ищи «Melete»): 3) ошибка внутри process() уходит наружу сообщением 'error' → onprocessorerror; 4) чтение окна на стыке двух кусков записи (в оригинале — RangeError и тишина); 1) в неактивном состоянии узел не читает вход (с numberOfInputs: 0 он падал на первом кванте);
+// (ищи «Melete»): 3) ошибка внутри process() уходит наружу сообщением 'error' → onprocessorerror; 4) чтение окна на стыке двух кусков записи (в оригинале — RangeError и тишина); 5) дорожки записи в узле (setParts/setGains) — смесь на лету; 1) в неактивном состоянии узел не читает вход (с numberOfInputs: 0 он падал на первом кванте);
 // 2) ветка «живой вход» включается только явно (processorOptions.liveInput): Android WebView подаёт на неподключённый
 // вход канал нулей, и без правки узел молча обрабатывал эту тишину вместо загруженных буферов — медиатека не звучала.
 let module = {}, exports = {};
@@ -38,6 +38,9 @@ function registerWorkletProcessor(Module, audioNodeKey) {
 			this.audioBuffers = []; // list of (multi-channel) audio buffers
 			this.audioBuffersStart = 0; // time-stamp for the first audio buffer
 			this.audioBuffersEnd = 0; // just to be helpful
+			// Melete (правка 5): дорожки записи живут в узле (Int16 L/R одной длины), смесь считается здесь на каждом
+			// кванте с громкостями gains (цель gainsT, сглаживание ~50 мс) — смена громкости дорожки мгновенна и без разрыва
+			this.parts = null; this.partLen = 0; this.gains = []; this.gainsT = [];
 			
 			this.timeIntervalSamples = sampleRate*0.1;
 			this.timeIntervalCounter = 0;
@@ -138,6 +141,7 @@ function registerWorkletProcessor(Module, audioNodeKey) {
 						let buffers = this.audioBuffers.flat(1).map(b => b.buffer);
 						this.audioBuffers = [];
 						this.audioBuffersStart = this.audioBuffersEnd = 0;
+						this.parts = null; this.partLen = 0; // Melete (правка 5)
 						return {
 							value: {start: 0, end: 0},
 							transfer: buffers
@@ -162,7 +166,18 @@ function registerWorkletProcessor(Module, audioNodeKey) {
 						transfer: transfer
 					};
 				},
+				// Melete (правка 5): parts — [{ L: Int16Array, R: Int16Array }] одной длины, gains — [число]
+				setParts: (parts, gains) => {
+					this.audioBuffers = []; this.audioBuffersStart = 0;
+					this.parts = parts && parts.length ? parts : null;
+					this.partLen = this.parts ? this.parts[0].L.length : 0;
+					this.gains = (gains || []).slice(); this.gainsT = (gains || []).slice();
+					this.audioBuffersEnd = this.partLen;
+					return this.partLen/sampleRate;
+				},
+				setGains: gains => { this.gainsT = (gains || []).slice(); },
 				addBuffers: sampleBuffers => {
+					this.parts = null; this.partLen = 0;
 					sampleBuffers = [].concat(sampleBuffers);
 					this.audioBuffers.push(sampleBuffers);
 					let length = sampleBuffers[0].length;
@@ -309,6 +324,31 @@ function registerWorkletProcessor(Module, audioNodeKey) {
 				// Fill the buffer with previous input
 				let buffers = outputList[0].map((_, c) => new Float32Array(memory, this.buffersIn[c], this.bufferLength));
 
+				if (this.parts) { // Melete (правка 5): окно — смесь дорожек с текущими громкостями
+					let parts = this.parts, L = this.partLen, startS = inputSamplesEnd - this.bufferLength;
+					let i0 = Math.max(0, startS), i1 = Math.min(L, inputSamplesEnd);
+					for (let p = 0; p < parts.length; p++) {
+						let g = this.gains[p] || 0, gt = this.gainsT[p] || 0;
+						g += (gt - g)*0.15; if (Math.abs(gt - g) < 1e-4) g = gt;
+						this.gains[p] = g;
+					}
+					buffers.forEach((buffer, c) => {
+						buffer.fill(0);
+						for (let p = 0; p < parts.length; p++) {
+							let g = this.gains[p]/32767;
+							if (!g) continue;
+							let src = c === 0 ? parts[p].L : parts[p].R;
+							for (let i = i0; i < i1; i++) buffer[i - startS] += src[i]*g;
+						}
+					});
+					wasmModule._seek(this.bufferLength, currentMapSegment.rate);
+					wasmModule._process(0, outputBlockSize);
+					this.timeIntervalCounter -= outputBlockSize;
+					if (this.timeIntervalCounter <= 0) {
+						this.timeIntervalCounter = this.timeIntervalSamples;
+						this.port.postMessage(['time', inputTime]);
+					}
+				} else {
 				let blockSamples = 0; // current write position in the temporary input buffer
 				let audioBufferIndex = 0;
 				let audioSamples = this.audioBuffersStart; // start of current audio buffer
@@ -352,6 +392,7 @@ function registerWorkletProcessor(Module, audioNodeKey) {
 				if (this.timeIntervalCounter <= 0) {
 					this.timeIntervalCounter = this.timeIntervalSamples;
 					this.port.postMessage(['time', inputTime]);
+				}
 				}
 			}
 			

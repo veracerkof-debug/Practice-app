@@ -27,6 +27,7 @@ export function mixerHTML(ctx, p, names) {
 
 // Жесты и уровни. on: { vol(tr, v), pan(tr, v), mute(tr), solo(tr), fx(tr), sound(tr), master(), save() }
 export function mixerBind(host, p, seq, on) {
+  const ac = new AbortController(), sig = { signal: ac.signal }; // слушатели — до перерисовки (иначе копились: два переключения за одно касание)
   const trOf = (el) => { const f = el.closest('.smf'); return f && p.tracks.find((x) => x.id === f.dataset.tr); };
   let drag = null, raf = 0;
   const fromY = (d, y) => { const r = d.el.getBoundingClientRect(); return Math.max(0, Math.min(VOL_MAX, (1 - (y - r.top) / r.height) * VOL_MAX)); };
@@ -39,14 +40,14 @@ export function mixerBind(host, p, seq, on) {
     drag = { id: e.pointerId, el, tr, f: el.closest('.smf'), pan: el.hasAttribute('data-pan') };
     try { host.setPointerCapture(e.pointerId); } catch { /* */ }
     move(e); e.preventDefault();
-  });
+  }, sig);
   const move = (e) => {
     if (!drag || e.pointerId !== drag.id) return;
     if (drag.pan) { const v = fromX(drag, e.clientX); on.pan(drag.tr, v); showPan(drag.f, v); } else { const v = fromY(drag, e.clientY); on.vol(drag.tr, v); showVol(drag.f, v); }
   };
   const up = (e) => { if (!drag || e.pointerId !== drag.id) return; drag = null; on.save(); };
-  host.addEventListener('pointermove', move); host.addEventListener('pointerup', up); host.addEventListener('pointercancel', up);
-  host.addEventListener('dblclick', (e) => { const el = e.target.closest('[data-pan]'), tr = el && trOf(el); if (tr) { on.pan(tr, 0); showPan(el.closest('.smf'), 0); on.save(); } });
+  host.addEventListener('pointermove', move, sig); host.addEventListener('pointerup', up, sig); host.addEventListener('pointercancel', up, sig);
+  host.addEventListener('dblclick', (e) => { const el = e.target.closest('[data-pan]'), tr = el && trOf(el); if (tr) { on.pan(tr, 0); showPan(el.closest('.smf'), 0); on.save(); } }, sig);
   host.addEventListener('keydown', (e) => { // с клавиатуры: стрелки
     const el = e.target.closest('[data-fader],[data-pan]'), tr = el && trOf(el);
     if (!tr) return;
@@ -55,12 +56,12 @@ export function mixerBind(host, p, seq, on) {
     e.preventDefault();
     if (el.hasAttribute('data-pan')) { const v = Math.max(-1, Math.min(1, tr.pan + d * 0.1)); on.pan(tr, v); showPan(el.closest('.smf'), v); } else { const v = Math.max(0, Math.min(VOL_MAX, tr.vol + d * 0.05)); on.vol(tr, v); showVol(el.closest('.smf'), v); }
     on.save();
-  });
+  }, sig);
   host.addEventListener('click', (e) => {
     const b = e.target.closest('[data-mx]'); if (!b) return;
     const k = b.dataset.mx, tr = trOf(b);
     if (k === 'master') on.master(); else if (tr && on[k]) on[k](tr);
-  });
+  }, sig);
   // уровни: анализаторы включены, пока микшер открыт
   seq.meters(true);
   const tick = () => {
@@ -68,5 +69,5 @@ export function mixerBind(host, p, seq, on) {
     raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
-  return () => { cancelAnimationFrame(raf); seq.meters(false); };
+  return () => { ac.abort(); cancelAnimationFrame(raf); seq.meters(false); };
 }

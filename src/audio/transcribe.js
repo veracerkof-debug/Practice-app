@@ -1,8 +1,10 @@
 // Ноты со слуха: запись → ноты (MIDI) — модель Basic Pitch (Spotify, Apache-2.0) в TensorFlow.js, всё на устройстве.
 // Модель (0,9 МБ) лежит в сборке (public/bp/), сеть не нужна. Считает в главном потоке по кускам в 2 с (между
 // кусками интерфейс дышит), ход — долями; на телефоне — WebGL, без него — процессор, медленнее.
-// Выход — события игры как у записей инструментов (src/music/midi.js: on/mv/off) и файл .mid.
+// Выход — события игры как у записей инструментов (src/music/midi.js: on/mv/off), сырые ноты и темп; ритм (сетка долей,
+// длительности, паузы, такты) и файл .mid с темпом — в src/core/jobs.js через src/music/quantize.js.
 import { writeMidi } from '../music/midi.js';
+import { detectTempo } from '../music/analyze.js';
 
 const SR = 22050;
 let lib = null;
@@ -54,7 +56,11 @@ export function transcribe(blob, { onStage = () => {}, sens = 'normal', bends = 
     const notes = bp.noteFramesToTime(bp.addPitchBendsToNoteEvents(contours, bp.outputToNotesPoly(frames, onsets, onT, frT, minLen)));
     const ev = notesToEvents(notes, { bends });
     const dur = ev.length ? ev[ev.length - 1].t : buf.duration;
-    return { ev, mid: writeMidi(ev, { name }), notes: notes.length, dur };
+    // сырые ноты и темп записи — для ритма (src/music/quantize.js в jobs.js), когда разбора записи (rec.ana) нет
+    const raw = notes.map((n) => ({ t: n.startTimeSeconds, d: n.durationSeconds, m: n.pitchMidi, v: Math.max(0.05, Math.min(1, n.amplitude || 0.7)) }));
+    let tempo = null;
+    try { tempo = detectTempo(buf.getChannelData(0), SR); } catch { /* без темпа — 120 */ }
+    return { ev, mid: writeMidi(ev, { name }), notes: notes.length, dur, raw, tempo };
   })();
   return { promise, cancel() { cancelled = true; } };
 }

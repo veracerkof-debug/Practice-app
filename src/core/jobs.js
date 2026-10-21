@@ -11,7 +11,8 @@ import { transcribe } from '../audio/transcribe.js';
 import { transcribeLyrics, lyricsSupported } from '../audio/lyrics.js';
 import { denoise, denoiseSupported } from '../audio/denoise.js';
 import { encodeWav, peaks } from '../audio/voicefx.js';
-import { takeDur } from '../music/midi.js';
+import { takeDur, writeMidiTracks } from '../music/midi.js';
+import { beatMap, fitOffset, quantizeNotes, instForNotes, notesToEventsSec } from '../music/quantize.js';
 import { log, logErr } from './log.js';
 
 const stemPeaks = (ch) => { const pk = peaks(ch, 600), mx = Math.max(1e-6, ...pk); return Array.from(pk, (v) => Math.round((v / mx) * 100) / 100); };
@@ -53,13 +54,29 @@ export function createJobs(files) {
     return { stems, absent };
   }
   // Снять ноты записи rec → запись .mid
-  async function runNotes(rec) {
+  // Ноты модели → ритм: сетка долей записи (rec.ana: доли, сильные, темп) или темп по записи с подгонкой сдвига; начала и
+  // концы — к шестнадцатым, паузы сами, призвуки вон; инструмент по характеру нот. Файл .mid — с темпом и размером
+  // (такты в любой программе), события игры (take.ev) — по карте записи (следуют за ней); score — ноты в долях для студии.
+  // С изгибами высоты (bends) ритм не трогаем: изгибы привязаны к сырому времени
+  function withRhythm(rec, res, bends) {
+    const ana = rec.ana || null, raw = res.raw || [];
+    const bpm = (ana && ana.bpm) || (res.tempo && res.tempo.bpm) || 120, bpb = (ana && ana.bpb) || 4;
+    const map = ana && ana.beats && ana.beats.length >= 4 ? beatMap(ana.beats, bpm, { downbeats: ana.downbeats, bpb })
+      : beatMap(null, bpm, { offset: fitOffset(raw.map((n) => n.t), 60 / bpm) });
+    const notes = quantizeNotes(raw, map, { div: 4 }), inst = instForNotes(notes);
+    const program = inst === 'wair' ? 89 : inst === 'abass' ? 33 : 0;
+    const mid = writeMidiTracks({ bpm: map.bpm || bpm, num: bpb, den: 4, name: base(rec), key: ana && ana.pc != null ? { pc: ana.pc, minor: !!ana.minor } : null, tracks: [{ name: base(rec), program, notes }] });
+    const ev = bends ? res.ev : notesToEventsSec(notes, map);
+    return { ev, mid, notes: notes.length, score: { v: 1, bpm: map.bpm || bpm, num: bpb, inst, grid: 4, beats: !!(ana && ana.beats && ana.beats.length >= 4), notes } };
+  }
+  async function runNotes(rec, bends) {
     const res = await cur.job.promise;
     const at = Date.now(), old = notesOf(files, rec.id);
-    const r = { id: old ? old.id : 'tn' + at.toString(36), name: base(rec) + ' — ' + t('stems.notesSuffix') + '.mid', size: res.mid.length, type: 'audio/midi', kind: 'midi', tool: 'piano', songs: rec.songs || [],
-      created: at, blob: new Blob([res.mid], { type: 'audio/midi' }), take: { v: 1, ev: res.ev }, dur: takeDur(res.ev), notes: res.notes, trans: { src: rec.id } };
+    const q = res.raw ? withRhythm(rec, res, bends) : { ev: res.ev, mid: res.mid, notes: res.notes, score: null };
+    const r = { id: old ? old.id : 'tn' + at.toString(36), name: base(rec) + ' — ' + t('stems.notesSuffix') + '.mid', size: q.mid.length, type: 'audio/midi', kind: 'midi', tool: 'piano', songs: rec.songs || [],
+      created: at, blob: new Blob([q.mid], { type: 'audio/midi' }), take: { v: 1, ev: q.ev }, dur: takeDur(q.ev), notes: q.notes, trans: { src: rec.id }, ...(q.score ? { score: q.score } : {}) };
     await files.add(r);
-    log('jobs', 'ноты: ' + res.notes);
+    log('jobs', 'ноты: ' + q.notes + (q.score ? ', темп ' + q.score.bpm + (q.score.beats ? ' по долям записи' : ' ровный') + ', ' + q.score.inst : ''));
     return r;
   }
 
@@ -103,7 +120,7 @@ export function createJobs(files) {
       cur = { kind: 'notes', id: rec.id, rec, stage: 'load', frac: 0, t0: Date.now() };
       cur.job = transcribe(rec.blob, { sens, bends, name: base(rec), onStage: (stage, f) => set({ stage, frac: f, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) }) });
       emit();
-      return runNotes(rec).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
+      return runNotes(rec, bends).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
     },
     lyricsSupported: () => lyricsSupported(),
     // Текст песни (Windows): по отделённому вокалу, если он есть, иначе по записи целиком

@@ -5,8 +5,8 @@
 // растяжение по скорости — поэтому звук из медиатеки идёт здесь; видео остаётся на элементе (кадры).
 // Интерфейс как у медиа-элемента: currentTime, duration, paused, playbackRate, play(), pause(), события
 // loadedmetadata / play / pause / ended / error — модуль медиатеки обращается к обоим одинаково.
-// Узлов два (A и B): дорожки записи пересводятся в запасной узел, пока звучит рабочий, и подхватываются
-// перекрёстным затуханием в 60 мс — смена громкости дорожки на ходу не рвёт звук и не сбивает положение.
+// Дорожки записи (вокал, ударные, бас…) живут внутри узла как Int16, смесь с громкостями считает сам узел на каждом
+// кванте (правка 5 в копии библиотеки) — смена громкости дорожки мгновенна, без пересведения и без разрыва звука.
 import { isHeld } from './context.js';
 let loading = null;
 const lib = () => loading || (loading = import('./vendor/signalsmith-stretch.mjs').then((m) => m.default));
@@ -37,15 +37,14 @@ export async function createStretchPlayer(c, dest) {
     });
     return u;
   }
-  let A = await mk(), B = null; // A — звучит, B — запасной (создаётся при первой смене дорожек)
+  const A = await mk(); // единственный узел: дорожки и их громкости — внутри него
   // задержка узла — только разумная (секунды, не отсчёты и не NaN): иначе отрезок включился бы через часы
-  const refreshLatency = async (u = A) => { try { const l = await u.node.latency(); if (typeof l === 'number' && l > 0 && l < 2) { u.lat = l; if (u === A) lat = l; } } catch { /* */ } };
+  const refreshLatency = async () => { try { const l = await A.node.latency(); if (typeof l === 'number' && l > 0 && l < 2) { A.lat = l; lat = l; } } catch { /* */ } };
   // ошибка внутри процессора — наружу событием (процессор после неё молчит навсегда)
   A.node.onprocessorerror = (e) => p.dispatchEvent(Object.assign(new Event('procerror'), { detail: (e && e.message) || 'processorerror' }));
   // outputTime — когда вступает (ключ обёртки; в README он назван output), output — поле отрезка
-  const schedOn = (u, o) => { const t = lead(); return u.node.schedule({ output: t, outputTime: t, ...o }); };
-  const sched = (o) => schedOn(A, o);
-  const stopAll = () => { A.node.schedule({ active: false }); if (B) B.node.schedule({ active: false }); };
+  const sched = (o) => { const t = lead(); return A.node.schedule({ output: t, outputTime: t, ...o }); };
+  const stopAll = () => { A.node.schedule({ active: false }); };
   Object.defineProperties(p, {
     currentTime: { get: cur, set(t) { t = Math.max(0, Math.min(dur || 0, +t || 0)); pos = t; posAt = now(); ended = false; if (playing) sched({ input: t, active: true }); } },
     duration: { get: () => dur },
@@ -81,27 +80,29 @@ export async function createStretchPlayer(c, dest) {
     }
     return { db, sampleRate: c.sampleRate, state: c.state, lat, channels: A.node.channelCount, err };
   };
-  // Запись (Blob) → в узел; старое вычищается. Вернёт длительность
-  p.load = async (blob) => {
-    const my = ++gen;
-    parts = null; gains = {};
+  // Запись (Blob) → в узел целиком (Int16 L/R, переносом): одна «дорожка» с громкостью 1; старое вычищается
+  const toI16 = (f) => { const o = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const v = f[i]; o[i] = v >= 1 ? 32767 : v <= -1 ? -32768 : (v * 32767) | 0; } return o; };
+  const yieldUI = () => new Promise((r) => setTimeout(r, 0));
+  async function decodeI16(blob) {
+    const buf = await c.decodeAudioData(await blob.arrayBuffer());
+    const CH = Math.min(2, buf.numberOfChannels), L = toI16(buf.getChannelData(0));
+    await yieldUI();
+    const R = CH > 1 ? toI16(buf.getChannelData(1)) : L.slice();
+    return { L, R, len: buf.length };
+  }
+  async function reset() {
+    parts = null; gains = {}; names = [];
     playing = false; pos = 0; posAt = now(); ended = false;
     stopAll();
     await A.node.dropBuffers();
-    if (B) await B.node.dropBuffers();
-    let buf;
-    try { buf = await c.decodeAudioData(await blob.arrayBuffer()); } catch (e) { if (my === gen) fire('error'); throw e; }
+  }
+  p.load = async (blob) => {
+    const my = ++gen;
+    await reset();
+    let P;
+    try { P = await decodeI16(blob); } catch (e) { if (my === gen) fire('error'); throw e; }
     if (my !== gen) return 0; // пока раскодировали, выбрали другую запись
-    const chs = buf.numberOfChannels, L = buf.length, CH = Math.min(2, chs);
-    // кусками по 30 с: буферы уходят в поток звука переносом, главный поток не держит копию
-    const STEP = c.sampleRate * 30;
-    for (let s = 0; s < L; s += STEP) {
-      const n = Math.min(STEP, L - s), chunk = [];
-      for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(Math.min(ch, CH - 1)); chunk.push(d.slice(s, s + n)); }
-      await A.node.addBuffers(chunk);
-      if (my !== gen) return 0;
-    }
-    dur = buf.duration;
+    dur = await A.node.setParts([P], [1], [P.L.buffer, P.R.buffer]);
     await refreshLatency();
     fire('loadedmetadata');
     return dur;
@@ -120,93 +121,42 @@ export async function createStretchPlayer(c, dest) {
     stopAll();
     fire('pause');
   };
-  // Дорожки записи (stems) с громкостью каждой: parts — { имя: Blob }, gains — { имя: 0…1.5 }. Раскодированные дорожки
-  // держатся в памяти как Int16 (в два раза меньше float), смесь считается по кускам в 30 с и уходит в узел переносом;
-  // setMix — пересведение в запасной узел на ходу, подхват перекрёстным затуханием
-  let parts = null, gains = {}, mixTm = 0, mixing = 0;
-  const FADE = 0.06;
-  const toI16 = (f) => { const o = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const v = f[i]; o[i] = v >= 1 ? 32767 : v <= -1 ? -32768 : (v * 32767) | 0; } return o; };
-  async function pushMix(u, my) {
-    const names = Object.keys(parts), len = parts[names[0]].len, STEP = c.sampleRate * 30;
-    for (let s0 = 0; s0 < len; s0 += STEP) {
-      const n = Math.min(STEP, len - s0), L = new Float32Array(n), R = new Float32Array(n);
-      for (const k of names) {
-        const g = (gains[k] == null ? 1 : gains[k]) / 32767, P = parts[k];
-        if (!g) continue;
-        for (let i = 0; i < n; i++) { L[i] += P.L[s0 + i] * g; R[i] += P.R[s0 + i] * g; }
-      }
-      await u.node.addBuffers([L, R]);
-      if (my !== gen) return false;
-    }
-    return true;
-  }
+  // Дорожки записи (stems) с громкостью каждой: parts — { имя: Blob }, gains — { имя: 0…1.5 }. Дорожки раскодируются,
+  // переводятся в Int16 (вдвое меньше float) и уходят в узел переносом; смесь считает сам узел на каждом кванте
+  // (правка 5 в vendor/signalsmith-stretch.mjs) — setMix действует мгновенно, без пересведения и без разрыва звука
+  let parts = null, gains = {}, names = [];
   p.loadParts = async (blobs, g = {}) => {
     const my = ++gen;
-    playing = false; pos = 0; posAt = now(); ended = false;
-    stopAll();
-    await A.node.dropBuffers();
-    if (B) await B.node.dropBuffers();
+    await reset();
     const next = {};
     let len = 0;
     for (const k of Object.keys(blobs)) {
-      let buf;
-      try { buf = await c.decodeAudioData(await blobs[k].arrayBuffer()); } catch (e) { if (my === gen) fire('error'); throw e; }
+      let P;
+      try { P = await decodeI16(blobs[k]); } catch (e) { if (my === gen) fire('error'); throw e; }
       if (my !== gen) return 0;
-      const CH = Math.min(2, buf.numberOfChannels);
-      next[k] = { L: toI16(buf.getChannelData(0)), R: toI16(buf.getChannelData(CH - 1)), len: buf.length };
-      len = Math.max(len, buf.length);
+      next[k] = P; len = Math.max(len, P.len);
     }
     for (const k of Object.keys(next)) if (next[k].len < len) { // выровнять длины
       const P = next[k], L = new Int16Array(len), R = new Int16Array(len); L.set(P.L); R.set(P.R); next[k] = { L, R, len };
     }
-    parts = next; gains = { ...g };
-    if (!(await pushMix(A, my))) return 0;
-    dur = len / c.sampleRate;
+    names = Object.keys(next); gains = { ...g }; parts = true;
+    const list = names.map((k) => next[k]), tr = [];
+    list.forEach((P) => { tr.push(P.L.buffer); if (P.R.buffer !== P.L.buffer) tr.push(P.R.buffer); });
+    dur = await A.node.setParts(list, names.map((k) => (gains[k] == null ? 1 : gains[k])), tr);
+    if (my !== gen) return 0;
     await refreshLatency();
     fire('loadedmetadata');
     return dur;
   };
-  // Пересведение: смесь строится в запасном узле, пока рабочий звучит; затем запасной вступает с того же места,
-  // громкости меняются крест-накрест за 60 мс, узлы меняются ролями. Новая правка во время сведения — ждёт своей очереди
-  async function remix() {
-    if (mixing || !parts) return;
-    mixing = 1;
-    const my = gen;
-    try {
-      if (!B) B = await mk();
-      await B.node.dropBuffers();
-      if (my !== gen || !parts) return;
-      if (!(await pushMix(B, my))) return;
-      await refreshLatency(B);
-      if (my !== gen || !parts) return;
-      const old = A, nu = B;
-      if (playing) {
-        const t = c.currentTime + Math.max(old.lat, nu.lat), at = Math.min(dur, cur() + Math.max(0, t - c.currentTime) * rate);
-        nu.node.schedule({ output: t, outputTime: t, active: true, input: at, rate, semitones: semi, formantCompensation: formant });
-        nu.g.gain.cancelScheduledValues(0); nu.g.gain.setValueAtTime(0, t); nu.g.gain.linearRampToValueAtTime(1, t + FADE);
-        old.g.gain.cancelScheduledValues(0); old.g.gain.setValueAtTime(1, t); old.g.gain.linearRampToValueAtTime(0, t + FADE);
-        setTimeout(() => { if (my === gen) old.node.schedule({ active: false }); }, (Math.max(old.lat, nu.lat) + FADE + 0.05) * 1000);
-      } else {
-        nu.node.schedule({ active: false, rate, semitones: semi, formantCompensation: formant });
-        nu.g.gain.cancelScheduledValues(0); nu.g.gain.value = 1; old.g.gain.cancelScheduledValues(0); old.g.gain.value = 0;
-      }
-      A = nu; B = old; lat = nu.lat;
-      // старые буферы — вон, когда затухание прошло
-      setTimeout(() => { if (my === gen && B === old) old.node.dropBuffers().catch(() => {}); }, (Math.max(old.lat, nu.lat) + FADE + 0.3) * 1000);
-    } finally { mixing = 0; }
-    if (dirty) { dirty = false; remix(); }
-  }
-  let dirty = false;
   p.setMix = (g) => {
     gains = { ...gains, ...g };
     if (!parts) return;
-    clearTimeout(mixTm);
-    mixTm = setTimeout(() => { if (mixing) dirty = true; else remix(); }, 120);
+    A.node.setGains(names.map((k) => (gains[k] == null ? 1 : gains[k])));
   };
   p.hasParts = () => !!parts;
-  p.dropParts = () => { parts = null; gains = {}; };
+  p.dropParts = () => { parts = null; gains = {}; names = []; };
   p.setPitch = (s = 0, cents = 0, f = false) => { semi = (+s || 0) + (+cents || 0) / 100; formant = !!f; sched({ semitones: semi, formantCompensation: formant }); };
   p.latency = () => lat;
-  p.destroy = () => { gen++; try { stopAll(); A.node.disconnect(); A.g.disconnect(); if (B) { B.node.disconnect(); B.g.disconnect(); } } catch { /* */ } };
+  p.destroy = () => { gen++; try { stopAll(); A.node.disconnect(); A.g.disconnect(); } catch { /* */ } };
   return p;
 }

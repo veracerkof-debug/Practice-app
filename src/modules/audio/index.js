@@ -126,7 +126,10 @@ let host = null, ctx = null, size = 'full', input = null, uiTimer = 0, offs = []
 
 const fmtT = (s) => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const st = () => ctx.store.all();
-const tracks = () => ctx.files.list('audio');
+// записи медиатеки — без дорожек разделения: они живут внутри своей записи (панель «Дорожки», шторка), в списке их нет
+const tracks = () => ctx.files.list('audio').filter((x) => !x.stem);
+// удалить запись вместе с её дорожками
+async function removeWithStems(id) { for (const r of stemsOf(ctx.files, id)) await ctx.files.remove(r.id); await ctx.files.remove(id); }
 const curSong = () => (ctx.session && ctx.session.songId) || null;
 const audKey = () => (curSong() ? 'song:' + curSong() : 'free');
 const style = () => (st().style === 'vinyl' && !ctx.mono ? 'vinyl' : 'wave'); // «Минимал» — волна
@@ -455,6 +458,7 @@ function stemsSheet() {
           if (tr.ana && tr.ana.bpm) song.bpm = tr.ana.bpm;
           const p = projectFromSong(song);
           if (isEmptyProject(p)) { ctx.ui.toast(t('notes.none')); return; }
+          if (notes.score && notes.score.inst) p.tracks.forEach((x) => { if (x.kind === 'notes') x.inst = notes.score.inst; }); // звук по характеру нот (долгие — пэд, низкие — бас)
           ctx.projects.save(p); ctx.ui.toast(t('job.studioMade'));
         } catch (err) { jobErr(err); }
       }
@@ -1090,7 +1094,7 @@ async function removeTrack(x) {
   const { t, ui } = ctx;
   if (!(await ui.confirm(t('delTitle', { name: x.name }), t('delText'), t('delete')))) return;
   if (AU.cur && AU.cur.id === x.id) { pl().pause(); AU.cur = null; }
-  await ctx.files.remove(x.id);
+  await removeWithStems(x.id);
   render();
 }
 
@@ -1257,7 +1261,7 @@ async function removeSelected() {
   if (!xs.length || !(await ui.confirm(t('delSelTitle', { files: tn('files', xs.length) }), t('delText'), t('delete')))) return;
   for (const x of xs) {
     if (AU.cur && AU.cur.id === x.id) { pl().pause(); AU.cur = null; }
-    await ctx.files.remove(x.id);
+    await removeWithStems(x.id);
   }
   ML.sel = null;
   render();
