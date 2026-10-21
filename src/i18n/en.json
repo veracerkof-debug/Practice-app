@@ -904,6 +904,8 @@
   "auto.stems": "Stems automatically",
   "auto.off": "Off",
   "auto.stemsHint": "Every new recording is split into stems by itself — in silence, when nothing is playing, 3–7 minutes per song. 2 — vocals and instrumental, 4 — drums and bass as well, 6 — guitar and keys as well. The result is in the player: each stem’s volume with key and speed.",
+  "auto.hq": "Overnight stem quality",
+  "auto.hqHint": "Three shifted passes and a half-length step: cleaner stem edges, 4.5× the time. Finished recordings are redone while idle.",
   "auto.ana": "Key and tempo automatically",
   "auto.anaHint": "Key and tempo are detected for every new recording — shown in the library and the player.",
   "presence.denied": "No microphone access — confirming playing by sound is off.",

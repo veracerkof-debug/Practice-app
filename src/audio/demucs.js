@@ -98,15 +98,20 @@ export async function createDemucs(ort, modelUrl, { sessionOptions = {}, onDownl
   if (meta) for (const m of Array.isArray(meta) ? meta : Object.values(meta)) { const d = m.shape || m.dimensions || []; if (d.length === 3) waveName = m.name; else if (d.length >= 4) { specName = m.name; interleaved = d.length === 5; } }
   const api = {
     stems: 0, parts: null, interleaved,
-    async separate(L, R, { onProgress = () => {}, isCancelled = () => false } = {}) {
-      const total = L.length, segs = total <= N ? 1 : Math.ceil((total - N) / STRIDE) + 1;
+    // hq — «ночное» качество: шаг окна N/2 вместо 3N/4 и три прохода на сегмент со случайным сдвигом окна
+    // (как shifts у Demucs: разные положения окна усредняются, края дорожек чище); время ≈ ×4,5
+    async separate(L, R, { onProgress = () => {}, isCancelled = () => false, hq = false } = {}) {
+      const total = L.length, stride = hq ? N >> 1 : STRIDE, passes = hq ? 3 : 1, MAXOFF = SR >> 1;
+      const segs = Math.max(1, Math.ceil(total / stride)); // столько раз пройдёт цикл по start
       const wave = new Float32Array(2 * N), spec = new Float32Array(4 * BINS * FRAMES), seg = new Float32Array(N), wt = new Float32Array(total);
       let outs = null, idx = 0;
-      const half = STRIDE * 0.5, win = (i, len) => Math.min(Math.min(i / half, (len - i) / half), 1);
-      for (let start = 0; start < total; start += STRIDE, idx++) {
+      const half = stride * 0.5, win = (i, len) => Math.min(Math.min(i / half, (len - i) / half), 1);
+      for (let start = 0; start < total; start += stride, idx++) for (let pass = 0; pass < passes; pass++) {
         if (isCancelled()) throw new Error('cancel');
-        const len = Math.min(N, total - start);
-        wave.fill(0); wave.set(L.subarray(start, start + len), 0); wave.set(R.subarray(start, start + len), N);
+        const off = pass ? Math.min(Math.floor(Math.random() * MAXOFF), Math.max(0, total - start - 1)) : 0, at = start + off;
+        if (at >= total) continue;
+        const len = Math.min(N, total - at);
+        wave.fill(0); wave.set(L.subarray(at, at + len), 0); wave.set(R.subarray(at, at + len), N);
         const left = wave.subarray(0, N), right = wave.subarray(N, 2 * N);
         if (interleaved) { spectrum(left, spec, 0, 1, 2); spectrum(right, spec, 2 * BINS * FRAMES, 2 * BINS * FRAMES + 1, 2); }
         else { spectrum(left, spec, 0, BINS * FRAMES, 1); spectrum(right, spec, 2 * BINS * FRAMES, 3 * BINS * FRAMES, 1); }
@@ -118,15 +123,15 @@ export async function createDemucs(ort, modelUrl, { sessionOptions = {}, onDownl
         for (const k of Object.keys(res)) { const t = res[k]; if (t.dims.length === 4 && t.dims[2] === 2) { time = t.data; stems = t.dims[1]; } else if (t.dims.length === 5 && t.dims[2] === 4) freq = t.data; }
         if (!time) throw new Error('no time output');
         if (!outs) { api.stems = stems; api.parts = partsOf(stems); outs = api.parts.map(() => [new Float32Array(total), new Float32Array(total)]); }
-        for (let i = 0; i < len; i++) wt[start + i] += win(i, len);
+        for (let i = 0; i < len; i++) wt[at + i] += win(i, len);
         const trackStride = 4 * BINS * FRAMES;
         for (let k = 0; k < stems; k++) for (let ch = 0; ch < 2; ch++) {
           seg.set(time.subarray((k * 2 + ch) * N, (k * 2 + ch + 1) * N));
           if (freq) ispec(freq, k * trackStride + (ch * 2) * BINS * FRAMES, k * trackStride + (ch * 2 + 1) * BINS * FRAMES, seg);
           const o = outs[k][ch];
-          for (let i = 0; i < len; i++) o[start + i] += seg[i] * win(i, len);
+          for (let i = 0; i < len; i++) o[at + i] += seg[i] * win(i, len);
         }
-        onProgress((idx + 1) / segs);
+        onProgress(Math.min(1, (idx + (pass + 1) / passes) / segs));
       }
       for (const [l, r2] of outs) for (let i = 0; i < total; i++) { const w = wt[i] > 0 ? wt[i] : 1; l[i] /= w; r2[i] /= w; }
       const result = {};

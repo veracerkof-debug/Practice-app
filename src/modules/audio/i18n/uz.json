@@ -188,5 +188,10 @@
   "notes.saved": "Tayyor: notalar — {n}",
   "notes.none": "Nota topilmadi: jim yozuv yoki balandliksiz",
   "notes.hint": "Yozuvdan notalar (.mid) — mediatekaga, uning yoniga. Eng aniq — bitta cholgʻu yoki ovoz: aralashmani avval ajratib, yoʻlakdan olish yaxshi.",
-  "notes.doneHint": ".mid fayli mediatekada yozuv yonida. «Tablar»da — nota va tabulatura, studiyada — tahrirlash, ovoz va tempni oʻzgartirish."
+  "notes.doneHint": ".mid fayli mediatekada yozuv yonida. «Tablar»da — nota va tabulatura, studiyada — tahrirlash, ovoz va tempni oʻzgartirish.",
+  "stems.hq": "Tungi sifat",
+  "stems.hqHint": "4,5 barobar uzoqroq, yoʻlak chetlari tozaroq. Fonda tayyor yozuvlarni ham qayta hisoblaydi.",
+  "stems.hqShort": "tungi",
+  "stems.hqDone": "Tungi sifat.",
+  "stems.redo": "Tungi sifatda qayta hisoblash · ≈ {t}"
 }

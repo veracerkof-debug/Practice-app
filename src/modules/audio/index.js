@@ -172,7 +172,7 @@ const jobErr = (e) => { const { t } = ctx; if (e && e.message === 'cancel') ctx.
 function stemsSheet() {
   const { t, ui } = ctx, tr = AU.cur, jobs = ctx.jobs;
   if (!tr || !jobs) return;
-  const can = jobs.supported();
+  const can = jobs.supported(), hq = () => !!(ctx.auto && ctx.auto.hq());
   const g = () => mixOf(tr), val = (k) => (g()[k] == null ? 1 : g()[k]), prev = {};
   const job = () => (jobs.current && jobs.current.id === tr.id ? jobs.current : null);
   const first = stemsFor(tr)[0];
@@ -181,7 +181,7 @@ function stemsSheet() {
   const progress = (j, sel) => {
     const pct = Math.round((j.frac || 0) * 100), run = j.stage === 'separate' || j.stage === 'run', gone = (Date.now() - (j.stageAt || j.t0)) / 1000;
     const left = run && j.frac > 0.02 ? Math.max(0, gone / j.frac - gone) : 0;
-    return '<div class="cellcol sjob"><span class="grow">' + ui.esc(t('job.' + j.stage)) + (run ? ' · <b class="num">' + pct + ' %</b>' + (left ? ' · ' + ui.esc(t('job.left', { t: fmtT(left) })) : '') : '') + '</span><div class="sbar"><b style="width:' + pct + '%"></b></div></div>' +
+    return '<div class="cellcol sjob"><span class="grow">' + ui.esc(t('job.' + j.stage)) + (j.hq ? ' · ' + ui.esc(t('stems.hqShort')) : '') + (run ? ' · <b class="num">' + pct + ' %</b>' + (left ? ' · ' + ui.esc(t('job.left', { t: fmtT(left) })) : '') : '') + '</span><div class="sbar"><b style="width:' + pct + '%"></b></div></div>' +
       '<button class="cell act center" ' + sel + '>' + ui.esc(t('job.cancel')) + '</button>';
   };
   const body = () => {
@@ -192,11 +192,14 @@ function stemsSheet() {
       h += set.map((r) => { const k = r.stem.part, v = val(k), mu = v === 0; return '<div class="cellcol stemrow' + (mu ? ' mu' : '') + '"><div class="row"><button class="ic sm plain" data-smute="' + k + '" aria-pressed="' + mu + '" aria-label="' + ui.esc(t(mu ? 'stems.unmute' : 'stems.mute', { name: t('part.' + k) })) + '">' + (mu ? I.mute : I.vol) + '</button><span class="grow">' + ui.esc(t('part.' + k)) + '</span><b class="num" data-sv="' + k + '">' + Math.round(v * 100) + ' %</b></div>' +
         '<input type="range" min="0" max="150" step="5" value="' + Math.round(v * 100) + '" data-sg="' + k + '" aria-label="' + ui.esc(t('part.' + k)) + '"></div>'; }).join('') +
         '<button class="cell act" data-sreset>' + ui.esc(t('stems.reset')) + '</button><button class="cell act" data-sstudio>' + ui.esc(t('stems.toStudio')) + '</button>';
-    } else if (can) h += '<button class="cell act center b" data-sgo>' + ui.esc(t('stems.go', { t: fmtT(estimateSec(tr.dur || 60, m)) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
+    } else if (can) h += '<button class="cell act center b" data-sgo>' + ui.esc(t('stems.go', { t: fmtT(estimateSec(tr.dur || 60, m, hq())) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
     else h += '<div class="cellcol"><span class="l2">' + ui.esc(t('stems.web')) + '</span></div>';
+    // «ночное» качество — один переключатель с настройкой «Дорожки автоматически»: в фоне пересчитает и готовые наборы
+    if (can && !(j && j.kind === 'stems')) h += '<button class="cell act" data-shq aria-pressed="' + hq() + '"><span class="grow">' + ui.esc(t('stems.hq')) + '<span class="bksub">' + ui.esc(t('stems.hqHint')) + '</span></span><span class="val">' + (hq() ? '✓' : '') + '</span></button>' +
+      (set.length && hq() && !set[0].stem.hq ? '<button class="cell act center" data-sgo>' + ui.esc(t('stems.redo', { t: fmtT(estimateSec(tr.dur || 60, m, true)) })) + '</button>' : '');
     h += '</div>';
     if (set.length && absent.length) h += '<p class="ftr">' + ui.esc(t('stems.absent', { list: absent.map((p) => t('part.' + p)).join(', ') })) + '</p>';
-    else h += '<p class="ftr">' + ui.esc(t(set.length ? 'stems.hint' : can ? 'stems.goHint' : 'stems.webHint')) + '</p>';
+    else h += '<p class="ftr">' + ui.esc((set.length && set[0].stem.hq ? t('stems.hqDone') + ' ' : '') + t(set.length ? 'stems.hint' : can ? 'stems.goHint' : 'stems.webHint')) + '</p>';
     // ноты
     h += '<div class="hdr">' + ui.esc(t('notes.hdr')) + '</div><div class="group">';
     if (j && j.kind === 'notes') h += progress(j, 'data-njcancel');
@@ -231,7 +234,7 @@ function stemsSheet() {
     tick = setInterval(() => { if (job() && el.isConnected) sh.update(); }, 1000);
     el.addEventListener('input', (e) => { const i = e.target.closest('[data-sg]'); if (!i) return; setG(i.dataset.sg, +i.value / 100); apply(sh); });
     el.addEventListener('click', async (e) => {
-      const b = e.target.closest('[data-smute], [data-sreset], [data-sstudio], [data-sgo], [data-sjcancel], [data-njcancel], [data-ngo], [data-nlisten], [data-ntabs], [data-nstudio], [data-nbends], [data-seg="smode"] [data-v], [data-seg="nsens"] [data-v]');
+      const b = e.target.closest('[data-smute], [data-sreset], [data-sstudio], [data-sgo], [data-shq], [data-sjcancel], [data-njcancel], [data-ngo], [data-nlisten], [data-ntabs], [data-nstudio], [data-nbends], [data-seg="smode"] [data-v], [data-seg="nsens"] [data-v]');
       if (!b) return;
       const d = b.dataset;
       if (d.smute != null) { const k = d.smute, was = val(k); if (was === 0) setG(k, prev[k] || 1); else { prev[k] = was; setG(k, 0); } const i = el.querySelector('[data-sg="' + k + '"]'); if (i) i.value = Math.round(val(k) * 100); apply(sh); return; }
@@ -240,7 +243,8 @@ function stemsSheet() {
       if (b.closest('[data-seg="nsens"]')) { st().nsens = d.v; ctx.store.save(); sh.update(); return; }
       if (b.hasAttribute('data-nbends')) { st().nbends = !st().nbends; ctx.store.save(); sh.update(); return; }
       if (b.hasAttribute('data-sjcancel') || b.hasAttribute('data-njcancel')) { jobs.cancel(); return; }
-      if (b.hasAttribute('data-sgo')) { setMode(m); jobs.separate(tr, m).then((r) => { ctx.ui.toast(t(r.stems.length ? 'stems.saved' : 'stems.none')); }).catch(jobErr); sh.update(); return; }
+      if (b.hasAttribute('data-shq')) { if (ctx.auto) ctx.auto.setHq(!hq()); sh.update(); return; }
+      if (b.hasAttribute('data-sgo')) { setMode(m); jobs.separate(tr, m, { hq: hq() }).then((r) => { ctx.ui.toast(t(r.stems.length ? 'stems.saved' : 'stems.none')); }).catch(jobErr); sh.update(); return; }
       if (b.hasAttribute('data-ngo')) { jobs.notes(tr, { sens: st().nsens || 'normal', bends: !!st().nbends }).then((r) => { ctx.ui.toast(r.notes ? t('notes.saved', { n: r.notes }) : t('notes.none')); }).catch(jobErr); sh.update(); return; }
       if (b.hasAttribute('data-sstudio')) {
         const set = stemsFor(tr, m), p = projectFromStems(tr.name.replace(/\.[a-z0-9]+$/i, ''), set.map((r) => ({ part: r.stem.part, name: t('part.' + r.stem.part), fileId: r.id, dur: r.dur })), { songId: (tr.songs || [])[0] || null, bpm: (tr.ana && tr.ana.bpm) || 90 });

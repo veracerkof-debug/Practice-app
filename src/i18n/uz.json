@@ -880,6 +880,8 @@
   "auto.stems": "Yoʻlaklar avtomatik",
   "auto.off": "Oʻchiq",
   "auto.stemsHint": "Har bir yangi yozuv oʻzi yoʻlaklarga boʻlinadi — sukunatda, hech narsa chalinmayotganda, har qoʻshiqqa 3–7 daqiqa. 2 — vokal va instrumental, 4 — yana zarbli va bas, 6 — yana gitara va klavishlar. Natija pleerda: har bir yoʻlak balandligi tonallik va tezlik bilan.",
+  "auto.hq": "Yoʻlaklarning tungi sifati",
+  "auto.hqHint": "Oyna siljishi bilan uch oʻtish va ikki barobar qisqa qadam: yoʻlak chetlari tozaroq, vaqt 4,5 barobar koʻp. Tayyor yozuvlar jimlikda qayta hisoblanadi.",
   "auto.ana": "Tonallik va temp avtomatik",
   "auto.anaHint": "Har bir yangi yozuvning tonalligi va tempi aniqlanadi — mediateka va pleerda koʻrinadi.",
   "presence.denied": "Mikrofonga ruxsat yoʻq — chalishni tovush bilan tasdiqlash ishlamaydi.",

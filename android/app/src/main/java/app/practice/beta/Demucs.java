@@ -146,27 +146,37 @@ public final class Demucs {
     }
 
     // inL, inR — файлы float32 LE; total — отсчётов; outDir — куда класть <part>.f32 (чередование L R)
-    public void separate(File inL, File inR, long total, File outDir, Progress progress) throws Exception {
+    public void separate(File inL, File inR, long total, File outDir, Progress progress) throws Exception { separate(inL, inR, total, outDir, progress, false); }
+    // hq — «ночное» качество: шаг окна N/2 вместо 3N/4 и три прохода на сегмент со случайным сдвигом окна до 0,5 с
+    // (как shifts у Demucs: положения окна усредняются, края дорожек чище); время ≈ ×4,5
+    public void separate(File inL, File inR, long total, File outDir, Progress progress, boolean hq) throws Exception {
         tables();
         if (!outDir.isDirectory() && !outDir.mkdirs()) throw new Exception("outdir");
-        int segs = total <= N ? 1 : (int) Math.ceil((double) (total - N) / STRIDE) + 1;
+        final int stride = hq ? N / 2 : STRIDE, passes = hq ? 3 : 1, MAXOFF = SR / 2, BUF = N + MAXOFF;
+        int segs = Math.max(1, (int) Math.ceil((double) total / stride)); // столько раз пройдёт цикл по start
         float[] wave = new float[2 * N], spec = new float[4 * BINS * FRAMES];
         float[] re = new float[FFT], im = new float[FFT], acc = new float[(FRAMES + 3) * HOP + FFT], wsum = new float[acc.length];
         float[] seg = new float[N]; // одна дорожка, один канал после суммы ветвей
-        float[][][] sum = null; // накопление с окном для текущего сегмента (перекрытие с предыдущим); размер — по числу дорожек
-        float[] wt = new float[N];
+        float[][][] sum = null; // накопление с окном (перекрытие с соседями и сдвинутыми проходами); размер — по числу дорожек
+        float[] wt = new float[BUF];
         byte[] tmp = new byte[N * 4];
-        byte[] outBytes = new byte[STRIDE * 8];
+        byte[] outBytes = new byte[stride * 8];
         RandomAccessFile[] outs = null;
+        java.util.Random rnd = new java.util.Random(7);
         try (RandomAccessFile fl = new RandomAccessFile(inL, "r"); RandomAccessFile fr = new RandomAccessFile(inR, "r")) {
             long[] shape1 = { 1, 2, N }, shape2 = interleaved ? new long[] { 1, 2, BINS, FRAMES, 2 } : new long[] { 1, 4, BINS, FRAMES };
             int idx = 0;
-            for (long start = 0; start < total; start += STRIDE, idx++) {
+            float half = stride * 0.5f;
+            for (long start = 0; start < total; start += stride, idx++) {
+              for (int pass = 0; pass < passes; pass++) {
                 if (cancelled) throw new Exception("cancel");
-                int len = (int) Math.min(N, total - start);
-                readSeg(fl, start, len, wave, tmp);
+                int off = pass == 0 ? 0 : (int) Math.min(rnd.nextInt(MAXOFF), Math.max(0, total - start - 1));
+                long at = start + off;
+                if (at >= total) continue;
+                int len = (int) Math.min(N, total - at);
+                readSeg(fl, at, len, wave, tmp);
                 float[] left = new float[N]; System.arraycopy(wave, 0, left, 0, N);
-                readSeg(fr, start, len, seg, tmp);
+                readSeg(fr, at, len, seg, tmp);
                 float[] right = new float[N]; System.arraycopy(seg, 0, right, 0, N);
                 System.arraycopy(left, 0, wave, 0, N); System.arraycopy(right, 0, wave, N, N);
                 if (interleaved) { spectrum(left, spec, 0, 1, 2, re, im); spectrum(right, spec, 2 * BINS * FRAMES, 2 * BINS * FRAMES + 1, 2, re, im); }
@@ -188,14 +198,13 @@ public final class Demucs {
                     }
                 }
                 if (sum == null) {
-                    sum = new float[stems][2][N];
+                    sum = new float[stems][2][BUF];
                     outs = new RandomAccessFile[stems];
                     String[] parts = partsOf(stems);
                     for (int k = 0; k < stems; k++) { outs[k] = new RandomAccessFile(new File(outDir, parts[k] + ".f32"), "rw"); outs[k].setLength(0); }
                 }
                 // окно склейки: подъём и спад по половине шага
-                float half = STRIDE * 0.5f;
-                for (int i = 0; i < len; i++) wt[i] += Math.min(Math.min(i / half, (len - i) / half), 1f);
+                for (int i = 0; i < len; i++) wt[off + i] += Math.min(Math.min(i / half, (len - i) / half), 1f);
                 int trackStride = 4 * BINS * FRAMES;
                 for (int k = 0; k < stems; k++) {
                     for (int ch = 0; ch < 2; ch++) {
@@ -203,21 +212,23 @@ public final class Demucs {
                         for (int i = 0; i < N; i++) seg[i] = timeOut.get(tOff + i);
                         if (freqOut != null) ispec(freqOut, k * trackStride + (ch * 2) * BINS * FRAMES, k * trackStride + (ch * 2 + 1) * BINS * FRAMES, seg, re, im, acc, wsum);
                         float[] s = sum[k][ch];
-                        for (int i = 0; i < len; i++) s[i] += seg[i] * Math.min(Math.min(i / half, (len - i) / half), 1f);
+                        for (int i = 0; i < len; i++) s[off + i] += seg[i] * Math.min(Math.min(i / half, (len - i) / half), 1f);
                     }
                 }
+                if (progress != null) progress.at(Math.min(1.0, (idx + (pass + 1) / (double) passes) / segs));
+              }
+                if (sum == null) continue;
                 // готово всё до начала следующего сегмента — в файл; остаток сдвигаем к началу
-                int done = (int) Math.min(STRIDE, total - start);
+                int done = (int) Math.min(stride, total - start);
                 ByteBuffer bb = ByteBuffer.wrap(outBytes).order(ByteOrder.LITTLE_ENDIAN);
                 for (int k = 0; k < stems; k++) {
                     bb.clear();
                     float[] l = sum[k][0], rr = sum[k][1];
                     for (int i = 0; i < done; i++) { float w = wt[i] > 0 ? wt[i] : 1f; bb.putFloat(l[i] / w); bb.putFloat(rr[i] / w); }
                     outs[k].write(outBytes, 0, done * 8);
-                    for (int ch = 0; ch < 2; ch++) { float[] s = sum[k][ch]; System.arraycopy(s, STRIDE, s, 0, N - STRIDE); java.util.Arrays.fill(s, N - STRIDE, N, 0f); }
+                    for (int ch = 0; ch < 2; ch++) { float[] s = sum[k][ch]; System.arraycopy(s, stride, s, 0, BUF - stride); java.util.Arrays.fill(s, BUF - stride, BUF, 0f); }
                 }
-                System.arraycopy(wt, STRIDE, wt, 0, N - STRIDE); java.util.Arrays.fill(wt, N - STRIDE, N, 0f);
-                if (progress != null) progress.at((idx + 1) / (double) segs);
+                System.arraycopy(wt, stride, wt, 0, BUF - stride); java.util.Arrays.fill(wt, BUF - stride, BUF, 0f);
             }
         } finally {
             if (outs != null) for (RandomAccessFile o : outs) if (o != null) try { o.close(); } catch (Exception e) { /* ignore */ }

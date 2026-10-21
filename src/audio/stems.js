@@ -48,7 +48,9 @@ export function partsForMode(raw, mode) {
 export const stemsThreads = () => (Native ? Math.max(1, Math.min(8, navigator.hardwareConcurrency || 4)) : globalThis.crossOriginIsolated ? Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1)) : 1);
 // Оценка времени (с) для записи длиной dur с: нативно на 4 ядрах ×1,25 (телефон — с запасом), WebAssembly на 4 потоках
 // ×1,9, на одном ×4,5
-export const estimateSec = (dur, mode = '4') => Math.round(dur * (Native ? 2 : stemsThreads() > 1 ? 2.5 : 5.5) * (mode === '6' ? 1.5 : 1));
+// hq — «ночное» качество (три прохода со сдвигом и шаг окна вдвое короче): ≈ ×4,5
+export const HQ_MUL = 4.5;
+export const estimateSec = (dur, mode = '4', hq = false) => Math.round(dur * (Native ? 2 : stemsThreads() > 1 ? 2.5 : 5.5) * (mode === '6' ? 1.5 : 1) * (hq ? HQ_MUL : 1));
 
 let worker = null, ready = null, readyModel = '';
 // Рабочий поток с моделью (stems.worker.js): создаётся один раз на модель, модель грузится один раз; другая модель — заново
@@ -95,7 +97,7 @@ async function readPart(path, total) {
   for (let i = 0; i < n; i++) { left[i] = il[2 * i]; right[i] = il[2 * i + 1]; }
   return { left, right };
 }
-function separateNative(blob, onStage, mode) {
+function separateNative(blob, onStage, mode, hq) {
   let cancelled = false, running = false, sub = null;
   const isCancelled = () => cancelled;
   const run = (async () => {
@@ -110,7 +112,7 @@ function separateNative(blob, onStage, mode) {
       onStage('separate', 0);
       sub = await Native.addListener('progress', ({ f }) => onStage('separate', Math.min(1, f || 0)));
       running = true;
-      const { files, total } = await Native.run({ model: mode === '6' ? '6' : '4' });
+      const { files, total } = await Native.run({ model: mode === '6' ? '6' : '4', hq: !!hq });
       running = false;
       const raw = {};
       for (const k of Object.keys(files)) raw[k] = await readPart(files[k], total);
@@ -125,9 +127,9 @@ function separateNative(blob, onStage, mode) {
 }
 
 // Разделить: blob → { parts: { vocals: { left, right }, … }, mix, dur, sr }; onStage('load' | 'decode' | 'separate', доля 0…1);
-// mode — '2' | '4' | '6'; cancel() — прервать
-export function separate(blob, { onStage = () => {}, mode = '4' } = {}) {
-  if (Native) return separateNative(blob, onStage, mode);
+// mode — '2' | '4' | '6'; hq — «ночное» качество (дольше в HQ_MUL раз, чище края дорожек); cancel() — прервать
+export function separate(blob, { onStage = () => {}, mode = '4', hq = false } = {}) {
+  if (Native) return separateNative(blob, onStage, mode, hq);
   let cancelled = false;
   const run = (async () => {
     onStage('load', 0);
@@ -141,7 +143,7 @@ export function separate(blob, { onStage = () => {}, mode = '4' } = {}) {
       const h = (e) => { const m = e.data; if (m.k === 'progress') onStage('separate', m.f); else if (m.k === 'done') { w.removeEventListener('message', h); res(m.parts); } else if (m.k === 'error') { w.removeEventListener('message', h); rej(new Error(m.msg)); } };
       w.addEventListener('message', h);
       const L = new Float32Array(left), R = new Float32Array(right); // копии — исходный буфер остаётся у вызывающего
-      w.postMessage({ k: 'run', left: L, right: R }, [L.buffer, R.buffer]);
+      w.postMessage({ k: 'run', left: L, right: R, hq: !!hq }, [L.buffer, R.buffer]);
     });
     return { parts: partsForMode(raw, mode), mix: { left, right }, dur, sr: SR };
   })();

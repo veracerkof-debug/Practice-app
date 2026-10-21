@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { isDesktop } from '../desktop.js';
 import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
-import { autoMode, autoAna } from '../autostems.js';
+import { autoMode, autoAna, autoHq } from '../autostems.js';
 import { sortable } from '../../ui/hold.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
@@ -188,7 +188,7 @@ function weekHTML(app) {
     '<div class="group"><div class="cell"><span class="grow">' + t('presence.title') + '</span>' + psw('micPresence', !!st.micPresence, t('presence.title')) + '</div></div>' +
     '<p class="ftr">' + t('presence.hint') + '</p>' +
     // медиатека: дорожки и тональность с темпом — сами, в фоне (src/core/autostems.js)
-    '<div class="hdr">' + t('auto.title') + '</div><div class="group">' + (app.jobs && app.jobs.supported() ? '<div class="cellcol">' + seg('autostems', [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']], autoMode(st), t('auto.stems')) + '<div class="segcap">' + t('auto.stemsHint') + '</div></div>' : '') +
+    '<div class="hdr">' + t('auto.title') + '</div><div class="group">' + (app.jobs && app.jobs.supported() ? '<div class="cellcol">' + seg('autostems', [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']], autoMode(st), t('auto.stems')) + '<div class="segcap">' + t('auto.stemsHint') + '</div></div><div class="cell"><span class="grow">' + t('auto.hq') + '<span class="bksub">' + t('auto.hqHint') + '</span></span>' + psw('autoHq', autoHq(st), t('auto.hq')) + '</div>' : '') +
     '<div class="cell"><span class="grow">' + t('auto.ana') + '</span>' + psw('autoAna', autoAna(st), t('auto.ana')) + '</div></div><p class="ftr">' + t('auto.anaHint') + '</p>' +
     // звук: буфер (задержка против треска) и режим ресурсов (полный / экономный для слабых телефонов) — src/audio/perf.js
     '<div class="hdr">' + t('snd.title') + '</div><div class="group"><div class="cellcol">' + seg('sndmode', [['fast', t('snd.fast')], ['bal', t('snd.bal')], ['smooth', t('snd.smooth')]], app.audio.mixer.state.mode, t('snd.mode')) + '</div>' +
@@ -661,7 +661,7 @@ export function createPanel(app, onChange) {
         if (k === 'float' && on) canOverlay().then((ok) => { if (!ok) { toast(t('pl.askOverlay')); askOverlay(); } });
         return;
       }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if (d.psw === 'autoAna' && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
         onChange();

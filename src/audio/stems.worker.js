@@ -1,6 +1,6 @@
 // Рабочий поток разделения на дорожки: ONNX Runtime Web + свой движок (demucs.js) живут здесь, главный поток свободен.
 // Сообщения внутрь: { k: 'init', wasmPaths, modelUrl, threads } → { k: 'ready', stems } | { k: 'error', msg };
-//                   { k: 'run', left, right } → { k: 'progress', f } … { k: 'done', parts, order } | { k: 'error', msg };
+//                   { k: 'run', left, right, hq } → { k: 'progress', f } … { k: 'done', parts, order } | { k: 'error', msg };
 //                   { k: 'cancel' } — прервать между сегментами (идущий сегмент досчитывается).
 // Модель задаётся при init; другая модель (4 или 6 дорожек) — новый рабочий поток.
 import * as ort from 'onnxruntime-web';
@@ -19,7 +19,7 @@ self.onmessage = async (e) => {
     } else if (m.k === 'run') {
       if (!dm) throw new Error('not ready');
       cancelled = false;
-      const res = await dm.separate(m.left, m.right, { onProgress: (f) => self.postMessage({ k: 'progress', f: Math.min(1, f) }), isCancelled: () => cancelled });
+      const res = await dm.separate(m.left, m.right, { hq: !!m.hq, onProgress: (f) => self.postMessage({ k: 'progress', f: Math.min(1, f) }), isCancelled: () => cancelled });
       const parts = {}, buf = [];
       for (const k of dm.parts) { parts[k] = { left: res[k].left, right: res[k].right }; buf.push(res[k].left.buffer, res[k].right.buffer); }
       self.postMessage({ k: 'done', parts, order: dm.parts }, buf);

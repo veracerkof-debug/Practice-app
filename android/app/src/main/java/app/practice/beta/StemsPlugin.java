@@ -64,6 +64,7 @@ public class StemsPlugin extends Plugin {
         if (busy) { call.reject("busy"); return; }
         busy = true;
         final String modelAsset = "6".equals(call.getString("model", "4")) ? MODEL6 : MODEL4;
+        final boolean hq = Boolean.TRUE.equals(call.getBoolean("hq", false));
         final File d = dir();
         try { closeIns(); } catch (Exception e) { busy = false; call.reject(e.getMessage()); return; }
         final long total = new File(d, "in0.f32").length() / 4;
@@ -80,7 +81,7 @@ public class StemsPlugin extends Plugin {
                 dm = new Demucs(model.getAbsolutePath(), threads);
                 job = dm;
                 File out = new File(d, "out");
-                dm.separate(new File(d, "in0.f32"), new File(d, "in1.f32"), total, out, (f) -> { JSObject p = new JSObject(); p.put("f", f); notifyListeners("progress", p); });
+                dm.separate(new File(d, "in0.f32"), new File(d, "in1.f32"), total, out, (f) -> { JSObject p = new JSObject(); p.put("f", f); notifyListeners("progress", p); }, hq);
                 JSObject files = new JSObject();
                 for (String part : Demucs.partsOf(dm.stems())) files.put(part, new File(out, part + ".f32").getAbsolutePath());
                 JSObject r = new JSObject();
