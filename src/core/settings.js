@@ -197,12 +197,35 @@ export function orderTabs(store, known, ids) {
   return true;
 }
 
+// Инструмент → вкладка и обратно (settings.tabMods). → 'ok' | 'has' | 'max'
+export const TABS_MAX = 10;
+export function makeTab(store, id, known) {
+  const st = store.state.settings, mods = st.tabMods || [];
+  if (mods.includes(id)) return 'has';
+  const vis = visibleTabs(st, known);
+  if (vis.length >= TABS_MAX) return 'max';
+  st.tabMods = [...mods, id];
+  st.tabs = [...vis, id];
+  st.tabsOff = (st.tabsOff || []).filter((k) => k !== id);
+  store.settingsChanged();
+  return 'ok';
+}
+export function unmakeTab(store, id) {
+  const st = store.state.settings;
+  if (!(st.tabMods || []).includes(id)) return false;
+  st.tabMods = st.tabMods.filter((k) => k !== id);
+  st.tabs = (st.tabs || DEFAULT_TABS).filter((k) => k !== id);
+  st.tabsOff = (st.tabsOff || []).filter((k) => k !== id);
+  store.settingsChanged();
+  return true;
+}
+
 export function editTabs(store, known, id, action) {
   const st = store.state.settings, vis = visibleTabs(st, known), off = new Set(st.tabsOff || []);
   const i = vis.indexOf(id);
   if (action === 'up' && i > 0) [vis[i - 1], vis[i]] = [vis[i], vis[i - 1]];
   else if (action === 'off' && i >= 0 && vis.length > 1) { vis.splice(i, 1); off.add(id); }
-  else if (action === 'on' && i < 0) { vis.push(id); off.delete(id); }
+  else if (action === 'on' && i < 0) { if (vis.length >= TABS_MAX) return false; vis.push(id); off.delete(id); }
   else return false;
   st.tabs = vis;
   st.tabsOff = [...off];

@@ -4,7 +4,9 @@
 .large{font-size:34px;font-weight:700;letter-spacing:-.025em;margin:28px 4px 14px;line-height:1.1}
 .sub{color:var(--l2);font-size:15px;margin:-8px 4px 14px}
 .tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep);padding-bottom:env(safe-area-inset-bottom,0px);z-index:20}
-.tabbar .in{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.tabbar .in{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);overflow-x:auto;scrollbar-width:none}
+.tabbar .in::-webkit-scrollbar{display:none}
+.tabbar .tab.lifting{opacity:.85}
 .tab{padding:7px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:500;color:var(--l2);letter-spacing:0}
 .tab svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .tab[aria-current="page"]{color:var(--tint)}

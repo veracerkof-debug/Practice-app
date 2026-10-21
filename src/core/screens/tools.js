@@ -17,7 +17,7 @@ export const renderTools = (app, root) => bareScope(() => renderToolsNow(app, ro
 // Порядок и убранные во вкладке (settings.toolsTab: { order, off }): удержание карточки — меню (левее, правее, убрать);
 // убранные остаются включёнными (быстрый доступ, сессия) — вернуть кнопкой внизу вкладки
 export function toolsTab(st) {
-  const all = modules.filter((m) => !m.tab && !m.inner && isOn(st, m.id)).map((m) => m.id), tt = st.toolsTab || {};
+  const all = modules.filter((m) => !m.tab && !m.inner && isOn(st, m.id) && !(st.tabMods || []).includes(m.id)).map((m) => m.id), tt = st.toolsTab || {}; // ставшие вкладками — не здесь
   const order = (tt.order || []).filter((id) => all.includes(id));
   all.forEach((id) => { if (!order.includes(id)) order.push(id); });
   const off = new Set((tt.off || []).filter((id) => all.includes(id)));

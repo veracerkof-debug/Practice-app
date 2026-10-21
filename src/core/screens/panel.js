@@ -39,7 +39,7 @@ import { APP_ICON_IDS, appIconSVG } from '../../ui/appicons.js';
 import { iconOf, setAppIcon } from '../appicon.js';
 import { gemSVG } from '../../ui/gems.js';
 import { gemCanvas } from '../../ui/gem3d.js';
-import { mountStones, homeLayout, setHomeLayout, HOME_SIZES } from './home.js';
+import { mountStones } from './home.js';
 import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
@@ -61,7 +61,7 @@ const PAGES = {
   data: ['green', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
 // Страницы группами: я и практика, экран, инструменты и подсказки, помощь и данные
-const PAGE_GROUPS = [['me', ['me', 'week', 'stats']], ['screen', ['look', 'homes', 'tabs']], ['tools', ['feat', 'mascot', 'notif']], ['help', ['help', 'data']]];
+const PAGE_GROUPS = [['me', ['me', 'week', 'stats']], ['screen', ['look', 'tabs']], ['tools', ['feat', 'mascot', 'notif']], ['help', ['help', 'data']]]; // главная правится на самой главной (удержание блока)
 // Страницы, которых нет в режиме «Только инструменты»
 const PLAIN_HIDE = ['stats', 'week', 'notif', 'mascot'];
 // «Сообщить о проблеме» — лист со строчками журнала
@@ -412,20 +412,6 @@ function featHTML(app) {
 }
 
 // Вкладки внизу: порядок и состав
-// Главный экран: блоки — порядок (удержать и вести), размер (меньше, обычно, больше), показывать или нет
-function homesHTML(app) {
-  const st = app.store.state.settings, L = homeLayout(st);
-  const sz = (k) => (HOME_SIZES.includes(L.size[k]) ? L.size[k] : 'm');
-  const row = (k, on) => '<div class="cell hbrow"' + (on ? ' data-hbrow="' + k + '"' : '') + '><span class="grow">' + t('hb.' + k) + '</span>' +
-    (on ? '<span class="hbsz" role="group" aria-label="' + esc(t('hb.size')) + '">' + HOME_SIZES.map((x) => '<button class="' + (sz(k) === x ? 'on' : '') + '" data-hbsz="' + k + ':' + x + '" aria-pressed="' + (sz(k) === x) + '" aria-label="' + esc(t('hb.size.' + x)) + '">' + { s: 'A−', m: 'A', l: 'A+' }[x] + '</button>').join('') + '</span>' +
-      '<button class="ic sm plain" data-hboff="' + k + '" aria-label="' + esc(t('hb.hide') + ': ' + t('hb.' + k)) + '" style="color:var(--red)">' + IC.minus + '</button>'
-      : '<button class="ic sm plain" data-hbon="' + k + '" aria-label="' + esc(t('hb.show') + ': ' + t('hb.' + k)) + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
-  const vis = L.order.filter((k) => !L.off.has(k)), hid = L.order.filter((k) => L.off.has(k));
-  return '<div class="large">' + t('page.homes') + '</div>' +
-    '<div class="hdr">' + t('hb.shown') + '</div><div class="group">' + vis.map((k) => row(k, true)).join('') + '</div>' +
-    (hid.length ? '<div class="hdr">' + t('hb.hiddenList') + '</div><div class="group">' + hid.map((k) => row(k, false)).join('') + '</div>' : '') +
-    '<p class="ftr">' + t('hb.hint') + '</p><div class="group"><button class="cell act center" data-hbreset>' + t('hb.reset') + '</button></div>';
-}
 
 function tabsHTML(app) {
   const st = app.store.state.settings, vis = visibleTabs(st, tabIds(st)), hid = hiddenTabs(st, tabIds(st));
@@ -497,7 +483,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, feat: featHTML, homes: homesHTML, tabs: tabsHTML, help: helpHTML }[page](app);
+    const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML }[page](app);
     layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="ic sm plain" data-pp="root" aria-label="' + esc(t('panel.back')) + '">' + icons.back + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
     // переход между страницами: вперёд — справа, назад в корень — слева; перерисовка той же страницы — без движения
@@ -527,8 +513,6 @@ export function createPanel(app, onChange) {
     const ownSet = (el) => { const st = app.store.state.settings, v = el.value.toUpperCase(); if (el.dataset.owncolor === 'main') { st.ownMain = v; st.palette = 'own'; } else st.ownBg = v; applyTheme(st); };
     layer.addEventListener('input', (e) => { if (e.target.dataset && e.target.dataset.owncolor) ownSet(e.target); });
     layer.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.owncolor) { ownSet(e.target); changed(); } });
-    // «Главный экран»: удержать блок и вести — новый порядок
-    sortable(layer, '[data-hbrow]', 'data-hbrow', (ids) => { const st = app.store.state.settings, L = homeLayout(st); L.order = [...ids, ...L.order.filter((k) => !ids.includes(k))]; setHomeLayout(st, L); changed(); });
     // «Вкладки»: удержать вкладку и вести вверх-вниз — новый порядок
     sortable(layer, '[data-tab-row]', 'data-tab-row', (ids) => { if (orderTabs(app.store, tabIds(app.store.state.settings), ids)) { render(); onChange(); } });
     layer.addEventListener('click', (e) => {
@@ -543,14 +527,6 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
       if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); render(); return; }
       if ((b = g('[data-hshow]'))) { const k = b.dataset.hshow, m = k.startsWith('core:') ? coreTopic(k.slice(5)) : moduleById(k); if (m) showHelp(app, m); return; }
-      if ((b = g('[data-hbsz], [data-hboff], [data-hbon], [data-hbreset]'))) {
-        const st = app.store.state.settings, L = homeLayout(st), d = b.dataset;
-        if (d.hbsz) { const [k, x] = d.hbsz.split(':'); L.size[k] = x; }
-        else if (d.hboff) L.off.add(d.hboff);
-        else if (d.hbon) L.off.delete(d.hbon);
-        else { delete st.home; changed(); return; }
-        setHomeLayout(st, L); changed(); return;
-      }
       if (g('[data-bplannew]')) { planSheet(app, () => { render(); onChange(); }); return; }
       if (g('[data-bplanedit]')) { planSheet(app, () => { render(); onChange(); }, app.bible.st().plan); return; }
       if (g('[data-brestart]')) { app.bible.setPlan(app.bible.st().plan, dayKeyOf(Date.now())); toast(t('church.restarted')); render(); onChange(); return; }

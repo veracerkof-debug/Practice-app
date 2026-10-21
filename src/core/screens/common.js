@@ -5,6 +5,7 @@ import { esc, seg } from '../../ui/index.js';
 import { dayStart, DAY } from '../time.js';
 import { scaleOf, toScale, fromScale, masteryLevel } from '../library.js';
 import { isOn } from '../settings.js';
+import { moduleById } from '../../modules/index.js';
 
 export const AVATAR = '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M5 19.5c1.4-3.2 4-4.6 7-4.6s5.6 1.4 7 4.6"/></svg>';
 export const CHEV = '<svg class="chev" viewBox="0 0 8 13"><path d="M1.5 1.5 6.5 6.5 1.5 11.5"/></svg>';
@@ -25,9 +26,14 @@ export const IC = {
 // «Студия» — не инструмент, а своя вкладка (модуль studio на весь экран, как «Библия»)
 export const TAB_IDS = ['home', 'library', 'calendar', 'tools', 'studio'];
 // В церковном режиме — ещё вкладка «Библия» (модуль bible на весь экран)
-export const tabIds = (st) => (isOn(st, 'bible') ? [...TAB_IDS, 'bible'] : TAB_IDS);
-// Вкладки, за которыми стоит модуль на весь экран
+// Любой инструмент можно сделать вкладкой (settings.tabMods — список id; удержание карточки → «Сделать вкладкой»,
+// удержание вкладки → «В инструменты»); вкладок — до TABS_MAX (settings.js)
+export const tabMods = (st) => (st.tabMods || []).filter((id) => moduleById(id) && isOn(st, id) && !TAB_IDS.includes(id) && id !== 'bible');
+export const tabIds = (st) => { const base = isOn(st, 'bible') ? [...TAB_IDS, 'bible'] : TAB_IDS, extra = tabMods(st); return extra.length ? [...base, ...extra] : base; };
+// Вкладки, за которыми стоит модуль на весь экран (постоянные — «Библия», «Студия»; остальные — по tabMods)
 export const TAB_MODULES = { bible: 'bible', studio: 'studio' };
+export const tabModuleOf = (st, id) => TAB_MODULES[id] || (tabMods(st).includes(id) ? id : null);
+export const tabIcon = (id) => TAB_ICONS[id] || (moduleById(id) || {}).icon || '';
 export const TAB_ICONS = {
   home: '<svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="10"/><path d="M14 8.5V14l3.6 2.4"/></svg>',
   library: '<svg viewBox="0 0 28 28"><path d="M11 20V7.5l11-2.5V17.5"/><circle cx="8" cy="20" r="3"/><circle cx="19" cy="17.5" r="3"/></svg>',

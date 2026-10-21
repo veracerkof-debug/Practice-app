@@ -12,12 +12,12 @@ export function onHold(root, sel, cb, ms = HOLD_MS) {
   let tm = 0, st = null, fired = false;
   const cancel = () => { clearTimeout(tm); st = null; };
   root.addEventListener('pointerdown', (e) => {
+    fired = false; // новое касание — прежнее удержание забыто (иначе первое нажатие после удержания с перерисовкой глоталось)
     const el = e.target.closest && e.target.closest(sel);
     if (!el || !root.contains(el) || e.button > 0) return;
-    fired = false;
     st = { x: e.clientX, y: e.clientY, el };
     clearTimeout(tm);
-    tm = setTimeout(() => { if (!st) return; fired = true; buzz(); cb(st.el, e); st = null; }, ms);
+    tm = setTimeout(() => { if (!st) return; fired = true; buzz(); cb(st.el, e); st = null; setTimeout(() => { fired = false; }, 500); }, ms); // гасится только клик сразу после удержания
   });
   root.addEventListener('pointermove', (e) => { if (st && Math.hypot(e.clientX - st.x, e.clientY - st.y) > 8) cancel(); });
   root.addEventListener('pointerup', cancel);

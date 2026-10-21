@@ -2,14 +2,14 @@
 // Перенесено из legacy/practice.html (view, renderTabs, go, render, глобальные обработчики нажатий).
 import '../../ui/screens.css';
 import { t } from '../../i18n/index.js';
-import { confirm, toast } from '../../ui/index.js';
+import { confirm, toast, esc } from '../../ui/index.js';
 import { deleteSong } from '../library.js';
 import { addDemo, removeDemo } from '../demo.js';
-import { TAB_ICONS, tabIds, TAB_MODULES } from './common.js';
+import { TAB_ICONS, tabIds, tabModuleOf, tabIcon } from './common.js';
 import { moduleById } from '../../modules/index.js';
-import { mountModule } from '../modules.js';
-import { visibleTabs } from '../settings.js';
-import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeBlockMenu, homeEditAct, homeEditing, setHomeEdit, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
+import { mountModule, moduleName } from '../modules.js';
+import { visibleTabs, editTabs, orderTabs, unmakeTab } from '../settings.js';
+import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView, toolsTab, setToolsTab } from './tools.js';
 import { reportSheet } from './report.js';
@@ -37,12 +37,26 @@ export function createShell(app, root) {
   root.innerHTML = '<main class="wrap" id="main"></main><nav class="tabbar" aria-label="' + t('nav.aria') + '"><div class="in" id="tabs"></div></nav>';
   const main = root.querySelector('#main'), tabs = root.querySelector('#tabs');
 
+  const tabName = (k) => (TAB_ICONS[k] ? t('nav.' + k) : moduleName(moduleById(k)));
   const renderTabs = () => {
     const list = tabsNow();
-    tabs.style.gridTemplateColumns = 'repeat(' + list.length + ',1fr)';
+    // вкладок может быть много (до 10): узкие — полоса прокручивается пальцем
+    tabs.style.gridTemplateColumns = 'repeat(' + list.length + ',minmax(52px,1fr))';
     // вкладки — только значки (решение автора): название — в подсказке и для чтения с экрана
-    tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + ' aria-label="' + t('nav.' + k) + '" title="' + t('nav.' + k) + '">' + TAB_ICONS[k] + '</button>').join('');
+    tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + ' aria-label="' + esc(tabName(k)) + '" title="' + esc(tabName(k)) + '">' + tabIcon(k) + '</button>').join('');
   };
+  // Удержание вкладки — меню: модуль-вкладку вернуть в инструменты, обычную убрать; ведение — порядок
+  function tabHoldMenu(b) {
+    const st = app.store.state.settings, id = b.dataset.tab, items = [];
+    if ((st.tabMods || []).includes(id)) items.push({ icon: TAB_ICONS.tools, label: t('tabs.toTools'), run: () => { unmakeTab(app.store, id); if (view.tab === id) view.tab = tabsNow()[0]; render(); toast(t('tabs.toToolsDone')); } });
+    else if (tabsNow().length > 1) items.push({ icon: TAB_ICONS.tools, label: t('tabs.remove'), danger: true, run: () => { editTabs(app.store, tabIds(st), id, 'off'); if (view.tab === id) view.tab = tabsNow()[0]; render(); } });
+    items.push({ icon: TAB_ICONS.tabs || TAB_ICONS.tools, label: t('tabs.title'), run: () => panel.open('tabs') });
+    holdMenu(b, items, tabName(id));
+  }
+  dragSort(tabs, '.tab', 'data-tab', {
+    onStill: tabHoldMenu,
+    onDrop: (ids) => { orderTabs(app.store, tabIds(app.store.state.settings), ids); render(); },
+  });
 
   // Вкладки-модули («Библия» в церковном режиме, «Студия»): модуль на всё окно над вкладками; остаётся открытым,
   // пока выбрана вкладка
@@ -66,7 +80,8 @@ export function createShell(app, root) {
     leagueCheck(app);
     renderTabs();
     document.documentElement.style.setProperty('--tabh', tabs.parentElement.offsetHeight + 'px');
-    if (TAB_MODULES[view.tab]) { renderTabModule(TAB_MODULES[view.tab]); return; }
+    const tm = tabModuleOf(app.store.state.settings, view.tab);
+    if (tm) { renderTabModule(tm); return; }
     unmountBible();
     if (view.tab === 'tools') { renderTools(app, main); return; }
     main.onclick = null;
@@ -193,7 +208,7 @@ export function createShell(app, root) {
   // блоки главной (мимо инструментов и вращаемых камней)
   dragSort(root, '[data-hb]', 'data-hb', {
     skip: (e) => !!e.target.closest('[data-open-tool], canvas'),
-    onStill: (b) => homeBlockMenu(app, b, render, () => panel.open('homes')),
+    onStill: () => { setHomeEdit(true); render(); }, // удержание блока — правка главной прямо на ней
     onDrop: (ids) => { const st = app.store.state.settings, L = homeLayout(st); L.order = [...ids, ...L.order.filter((k) => !ids.includes(k))]; setHomeLayout(st, L); app.store.settingsChanged(); render(); },
   });
   // Песня в списке: удержание — меню (играть, изменить, отправить, удалить), как у значков приложений в телефоне

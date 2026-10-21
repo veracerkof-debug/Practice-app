@@ -10,11 +10,11 @@ import { gemSec } from '../profile.js';
 import { gemCanvas, mountGems } from '../../ui/gem3d.js';
 import { trackMode } from '../session.js';
 import { genreOf, ensureLib } from '../library.js';
-import { isOn } from '../settings.js';
+import { isOn, makeTab, TABS_MAX } from '../settings.js';
 import { weekday, dayKey } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
-import { topbar, weekdays, relDay, PLAY, IC } from './common.js';
+import { topbar, weekdays, relDay, PLAY, IC, tabIds } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
 import { stoneView, wear, stoneKm, stoneSeed, roundness } from '../../ui/stone.js';
 import { nextEventsHTML } from './calendar.js';
@@ -33,7 +33,7 @@ import { showHelp } from '../help.js';
 export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
 const QUICK_MAX = 8;
 
-const quickList = (st) => (st.quick || QUICK_DEF).filter((id) => isOn(st, id) && moduleById(id) && !moduleById(id).tab && !moduleById(id).inner);
+const quickList = (st) => (st.quick || QUICK_DEF).filter((id) => isOn(st, id) && moduleById(id) && !moduleById(id).tab && !moduleById(id).inner && !(st.tabMods || []).includes(id));
 
 export function streakPill(app, extra = '') {
   const st = app.store.state.settings;
@@ -58,8 +58,9 @@ export function homeLayout(st) {
 export function setHomeLayout(st, L) {
   st.home = { order: L.order.slice(), off: [...L.off], size: Object.fromEntries(Object.entries(L.size).filter(([k, v]) => HOME_BLOCKS.includes(k) && v !== 'm')) };
 }
-// Правка главной прямо на ней (как рабочий стол телефона): у каждого блока — меньше, больше, убрать; блоки
-// переставляются пальцем, щипок двумя пальцами — размер; внизу — убранные блоки (касание возвращает), сверху — «Готово»
+// Правка главной прямо на ней (как рабочий стол телефона): удержание любого блока — режим правки; у каждого блока —
+// меньше, больше, убрать; блоки переставляются пальцем, щипок двумя пальцами — размер; внизу — убранные блоки
+// (касание возвращает), сверху — «Как было» и «Готово». Отдельного экрана настроек главной нет (решение автора)
 let EDIT = false;
 export const homeEditing = () => EDIT;
 export const setHomeEdit = (on) => { EDIT = !!on; };
@@ -72,13 +73,14 @@ const blocks = (st, parts) => {
   const shown = L.order.filter((k) => !L.off.has(k) && parts[k]).map((k) => '<section class="hblk hb-' + sz(k) + '" data-hb="' + k + '">' + (EDIT ? ctl(k, sz(k)) : '') + parts[k] + '</section>').join('');
   if (!EDIT) return shown;
   const hidden = L.order.filter((k) => L.off.has(k) && parts[k]);
-  return '<div class="hbedit"><span>' + esc(t('hb.editHint')) + '</span><button class="btn sm fill" data-hbe="done">' + esc(t('hb.done')) + '</button></div>' + shown +
+  return '<div class="hbedit"><span>' + esc(t('hb.editHint')) + '</span><button class="btn sm" data-hbe="reset">' + esc(t('hb.reset')) + '</button><button class="btn sm fill" data-hbe="done">' + esc(t('hb.done')) + '</button></div>' + shown +
     (hidden.length ? '<div class="hbtray"><div class="hdr">' + esc(t('hb.hiddenList')) + '</div>' + hidden.map((k) => '<button class="lchip pick" data-hbe="show:' + k + '">＋ ' + esc(t('hb.' + k)) + '</button>').join('') + '</div>' : '');
 };
 // Действие правки: 'smaller:week' | 'bigger:…' | 'hide:…' | 'show:…' | 'done' → true, если что-то изменилось
 export function homeEditAct(app, a) {
   const st = app.store.state.settings, L = homeLayout(st), [op, id] = a.split(':');
   if (op === 'done') { EDIT = false; return true; }
+  if (op === 'reset') { delete st.home; app.store.settingsChanged(); return true; }
   const sz = HOME_SIZES.includes(L.size[id]) ? L.size[id] : 'm';
   if (op === 'smaller') L.size[id] = sz === 'l' ? 'm' : 's';
   else if (op === 'bigger') L.size[id] = sz === 's' ? 'm' : 'l';
@@ -210,6 +212,7 @@ const HI = {
   plus: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8M12 8v8"/></svg>',
   edit: '<svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="17" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg>',
   help: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.5M12 16.8v.2"/></svg>',
+  tab: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 15.5h17M9.2 15.5v4M14.8 15.5v4"/></svg>',
 };
 export function toolHoldMenu(app, btn, rerender, open) {
   const st = app.store.state.settings, id = btn.dataset.openTool, m = moduleById(id);
@@ -232,34 +235,12 @@ export function toolHoldMenu(app, btn, rerender, open) {
     if (j >= 0 && j < T.shown.length - 1) items.splice(j > 0 ? 2 : 1, 0, { icon: HI.right, label: t('hold.right'), run: () => tmove(1) });
     items.push({ icon: HI.minus, label: t('tools.hide'), danger: true, run: () => { T.off.add(id); setToolsTab(st, T); app.store.settingsChanged(); rerender(); toast(t('tools.hiddenToast')); } });
   }
+  // любой инструмент — вкладкой внизу (обратно — удержание вкладки → «В инструменты»)
+  items.push({ icon: HI.tab, label: t('hold.makeTab'), run: () => { const r = makeTab(app.store, id, tabIds(st)); if (r === 'max') toast(t('tabs.max', { max: TABS_MAX })); else { toast(t('hold.madeTab')); rerender(); } } });
   items.push({ icon: HI.help, label: t('hold.help'), run: () => showHelp(app, m) });
   holdMenu(btn, items, moduleName(m));
 }
 
-// Долгое нажатие на блок главной: меньше, больше, выше, ниже, убрать, настроить всё
-const HB = {
-  smaller: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>',
-  bigger: '<svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg>',
-  up: '<svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>',
-  down: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
-  hide: '<svg viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><path d="M4 20 20 4"/></svg>',
-  edit: '<svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="17" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg>',
-};
-export function homeBlockMenu(app, el, rerender, openPage) {
-  const st = app.store.state.settings, id = el.dataset.hb, L = homeLayout(st);
-  const vis = L.order.filter((k) => !L.off.has(k) && document.querySelector('[data-hb="' + k + '"]')), i = vis.indexOf(id), sz = HOME_SIZES.includes(L.size[id]) ? L.size[id] : 'm';
-  const save = () => { setHomeLayout(st, L); app.store.settingsChanged(); rerender(); };
-  const move = (d) => { const j = L.order.indexOf(vis[i + d]), k = L.order.indexOf(id); [L.order[j], L.order[k]] = [L.order[k], L.order[j]]; save(); };
-  const items = [];
-  if (sz !== 's') items.push({ icon: HB.smaller, label: t('hb.smaller'), run: () => { L.size[id] = sz === 'l' ? 'm' : 's'; save(); } });
-  if (sz !== 'l') items.push({ icon: HB.bigger, label: t('hb.bigger'), run: () => { L.size[id] = sz === 's' ? 'm' : 'l'; save(); } });
-  if (i > 0) items.push({ icon: HB.up, label: t('hb.up'), run: () => move(-1) });
-  if (i >= 0 && i < vis.length - 1) items.push({ icon: HB.down, label: t('hb.down'), run: () => move(1) });
-  items.push({ icon: HB.hide, label: t('hb.hide'), danger: true, run: () => { L.off.add(id); save(); toast(t('hb.hidden')); } });
-  items.push({ icon: HB.edit, label: t('hb.editHere'), run: () => { EDIT = true; rerender(); } });
-  items.push({ icon: HB.edit, label: t('hb.all'), run: openPage });
-  holdMenu(el, items, t('hb.' + id));
-}
 
 // Быстрый доступ: до 8 инструментов, порядок — перетаскиванием по удержанию или стрелкой
 export function quickEdit(app, rerender) {
