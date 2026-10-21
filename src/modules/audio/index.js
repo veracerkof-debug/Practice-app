@@ -8,6 +8,8 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { fileSongs, inSong, linkSong } from '../../core/files.js';
+import { SH, FL } from '../../music/notes.js';
+import { parseChord } from '../../audio/mirpost.js';
 import { pitchShifter } from '../../audio/pitchshift.js';
 import { createStretchPlayer, stretchAvailable } from '../../audio/stretchplayer.js';
 import { MODES, estimateSec } from '../../audio/stems.js';
@@ -76,6 +78,27 @@ const audKey = () => (curSong() ? 'song:' + curSong() : 'free');
 const style = () => (st().style === 'vinyl' && !ctx.mono ? 'vinyl' : 'wave'); // «Минимал» — волна
 // Тональность записи (src/audio/pitchshift.js): у каждой записи своя — settings.pitch[id] = [полутоны, центы]
 const pitchOf = (t) => (t && (st().pitch || {})[t.id]) || [0, 0];
+// Аккорды записи (rec.ana.chords: [{ t, d, c }], подписи ChordMini вида «A:min») с учётом сдвига высоты плеера;
+// корни — бемолями в бемольных тональностях. Доли (rec.ana.beats) — для притяжения A и B
+const QUAL_TXT = { '': '', min: 'm', dim: 'dim', aug: 'aug', min6: 'm6', maj6: '6', min7: 'm7', minmaj7: 'mMaj7', maj7: 'maj7', 7: '7', dim7: 'dim7', hdim7: 'm7♭5', sus2: 'sus2', sus4: 'sus4' };
+const FLAT_KEYS = [5, 10, 3, 8, 1];
+function chordTxt(c, t) {
+  const p = parseChord(c);
+  if (!p) return '';
+  const a = t.ana || {}, [semi] = pitchOf(t), keyPc = a.pc == null ? 0 : (((a.minor ? a.pc + 3 : a.pc) + semi) % 12 + 12) % 12;
+  return (FLAT_KEYS.includes(keyPc) ? FL : SH)[((p.pc + semi) % 12 + 12) % 12] + (QUAL_TXT[p.q] ?? p.q);
+}
+const chordsOf = (t) => (t && t.ana && Array.isArray(t.ana.chords) ? t.ana.chords : []);
+const chordAt = (t, sec) => { const L = chordsOf(t); let i = -1; for (let k = 0; k < L.length; k++) { if (L[k].t <= sec) i = k; else break; } return i; };
+// ближайшая доля не дальше 0,3 с — иначе время как есть
+function snapBeat(t, sec) {
+  const B = t && t.ana && Array.isArray(t.ana.beats) ? t.ana.beats : [];
+  if (!B.length) return sec;
+  let lo = 0, hi = B.length - 1;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (B[m] < sec) lo = m + 1; else hi = m; }
+  const c = [B[lo], B[lo - 1]].filter((x) => x != null).sort((x, y) => Math.abs(x - sec) - Math.abs(y - sec))[0];
+  return Math.abs(c - sec) <= 0.3 ? c : sec;
+}
 const keyTxt = () => { const [p, c] = pitchOf(AU.cur); return p || c ? (p > 0 ? '+' : p < 0 ? '−' : '±') + Math.abs(p) + (c ? (c > 0 ? ' +' : ' −') + Math.abs(c) + '¢' : '') : '0'; };
 const formantOn = () => !!st().formant; // сохранять форманты (голос) — по умолчанию нет: на музыке слышен «призрак» оригинала
 async function applyPitch() {
@@ -96,6 +119,8 @@ function setPitch(p, c) {
   ctx.store.save();
   applyPitch().catch((e) => ctx.logErr(e));
   const kv = host && host.querySelector('#keyv'); if (kv) kv.textContent = keyTxt();
+  // аккорды на волне и в строке — с новым сдвигом
+  if (host) { const L = chordsOf(AU.cur); host.querySelectorAll('#wfch i').forEach((el) => { const sp = el.querySelector('span'), c = L[+el.dataset.ci]; if (sp && c) sp.textContent = chordTxt(c.c, AU.cur); }); const ac = host.querySelector('#achord'); if (ac) delete ac.dataset.i; }
 }
 // Шторка тональности: линейка полутонов (−12…+12, текущий — по центру), центы ползунком (по 1), тональность и строй
 // записи (определяются по самой записи на устройстве, запоминаются), «как в тексте песни», сброс
@@ -277,7 +302,7 @@ function stemsSheet() {
 }
 
 // Подпись записи в списке: тональность и темп (rec.ana — src/core/autostems.js) и сколько дорожек
-const anaTxt = (x) => { const a = x.ana; if (!a) return ''; return [a.pc != null ? keyName(a.pc, a.minor) : '', a.bpm ? '♩ ' + a.bpm : ''].filter(Boolean).join(' '); };
+const anaTxt = (x) => { const a = x.ana; if (!a) return ''; return [a.pc != null ? keyName(a.pc, a.minor) : '', a.bpm ? '♩ ' + a.bpm + (a.bpb ? ' · ' + a.bpb + '/4' : '') : ''].filter(Boolean).join(' '); };
 const stemsTxt = (x) => { if (x.stem) return ''; const n = stemsFor(x).length; return n ? ctx.tn('stemsN', n) : ''; };
 const rateTxt = () => ctx.num(AU.rate, AU.rate * 100 % 10 ? 2 : AU.rate % 1 ? 1 : 0) + '×';
 const sizeMb = (r) => ctx.t('mb', { n: ctx.num((r.size || 0) / MB, 1) });
@@ -467,6 +492,9 @@ function wformHTML(cls) {
   pk.forEach((v, i) => { const hh = Math.max(1.5, v * 46); p += 'M' + (i + 0.5) + ' ' + (50 - hh) + 'V' + (50 + hh); });
   const ax = d && AU.a != null ? (AU.a / d) * N : null, bx = d && AU.b != null ? (AU.b / d) * N : null;
   const mk = d ? (t.marks || []).map((m, i) => '<i class="wfm" style="left:' + (m.t / d) * 100 + '%"><b>' + (i + 1) + '</b></i>').join('') : '';
+  // такты (сильные доли) — штрихи, аккорды — полоса внизу волны (подпись видна, если отрезок достаточно широк)
+  const db = d && t.ana && Array.isArray(t.ana.downbeats) && t.ana.downbeats.length <= 600 ? t.ana.downbeats.map((x) => '<i class="wfdb" style="left:' + (x / d) * 100 + '%"></i>').join('') : '';
+  const CH = chordsOf(t), ch = d && CH.length ? '<div class="wfch" id="wfch">' + CH.map((c, i) => '<i data-ci="' + i + '" style="left:' + (c.t / d) * 100 + '%;width:' + (c.d / d) * 100 + '%"' + (c.c ? '' : ' class="no"') + '><span>' + chordTxt(c.c, t) + '</span></i>').join('') + '</div>' : '';
   return '<div class="wform ' + cls + (flat ? ' flat' : '') + '" id="wform" role="slider" tabindex="0" aria-label="' + tr('waveAria') + '" aria-valuemin="0" aria-valuemax="' + Math.round(d) +
     '" aria-valuenow="' + Math.round(pl().currentTime) + '"><svg viewBox="0 0 ' + N + ' 100" preserveAspectRatio="none" aria-hidden="true"><defs><clipPath id="wfc"><rect id="wfclip" x="0" y="0" width="' +
     (d ? (pl().currentTime / d) * N : 0) + '" height="100"/></clipPath></defs>' +
@@ -474,7 +502,7 @@ function wformHTML(cls) {
     '<path class="wfbase" d="' + p + '"/><path class="wfplayed" d="' + p + '" clip-path="url(#wfc)"/></svg>' +
     (ax != null ? '<i class="wfh a" data-h="a" style="left:' + (ax / N) * 100 + '%"><b>A</b></i>' : '') +
     (bx != null ? '<i class="wfh b" data-h="b" style="left:' + (bx / N) * 100 + '%"><b>B</b></i>' : '') + mk +
-    '<i class="wfhead" id="wfhead" style="left:' + (d ? (pl().currentTime / d) * 100 : 0) + '%"></i></div>';
+    db + ch + '<i class="wfhead" id="wfhead" style="left:' + (d ? (pl().currentTime / d) * 100 : 0) + '%"></i></div>';
 }
 
 // Класс размера волны (f, h2, s, q) — чтобы перерисовать её на том же месте
@@ -589,6 +617,7 @@ function controls() {
     stepb: '<button class="ic txt sm' + (AU.step ? ' act' : '') + '" data-x="astep" aria-pressed="' + AU.step + '" aria-label="' + t('stepUp') + '">+5%↻</button>',
     list: icb('data-x="alist"', I.list, t('files.btn')),
     time: '<span id="acur" class="num">' + fmtT(pl().currentTime) + '</span>',
+    chord: chordsOf(AU.cur).length ? '<b class="achord" id="achord"></b>' : '', // текущий и следующий аккорд (uiTick)
     sty: (cls) => (ctx.mono ? '' : icb('data-x="astyle"', I.disc, t('styleBtn'), cls)), // в «Минимале» вид закреплён
     back2: !curSong() && ML.view === 'player' ? '<button class="mlback" data-x="mllib">' + t('backLib') + '</button>' : '',
   };
@@ -642,7 +671,7 @@ function playerHTML() {
     atimes(c, d) + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.stems + '</div><div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
-const atimes = (c, d) => '<div class="num l2 atimes">' + c.time + '<span>' + (AU.a != null ? 'A ' + fmtT(AU.a) + (AU.b != null ? ' – B ' + fmtT(AU.b) : '') : ctx.t('dragHint')) +
+const atimes = (c, d) => '<div class="num l2 atimes">' + c.chord + c.time + '<span>' + (AU.a != null ? 'A ' + fmtT(AU.a) + (AU.b != null ? ' – B ' + fmtT(AU.b) : '') : ctx.t('dragHint')) +
   '</span><span id="adur">' + fmtT(d) + '</span></div>';
 
 // Видео: картинка вместо волны и винила, под ней — шкала с A–B и метками
@@ -653,7 +682,7 @@ function videoHTML(c, name, all, sid) {
   if (size === 'quarter') return '<div class="vq vidq">' + vidbox('q') + wformHTML('s') + '<div class="srow2" style="flex:none">' + c.play + '<span class="l2 num" style="font-size:12px">' + c.time + '</span></div></div>';
   if (size === 'half') {
     return '<div class="ah2 vidh">' + c.back2 + '<div class="arow3"><div class="sgrow" style="min-width:0">' + head + '</div><div class="vrow tight">' + c.rate + c.key + '</div></div>' + vidbox('h') +
-      '<div class="wfbox vt">' + wformHTML('s') + '<span class="wft num">' + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
+      '<div class="wfbox vt">' + wformHTML('s') + '<span class="wft num">' + c.chord + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
   return '<div class="mcard av vidf">' + c.back2 + head + vidbox('f') + wformHTML('s') + atimes(c, d) + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.stems + '</div><div class="ctrl5">' +
     c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
@@ -691,6 +720,16 @@ function uiTick() {
   }
   const c1 = q('#acur');
   if (c1) c1.textContent = fmtT(pl().currentTime);
+  const ac = q('#achord');
+  if (ac) {
+    const L = chordsOf(AU.cur), i = chordAt(AU.cur, pl().currentTime);
+    if (ac.dataset.i !== String(i)) {
+      ac.dataset.i = i;
+      const now = i >= 0 ? chordTxt(L[i].c, AU.cur) : '', nxt = L.slice(i + 1).find((c) => c.c);
+      ac.textContent = now ? now + (nxt ? ' → ' + chordTxt(nxt.c, AU.cur) : '') : (nxt ? '→ ' + chordTxt(nxt.c, AU.cur) : '');
+      const strip = q('#wfch'); if (strip) { const on = strip.querySelector('.on'); if (on) on.classList.remove('on'); const el = strip.querySelector('[data-ci="' + i + '"]'); if (el) el.classList.add('on'); }
+    }
+  }
   const mks = host.querySelectorAll('.amk');
   if (mks.length) { const k = currentMark(AU.cur.marks, pl().currentTime); mks.forEach((b, i) => b.classList.toggle('on', i === k)); }
   const c2 = q('#adur');
@@ -1035,9 +1074,9 @@ function act(a, el) {
     case 'afwd': pl().currentTime = Math.min(pl().duration || 0, pl().currentTime + 5); break;
     case 'aab': // A — B — сброс
       if (AU.b != null) { AU.a = AU.b = null; AU.loop = false; }
-      else if (AU.a == null) AU.a = pl().currentTime;
-      else if (pl().currentTime > AU.a) { AU.b = pl().currentTime; AU.loop = true; }
-      else AU.a = pl().currentTime;
+      else if (AU.a == null) AU.a = snapBeat(AU.cur, pl().currentTime);
+      else if (pl().currentTime > AU.a) { AU.b = snapBeat(AU.cur, pl().currentTime); AU.loop = true; }
+      else AU.a = snapBeat(AU.cur, pl().currentTime);
       if (host.querySelector('#vdisc')) {
         // Пластинку не перерисовываем (она крутится), но волну под ней — да: иначе на ней остаются старые A и B
         const ab = AU.b != null ? 'on' : AU.a != null ? 'a' : '';
@@ -1130,8 +1169,8 @@ function bind() {
   on(window, 'pointermove', (e) => {
     if (!wf || e.pointerId !== wf.pid) return;
     const tt = Math.max(0, Math.min(wf.d, ((e.clientX - wf.r.left) / wf.r.width) * wf.d));
-    if (wf.h === 'a') AU.a = Math.min(tt, AU.b != null ? AU.b - 0.2 : tt);
-    else if (wf.h === 'b') AU.b = Math.max(tt, (AU.a || 0) + 0.2);
+    if (wf.h === 'a') AU.a = Math.min(snapBeat(AU.cur, tt), AU.b != null ? AU.b - 0.2 : tt);
+    else if (wf.h === 'b') AU.b = Math.max(snapBeat(AU.cur, tt), (AU.a || 0) + 0.2);
     else pl().currentTime = tt;
     if (wf.h) { const w = host.querySelector('#wform'); if (w) w.outerHTML = wformHTML(wfCls(w)); }
   }, { passive: true });

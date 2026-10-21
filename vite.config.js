@@ -79,7 +79,7 @@ const lightWeb = (mode) => {
   };
 };
 // …и сам рабочий поток (собирается отдельной сборкой — свой список плагинов, worker.plugins)
-const lightWebWorker = (mode) => (mode !== 'web' ? null : { name: 'light-web-worker', load(id) { if (id.endsWith('/src/audio/stems.worker.js')) return "self.onmessage = () => self.postMessage({ k: 'error', msg: 'web' });"; } }); // public/ копируется целиком — лишнее убираем после сборки
+const lightWebWorker = (mode) => (mode !== 'web' ? null : { name: 'light-web-worker', load(id) { if (id.endsWith('/src/audio/stems.worker.js') || id.endsWith('/src/audio/mir.worker.js')) return "self.onmessage = () => self.postMessage({ k: 'error', msg: 'web' });"; } }); // public/ копируется целиком — лишнее убираем после сборки
 export default defineConfig(({ mode }) => ({
   // относительные пути — нужны для Capacitor (этап 3)
   base: './',

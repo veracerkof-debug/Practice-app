@@ -26,6 +26,34 @@
         "only": "^([A-G]#?[0-8]v([1-9]|1[0-6])|rel[0-9]+)\\.ogg$"
       },
       "what": "Salamander Grand Piano V3 (Alexander Holm, CC BY 3.0), Ogg Vorbis: 30 нот через малую терцию × 16 слоёв силы удара и 88 звуков отпускания — полный рояль (src/audio/grand.js); признак пакета — pack.json"
+    },
+    {
+      "file": "public/models/mir/skey.onnx",
+      "url": "https://huggingface.co/musetric/skey-onnx/resolve/main/skey.onnx",
+      "sha256": "5113c1378c1007c8559fcb767593366ba9794397b060535eb80a113db50530fc",
+      "bytes": 338482,
+      "what": "S-KEY (Deezer, MIT; ONNX musetric/skey-onnx) — тональность записи (src/audio/mir.js)"
+    },
+    {
+      "file": "public/models/mir/mel_spectrogram.onnx",
+      "url": "https://huggingface.co/ashudesai/songbird-models/resolve/main/mel_spectrogram.onnx",
+      "sha256": "f8581e3661590d690a467a1d4ba57d789f45683a289d7280d53a9eec774675b5",
+      "bytes": 302301,
+      "what": "Мел-спектр для Beat This! (ashudesai/songbird-models, MIT): 128 полос, 50 кадров/с, log1p(1000·x)"
+    },
+    {
+      "file": "public/models/mir/small0.onnx",
+      "url": "https://huggingface.co/ashudesai/songbird-models/resolve/main/small0.onnx",
+      "sha256": "c462b064a4033050ca6a5354bf866ff4610ab1fd8f1dec1e494b20b22d870aea",
+      "bytes": 10401044,
+      "what": "Beat This! малая модель (CPJKU, MIT; ONNX ashudesai/songbird-models) — доли, сильные доли и темп"
+    },
+    {
+      "file": "public/models/mir/chordnet.onnx",
+      "url": "https://huggingface.co/musetric/chordmini-onnx/resolve/main/chordnet.onnx",
+      "sha256": "1faee8e1cf168300afe0f47517e76836ac200c3841b0fb430fad7dfea5ad6394",
+      "bytes": 17080550,
+      "what": "ChordMini ChordNet 2E1D (MIT; ONNX musetric/chordmini-onnx) — аккорды записи, 170 видов; лог-CQT считает src/music/cqt.js"
     }
   ]
 }

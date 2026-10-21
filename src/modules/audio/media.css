@@ -58,3 +58,12 @@
 /* шторка «Дорожки и ноты»: ход обработки */
 .sjob .sbar{height:8px;border-radius:4px;background:var(--fill);overflow:hidden;margin-top:6px}
 .sjob .sbar b{display:block;height:100%;background:var(--tint);transition:width .4s}
+/* такты и аккорды на волне (rec.ana: доли и аккорды моделями, src/audio/mir.js) */
+.wfdb{position:absolute;top:0;bottom:16px;width:0;border-left:1px solid color-mix(in srgb,var(--ink) 22%,transparent);pointer-events:none}
+.wfch{position:absolute;left:0;right:0;bottom:0;height:16px;pointer-events:none}
+.wfch i{position:absolute;top:0;height:100%;box-sizing:border-box;border-left:1px solid var(--bg);background:color-mix(in srgb,var(--tint) 28%,transparent);overflow:hidden;font-style:normal;font-size:10px;line-height:16px;font-weight:700;color:var(--ink);white-space:nowrap}
+.wfch i span{padding:0 3px}
+.wfch i.no{background:transparent}
+.wfch i.on{background:var(--tint);color:var(--on-tint)}
+.wft .achord{margin-right:8px;font-weight:700}
+.atimes .achord{margin-right:8px;font-weight:700;color:var(--ink)}

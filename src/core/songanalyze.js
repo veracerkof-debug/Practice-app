@@ -2,7 +2,8 @@
 // Всё на устройстве; файл никуда не отправляется и, если выбран только для анализа, не сохраняется.
 import { analyze, SR } from '../music/analyze.js';
 
-async function decode(blob) {
+// Запись → моно 22 050 Гц (Float32Array); общее с разбором моделями (src/audio/mir.js)
+export async function decodeMono(blob) {
   const C = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext;
   if (!C) throw Object.assign(new Error('decode'), { reason: 'unsupported' });
   const buf = await blob.arrayBuffer();
@@ -23,7 +24,7 @@ const inWorker = (x) => new Promise((res, rej) => {
 
 // → { tempo: { bpm, conf } | null, key: { pc, minor, conf } | null }
 export async function analyzeAudio(blob) {
-  const x = await decode(blob);
+  const x = await decodeMono(blob);
   if (typeof Worker !== 'undefined') { try { return await inWorker(x.slice()); } catch { /* без потока — на месте */ } }
   return analyze(x, SR);
 }

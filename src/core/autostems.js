@@ -29,7 +29,9 @@ export function createAutoStems(app) {
   if (typeof navigator !== 'undefined' && navigator.getBattery) navigator.getBattery().then((b) => { bat = b; charging = b.charging; b.addEventListener('chargingchange', () => { charging = b.charging; schedule(1000); }); }).catch(() => {});
   const powered = () => autoPower(settings()) === 'always' || !bat || charging;
   const candidate = (r) => r.kind === 'audio' && !r.stem && r.blob && !(r.type || '').startsWith('video/') && !r.noAuto && (!r.dur || r.dur <= MAX_SEC);
-  const needsAna = (r) => autoAna(settings()) && !r.ana && !r.anaTried;
+  // v < 2 — старый разбор (без долей и аккордов): пересчитать моделями, когда они есть
+  const needsAna = (r) => autoAna(settings()) && !r.anaTried && (!r.ana || (!(r.ana.v >= 2) && mirOk));
+  let mirOk = false; import('../audio/mir.js').then((m) => { mirOk = m.mirSupported(); schedule(); }).catch(() => {});
   const ok = (r) => !(failed.get(r.id) > Date.now());
   const needsStems = (r) => { const m = autoMode(settings()); return m !== 'off' && jobs.supported() && !hasStems(files, r.id, m) && ok(r); };
   const needsHq = (r) => { const m = autoMode(settings()); return autoHq(settings()) && m !== 'off' && jobs.supported() && !hasStems(files, r.id, m, true) && ok(r); };
@@ -38,12 +40,26 @@ export function createAutoStems(app) {
   // первая очередь — тональность и обычное разделение у всех; вторая — улучшенное, когда первая пуста
   const next = () => { const L = recent(); return L.find((r) => needsAna(r) || needsStems(r)) || L.find(needsHq) || null; };
 
+  // Разбор: моделями (src/audio/mir.js — тональность, доли и темп, аккорды; APK и Windows), иначе — своя хрома и
+  // огибающая (songanalyze.js). rec.ana: { pc, minor, cents, bpm, bpb, beats, downbeats, chords, v, at }
+  let ana = null; // идущий разбор — чтобы прервать, когда зазвучало
   async function analyze(r) {
     try {
-      const { analyzeAudio } = await import('./songanalyze.js');
-      const a = await analyzeAudio(r.blob);
-      r.ana = { pc: a.key ? a.key.pc : null, minor: !!(a.key && a.key.minor), cents: a.tuning ? a.tuning.cents : null, bpm: a.tempo ? Math.round(a.tempo.bpm) : null, at: Date.now() };
-    } catch (e) { r.anaTried = true; log('auto', 'тональность и темп не определились: ' + (e && e.message), 'w'); }
+      const { mirSupported, analyzeMir } = await import('../audio/mir.js');
+      if (mirSupported()) {
+        ana = analyzeMir(r.blob);
+        const a = await ana.promise;
+        r.ana = { pc: a.key.pc, minor: a.key.minor, conf: a.key.conf, cents: a.key.cents ?? null, bpm: a.beats.bpm || null, bpb: a.beats.beatsPerBar || null, beats: a.beats.beats, downbeats: a.beats.downbeats, chords: a.chords, v: 2, at: Date.now() };
+      } else {
+        const { analyzeAudio } = await import('./songanalyze.js');
+        const a = await analyzeAudio(r.blob);
+        r.ana = { pc: a.key ? a.key.pc : null, minor: !!(a.key && a.key.minor), cents: a.tuning ? a.tuning.cents : null, bpm: a.tempo ? Math.round(a.tempo.bpm) : null, v: 1, at: Date.now() };
+      }
+    } catch (e) {
+      if (e && e.message === 'cancel') { ana = null; return; } // повторится позже
+      r.anaTried = true; log('auto', 'разбор записи не удался: ' + (e && e.message), 'w');
+    }
+    ana = null;
     await files.save(r);
   }
   async function tick() {
@@ -65,7 +81,7 @@ export function createAutoStems(app) {
   }
   function schedule(ms = DELAY_MS) { if (timer) return; timer = setTimeout(tick, ms); }
   // зазвучало — прервать фоновое разделение (между сегментами), доделает позже
-  const onSound = () => { const c = jobs.current; if (c && c.auto) jobs.cancel(); };
+  const onSound = () => { const c = jobs.current; if (c && c.auto) jobs.cancel(); if (ana) ana.cancel(); };
   const api = {
     start() { files.subscribe(() => schedule()); schedule(DELAY_MS); setInterval(() => { if (!quiet()) onSound(); else schedule(); }, 5000); },
     kick: () => schedule(1000),
