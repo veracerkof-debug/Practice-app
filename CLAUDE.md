@@ -56,7 +56,7 @@
 - Web Audio API (единый AudioContext, шины, микшер), YIN для тюнера.
 - Хранение: localStorage (лёгкие данные) + IndexedDB (аудио, табы). Local-first.
 - alphaTab (MPL-2.0) для табулатур, pdf.js (Apache-2.0) для нот и табов в PDF, шрифт Bravura (OFL), звуковой банк SONiVOX (Apache-2.0).
-- Android: Capacitor. Windows: Tauri 2 (`src-tauri/`, системный WebView2; отличия от браузера — `src/core/desktop.js`: «Сохранить как», папка Melete, файлы при запуске, F11).
+- Android: Capacitor. Windows: Tauri 2 (`src-tauri/`, системный WebView2; отличия от браузера — `src/core/desktop.js`: «Сохранить как», папка Melete, файлы при запуске, F11; дорожки — нативный ONNX Runtime в Rust, `src-tauri/src/demucs.rs`).
 
 ## Архитектура
 - **Папки**: `src/core` (ядро), `src/modules/<id>` (инструменты), `src/audio` (звук), `src/i18n` (переводы),
@@ -108,7 +108,7 @@
   дорожки — WAV с `stem: { src, part, mode, db }`, пустые не сохраняются; ноты — `.mid` с `trans: { src }`), `src/core/autostems.js` — фоновая очередь: каждая новая запись
   сама делится на дорожки (настройка «Дорожки автоматически»: выкл / 2 / 4 / 6, по умолчанию 4; порядок — от недавних, `device.audio.used`; «Когда считать» `settings.autoPower`: на зарядке (Battery Status API) / всегда; «Улучшенное разделение» `settings.autoHq`, выкл: вторая очередь после обычной — три прохода со сдвигом окна и шаг вдвое короче, ×4,5 времени, первая версия остаётся, в плеере выбор версии; тот же переключатель — в шторке плеера) и получает тональность и темп (`rec.ana`, настройка «Тональность и темп автоматически»),
   только в тишине (ничего не звучит, нет занятия и записи), зазвучало — прерывается и повторится. Движки: `src/audio/stems.js` (HTDemucs; Android — нативный ONNX Runtime на всех ядрах через плагин
-  `Stems` (`StemsPlugin.java`, `Demucs.java`), Windows и dev — ONNX Runtime Web с собственным движком `src/audio/demucs.js` (STFT, маски, склейка; N дорожек), файлы `ort/…` в сборке;
+  `Stems` (`StemsPlugin.java`, `Demucs.java`); Windows — нативный ONNX Runtime из Rust (`src-tauri/src/demucs.rs`, команды `stems_*` в `lib.rs`, адаптер `src/audio/stemsdesktop.js` с контрактом плагина Android, крейт `ort` со статическими бинарниками pyke); dev и браузер — ONNX Runtime Web с собственным движком `src/audio/demucs.js` (STFT, маски, склейка; N дорожек), файлы `ort/…` в сборке;
   модели — htdemucs 4 дорожки и htdemucs_6s), `src/audio/transcribe.js` (Basic Pitch в TensorFlow.js, модель 0,9 МБ в `public/bp/`, есть и в вебе). **Разбор записи моделями** — `src/audio/mir.js` (рабочий поток `mir.worker.js`, обработка выходов — `mirpost.js`, лог-CQT по формулам librosa — `src/music/cqt.js`; модели MIT из `build/models.json` в `public/models/mir/`, APK и Windows, в вебе — своя хрома `songanalyze.js`): тональность — S-KEY, доли, сильные доли и темп — Beat This! (мел-спектр — вспомогательный граф), аккорды — ChordMini (170 видов). Результат — `rec.ana` `{ pc, minor, cents, bpm, bpb, beats, downbeats, chords: [{ t, d, c }], v: 2 }`; в плеере — полоса аккордов и такты на волне, текущий и следующий аккорд (с учётом сдвига высоты), A и B притягиваются к долям, в списке — тональность, темп и размер. В плеере — шторка «Дорожки и ноты»:
   режим, разделить, микшер дорожек на ходу (громкость, выкл — в движке `stretchplayer.js` два узла с перекрёстным затуханием, звук не рвётся), в студию; ноты — снять, послушать, в «Табы», в студию.
 - **Две сборки**: `prod` (Google Play/F-Droid — только встроенные модули, без отладки) и

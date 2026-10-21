@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-stems-run"
+description = "Enables the stems_run command without any pre-configured scope."
+commands.allow = ["stems_run"]
+
+[[permission]]
+identifier = "deny-stems-run"
+description = "Denies the stems_run command without any pre-configured scope."
+commands.deny = ["stems_run"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-stems-begin"
+description = "Enables the stems_begin command without any pre-configured scope."
+commands.allow = ["stems_begin"]
+
+[[permission]]
+identifier = "deny-stems-begin"
+description = "Denies the stems_begin command without any pre-configured scope."
+commands.deny = ["stems_begin"]

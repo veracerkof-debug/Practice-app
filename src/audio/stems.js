@@ -3,14 +3,18 @@
 // • Android — нативный ONNX Runtime на всех ядрах (плагин Stems: StemsPlugin.java, Demucs.java) — WebView не даёт
 //   WebAssembly больше одного потока, нативно в разы быстрее; запись уходит в плагин файлом, дорожки читаются
 //   из кэша по Capacitor.convertFileSrc;
-// • Windows и браузер — ONNX Runtime Web (WebAssembly; с изоляцией — в несколько потоков, иначе в один) и свой движок demucs.js
-//   (STFT, окна, склейка) в своём рабочем потоке (stems.worker.js), интерфейс не замирает.
+// • Windows — нативный ONNX Runtime из Rust (src-tauri/src/demucs.rs; команды stems_*, адаптер stemsdesktop.js с тем же
+//   контрактом, что у плагина Android);
+// • браузер (и запасной путь) — ONNX Runtime Web (WebAssembly; с изоляцией — в несколько потоков, иначе в один) и свой
+//   движок demucs.js (STFT, окна, склейка) в своём рабочем потоке (stems.worker.js), интерфейс не замирает.
 // Ход — по сегментам (~8 с записи), отмена — между сегментами.
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { peaks } from './voicefx.js';
+import { isDesktop } from '../core/desktop.js';
 
-const Native = Capacitor.isNativePlatform() ? registerPlugin('Stems') : null;
-export const stemsNative = () => !!Native;
+let Native = Capacitor.isNativePlatform() ? registerPlugin('Stems') : null;
+if (!Native && isDesktop()) import('./stemsdesktop.js').then((m) => { Native = m.desktopStems; }).catch(() => {});
+export const stemsNative = () => !!Native || isDesktop();
 // В веб-сборке моделей нет (рабочий поток подменён пустышкой) — разделение недоступно, кнопки прячутся
 export const stemsSupported = () => !(typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__);
 
@@ -45,12 +49,12 @@ export function partsForMode(raw, mode) {
 }
 
 // Потоков для счёта: нативно — все ядра (до 8); WebAssembly с изоляцией (Windows) — до 4, иначе один
-export const stemsThreads = () => (Native ? Math.max(1, Math.min(8, navigator.hardwareConcurrency || 4)) : globalThis.crossOriginIsolated ? Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1)) : 1);
+export const stemsThreads = () => (Native || isDesktop() ? Math.max(1, Math.min(16, navigator.hardwareConcurrency || 4)) : globalThis.crossOriginIsolated ? Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1)) : 1);
 // Оценка времени (с) для записи длиной dur с: нативно на 4 ядрах ×1,25 (телефон — с запасом), WebAssembly на 4 потоках
 // ×1,9, на одном ×4,5
 // hq — «ночное» качество (три прохода со сдвигом и шаг окна вдвое короче): ≈ ×4,5
 export const HQ_MUL = 4.5;
-export const estimateSec = (dur, mode = '4', hq = false) => Math.round(dur * (Native ? 2 : stemsThreads() > 1 ? 2.5 : 5.5) * (mode === '6' ? 1.5 : 1) * (hq ? HQ_MUL : 1));
+export const estimateSec = (dur, mode = '4', hq = false) => Math.round(dur * (Native || isDesktop() ? (isDesktop() ? 0.5 : 2) : stemsThreads() > 1 ? 2.5 : 5.5) * (mode === '6' ? 1.5 : 1) * (hq ? HQ_MUL : 1));
 
 let worker = null, ready = null, readyModel = '';
 // Рабочий поток с моделью (stems.worker.js): создаётся один раз на модель, модель грузится один раз; другая модель — заново
@@ -87,7 +91,7 @@ async function sendChannel(ch, data, onFrac, isCancelled) {
   const u8 = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
   for (let i = 0; i < u8.length; i += CHUNK) {
     if (isCancelled()) throw new Error('cancel');
-    await Native.push({ ch, b64: b64(u8.subarray(i, i + CHUNK)) });
+    if (Native.pushRaw) await Native.pushRaw(ch, u8.subarray(i, i + CHUNK)); else await Native.push({ ch, b64: b64(u8.subarray(i, i + CHUNK)) });
     onFrac((i + CHUNK) / u8.length);
   }
 }
@@ -115,7 +119,7 @@ function separateNative(blob, onStage, mode, hq) {
       const { files, total } = await Native.run({ model: mode === '6' ? '6' : '4', hq: !!hq });
       running = false;
       const raw = {};
-      for (const k of Object.keys(files)) raw[k] = await readPart(files[k], total);
+      for (const k of Object.keys(files)) raw[k] = Native.readPart ? await Native.readPart(k, total) : await readPart(files[k], total);
       return { parts: partsForMode(raw, mode), mix: { left, right }, dur, sr: SR };
     } finally {
       running = false;
@@ -130,6 +134,11 @@ function separateNative(blob, onStage, mode, hq) {
 // mode — '2' | '4' | '6'; hq — «ночное» качество (дольше в HQ_MUL раз, чище края дорожек); cancel() — прервать
 export function separate(blob, { onStage = () => {}, mode = '4', hq = false } = {}) {
   if (Native) return separateNative(blob, onStage, mode, hq);
+  if (isDesktop()) { // адаптер ещё грузится — дождаться, в браузер не уходить
+    let job = null, cancelled = false;
+    const promise = import('./stemsdesktop.js').then((m) => { Native = m.desktopStems; if (cancelled) throw new Error('cancel'); job = separateNative(blob, onStage, mode, hq); return job.promise; });
+    return { promise, cancel() { cancelled = true; if (job) job.cancel(); } };
+  }
   let cancelled = false;
   const run = (async () => {
     onStage('load', 0);
