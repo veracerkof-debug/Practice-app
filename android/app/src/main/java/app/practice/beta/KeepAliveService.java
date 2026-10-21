@@ -33,7 +33,7 @@ public class KeepAliveService extends Service {
     static volatile String lastTitle = "Melete", lastText = "", lastIcon = "";
     static final int ACCENT = 0xFF9C7242; // цвет акцента приложения (src/styles/tokens.css)
     static volatile boolean running = false;
-    // Моргание: лицо в уведомлении живое — раз в несколько секунд на миг закрытые глаза (кадр mn_<f|m>_<лицо>B);
+    // Моргание: лицо в уведомлении живое — раз в несколько секунд на миг закрытые глаза (кадр mn_<f|m>_<лицо>_blink);
     // два обновления уведомления без звука и без всплытия (setOnlyAlertOnce) — экран и батарею не трогает
     static final long BLINK_EVERY = 6500, BLINK_MS = 180;
     static volatile boolean blink = false;
@@ -42,7 +42,7 @@ public class KeepAliveService extends Service {
         @Override public void run() {
             if (!running) return;
             blink = !blink;
-            if (blink && faceId(KeepAliveService.this, lastIcon + "B") == 0) { blink = false; ui.postDelayed(this, BLINK_EVERY); return; }
+            if (blink && faceId(KeepAliveService.this, lastIcon + "_blink") == 0) { blink = false; ui.postDelayed(this, BLINK_EVERY); return; }
             refresh(KeepAliveService.this);
             ui.postDelayed(this, blink ? BLINK_MS : BLINK_EVERY);
         }
@@ -62,7 +62,7 @@ public class KeepAliveService extends Service {
     static Notification build(Context c, String title, String text, String icon) {
         Intent open = c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
         PendingIntent pi = open == null ? null : PendingIntent.getActivity(c, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        int face = faceId(c, blink ? icon + "B" : icon);
+        int face = faceId(c, blink ? icon + "_blink" : icon);
         if (face == 0) face = faceId(c, icon);
         // В духе приложения: в строке состояния — лицо маскота одним цветом (ic_stat_melete), цвет акцента,
         // лицо маскота без кружка — крупной картинкой; оно моргает (blinker)

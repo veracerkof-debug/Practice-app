@@ -22,12 +22,12 @@ for (const g of ['f', 'm']) for (const mood of NOTIFY_MOODS) {
 }
 // Уведомление «Идёт занятие» (KeepAliveService): лицо без кружка, линии цветом акцента — читается и на светлой,
 // и на тёмной шторке → mn_<f|m>_<лицо>.png
-const BARE = ['calm', 'sing', 'wait', 'focus', 'calmB', 'singB', 'waitB', 'focusB']; // …B — кадр моргания (глаза закрыты)
+const BARE = ['calm', 'sing', 'wait', 'focus', 'calmB', 'singB', 'waitB', 'focusB']; // …B — кадр моргания (глаза закрыты); файл — mn_<f|m>_<лицо>_blink (имена ресурсов — только строчные)
 const bare = (svg) => '<!doctype html><meta charset="utf-8"><style>:root{--ink:#9C7242;--cell:transparent;--sep:transparent;--tint:#9C7242}html,body{margin:0;background:transparent}' + css +
   '.mascot .ms{stroke-width:3.8}.mascot .mt{stroke-width:2.8}.box{width:' + PX + 'px;height:' + PX + 'px}.box svg{display:block;width:100%;height:100%}</style><div class="box">' + svg + '</div>';
 for (const g of ['f', 'm']) for (const mood of BARE) {
   await p.setContent(bare(mascotSVG(mood, { size: PX, gender: g, ring: false })));
-  await (await p.$('.box')).screenshot({ path: DIR + 'mn_' + g + '_' + mood + '.png', omitBackground: true });
+  await (await p.$('.box')).screenshot({ path: DIR + 'mn_' + g + '_' + mood.replace(/B$/, '_blink') + '.png', omitBackground: true });
 }
 await b.close();
 console.log('уведомления:', NOTIFY_MOODS.length * 2 + BARE.length * 2, 'картинок');
