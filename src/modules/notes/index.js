@@ -439,7 +439,7 @@ function scoreView() {
       : '<span class="sgrow aname" style="text-align:left">' + esc(AT.cur.name) + '</span>') +
     icb('data-x="tzoom" data-d="-1"', I.minus, t('smaller'), 'sm') + icb('data-x="tzoom" data-d="1"', I.plus, t('bigger'), 'sm') +
     '<button class="ic txt sm' + (st().prof === 'both' ? ' act' : '') + '" data-x="tprof" aria-pressed="' + (st().prof === 'both') + '" aria-label="' + t('scoreTab') + '">♪+T</button>' +
-    (daw && AT.proj ? '<button class="btn sm" data-x="dstudio">' + t('toStudio') + '</button>' : '') + '</div>' +
+    (daw && AT.proj && ctx.hasTool('studio') ? '<button class="btn sm" data-x="dstudio">' + t('toStudio') + '</button>' : '') + '</div>' +
     (big() ? barHTML() : '') + '<div class="atwrap" id="atSlot">' + (AT.state === 'loading' ? '<div class="atload">' + ctx.ui.loader('beat', AT.cur.name) + '</div>' : '') + '</div>';
 }
 

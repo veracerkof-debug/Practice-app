@@ -372,7 +372,7 @@ function stemsSheet() {
     if (j && j.kind === 'stems') h += progress(j, 'data-sjcancel');
     else if (set.length) {
       h += stemRowsHTML(tr, set) +
-        '<button class="cell act" data-sreset>' + ui.esc(t('stems.reset')) + '</button><button class="cell act" data-sstudio>' + ui.esc(t('stems.toStudio')) + '</button>';
+        '<button class="cell act" data-sreset>' + ui.esc(t('stems.reset')) + '</button>' + (ctx.hasTool('studio') ? '<button class="cell act" data-sstudio>' + ui.esc(t('stems.toStudio')) + '</button>' : '');
     } else if (can) h += '<button class="cell act center b" data-sgo>' + ui.esc(t('stems.go', { t: fmtT(estimateSec(tr.dur || 60, m, hq())) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
     else h += '<div class="cellcol"><span class="l2">' + ui.esc(t('stems.web')) + '</span></div>';
     // «ночное» качество — один переключатель с настройкой «Дорожки автоматически»: в фоне пересчитает и готовые наборы
@@ -389,7 +389,7 @@ function stemsSheet() {
     h += '<div class="hdr">' + ui.esc(t('notes.hdr')) + '</div><div class="group">';
     if (j && j.kind === 'notes') h += progress(j, 'data-njcancel');
     else if (notes) h += '<button class="cell act" data-nlisten aria-pressed="' + !!LN + '"><span class="grow">' + ui.esc(t('notes.n', { n: notes.notes || 0 })) + '</span><span class="val">' + ui.esc(t(LN ? 'notes.stop' : 'notes.listen')) + '</span></button>' +
-      '<button class="cell act" data-ntabs>' + ui.esc(t('notes.toTabs')) + '</button><button class="cell act" data-nstudio>' + ui.esc(t('notes.toStudio')) + '</button><button class="cell act" data-ngo>' + ui.esc(t('notes.redo')) + '</button>';
+      '<button class="cell act" data-ntabs>' + ui.esc(t('notes.toTabs')) + '</button>' + (ctx.hasTool('studio') ? '<button class="cell act" data-nstudio>' + ui.esc(t('notes.toStudio')) + '</button>' : '') + '<button class="cell act" data-ngo>' + ui.esc(t('notes.redo')) + '</button>';
     else h += '<div class="cellcol"><span>' + ui.esc(t('notes.sens')) + '</span>' + ui.seg('nsens', [['normal', t('notes.sensNormal')], ['high', t('notes.sensHigh')]], st().nsens || 'normal', t('notes.sens')) + '</div>' +
       '<button class="cell act" data-nbends aria-pressed="' + !!st().nbends + '"><span class="grow">' + ui.esc(t('notes.bends')) + '<span class="bksub">' + ui.esc(t('notes.bendsHint')) + '</span></span><span class="val">' + (st().nbends ? '✓' : '') + '</span></button>' +
       '<button class="cell act center b" data-ngo>' + ui.esc(t('notes.go')) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');

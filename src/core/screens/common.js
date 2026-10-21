@@ -29,7 +29,8 @@ export const TAB_IDS = ['home', 'library', 'calendar', 'tools', 'studio'];
 // Любой инструмент можно сделать вкладкой (settings.tabMods — список id; удержание карточки → «Сделать вкладкой»,
 // удержание вкладки → «В инструменты»); вкладок — до TABS_MAX (settings.js)
 export const tabMods = (st) => (st.tabMods || []).filter((id) => moduleById(id) && isOn(st, id) && !TAB_IDS.includes(id) && id !== 'bible');
-export const tabIds = (st) => { const base = isOn(st, 'bible') ? [...TAB_IDS, 'bible'] : TAB_IDS, extra = tabMods(st); return extra.length ? [...base, ...extra] : base; };
+// Постоянные вкладки-модули («Студия», «Библия») — только пока модуль включён в «Модулях и функциях»
+export const tabIds = (st) => { const base = TAB_IDS.filter((id) => id !== 'studio' || isOn(st, 'studio')), extra = tabMods(st); if (isOn(st, 'bible')) base.push('bible'); return extra.length ? [...base, ...extra] : base; };
 // Вкладки, за которыми стоит модуль на весь экран (постоянные — «Библия», «Студия»; остальные — по tabMods)
 export const TAB_MODULES = { bible: 'bible', studio: 'studio' };
 export const tabModuleOf = (st, id) => TAB_MODULES[id] || (tabMods(st).includes(id) ? id : null);

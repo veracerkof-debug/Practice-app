@@ -13,6 +13,8 @@ import { createFxPanel } from '../ui/fxpanel.js';
 import { gemOf } from './mastery.js';
 import { firstHelp, showHelp } from './help.js';
 import { guardOpen, guardClose } from './guard.js';
+import { isOn } from './settings.js';
+import { moduleById } from '../modules/index.js';
 
 export const SIZES = ['full', 'half', 'quarter', 'strip'];
 
@@ -157,6 +159,8 @@ export function makeCtx(app, mod) {
     },
     // Открыть другой инструмент (например, пианино с подсветкой гаммы)
     openTool: (id) => app.openTool && app.openTool(id),
+    // Есть ли другой модуль и включён ли он (кнопки «В студию» прячутся, когда студия выключена)
+    hasTool: (id) => !!moduleById(id) && isOn(app.store.state.settings, id),
     // Открыть инструмент с переданными настройками (например, «Табы» на файле: { lastTab, sec })
     openIn(id, patch) { Object.assign(app.device[id] ??= {}, patch); app.saveDevice(); if (app.openTool) app.openTool(id); },
     // инструкция модуля (для вкладок-модулей, у которых нет шапки с «?»)
