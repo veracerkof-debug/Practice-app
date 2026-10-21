@@ -11,7 +11,7 @@ export async function pitchShifter(el, dest) {
   const ac = dest.context, src = ac.createMediaElementSource(el), dry = ac.createGain();
   src.connect(dry).connect(dest);
   let node = null, loading = null, cur = 0;
-  const load = () => loading || (loading = import('signalsmith-stretch').then((m) => m.default(ac, { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] })).then((n) => {
+  const load = () => loading || (loading = import('./vendor/signalsmith-stretch.mjs').then((m) => m.default(ac, { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] })).then((n) => {
     node = n;
     node.connect(dest);
     node.start();

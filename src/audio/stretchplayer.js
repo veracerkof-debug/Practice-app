@@ -8,7 +8,7 @@
 // Узлов два (A и B): дорожки записи пересводятся в запасной узел, пока звучит рабочий, и подхватываются
 // перекрёстным затуханием в 60 мс — смена громкости дорожки на ходу не рвёт звук и не сбивает положение.
 let loading = null;
-const lib = () => loading || (loading = import('signalsmith-stretch').then((m) => m.default));
+const lib = () => loading || (loading = import('./vendor/signalsmith-stretch.mjs').then((m) => m.default));
 
 export const stretchAvailable = () => typeof AudioWorkletNode !== 'undefined';
 

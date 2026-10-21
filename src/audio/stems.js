@@ -91,7 +91,7 @@ async function sendChannel(ch, data, onFrac, isCancelled) {
   const u8 = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
   for (let i = 0; i < u8.length; i += CHUNK) {
     if (isCancelled()) throw new Error('cancel');
-    if (Native.pushRaw) await Native.pushRaw(ch, u8.subarray(i, i + CHUNK)); else await Native.push({ ch, b64: b64(u8.subarray(i, i + CHUNK)) });
+    if (Native.desktop) await Native.pushRaw(ch, u8.subarray(i, i + CHUNK)); else await Native.push({ ch, b64: b64(u8.subarray(i, i + CHUNK)) });
     onFrac((i + CHUNK) / u8.length);
   }
 }
@@ -119,7 +119,7 @@ function separateNative(blob, onStage, mode, hq) {
       const { files, total } = await Native.run({ model: mode === '6' ? '6' : '4', hq: !!hq });
       running = false;
       const raw = {};
-      for (const k of Object.keys(files)) raw[k] = Native.readPart ? await Native.readPart(k, total) : await readPart(files[k], total);
+      for (const k of Object.keys(files)) raw[k] = Native.desktop ? await Native.readPart(k, total) : await readPart(files[k], total);
       return { parts: partsForMode(raw, mode), mix: { left, right }, dur, sr: SR };
     } finally {
       running = false;

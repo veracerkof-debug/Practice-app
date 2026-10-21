@@ -5,6 +5,7 @@ const core = () => import('@tauri-apps/api/core');
 const CHUNK = 4 << 20;
 
 export const desktopStems = {
+  desktop: true, // признак адаптера: у плагина Capacitor любое имя метода «есть» (прокси), по нему выбирать нельзя
   async begin() { const { invoke } = await core(); await invoke('stems_begin'); },
   // Кусок канала: float32 → тело запроса, номер канала — заголовок
   async pushRaw(ch, u8) { const { invoke } = await core(); await invoke('stems_push', u8, { headers: { ch: String(ch) } }); },

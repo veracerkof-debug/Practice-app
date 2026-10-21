@@ -23,6 +23,7 @@ button.cell:active{background:var(--fill)}
 .round{width:44px;height:44px;border-radius:50%;background:var(--fill);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;flex:none;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .round svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
 .seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;gap:2px;width:100%}
+.cell>.seg{width:auto;flex:1 1 55%;min-width:0} /* рядом с подписью — делит строку, не ложится поверх */
 .seg button{flex:1;min-height:32px;border-radius:7px;font-size:14px;font-weight:500;padding:0 6px;white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--cell);box-shadow:0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
 .sw{position:relative;width:51px;height:31px;flex:none}

@@ -234,14 +234,15 @@ function settingsSheet() {
   const { t, ui } = ctx, p = proj();
   const NAMES = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
   const row = (lab, right) => '<div class="cell"><span class="grow">' + ui.esc(lab) + '</span>' + right + '</div>';
+  const rowSeg = (lab, seg) => '<div class="cellcol"><span>' + ui.esc(lab) + '</span>' + seg + '</div>'; // переключатель на всю ширину — под подписью, не поверх неё
   const step = (k, v, lab) => '<span class="stepper"><button type="button" data-st="' + k + '" data-d="-1" aria-label="' + ui.esc(lab + ' −') + '">−</button><b class="num stv">' + v + '</b><button type="button" data-st="' + k + '" data-d="1" aria-label="' + ui.esc(lab + ' +') + '">+</button></span>';
   const body = () => ui.snav(t('settings')) +
     '<div class="group"><label class="cell"><input class="inp left" data-name maxlength="40" placeholder="' + ui.esc(t('nameHint')) + '" value="' + ui.esc(p.name) + '" aria-label="' + ui.esc(t('pname')) + '"></label></div>' +
-    '<div class="hdr">' + ui.esc(t('tempo')) + '</div><div class="group">' + row(t('bpm'), step('bpm', p.bpm, t('bpm'))) + row(t('meter'), ui.seg('stnum', [['3', '3/4'], ['4', '4/4'], ['6', '6/8']], String(p.num), t('meter'))) +
+    '<div class="hdr">' + ui.esc(t('tempo')) + '</div><div class="group">' + row(t('bpm'), step('bpm', p.bpm, t('bpm'))) + rowSeg(t('meter'), ui.seg('stnum', [['3', '3/4'], ['4', '4/4'], ['6', '6/8']], String(p.num), t('meter'))) +
     '<label class="cell"><span class="grow">' + ui.esc(t('swing')) + '<span class="bksub">' + ui.esc(t('swingHint')) + '</span></span><b class="num" style="min-width:4ch;text-align:right">' + Math.round(p.swing * 100) + '%</b></label><div class="cell"><input type="range" class="strange" min="0" max="1" step="0.05" value="' + p.swing + '" data-swing aria-label="' + ui.esc(t('swing')) + '"></div></div>' +
     '<div class="hdr">' + ui.esc(t('key')) + '</div><div class="hscroll" style="padding:0 4px">' + NAMES.map((n, pc) => '<button class="pill sm" data-key="' + pc + '" aria-pressed="' + (pc === p.key.pc) + '">' + n + '</button>').join('') + '</div>' +
     '<div class="group" style="margin-top:8px"><div class="cellcol">' + ui.seg('stmin', [['0', t('maj')], ['1', t('min')]], p.key.minor ? '1' : '0', t('key')) + '</div></div>' +
-    '<div class="hdr">' + ui.esc(t('rec.title')) + '</div><div class="group">' + row(t('rec.countIn'), ui.seg('stcnt', [['0', '0'], ['1', '1'], ['2', '2']], String(countIn()), t('rec.countIn'))) +
+    '<div class="hdr">' + ui.esc(t('rec.title')) + '</div><div class="group">' + rowSeg(t('rec.countIn'), ui.seg('stcnt', [['0', '0'], ['1', '1'], ['2', '2']], String(countIn()), t('rec.countIn'))) +
     row(t('rec.lat'), step('lat', Math.round(recLat() * 1000) + ' ms', t('rec.lat'))) + '</div><p class="ftr">' + ui.esc(t('rec.latHint')) + '</p>' +
     '<div class="group" style="margin-top:16px"><button class="cell" data-x2="export"><span class="grow">' + ui.esc(t('export')) + '</span>' + ui.icons.chev + '</button><button class="cell danger center" data-delproj>' + ui.esc(t('delete')) + '</button></div>';
   ui.sheet(body, (el, sh) => {
