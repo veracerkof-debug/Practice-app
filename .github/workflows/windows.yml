@@ -44,12 +44,17 @@ jobs:
       - name: Модели
         run: npm run models
 
-      # beforeBuildCommand в tauri.conf.json собирает веб-часть (npm run build); whisper.cpp собирается cmake-ом,
-      # привязки Rust берутся готовые (без libclang)
+      # whisper.cpp собирается cmake-ом, привязки Rust генерирует bindgen прямо на Windows (готовые в крейте сделаны
+      # под Linux и на MSVC не проходят проверку размеров структур) — ему нужен libclang из LLVM образа
+      - name: LLVM для bindgen
+        shell: bash
+        run: |
+          if [ ! -f "/c/Program Files/LLVM/bin/libclang.dll" ]; then choco install llvm -y --no-progress; fi
+          echo "LIBCLANG_PATH=C:\\Program Files\\LLVM\\bin" >> "$GITHUB_ENV"
+
+      # beforeBuildCommand в tauri.conf.json собирает веб-часть (npm run build)
       - name: Сборка установщика
         run: npx tauri build --ci
-        env:
-          WHISPER_DONT_GENERATE_BINDINGS: '1'
 
       - name: Переименовать
         shell: bash
