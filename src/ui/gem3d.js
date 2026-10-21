@@ -299,7 +299,8 @@ function qmat(q) {
 }
 
 // Свет (экран: y вниз, зритель — со стороны +z): главный сверху-слева, заполняющий справа, контровой снизу-сзади
-const L0 = norm([-0.5, -0.75, 0.55]), L1 = norm([0.75, -0.25, 0.5]), L2 = norm([0.2, 0.7, 0.45]);
+// свет — тот же, что у камня «Минимала» (stone.js: L), чтобы все камни были в одной стилистике
+const L0 = norm([-0.55, -0.75, 0.6]), L1 = norm([0.75, -0.25, 0.5]), L2 = norm([0.2, 0.7, 0.45]);
 const H0 = norm([L0[0], L0[1], L0[2] + 1]), H1 = norm([L1[0], L1[1], L1[2] + 1]), H2 = norm([L2[0], L2[1], L2[2] + 1]);
 const LIN = norm([0.45, -0.55, -0.7]); // свет внутри камня — входит сверху и отражается от задних граней
 
@@ -364,10 +365,10 @@ export function paintGem(ctx, mesh, q, cx, cy, s, { frac = 0, dark = false, mono
     // фактура поверхности: штриховка граней, шероховатость, раковистые волны
     if (pl.deco && pl.deco.type === 'striae') {
       const a = P.pt.axis, ph = (po[0] * a[0] + po[1] * a[1] + po[2] * a[2]) * (pl.deco.along ? 70 : 0) + (pl.deco.along ? 0 : (po[0] + po[2]) * 60);
-      const amp = 0.04 * Math.sin(ph + vnoise(po[0] * 9, po[1] * 9, po[2] * 9) * 3);
+      const amp = 0.022 * Math.sin(ph + vnoise(po[0] * 9, po[1] * 9, po[2] * 9) * 3);
       nx += P.ax[0] * amp; ny += P.ax[1] * amp; nz += P.ax[2] * amp;
     }
-    const fr = (m.frost || 0.025) * (pl.deco && pl.deco.type === 'trigons' ? 1.3 : 1);
+    const fr = (m.frost || 0.012) * (pl.deco && pl.deco.type === 'trigons' ? 1.3 : 1); // шероховатость мягче: гладкие грани, как обкатанный камень
     const b1 = vnoise(po[0] * 40 + pl.k * 9, po[1] * 40, po[2] * 40) - 0.5, b2 = vnoise(po[0] * 40, po[1] * 40 + 5, po[2] * 40 + pl.k * 9) - 0.5;
     nx += b1 * fr; ny += b2 * fr;
     if (m.opaque === 'glass') { // обсидиан: концентрические волны раковистого скола от точки удара
@@ -410,7 +411,7 @@ export function paintGem(ctx, mesh, q, cx, cy, s, { frac = 0, dark = false, mono
       const Tr = Math.exp(-(-Math.log(m.tint[0])) * thick * dens * 2.2), Tg = Math.exp(-(-Math.log(m.tint[1])) * thick * dens * 2.2), Tb = Math.exp(-(-Math.log(m.tint[2])) * thick * dens * 2.2);
       // рисунок отражений внутри — по задней грани (её ребра тоже видны насквозь)
       const bx2 = P.NX[h.bi], by2 = P.NY[h.bi], bz2 = P.NZ[h.bi];
-      const inner = 0.42 + 0.85 * Math.pow(Math.max(0, -(bx2 * LIN[0] + by2 * LIN[1] + bz2 * LIN[2])), 2) + 0.25 * Math.exp(-h.gapb / 0.02);
+      const inner = 0.5 + 0.8 * Math.pow(Math.max(0, -(bx2 * LIN[0] + by2 * LIN[1] + bz2 * LIN[2])), 2) + 0.22 * Math.exp(-h.gapb / 0.02);
       let ir = inner * Tr, ig = inner * Tg, ib = inner * Tb;
       if (m.fire) { // огонь алмаза: задние грани под светом — в цвета радуги
         const fl = Math.pow(Math.max(0, -(bx2 * LIN[0] + by2 * LIN[1] + bz2 * LIN[2])), 6) * (0.5 + 0.6 * f01), hue = (bx2 * 2.1 + by2 * 3.3 + 7) * 2.4;
@@ -418,20 +419,21 @@ export function paintGem(ctx, mesh, q, cx, cy, s, { frac = 0, dark = false, mono
       }
       if (m.glow) { ir += 0.12 * lam; } // рубин светится красным (флуоресценция)
       // облачка (молочные включения), «сад» изумруда — внутри, по середине луча
-      const cl = fbm(mid[0] * 3.3 + P.pt.seed % 97, mid[1] * 3.3, mid[2] * 3.3), cloud = smooth(0.55, 0.85, cl) * m.cloud * Math.min(1, thick * 1.4);
+      const cl = fbm(mid[0] * 3.3 + P.pt.seed % 97, mid[1] * 3.3, mid[2] * 3.3), cloud = smooth(0.55, 0.85, cl) * m.cloud * 0.6 * Math.min(1, thick * 1.4);
       let gard = 0;
       if (m.garden) gard = smooth(0.62, 0.8, fbm(mid[0] * 7 + 3, mid[1] * 7, mid[2] * 7)) * 0.55 * Math.min(1, thick * 2);
       const ph = P.DP ? phantomAt(P, X, Y) : 0;
-      const spc = sp(H0, 220) * 0.95 + sp(H1, 140) * 0.45 + sp(H2, 90) * 0.2; // узкие блики: грань вспыхивает пятнами, а не вся
-      const rim = 0.32 * edge * (0.6 + 0.5 * lam); // кромка ловит свет
-      const refl = fres * env * 0.55 + 0.08 * lam;
+      // блики как у камня «Минимала»: один мягкий широкий (объём) плюс узкие вспышки граней
+      const spc = sp(H0, 26) * 0.16 + sp(H0, 220) * 0.6 + sp(H1, 140) * 0.3 + sp(H2, 90) * 0.15;
+      const rim = 0.26 * edge * (0.6 + 0.5 * lam) + Math.pow(1 - Math.max(0, nz), 3) * 0.1; // кромка и край силуэта ловят свет
+      const refl = fres * env * 0.5 + 0.1 * lam;
       r = ir * (1 - gard) + cloud * 0.85 + ph * 0.9 + refl + spc + rim;
       g = ig * (1 - gard * 0.6) + cloud * 0.86 + ph * 0.9 + refl + spc + rim;
       b = ib * (1 - gard) + cloud * 0.9 + ph * 0.92 + refl + spc + rim;
       // сквозь прозрачное видно фон — меньше там, где камень густой, в бликах и облачках
       const meanT = (Tr + Tg + Tb) / 3;
       a = Math.min(1, (1 - m.clear * meanT * (1 - fres)) + cloud + spc * 0.8 + rim * 0.6 + ph * 0.4) * cover;
-      a = Math.max(a, 0.32 * cover);
+      a = Math.max(a, 0.42 * cover); // камень плотнее на просвет: читается как тело, а не стекло
       if (spc > 1.1 && thick > 0.05) sparks.push([X, Y, spc]);
     }
     if (mono) { const yv = r * 0.3 + g * 0.59 + b * 0.11; r = g = b = yv; }
@@ -513,7 +515,7 @@ export function gemView(canvas, { gem, seed = 1, frac = 0, spin = true } = {}) {
     if (canvas.width !== Math.round(W * dpr)) { canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    paintGem(ctx, mesh, q, W / 2, H / 2 - Math.min(W, H) * 0.03, Math.min(W, H) * 0.4, { frac, dark: isDark(), mono: document.documentElement.dataset.style === 'mono', res: W > 80 ? 1 : 1.5 });
+    paintGem(ctx, mesh, q, W / 2, H / 2 - Math.min(W, H) * 0.03, Math.min(W, H) * 0.44, { frac, dark: isDark(), mono: document.documentElement.dataset.style === 'mono', res: W > 80 ? 1 : 1.5 });
   };
   const turn = (dx, dy) => { const a = Math.hypot(dx, dy); if (a > 1e-5) q = norm4(qmul(qaxis(dy / a, -dx / a, 0, a), q)); };
   // вращение — вокруг вертикали (как на витрине), с лёгким покачиванием
