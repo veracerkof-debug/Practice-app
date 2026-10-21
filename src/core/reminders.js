@@ -142,7 +142,7 @@ export async function openExactSettings() {
 // Уведомление из текста: { title, body, icon } → поля плагина. Значок в строке состояния — буква «Μ» логотипа
 // (res/drawable/ic_stat_melete.xml), лицо — одно: большая картинка, маскот с лицом по поводу (icon, remindtexts.js:
 // notifyIcon). largeBody — текст целиком в раскрытом виде (иначе Android обрезает историю на второй строке)
-const note = ({ title, body, icon }) => ({ title, body, largeBody: body, smallIcon: 'ic_stat_melete', iconColor: '#9C7242', ...(icon ? { largeIcon: icon } : {}) });
+const note = ({ title, body, icon }) => ({ title, body, largeBody: body, smallIcon: icon || 'ic_stat_melete', iconColor: '#9C7242' });
 
 // Пересчитать расписание. texts({ i, ts, n, slot, mode }) → { title, body, icon } — текст напоминания (маскот, цитаты)
 export async function reschedule(state, texts, now = Date.now()) {

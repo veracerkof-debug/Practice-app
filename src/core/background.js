@@ -16,12 +16,12 @@ export const bgStatus = () => (KA ? KA.status().catch(() => null) : Promise.reso
 export const bgAsk = { battery: () => KA && KA.askBattery(), notify: () => KA && KA.askNotify(), settings: () => KA && KA.openSettings(), autostart: () => KA && KA.autostart().catch(() => KA.openSettings()) };
 
 // Что сейчас идёт — строка для уведомления; null — ничего
-// Лицо маскота для уведомления (картинки mn_<f|m>_<лицо>.png — build/notifyicons.mjs); '' — без маскота
+// Лицо маскота для уведомления — маленьким значком (ns_<f|m>_<лицо>.png — build/notifyicons.mjs); '' — без маскота
 export function busyFace(app) {
   const g = mascotOf(app.store.state.settings);
   if (g === 'none') return '';
   const mood = app.active ? (app.active.pausedAt ? 'wait' : 'focus') : app.audio.metro.running ? 'calm' : app.soundingAudio() ? 'sing' : 'wait';
-  return 'mn_' + g + '_' + mood;
+  return 'ns_' + g + '_' + mood;
 }
 export function busyText(app) {
   if (app.active) return t(app.active.pausedAt ? 'bg.paused' : 'bg.session');

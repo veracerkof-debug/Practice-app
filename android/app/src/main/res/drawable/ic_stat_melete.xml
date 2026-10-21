@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Значок уведомлений в строке состояния: лицо маскота одним цветом (брови «Μ», глаза, нос-нотка, рот) — по рисунку
-     src/ui/mascot.js (лицо Мелеты, без круга). Лицо в самом уведомлении — большая картинка mn_* -->
+<!-- Значок уведомлений в строке состояния: восьмая нота одним цветом (знак приложения, не лицо). Лицо маскота в
+     уведомлении — одно, большая картинка по поводу (mn_* / ma_*, src/core/notifymood.js); два лица рядом — лишнее -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp" android:viewportWidth="100" android:viewportHeight="100">
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="7" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
-        android:pathData="M22,38 q14,-16 28,0 q14,-16 28,0"/>
-    <path android:fillColor="#FFFFFFFF" android:pathData="M36,50 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0"/>
-    <path android:fillColor="#FFFFFFFF" android:pathData="M64,50 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0"/>
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="6" android:strokeLineCap="round" android:fillColor="#00000000" android:pathData="M53,66 V50"/>
-    <path android:fillColor="#FFFFFFFF" android:pathData="M49,69 m-6,0 a6,4.5 0 1,0 12,0 a6,4.5 0 1,0 -12,0"/>
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="7" android:strokeLineCap="round" android:fillColor="#00000000" android:pathData="M38,86 q12,6 24,0"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M38,72 m-16,0 a16,12 0 1,0 32,0 a16,12 0 1,0 -32,0"/>
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="9" android:strokeLineCap="round" android:fillColor="#00000000" android:pathData="M54,72 V16"/>
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="9" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M54,16 q22,8 24,30 q-6,-10 -24,-8"/>
 </vector>

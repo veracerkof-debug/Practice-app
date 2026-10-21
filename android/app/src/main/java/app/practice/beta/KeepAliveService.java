@@ -8,7 +8,6 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
-import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -53,7 +52,7 @@ public class KeepAliveService extends Service {
         return PendingIntent.getService(c, code, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    // Лицо маскота (res/drawable-nodpi/mn_<f|m>_<лицо>.png, build/notifyicons.mjs) или 0 — без маскота
+    // Лицо маскота (res/drawable-nodpi/ns_<f|m>_<лицо>.png, build/notifyicons.mjs) или 0 — без маскота
     static int faceId(Context c, String icon) {
         if (icon == null || icon.isEmpty()) return 0;
         return c.getResources().getIdentifier(icon, "drawable", c.getPackageName());
@@ -64,10 +63,10 @@ public class KeepAliveService extends Service {
         PendingIntent pi = open == null ? null : PendingIntent.getActivity(c, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         int face = faceId(c, blink ? icon + "_blink" : icon);
         if (face == 0) face = faceId(c, icon);
-        // В духе приложения: в строке состояния — лицо маскота одним цветом (ic_stat_melete), цвет акцента,
-        // лицо маскота без кружка — крупной картинкой; оно моргает (blinker)
+        // Лицо маскота — одно: маленьким значком (строка состояния и слева в шторке, Android красит его цветом
+        // акцента); оно моргает (blinker). Без маскота — нота ic_stat_melete. Большой картинки нет
         NotificationCompat.Builder b = new NotificationCompat.Builder(c, CHANNEL)
-            .setSmallIcon(R.drawable.ic_stat_melete)
+            .setSmallIcon(face != 0 ? face : R.drawable.ic_stat_melete)
             .setColor(ACCENT)
             .setContentTitle(title)
             .setContentText(text)
@@ -77,7 +76,6 @@ public class KeepAliveService extends Service {
             .setShowWhen(false)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(pi);
-        if (face != 0) { try { b.setLargeIcon(BitmapFactory.decodeResource(c.getResources(), face)); } catch (Exception ignored) { } }
         // пока что-то звучит — значки «Тише», «Пауза / Продолжить», «Громче» (своя разметка: обычные кнопки
         // уведомления на Android 7+ показывают только слова)
         if (PlayerPlugin.notifyCtl && PlayerPlugin.sounding()) {
