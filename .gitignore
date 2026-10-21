@@ -31,3 +31,4 @@ dist-show/
 showcase/media/
 # тяжёлые модели (build/models.json) — скачиваются перед сборкой: npm run models
 public/models/
+public/tmp-*
