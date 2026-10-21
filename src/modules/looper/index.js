@@ -9,7 +9,7 @@ import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { createLooper, SLOTS, MAX_SEC } from '../../audio/looper.js';
 import { encodeWav } from '../../audio/voicefx.js';
-import { onHold, holdMenu } from '../../ui/hold.js';
+import { onHold, holdMenu, holdRepeat } from '../../ui/hold.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.6 5.9"/><path d="M4 18.5V14h4.5"/><circle cx="12" cy="12" r="2" style="fill:currentColor"/></svg>';
 const I = {
@@ -25,15 +25,20 @@ const I = {
   x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   reels: '<svg viewBox="0 0 24 24"><circle cx="7.5" cy="12" r="4"/><circle cx="16.5" cy="12" r="4"/><path d="M7.5 16h9"/></svg>',
   ring: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" style="fill:currentColor"/></svg>',
+  tracks: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><path d="M8 5v4M13 10v4M17 15v4" style="stroke-width:3"/></svg>',
   left: '<svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg>',
   right: '<svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>',
 };
-const REELS = 4, SHIFT_STEP = 10; // катушек на экране; шаг сдвига слоя, мс
+const REELS = 4, NUDGE = 1; // катушек на экране; шаг точной донастройки сдвига, мс (удержание — автоповтор)
+const VIEWS = ['ring', 'reels', 'tracks'];
 const R = 46, C = 2 * Math.PI * R;
 
 let host = null, ctx = null, size = 'full', lp = null, raf = 0, offs = [], arm = null, offBeat = null;
 const peaksCache = new Map(); // слой (номер:версия:точек) → огибающая
-const reelsView = () => st().view === 'reels' && size !== 'strip';
+const curView = () => (size === 'strip' ? 'ring' : VIEWS.includes(st().view) ? st().view : 'ring');
+const reelsView = () => curView() === 'reels';
+const tracksView = () => curView() === 'tracks';
+let live = null; // ведение слоя пальцем: { i, shift } — живой показ до отпускания
 const st = () => ctx.store.all();
 const metro = () => ctx.audio.metro;
 const barSec = () => { const m = metro().cfg; return (60 / m.bpm) * Math.max(1, m.num); };
@@ -57,19 +62,26 @@ function view() {
     : '<div class="lphint l2">' + ui.esc(t(small ? 'hintShort' : s === 'idle' ? 'hint' : 'hintMore')) + '</div>';
   const slots = '<div class="lpslots" role="group" aria-label="' + ui.esc(t('loops')) + '">' + Array.from({ length: SLOTS }, (_, i) => '<button class="lpslot' + (i === S.slot ? ' on' : '') + (S.slots[i] ? ' has' : '') + '" data-x="slot" data-i="' + i + '" aria-pressed="' + (i === S.slot) + '" aria-label="' + ui.esc(t('loopN', { n: i + 1 })) + '">' + (i + 1) + '</button>').join('') + '</div>';
   const bar = '<div class="lpbar">' +
-    ui.icb('data-x="view"', reelsView() ? I.ring : I.reels, t(reelsView() ? 'viewRing' : 'viewReels'), 'sm') +
+    ui.icb('data-x="view"', reelsView() ? I.tracks : tracksView() ? I.ring : I.reels, t(reelsView() ? 'viewTracks' : tracksView() ? 'viewRing' : 'viewReels'), 'sm') +
     ui.icb('data-x="metro"', I.metro, t('metro'), 'sm' + (withMetro() ? ' on' : '')) +
     ui.icb('data-x="mon"', I.ear, t('mon'), 'sm' + (S.mon ? ' on' : '')) +
     ui.icb('data-x="undo"', I.undo, t('undo'), 'sm') +
     ui.icb('data-x="stop"', I.stop, t('stop'), 'sm') +
     ui.icb('data-x="save"', I.save, t('save'), 'sm') + '</div>';
+  // точная донастройка: ‹ ±1 мс › с автоповтором при удержании; число — сдвиг, касание — в ноль
+  const nudge = (L, i, cls = '') => '<span class="lpnudge' + cls + '">' + ui.icb('data-nd="-' + NUDGE + '" data-i="' + i + '"', I.left, t('earlier1'), 'sm plain') +
+    '<button class="lpshv num" data-nd="0" data-i="' + i + '" aria-label="' + ui.esc(t('shiftReset')) + '">' + (L.shift > 0 ? '+' : '') + L.shift + '</button>' + ui.icb('data-nd="' + NUDGE + '" data-i="' + i + '"', I.right, t('later1'), 'sm plain') + '</span>';
   if (reelsView()) {
-    // «Катушки»: четыре кругляша — слои с волной по кругу, крутятся при игре; ниже — те же слои дорожками со сдвигом
-    const reels = '<div class="lpreels">' + Array.from({ length: REELS }, (_, i) => { const L = S.layers[i]; return '<div class="lpreel' + (L ? (L.mute ? ' muted' : '') : ' lpnone') + '" data-li="' + i + '"' + (L ? ' data-x="edit" data-i="' + i + '" role="button" aria-label="' + ui.esc(t('layerEdit', { n: i + 1 })) + '"' : '') + '><canvas class="lpreelcv"></canvas><span class="lpreeln num">' + (i + 1) + '</span></div>'; }).join('') + '</div>';
-    const lanes = '<div class="lplanes">' + S.layers.map((L, i) => '<div class="lplane' + (L.mute ? ' muted' : '') + '" data-li="' + i + '"><span class="lpnum num">' + (i + 1) + '</span><canvas class="lplanecv" data-x="edit" data-i="' + i + '" role="button" aria-label="' + ui.esc(t('layerEdit', { n: i + 1 })) + '"></canvas>' +
-      '<span class="lpshift">' + ui.icb('data-x="shl" data-i="' + i + '"', I.left, t('earlier'), 'sm plain') + '<button class="lpshv num" data-x="sh0" data-i="' + i + '" aria-label="' + ui.esc(t('shiftReset')) + '">' + (L.shift > 0 ? '+' : '') + L.shift + '</button>' + ui.icb('data-x="shr" data-i="' + i + '"', I.right, t('later'), 'sm plain') + '</span></div>').join('') +
+    // «Катушки»: четыре кругляша с волной по кругу, крутятся при игре. Вести кругляш — сдвиг слоя, касание — окно слоя
+    const reels = '<div class="lpreels">' + Array.from({ length: REELS }, (_, i) => { const L = S.layers[i]; return '<div class="lpreelw"><div class="lpreel' + (L ? (L.mute ? ' muted' : '') : ' lpnone') + '" data-li="' + i + '"' + (L ? ' data-x="edit" data-i="' + i + '" data-drag="' + i + '" role="button" aria-label="' + ui.esc(t('layerDrag', { n: i + 1 })) + '"' : '') + '><canvas class="lpreelcv"></canvas><span class="lpreeln num">' + (i + 1) + '</span><span class="lpbadge num" hidden></span></div>' + (L ? nudge(L, i) : '') + '</div>'; }).join('') + '</div>' +
+      (S.layers.length ? '' : '<div class="lphint l2">' + ui.esc(t(s === 'idle' ? 'hint' : 'hintMore')) + '</div>');
+    return '<div class="lpwrap reels ' + size + '">' + reels + '<div class="lpmain row">' + main + time + slots + '</div>' + bar + '</div>';
+  }
+  if (tracksView()) {
+    // «Дорожки»: четыре слоя волной слева направо во всё окно. Вести дорожку — сдвиг, касание — окно слоя, стрелки — по миллисекунде
+    const lanes = '<div class="lplanes big">' + Array.from({ length: REELS }, (_, i) => { const L = S.layers[i]; return '<div class="lplane' + (L ? (L.mute ? ' muted' : '') : ' lpnone') + '" data-li="' + i + '"><span class="lpnum num">' + (i + 1) + '</span><div class="lplanebox"><canvas class="lplanecv"' + (L ? ' data-x="edit" data-i="' + i + '" data-drag="' + i + '" role="button" aria-label="' + ui.esc(t('layerDrag', { n: i + 1 })) + '"' : '') + '></canvas><span class="lpbadge num" hidden></span></div>' + (L ? nudge(L, i, ' col') : '') + '</div>'; }).join('') +
       (S.layers.length ? '' : '<div class="lphint l2">' + ui.esc(t(s === 'idle' ? 'hint' : 'hintMore')) + '</div>') + '</div>';
-    return '<div class="lpwrap reels ' + size + '">' + reels + lanes + '<div class="lpmain row">' + main + time + slots + '</div>' + bar + '</div>';
+    return '<div class="lpwrap tracks ' + size + '">' + lanes + '<div class="lpmain row">' + main + time + slots + '</div>' + bar + '</div>';
   }
   return '<div class="lpwrap ' + size + '"><div class="lpmain">' + main + time + '</div>' + layers + slots + bar + '</div>';
 }
@@ -82,12 +94,14 @@ let css = null;
 const colors = () => css || (css = (() => { const s = getComputedStyle(host); return { tint: s.getPropertyValue('--tint').trim(), fill: s.getPropertyValue('--fill').trim(), ink: s.getPropertyValue('--ink').trim(), l2: s.getPropertyValue('--l2').trim(), red: '#D9534F' }; })());
 
 // Катушка: кольцо волны (отрезки по кругу) крутится с петлёй, головка — неподвижная метка сверху
+// d — живой сдвиг при ведении (мс относительно текущего): раньше → плёнка к головке
+const liveDelta = (i, L, S) => (live && live.i === i ? (live.shift - L.shift) / Math.max(1, S.len * 1000) : 0);
 function drawReel(cv, i, L, pos, S) {
   const [w, h] = fit(cv), g = cv.getContext('2d'), C = colors(), cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2, r0 = R * 0.5, r1 = R * 0.92;
   g.clearRect(0, 0, w, h);
   g.beginPath(); g.arc(cx, cy, R * 0.98, 0, Math.PI * 2); g.fillStyle = C.fill; g.fill();
   if (!L) { g.beginPath(); g.arc(cx, cy, r0, 0, Math.PI * 2); g.strokeStyle = C.l2; g.globalAlpha = 0.35; g.setLineDash([4, 6]); g.lineWidth = 2; g.stroke(); g.setLineDash([]); g.globalAlpha = 1; return; }
-  const N = 96, pk = peaks(i, L, N), rot = -pos * Math.PI * 2 - Math.PI / 2; // плёнка идёт мимо головки
+  const N = 96, pk = peaks(i, L, N), rot = -(pos + liveDelta(i, L, S)) * Math.PI * 2 - Math.PI / 2; // плёнка идёт мимо головки
   g.lineWidth = Math.max(1.5, (Math.PI * 2 * r0) / N * 0.6); g.lineCap = 'round';
   g.strokeStyle = L.mute ? C.l2 : S.state === 'dub' && i === S.layers.length - 1 ? C.red : C.tint;
   g.globalAlpha = L.mute ? 0.35 : 0.9;
@@ -101,18 +115,18 @@ function drawReel(cv, i, L, pos, S) {
   g.beginPath(); g.moveTo(cx - 5, cy - R); g.lineTo(cx + 5, cy - R); g.lineTo(cx, cy - R + 9); g.closePath(); g.fillStyle = C.ink; g.fill();
 }
 // Дорожка: волна слева направо, ход — линия
-function drawLane(cv, i, L, pos) {
-  const [w, h] = fit(cv), g = cv.getContext('2d'), C = colors(), N = Math.max(24, Math.floor(w / 3)), pk = peaks(i, L, N), bw = w / N;
+function drawLane(cv, i, L, pos, S) {
+  const [w, h] = fit(cv), g = cv.getContext('2d'), C = colors(), N = Math.max(24, Math.floor(w / 3)), pk = peaks(i, L, N), bw = w / N, off = -liveDelta(i, L, S) * w;
   g.clearRect(0, 0, w, h);
   g.fillStyle = L.mute ? C.l2 : C.tint; g.globalAlpha = L.mute ? 0.35 : 0.85;
-  for (let k = 0; k < N; k++) { const v = pk ? pk[k] : 0, bh = Math.max(2, v * (h - 4)); g.fillRect(k * bw + bw * 0.2, (h - bh) / 2, bw * 0.6, bh); }
+  for (let k = 0; k < N; k++) { const v = pk ? pk[k] : 0, bh = Math.max(2, v * (h - 4)); let x = k * bw + off; if (x < -bw) x += w; else if (x > w) x -= w; g.fillRect(x + bw * 0.2, (h - bh) / 2, bw * 0.6, bh); }
   g.globalAlpha = 1;
   if (pos >= 0) { g.fillStyle = C.ink; g.fillRect(pos * w - 1, 0, 2, h); }
 }
 function drawAll() {
   const S = lp.state, pos = S.state === 'play' || S.state === 'dub' ? S.pos : -1;
   host.querySelectorAll('.lpreel').forEach((el, i) => drawReel(el.querySelector('canvas'), i, S.layers[i], Math.max(0, pos), S));
-  host.querySelectorAll('.lplanecv').forEach((cv) => { const i = +cv.dataset.i; if (S.layers[i]) drawLane(cv, i, S.layers[i], pos); });
+  host.querySelectorAll('.lplanecv').forEach((cv) => { const i = +cv.dataset.i; if (S.layers[i]) drawLane(cv, i, S.layers[i], pos, S); });
 }
 
 function render() {
@@ -129,9 +143,45 @@ function tick() {
   const S = lp.state, ring = host.querySelector('.lpring'), tm = host.querySelector('.lptime');
   if (ring) ring.setAttribute('stroke-dashoffset', (C * (1 - S.pos)).toFixed(1));
   if (tm && S.state === 'rec') tm.textContent = fmt(S.recSec) + ' / ' + fmt(MAX_SEC);
-  if (reelsView()) drawAll();
-  if (S.state !== 'idle') raf = requestAnimationFrame(tick);
+  if (reelsView() || tracksView()) drawAll();
+  if (S.state !== 'idle' || live) raf = requestAnimationFrame(tick);
 }
+
+/* ---------- жесты: вести слой — сдвиг; кнопки ±1 мс с автоповтором ---------- */
+
+// Катушка: 1 px = 3 мс (ширина экрана ≈ весь ход ±1 с); дорожка — в масштабе петли (вся ширина = длина петли).
+// До 6 px — касание (откроет окно слоя), дальше — ведение: живой показ, сдвиг применяется при отпускании
+function bindDrag(root) {
+  let d = null, moved = false;
+  const msPerPx = (el) => (el.classList.contains('lplanecv') ? (lp.state.len * 1000) / Math.max(1, el.getBoundingClientRect().width) : 3);
+  const badge = (el, ms) => { const b = el.parentElement.querySelector('.lpbadge'); if (!b) return; if (ms == null) { b.hidden = true; return; } b.hidden = false; b.textContent = (ms > 0 ? '+' : '') + ms + ' ms'; };
+  root.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('[data-drag]'); if (!el || e.button > 0) return;
+    const i = +el.dataset.drag, L = lp.state.layers[i]; if (!L) return;
+    d = { id: e.pointerId, el, i, x0: e.clientX, y0: e.clientY, shift: L.shift, k: msPerPx(el), lim: L.margin }; moved = false;
+  });
+  root.addEventListener('pointermove', (e) => {
+    if (!d || e.pointerId !== d.id) return;
+    const dx = e.clientX - d.x0;
+    if (!moved) { if (Math.abs(dx) < 6 || Math.abs(dx) < Math.abs(e.clientY - d.y0)) return; moved = true; try { d.el.setPointerCapture(d.id); } catch { /* */ } }
+    e.preventDefault();
+    live = { i: d.i, shift: Math.max(-d.lim, Math.min(d.lim, Math.round(d.shift - dx * d.k))) }; // палец вправо — слой позже (сдвиг < 0): волна и плёнка идут за пальцем
+    badge(d.el, live.shift);
+    tick();
+  });
+  const end = (e) => {
+    if (!d || e.pointerId !== d.id) return;
+    const was = d, v = live; d = null; live = null;
+    badge(was.el, null);
+    if (!moved) return;
+    was.el.dataset.swallow = '1'; // click после ведения — не открывать окно
+    if (v && e.type !== 'pointercancel') lp.shiftLayer(was.i, v.shift);
+    render();
+  };
+  root.addEventListener('pointerup', end); root.addEventListener('pointercancel', end);
+  root.addEventListener('click', (e) => { const el = e.target.closest('[data-drag]'); if (el && el.dataset.swallow) { delete el.dataset.swallow; e.stopPropagation(); e.preventDefault(); } }, true);
+}
+const nudgeAct = (el) => { const i = +el.dataset.i, d = +el.dataset.nd, L = lp.state.layers[i]; if (!L) return; lp.shiftLayer(i, d === 0 ? 0 : L.shift + d); const v = host && host.querySelector('.lpshv[data-i="' + i + '"]'); if (v) { const s = lp.state.layers[i].shift; v.textContent = (s > 0 ? '+' : '') + s; } };
 
 /* ---------- окно слоя: границы и сдвиг рукой, эквалайзер, компрессия, реверберация ---------- */
 
@@ -145,7 +195,7 @@ function layerSheet(i) {
   let pmb = null;
   ui.sheet(() => { const L = lp.state.layers[i]; if (!L) return ui.snav(''); return ui.snav(t('layerN', { n: i + 1 })) +
     '<div class="lpedit"><canvas class="lpeditcv" aria-label="' + ui.esc(t('editHint')) + '"></canvas><p class="ftr" style="margin:4px 0 0">' + ui.esc(t('editHint')) + '</p>' +
-    '<div class="lpnudge">' + ui.icb('data-nd="-10"', I.left, t('earlier'), 'sm plain') + ui.icb('data-nd="-1"', '−1', t('earlier1'), 'sm plain txt') + '<button class="lpshv num" data-nd="0" aria-label="' + ui.esc(t('shiftReset')) + '">' + (L.shift > 0 ? '+' : '') + L.shift + ' ms</button>' + ui.icb('data-nd="1"', '+1', t('later1'), 'sm plain txt') + ui.icb('data-nd="10"', I.right, t('later'), 'sm plain') + '</div></div>' +
+    '<div class="lpnudge">' + ui.icb('data-nd="-10" data-i="' + i + '"', I.left, t('earlier'), 'sm plain') + ui.icb('data-nd="-1" data-i="' + i + '"', '−1', t('earlier1'), 'sm plain txt') + '<button class="lpshv num" data-nd="0" data-i="' + i + '" aria-label="' + ui.esc(t('shiftReset')) + '">' + (L.shift > 0 ? '+' : '') + L.shift + ' ms</button>' + ui.icb('data-nd="1" data-i="' + i + '"', '+1', t('later1'), 'sm plain txt') + ui.icb('data-nd="10" data-i="' + i + '"', I.right, t('later'), 'sm plain') + '</div></div>' +
     '<div class="hdr">' + ui.esc(t('fx')) + '</div>' + pm.html() +
     '<div class="group" style="margin-top:12px"><button class="cell" data-lmute><span class="grow">' + ui.esc(t(L.mute ? 'unmute' : 'mute')) + '</span></button><button class="cell danger center" data-lrm>' + ui.esc(t('removeLayer')) + '</button></div>'; },
   (el, sh) => {
@@ -199,10 +249,9 @@ function layerSheet(i) {
     };
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
     pmb = pm.bind(el, sh);
+    holdRepeat(el, '[data-nd]', (b) => { const d = +b.dataset.nd, L = lp.state.layers[i]; if (!L) return; lp.shiftLayer(i, d === 0 ? 0 : L.shift + d); const v = el.querySelector('.lpshv'); if (v) { const s2 = lp.state.layers[i].shift; v.textContent = (s2 > 0 ? '+' : '') + s2 + ' ms'; } });
     el.addEventListener('click', (e) => {
-      let b;
-      if ((b = e.target.closest('[data-nd]'))) { const d = +b.dataset.nd, L = lp.state.layers[i]; if (!L) return; lp.shiftLayer(i, d === 0 ? 0 : L.shift + d); sh.update(); pmb && pmb.mount(); }
-      else if (e.target.closest('[data-lmute]')) { lp.toggleMute(i); sh.update(); pmb && pmb.mount(); }
+      if (e.target.closest('[data-lmute]')) { lp.toggleMute(i); sh.update(); pmb && pmb.mount(); }
       else if (e.target.closest('[data-lrm]')) { lp.removeLayer(i); sh.close(); }
     });
     let r = 0;
@@ -270,10 +319,7 @@ function act(x, el) {
     case 'mon': lp.setMonitor(!lp.state.mon); if (lp.state.mon) ctx.ui.toast(ctx.t('monOn')); render(); break;
     case 'mute': lp.toggleMute(i); render(); break;
     case 'slot': if (arm) disarm(); lp.select(i); render(); break;
-    case 'view': st().view = reelsView() ? 'ring' : 'reels'; ctx.store.save(); render(); break;
-    case 'shl': lp.shiftLayer(i, (lp.state.layers[i].shift || 0) + SHIFT_STEP); render(); break;
-    case 'shr': lp.shiftLayer(i, (lp.state.layers[i].shift || 0) - SHIFT_STEP); render(); break;
-    case 'sh0': lp.shiftLayer(i, 0); render(); break;
+    case 'view': st().view = VIEWS[(VIEWS.indexOf(curView()) + 1) % VIEWS.length]; ctx.store.save(); render(); break;
     case 'edit': layerSheet(i); break;
   }
 }
@@ -305,9 +351,11 @@ export default {
     on(host, 'click', (e) => { const b = e.target.closest('[data-x]'); if (b) act(b.dataset.x, b); });
     on(host, 'input', (e) => { if (e.target.dataset.vol != null) lp.setGain(+e.target.dataset.vol, +e.target.value); });
     on(window, 'keydown', onKey);
+    bindDrag(host); // вести катушку или дорожку — сдвиг слоя
+    holdRepeat(host, '.lpwrap [data-nd]', nudgeAct);
     // удержание кнопки — отмена последнего слоя; удержание слоя — убрать его
     onHold(host, '[data-x="main"]', () => act('undo'));
-    onHold(host, '.lplayer, .lplane, .lpreel:not(.empty)', (row) => holdMenu(row, [{ icon: I.x, label: c.t('removeLayer'), danger: true, run: () => { lp.removeLayer(+row.dataset.li); render(); } }], c.t('layerN', { n: +row.dataset.li + 1 })));
+    onHold(host, '.lplayer, .lplane:not(.lpnone), .lpreel:not(.lpnone)', (row) => holdMenu(row, [{ icon: I.x, label: c.t('removeLayer'), danger: true, run: () => { lp.removeLayer(+row.dataset.li); render(); } }], c.t('layerN', { n: +row.dataset.li + 1 })));
     render();
   },
   resize(sz) { size = sz; render(); },

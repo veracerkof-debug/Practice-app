@@ -26,6 +26,20 @@ export function onHold(root, sel, cb, ms = HOLD_MS) {
   root.addEventListener('contextmenu', (e) => { if (e.target.closest && e.target.closest(sel)) e.preventDefault(); });
 }
 
+// Кнопка с автоповтором (±1 мс в лупере, шаги): нажатие — fn(el, false) сразу, удержание — fn(el, true) каждые every мс
+// после delay; click гасится — шаг уже сделан на pointerdown
+export function holdRepeat(root, sel, fn, { delay = 350, every = 60 } = {}) {
+  let tm = 0, iv = 0, cur = null;
+  const stop = () => { clearTimeout(tm); clearInterval(iv); tm = iv = 0; cur = null; };
+  root.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest(sel); if (!el || e.button > 0) return;
+    stop(); cur = el; fn(el, false);
+    tm = setTimeout(() => { if (cur === el) iv = setInterval(() => (cur === el ? fn(el, true) : stop()), every); }, delay);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => root.addEventListener(ev, stop));
+  root.addEventListener('click', (e) => { if (e.target.closest(sel)) { e.preventDefault(); e.stopPropagation(); } }, true); // шаг уже сделан на pointerdown
+}
+
 // Меню у элемента: items — [{ icon, label, run, danger }]; закрывается касанием мимо, Escape и после выбора
 export function holdMenu(anchor, items, title = '') {
   document.querySelectorAll('.hmenu').forEach((m) => m.remove());
