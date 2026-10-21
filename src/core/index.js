@@ -41,6 +41,8 @@ import { crashOffer } from './screens/report.js';
 import { bindVerses } from './screens/verses.js';
 import { createFiles } from './files.js';
 import { createRecorder } from './recorder.js';
+import { createJobs } from './jobs.js';
+import { createAutoStems } from './autostems.js';
 import { createMidi } from './midi.js';
 import { reschedule, rescheduleEvents } from './reminders.js';
 import { ensureCal, eventReminders, liveEvents, kindOf } from './calendar.js';
@@ -159,6 +161,8 @@ export function boot(root) {
     set active(a) { active = a; saveActive(a); },
   };
   app.rec = createRecorder(app);
+  app.jobs = createJobs(files); // долгие обработки записей: дорожки, ноты (jobs.js)
+  app.auto = createAutoStems(app); // дорожки и тональность с темпом — сами, в тишине (autostems.js)
   app.midi = midiRef = createMidi(app);
   app.midi.input.resume();
   // напоминания о практике: расписание на неделю — при запуске, смене настроек и после занятий (с задержкой)
@@ -222,6 +226,7 @@ export function boot(root) {
   createShell(app, root);
   // Работа в фоне на Android: пока что-то идёт — служба с уведомлением, приложение не замораживается
   initBackground(app);
+  app.auto.start();
   initPlayer(app); // шторка, плавающая кнопка, всплывающее окно (Android)
   // веб-версия: один раз — что это знакомство, а полная версия — приложение для Android
   // (после регистрации: на стартовом экране не мешает выбору языка)

@@ -91,6 +91,9 @@ export function makeCtx(app, mod) {
     logErr: (e) => logErr(mod.id, e),
     // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
     files: app.files,
+    // Долгие обработки записей (ядро, jobs.js): дорожки и ноты — ход, отмена, подписка; очередь в фоне — auto
+    jobs: app.jobs,
+    auto: app.auto,
     // MIDI: событие игры (src/music/midi.js) — в запись, если идёт MIDI-запись этого инструмента
     midi: {
       ev: (e) => app.rec && app.rec.midiEv(mod.id, e),
@@ -150,6 +153,8 @@ export function makeCtx(app, mod) {
     },
     // Открыть другой инструмент (например, пианино с подсветкой гаммы)
     openTool: (id) => app.openTool && app.openTool(id),
+    // Открыть инструмент с переданными настройками (например, «Табы» на файле: { lastTab, sec })
+    openIn(id, patch) { Object.assign(app.device[id] ??= {}, patch); app.saveDevice(); if (app.openTool) app.openTool(id); },
     // инструкция модуля (для вкладок-модулей, у которых нет шапки с «?»)
     help: () => showHelp(app, mod),
     openMixer: () => { if (app.openMixer) app.openMixer(); }, // шторка микшера (студия: кнопка в транспорте)

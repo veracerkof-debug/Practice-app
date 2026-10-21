@@ -11,6 +11,8 @@ import { peaks } from './voicefx.js';
 
 const Native = Capacitor.isNativePlatform() ? registerPlugin('Stems') : null;
 export const stemsNative = () => !!Native;
+// В веб-сборке моделей нет (рабочий поток подменён пустышкой) — разделение недоступно, кнопки прячутся
+export const stemsSupported = () => !(typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__);
 
 const SR = 44100;
 // Режимы: '2' — вокал и инструментал (из четырёх дорожек: остальное суммируется), '4' — вокал, ударные, бас,

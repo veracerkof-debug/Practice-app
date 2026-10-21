@@ -25,6 +25,8 @@ export function busyFace(app) {
 }
 export function busyText(app) {
   if (app.active) return t(app.active.pausedAt ? 'bg.paused' : 'bg.session');
+  const j = app.jobs && app.jobs.current;
+  if (j && j.kind === 'stems') return t('bg.stems', { pct: Math.round((j.frac || 0) * 100) });
   if (app.audio.metro.running) return t('bg.metro');
   if (app.soundingAudio()) return t('bg.sound');
   if (app.pomodoro && app.pomodoro.running) return t('bg.pomo');

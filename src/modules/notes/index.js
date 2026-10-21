@@ -763,7 +763,7 @@ export default {
     offs.push(c.files.subscribe(() => { if (!AT.cur || AT.state === 'error' || st().sec !== (isDaw(AT.cur) ? 'midi' : 'tabs')) render(); }));
     c.files.ready.then(() => {
       // последний открытый файл (табы или ноты) открывается сам, с того же места
-      const last = !AT.cur && st().lastTab && c.files.get(st().lastTab);
+      const last = st().lastTab && (!AT.cur || AT.cur.id !== st().lastTab) && c.files.get(st().lastTab);
       if (last && host) openTab(last); else render();
     });
     render();

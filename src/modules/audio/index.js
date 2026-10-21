@@ -10,6 +10,11 @@ import el from './i18n/el.json';
 import { fileSongs, inSong, linkSong } from '../../core/files.js';
 import { pitchShifter } from '../../audio/pitchshift.js';
 import { createStretchPlayer, stretchAvailable } from '../../audio/stretchplayer.js';
+import { MODES, estimateSec } from '../../audio/stems.js';
+import { stemsOf, notesOf } from '../../core/jobs.js';
+import { projectFromStems, projectFromSong, isEmptyProject } from '../../music/project.js';
+import { readMidiSong } from '../../music/daw.js';
+import { after, cancel } from '../../audio/clock.js';
 import { fmtDur } from '../../core/format.js';
 import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
 
@@ -39,14 +44,16 @@ const MB = 1048576;
 /* ---------- плеер (один на приложение, играет и при закрытом окне) ---------- */
 
 const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0, eng: null, engOn: false, engFor: null, partsFor: null };
-// Дорожки записи (модуль «Дорожки»): файлы с stem.src — эта запись; набор — режим с наибольшим числом дорожек
+// Дорожки записи (src/core/jobs.js: файлы с stem.src — эта запись); набор — выбранный режим (st().pmode[id]),
+// иначе режим с наибольшим числом дорожек
 const PART_ORDER = ['vocals', 'inst', 'drums', 'bass', 'guitar', 'piano', 'other'];
-function stemsFor(t) {
+const byPart = (a, b) => PART_ORDER.indexOf(a.stem.part) - PART_ORDER.indexOf(b.stem.part);
+const stemSets = (t) => { const by = {}; (t && ctx ? stemsOf(ctx.files, t.id) : []).forEach((r) => { (by[r.stem.mode || '4'] ??= []).push(r); }); return by; };
+function stemsFor(t, mode = null) {
   if (!t || !ctx) return [];
-  const all = ctx.files.list('audio').filter((r) => r.stem && r.stem.src === t.id), by = {};
-  all.forEach((r) => { (by[r.stem.mode || '4'] ??= []).push(r); });
-  const best = Object.values(by).sort((a, b) => b.length - a.length)[0] || [];
-  return best.sort((a, b) => PART_ORDER.indexOf(a.stem.part) - PART_ORDER.indexOf(b.stem.part));
+  const by = stemSets(t), want = mode || (st().pmode || {})[t.id];
+  const best = (want && by[want]) || Object.values(by).sort((a, b) => b.length - a.length)[0] || [];
+  return best.sort(byPart);
 }
 const mixOf = (t) => ((st().pmix || {})[t.id]) || {};
 const mixActive = (t) => Object.values(mixOf(t)).some((v) => v !== 1);
@@ -94,7 +101,7 @@ const keyName = (pc, minor) => (minor ? NOTE_m : NOTE_M)[((pc % 12) + 12) % 12] 
 const sgn = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v);
 function keySheet() {
   const { t, ui } = ctx, song = ctx.song(curSong()), tr = AU.cur;
-  const ana = () => (st().pana || {})[tr.id];
+  const ana = () => (tr.ana && tr.ana.pc != null ? tr.ana : (st().pana || {})[tr.id]);
   const body = () => {
     const [p, c] = pitchOf(tr), a = ana();
     const ruler = '<div class="hscroll kruler" id="kruler">' + Array.from({ length: 25 }, (_, i) => i - 12).map((v) =>
@@ -144,41 +151,122 @@ function keySheet() {
   });
 }
 
-// Шторка «Дорожки»: громкость каждой дорожки записи (0…150 %) и выключение; действует вместе с тональностью и скоростью.
-// Все на 100 % — играет исходная запись (дорожки не нужны); иначе звук собирается из дорожек в движке (loadParts/setMix)
+// Шторка «Дорожки и ноты» записи (обработки — src/core/jobs.js). Дорожки: режим 2 / 4 / 6; есть набор — микшер,
+// громкость каждой дорожки (0…150 %) и выключение, действует вместе с тональностью и скоростью, «В студии» — проект
+// из дорожек; набора нет — «Разделить» (ход и «Прервать»; в фоне то же делает src/core/autostems.js).
+// Ноты (Basic Pitch, src/audio/transcribe.js): снять, послушать, открыть в «Табах» или в студии.
+// Все дорожки на 100 % — играет исходная запись; иначе звук собирается из дорожек в движке (loadParts/setMix)
+let LN = null; // прослушивание нот: таймеры звука
+function listenNotes(rec) {
+  if (LN) { LN.forEach(cancel); LN = null; return false; }
+  const ev = (rec.take && rec.take.ev) || [], on = new Map();
+  ev.forEach((e) => { if (e.k === 'on') on.set(e.id, e); });
+  if (!pl().paused) pl().pause();
+  LN = [];
+  ev.forEach((e) => { if (e.k !== 'off') return; const s = on.get(e.id); if (!s) return; LN.push(after(s.t * 1000, () => ctx.audio.playNote(Math.round(s.m), { dur: Math.max(0.08, e.t - s.t), preset: 'piano' }))); });
+  const end = ev.length ? ev[ev.length - 1].t : 0;
+  LN.push(after(end * 1000 + 300, () => { LN = null; }));
+  return true;
+}
+const jobErr = (e) => { const { t } = ctx; if (e && e.message === 'cancel') ctx.ui.toast(t('job.cancelled')); else if (e && e.message === 'busy') ctx.ui.toast(t('job.busy')); else { ctx.logErr(e); ctx.ui.toast(t('job.fail')); } };
 function stemsSheet() {
-  const { t, ui } = ctx, tr = AU.cur, set = stemsFor(tr);
-  if (!set.length) return;
-  const g = () => mixOf(tr), val = (k) => (g()[k] == null ? 1 : g()[k]);
-  const body = () => ui.snav(t('stems.title')) + '<div class="group">' + set.map((r) => { const k = r.stem.part, v = val(k), mu = v === 0; return '<div class="cellcol stemrow' + (mu ? ' mu' : '') + '"><div class="row"><button class="ic sm plain" data-smute="' + k + '" aria-pressed="' + mu + '" aria-label="' + ui.esc(t(mu ? 'stems.unmute' : 'stems.mute', { name: t('part.' + k) })) + '">' + (mu ? I.mute : I.vol) + '</button><span class="grow">' + ui.esc(t('part.' + k)) + '</span><b class="num" data-sv="' + k + '">' + Math.round(v * 100) + ' %</b></div>' +
-    '<input type="range" min="0" max="150" step="5" value="' + Math.round(v * 100) + '" data-sg="' + k + '" aria-label="' + ui.esc(t('part.' + k)) + '"></div>'; }).join('') +
-    '<button class="cell act" data-sreset>' + ui.esc(t('stems.reset')) + '</button></div><p class="ftr">' + ui.esc(t('stems.hint')) + '</p>';
+  const { t, ui } = ctx, tr = AU.cur, jobs = ctx.jobs;
+  if (!tr || !jobs) return;
+  const can = jobs.supported();
+  const g = () => mixOf(tr), val = (k) => (g()[k] == null ? 1 : g()[k]), prev = {};
+  const job = () => (jobs.current && jobs.current.id === tr.id ? jobs.current : null);
+  const first = stemsFor(tr)[0];
+  let m = (first && first.stem.mode) || (ctx.auto && ctx.auto.mode()) || '4';
+  if (!MODES.includes(m)) m = '4';
+  const progress = (j, sel) => {
+    const pct = Math.round((j.frac || 0) * 100), run = j.stage === 'separate' || j.stage === 'run', gone = (Date.now() - (j.stageAt || j.t0)) / 1000;
+    const left = run && j.frac > 0.02 ? Math.max(0, gone / j.frac - gone) : 0;
+    return '<div class="cellcol sjob"><span class="grow">' + ui.esc(t('job.' + j.stage)) + (run ? ' · <b class="num">' + pct + ' %</b>' + (left ? ' · ' + ui.esc(t('job.left', { t: fmtT(left) })) : '') : '') + '</span><div class="sbar"><b style="width:' + pct + '%"></b></div></div>' +
+      '<button class="cell act center" ' + sel + '>' + ui.esc(t('job.cancel')) + '</button>';
+  };
+  const body = () => {
+    const j = job(), set = stemsFor(tr, m), notes = notesOf(ctx.files, tr.id), absent = ((tr.stemsAbsent && tr.stemsAbsent[m]) || []);
+    let h = ui.snav(t('stems.title')) + '<div class="group"><div class="cellcol">' + ui.seg('smode', MODES.map((k) => [k, k]), m, t('stems.modeTitle')) + '<div class="segcap">' + ui.esc(t('stems.mode.' + m)) + '</div></div>';
+    if (j && j.kind === 'stems') h += progress(j, 'data-sjcancel');
+    else if (set.length) {
+      h += set.map((r) => { const k = r.stem.part, v = val(k), mu = v === 0; return '<div class="cellcol stemrow' + (mu ? ' mu' : '') + '"><div class="row"><button class="ic sm plain" data-smute="' + k + '" aria-pressed="' + mu + '" aria-label="' + ui.esc(t(mu ? 'stems.unmute' : 'stems.mute', { name: t('part.' + k) })) + '">' + (mu ? I.mute : I.vol) + '</button><span class="grow">' + ui.esc(t('part.' + k)) + '</span><b class="num" data-sv="' + k + '">' + Math.round(v * 100) + ' %</b></div>' +
+        '<input type="range" min="0" max="150" step="5" value="' + Math.round(v * 100) + '" data-sg="' + k + '" aria-label="' + ui.esc(t('part.' + k)) + '"></div>'; }).join('') +
+        '<button class="cell act" data-sreset>' + ui.esc(t('stems.reset')) + '</button><button class="cell act" data-sstudio>' + ui.esc(t('stems.toStudio')) + '</button>';
+    } else if (can) h += '<button class="cell act center b" data-sgo>' + ui.esc(t('stems.go', { t: fmtT(estimateSec(tr.dur || 60, m)) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
+    else h += '<div class="cellcol"><span class="l2">' + ui.esc(t('stems.web')) + '</span></div>';
+    h += '</div>';
+    if (set.length && absent.length) h += '<p class="ftr">' + ui.esc(t('stems.absent', { list: absent.map((p) => t('part.' + p)).join(', ') })) + '</p>';
+    else h += '<p class="ftr">' + ui.esc(t(set.length ? 'stems.hint' : can ? 'stems.goHint' : 'stems.webHint')) + '</p>';
+    // ноты
+    h += '<div class="hdr">' + ui.esc(t('notes.hdr')) + '</div><div class="group">';
+    if (j && j.kind === 'notes') h += progress(j, 'data-njcancel');
+    else if (notes) h += '<button class="cell act" data-nlisten aria-pressed="' + !!LN + '"><span class="grow">' + ui.esc(t('notes.n', { n: notes.notes || 0 })) + '</span><span class="val">' + ui.esc(t(LN ? 'notes.stop' : 'notes.listen')) + '</span></button>' +
+      '<button class="cell act" data-ntabs>' + ui.esc(t('notes.toTabs')) + '</button><button class="cell act" data-nstudio>' + ui.esc(t('notes.toStudio')) + '</button><button class="cell act" data-ngo>' + ui.esc(t('notes.redo')) + '</button>';
+    else h += '<div class="cellcol"><span>' + ui.esc(t('notes.sens')) + '</span>' + ui.seg('nsens', [['normal', t('notes.sensNormal')], ['high', t('notes.sensHigh')]], st().nsens || 'normal', t('notes.sens')) + '</div>' +
+      '<button class="cell act" data-nbends aria-pressed="' + !!st().nbends + '"><span class="grow">' + ui.esc(t('notes.bends')) + '<span class="bksub">' + ui.esc(t('notes.bendsHint')) + '</span></span><span class="val">' + (st().nbends ? '✓' : '') + '</span></button>' +
+      '<button class="cell act center b" data-ngo>' + ui.esc(t('notes.go')) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
+    h += '</div><p class="ftr">' + ui.esc(t(notes ? 'notes.doneHint' : 'notes.hint')) + '</p>';
+    return h;
+  };
   let tm = 0;
+  // громкости: в движок (на ходу — setMix, пересведение без разрыва; исходник ↔ дорожки — перезагрузка с того же места)
   const apply = (sh) => {
     ctx.store.save();
     clearTimeout(tm);
     tm = setTimeout(async () => {
       if (AU.cur !== tr) return;
       if (AU.engOn && AU.partsFor === tr && mixActive(tr)) { AU.eng.setMix(g()); return; }
-      // переход: исходник ↔ дорожки — перезагрузка в движок с того же места
       const at = pl().currentTime, was = !pl().paused;
       if (await engineLoad(tr)) { AU.eng.currentTime = at; if (was) AU.eng.play().catch(() => {}); }
       render();
     }, 200);
-    if (sh) { const el = sh.el; set.forEach((r) => { const k = r.stem.part, b = el.querySelector('[data-sv="' + k + '"]'), m = el.querySelector('[data-smute="' + k + '"]'); if (b) b.textContent = Math.round(val(k) * 100) + ' %'; if (m) { m.setAttribute('aria-pressed', val(k) === 0); m.innerHTML = val(k) === 0 ? I.mute : I.vol; m.closest('.stemrow').classList.toggle('mu', val(k) === 0); } }); }
+    if (sh) { const el = sh.el; stemsFor(tr, m).forEach((r) => { const k = r.stem.part, b = el.querySelector('[data-sv="' + k + '"]'), mu = el.querySelector('[data-smute="' + k + '"]'); if (b) b.textContent = Math.round(val(k) * 100) + ' %'; if (mu) { mu.setAttribute('aria-pressed', val(k) === 0); mu.innerHTML = val(k) === 0 ? I.mute : I.vol; mu.closest('.stemrow').classList.toggle('mu', val(k) === 0); } }); }
   };
-  const setG = (k, v) => { const all = st().pmix || (st().pmix = {}), m = all[tr.id] || (all[tr.id] = {}); m[k] = Math.max(0, Math.min(1.5, Math.round(v * 20) / 20)); if (m[k] === 1) delete m[k]; if (!Object.keys(m).length) delete all[tr.id]; };
+  const setG = (k, v) => { const all = st().pmix || (st().pmix = {}), mx = all[tr.id] || (all[tr.id] = {}); mx[k] = Math.max(0, Math.min(1.5, Math.round(v * 20) / 20)); if (mx[k] === 1) delete mx[k]; if (!Object.keys(mx).length) delete all[tr.id]; };
+  const setMode = (v) => { m = v; (st().pmode ??= {})[tr.id] = v; ctx.store.save(); if (mixActive(tr)) apply(null); };
+  let un = null, tick = 0;
   ui.sheet(body, (el, sh) => {
     sh.el = el;
+    un = jobs.subscribe(() => { if (el.isConnected) sh.update(); });
+    tick = setInterval(() => { if (job() && el.isConnected) sh.update(); }, 1000);
     el.addEventListener('input', (e) => { const i = e.target.closest('[data-sg]'); if (!i) return; setG(i.dataset.sg, +i.value / 100); apply(sh); });
-    el.addEventListener('click', (e) => {
-      const m = e.target.closest('[data-smute]'), r = e.target.closest('[data-sreset]');
-      if (m) { const k = m.dataset.smute, was = val(k); setG(k, was === 0 ? (m._prev || 1) : (m._prev = was, 0)); const i = el.querySelector('[data-sg="' + k + '"]'); if (i) i.value = Math.round(val(k) * 100); apply(sh); }
-      else if (r) { const all = st().pmix || {}; delete all[tr.id]; el.querySelectorAll('[data-sg]').forEach((i) => { i.value = 100; }); apply(sh); }
+    el.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-smute], [data-sreset], [data-sstudio], [data-sgo], [data-sjcancel], [data-njcancel], [data-ngo], [data-nlisten], [data-ntabs], [data-nstudio], [data-nbends], [data-seg="smode"] [data-v], [data-seg="nsens"] [data-v]');
+      if (!b) return;
+      const d = b.dataset;
+      if (d.smute != null) { const k = d.smute, was = val(k); if (was === 0) setG(k, prev[k] || 1); else { prev[k] = was; setG(k, 0); } const i = el.querySelector('[data-sg="' + k + '"]'); if (i) i.value = Math.round(val(k) * 100); apply(sh); return; }
+      if (b.hasAttribute('data-sreset')) { const all = st().pmix || {}; delete all[tr.id]; el.querySelectorAll('[data-sg]').forEach((i) => { i.value = 100; }); apply(sh); return; }
+      if (b.closest('[data-seg="smode"]')) { setMode(d.v); sh.update(); return; }
+      if (b.closest('[data-seg="nsens"]')) { st().nsens = d.v; ctx.store.save(); sh.update(); return; }
+      if (b.hasAttribute('data-nbends')) { st().nbends = !st().nbends; ctx.store.save(); sh.update(); return; }
+      if (b.hasAttribute('data-sjcancel') || b.hasAttribute('data-njcancel')) { jobs.cancel(); return; }
+      if (b.hasAttribute('data-sgo')) { setMode(m); jobs.separate(tr, m).then((r) => { ctx.ui.toast(t(r.stems.length ? 'stems.saved' : 'stems.none')); }).catch(jobErr); sh.update(); return; }
+      if (b.hasAttribute('data-ngo')) { jobs.notes(tr, { sens: st().nsens || 'normal', bends: !!st().nbends }).then((r) => { ctx.ui.toast(r.notes ? t('notes.saved', { n: r.notes }) : t('notes.none')); }).catch(jobErr); sh.update(); return; }
+      if (b.hasAttribute('data-sstudio')) {
+        const set = stemsFor(tr, m), p = projectFromStems(tr.name.replace(/\.[a-z0-9]+$/i, ''), set.map((r) => ({ part: r.stem.part, name: t('part.' + r.stem.part), fileId: r.id, dur: r.dur })), { songId: (tr.songs || [])[0] || null, bpm: (tr.ana && tr.ana.bpm) || 90 });
+        ctx.projects.save(p); ctx.ui.toast(t('job.studioMade')); return;
+      }
+      const notes = notesOf(ctx.files, tr.id);
+      if (!notes) return;
+      if (b.hasAttribute('data-nlisten')) { listenNotes(notes); sh.update(); return; }
+      if (b.hasAttribute('data-ntabs')) { sh.close(); ctx.openIn('notes', { lastTab: notes.id, sec: 'midi' }); return; }
+      if (b.hasAttribute('data-nstudio')) {
+        try {
+          const song = readMidiSong(new Uint8Array(await notes.blob.arrayBuffer()));
+          song.name = tr.name.replace(/\.[a-z0-9]+$/i, '');
+          if (tr.ana && tr.ana.bpm) song.bpm = tr.ana.bpm;
+          const p = projectFromSong(song);
+          if (isEmptyProject(p)) { ctx.ui.toast(t('notes.none')); return; }
+          ctx.projects.save(p); ctx.ui.toast(t('job.studioMade'));
+        } catch (err) { jobErr(err); }
+      }
     });
-  }, { onClose: render });
+  }, { onClose: () => { if (un) un(); clearInterval(tick); if (LN) listenNotes(); render(); } });
 }
 
+// Подпись записи в списке: тональность и темп (rec.ana — src/core/autostems.js) и сколько дорожек
+const anaTxt = (x) => { const a = x.ana; if (!a) return ''; return [a.pc != null ? keyName(a.pc, a.minor) : '', a.bpm ? '♩ ' + a.bpm : ''].filter(Boolean).join(' '); };
+const stemsTxt = (x) => { if (x.stem) return ''; const n = stemsFor(x).length; return n ? ctx.tn('stemsN', n) : ''; };
 const rateTxt = () => ctx.num(AU.rate, AU.rate * 100 % 10 ? 2 : AU.rate % 1 ? 1 : 0) + '×';
 const sizeMb = (r) => ctx.t('mb', { n: ctx.num((r.size || 0) / MB, 1) });
 
@@ -447,7 +535,7 @@ function libHTML() {
   else {
     h += '<div class="mlist">' + list.map((x) => {
       const sn = songTitles(x), cur = AU.cur && AU.cur.id === x.id, mk = (x.marks || []).length;
-      const info = [x.dur ? fmtT(x.dur) : '', sizeMb(x), mk ? t('marksN', { n: mk }) : '', sn.join(', ')].filter(Boolean).join(' · ');
+      const info = [x.dur ? fmtT(x.dur) : '', anaTxt(x), stemsTxt(x), sizeMb(x), mk ? t('marksN', { n: mk }) : '', sn.join(', ')].filter(Boolean).join(' · ');
       if (sel) {
         const on = sel.has(x.id);
         return '<div class="mlrow' + (on ? ' cur' : '') + '"><button class="mlmain" data-x="mlsel" data-id="' + x.id + '" role="checkbox" aria-checked="' + on + '"><span class="mlchk' + (on ? ' on' : '') + '">' +
@@ -481,7 +569,7 @@ function controls() {
     // тональность без изменения скорости: ♭/♯ — полутон, нажатие на значение — шторка (полутоны, центы, сброс)
     key: '<span class="vrow tight akey">' + icb('data-step="akey" data-d="-1"', '♭', t('key.down'), 'sm txt') + '<button class="ratev num" id="keyv" data-x="akeysheet" aria-label="' + t('key.title') + '">' + keyTxt() + '</button>' +
       icb('data-step="akey" data-d="1"', '♯', t('key.up'), 'sm txt') + '</span>',
-    stems: stemsFor(AU.cur).length ? icb('data-x="astems"', I.stems, t('stems.btn'), 'sm' + (mixActive(AU.cur) ? ' act' : '')) : '',
+    stems: ctx.jobs ? icb('data-x="astems"', I.stems, t('stems.btn'), 'sm' + (mixActive(AU.cur) ? ' act' : '')) : '',
     back: icb('data-x="aback"', I.back5, t('back5')),
     fwd: icb('data-x="afwd"', I.fwd5, t('fwd5')),
     abb: '<button class="ic txt' + (ab === 'on' ? ' act' : '') + '" data-x="aab" aria-pressed="' + (ab === 'on') + '" aria-label="' + t('ab') + '">' + (ab === 'a' ? 'B?' : 'A–B') + '</button>',
@@ -1122,6 +1210,7 @@ export default {
     render();
     bind();
     offs.push(c.files.subscribe(() => { if (!document.activeElement?.hasAttribute?.('data-mlq')) render(); }));
+    if (c.jobs) offs.push(c.jobs.subscribe((j) => { if (!j) render(); }));
     c.files.ready.then(render);
     uiTimer = setInterval(uiTick, 200);
   },
