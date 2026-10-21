@@ -1,7 +1,8 @@
 // Единый AudioContext: общий выход через компрессор, реверберация (свёртка со сгенерированным импульсом).
 // Создаётся лениво — браузер разрешает звук только после жеста пользователя.
-import { makeIR } from './waves.js';
 import { spaceOf, latencyFor } from './perf.js';
+import { makeSpace, loadReverbWorklet, SPACES, SPACE_DEF } from './spaces.js';
+export { SPACES, SPACE_DEF };
 import { loadAirWorklet } from './airsound.js';
 import { installClock } from './clock.js';
 
@@ -29,17 +30,8 @@ export function getContext(mode = 'bal') {
     master = ctx.createGain();
     master.gain.value = 0.9;
     master.connect(comp);
-    try {
-      const cv = ctx.createConvolver();
-      cv.buffer = makeIR(ctx, 2.8);
-      const rg = ctx.createGain();
-      rg.gain.value = 0.55;
-      const hp = ctx.createBiquadFilter();
-      hp.type = 'highpass';
-      hp.frequency.value = 180;
-      reverb = ctx.createGain();
-      reverb.connect(hp).connect(cv).connect(rg).connect(comp);
-    } catch { reverb = null; }
+    loadReverbWorklet(ctx); // лёгкая реверберация (spaces.js) — модуль грузится сразу
+    try { spaces.hall = makeSpace(ctx, 'hall', comp); reverb = spaces.hall.input; } catch { reverb = null; }
   }
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
@@ -79,35 +71,20 @@ export function sendToReverb(node, level, via = null) {
   return s;
 }
 
-// Пространства реверберации — общие на всё приложение, создаются при первом посыле (свёртка — дорогой узел,
-// лишних не держим): комната (0,9 с, тёплая), зал (2,8 с — та же общая реверберация), пластина (1,7 с, яркая и
-// плотная, без предзадержки), собор (5,5 с, мягкие верха и медленное нарастание — для пэдов и поклонения, звук
-// «растворяется», не мешая остальным; свёртка стоит пропорционально длине, 7 с было дороже всего пианино). Все идут в общий компрессор
-export const SPACES = ['room', 'hall', 'plate', 'cathedral'];
-export const SPACE_DEF = {
-  room: { sec: 0.9, damp: 0.7, pre: 0, hp: 160, lp: 7000, gain: 0.5 },
-  hall: { sec: 2.8, damp: 0.6, pre: 0, hp: 180, lp: 20000, gain: 0.55 }, // общая реверберация (строится в getContext)
-  plate: { sec: 1.7, damp: 0.25, pre: 0, hp: 200, lp: 12000, gain: 0.45 },
-  cathedral: { sec: 5.5, damp: 0.86, pre: 0.035, hp: 140, lp: 5200, gain: 0.62 },
-};
+// Пространства реверберации — общие на всё приложение (описания и движки — spaces.js), создаются при первом посыле
+// (лишних не держим): комната, зал (та же общая реверберация), пластина, собор (для пэдов и поклонения). Все идут
+// в общий компрессор
 const spaces = {};
 function spaceNode(type) {
   if (!ctx) return null;
   type = spaceOf(type); // экономный режим: одно пространство на всех
   if (type === 'hall' || !SPACE_DEF[type]) return reverb;
-  if (spaces[type] !== undefined) return spaces[type];
-  try {
-    const d = SPACE_DEF[type], cv = ctx.createConvolver(), lp = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter(), g = ctx.createGain();
-    cv.buffer = makeIR(ctx, d.sec, { damp: d.damp, pre: d.pre });
-    hp.type = 'highpass'; hp.frequency.value = d.hp;
-    lp.type = 'lowpass'; lp.frequency.value = d.lp;
-    g.gain.value = d.gain;
-    const inp = ctx.createGain();
-    inp.connect(hp).connect(cv).connect(lp).connect(g).connect(comp);
-    spaces[type] = inp;
-  } catch { spaces[type] = null; }
-  return spaces[type];
+  if (spaces[type] !== undefined) return spaces[type] && spaces[type].input;
+  try { spaces[type] = makeSpace(ctx, type, comp); } catch { spaces[type] = null; }
+  return spaces[type] && spaces[type].input;
 }
+// Смена движка реверберации (perf.js: setVerb) — пересобрать все общие пространства; посылы остаются
+export function rebuildSpaces() { Object.values(spaces).forEach((s) => s && s.rebuild()); }
 // Вход пространства (для пост-фейдерных посылов микшера); null — нет контекста
 export const spaceInput = (type) => spaceNode(type);
 // Посыл узла в пространство (уровень 0…1); возвращает узел посыла или null; via — см. sendToReverb

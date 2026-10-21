@@ -3,7 +3,7 @@
 // драйв без передискретизации. Названия в интерфейсе: задержка «Низкая / Средняя / Надёжная», качество «Студийное / Облегчённое»;
 // по умолчанию всегда студийное (полное), автоподбора нет (autoPerf — только справочно).
 // Читается звуковыми модулями напрямую (без контекста): synth.js, airsound.js, context.js, fx.js.
-export const PERF = { level: 'full', engine: 'wl', squeeze: 0 }; // engine: 'wl' — воздушные голоса в AudioWorklet (airsound.js), 'nodes' — узлами Web Audio
+export const PERF = { level: 'full', engine: 'wl', squeeze: 0, verb: 'conv' }; // verb: 'conv' — свёртка, 'light' — лёгкая (spaces.js) // engine: 'wl' — воздушные голоса в AudioWorklet (airsound.js), 'nodes' — узлами Web Audio
 // squeeze 0…2 — ужатие под нагрузкой (load.js): поток звука не успевает (>90 %) — новым нотам меньше голосов и унисона,
 // старые голоса отбираются раньше; нагрузка спала — возвращается. Треск слышнее, чем голос меньше (третий принцип)
 export const setSqueeze = (n) => { PERF.squeeze = Math.max(0, Math.min(2, n | 0)); };
@@ -19,6 +19,11 @@ export const resolvePerf = (want) => (want === 'eco' ? 'eco' : 'full');
 export const setPerf = (level) => { PERF.level = level === 'eco' ? 'eco' : 'full'; };
 export const ENGINES = ['wl', 'nodes'];
 export const setEngine = (e) => { PERF.engine = e === 'nodes' ? 'nodes' : 'wl'; };
+export const VERBS = ['conv', 'light'];
+export const setVerb = (v) => { PERF.verb = v === 'light' ? 'light' : 'conv'; };
+export const verbLight = () => PERF.verb === 'light';
+// Умолчание: телефон — лёгкая (процессор слабее и режется при погашенном экране), компьютер — свёртка
+export const defaultVerb = (nav = typeof navigator !== 'undefined' ? navigator : {}) => (/Android|iPhone|iPad|Mobile/.test(nav.userAgent || '') ? 'light' : 'conv');
 export const eco = () => PERF.level === 'eco';
 export const maxVoices = () => Math.max(8, (eco() ? 10 : 22) - PERF.squeeze * 6);      // голосов синтезатора
 export const uniCap = (n) => (eco() || PERF.squeeze >= 2 ? Math.min(n || 1, 1) : PERF.squeeze ? Math.min(n || 1, 2) : n); // унисон пэдов: в экономном и под нагрузкой — меньше

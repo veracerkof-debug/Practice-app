@@ -1558,6 +1558,10 @@
   "snd.wl": "Yangi",
   "snd.nodes": "Avvalgi",
   "snd.engineHint": "«Yangi» pedlar, ibodat klavishlari, glayder va termenvoksni har notaga bitta tugun bilan hisoblaydi — protsessor uchun uch barobar arzon. Yangi notalarga taalluqli.",
+  "snd.verb": "Reverberatsiya",
+  "snd.verbLight": "Yengil",
+  "snd.verbConv": "Svyortka",
+  "snd.verbHint": "«Yengil» — telefon sintezatorlaridagi kabi algoritm: protsessor uchun oʻnlab marta arzon. «Svyortka» aniqroq, ammo barcha asboblar birga chalinganda tovush oqimi ulgurmasligi mumkin. Telefonda sukut boʻyicha — yengil. Darhol amal qiladi.",
   "snd.load": "Tovush yuklamasi",
   "snd.loadShort": "CPU",
   "snd.loadHint": "Tovush oqimi hisobga sarflaydigan vaqt ulushi: 70 % gacha — zaxira bor, 90 % dan — uzilishlar boʻlishi mumkin (kamroq ovoz yoki «Yengil» sifat). Xuddi shu oʻlchagich miksher pardasida."

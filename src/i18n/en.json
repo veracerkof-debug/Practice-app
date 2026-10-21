@@ -1593,6 +1593,10 @@
   "snd.wl": "New",
   "snd.nodes": "Previous",
   "snd.engineHint": "“New” computes pads, worship keys, glider and theremin in one node per note — three times cheaper for the CPU. Applies to new notes.",
+  "snd.verb": "Reverb",
+  "snd.verbLight": "Light",
+  "snd.verbConv": "Convolution",
+  "snd.verbHint": "“Light” is an algorithm like in phone synthesizers: tens of times cheaper for the processor. “Convolution” is more precise, but with all instruments at once the audio thread may fall behind. Light by default on a phone. Applies immediately.",
   "snd.load": "Audio load",
   "snd.loadShort": "CPU",
   "snd.loadHint": "Share of time the audio thread spends computing: up to 70 % there is headroom, from 90 % dropouts are likely (fewer voices or “Lite” quality). The same meter is in the mixer drawer."

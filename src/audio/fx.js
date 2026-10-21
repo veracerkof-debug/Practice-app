@@ -16,6 +16,7 @@
 // Кривая эквалайзера считается здесь же по формулам RBJ Audio EQ Cookbook — по ним же работает BiquadFilterNode, —
 // чистой функцией, чтобы рисовать и проверять без звука.
 import { sendToSpace, SPACES, SPACE_DEF } from './context.js';
+import { makeSpace } from './spaces.js';
 import { makeIR } from './waves.js';
 import { eco } from './perf.js';
 import { after, cancel } from './clock.js';
@@ -137,8 +138,10 @@ export function driveCurve(amount, n = 2048) {
 // space(type) → вход пространства, выход — в dest; создаются при первом посыле
 export function localSpaces(c, dest) {
   const made = {};
+  const live = typeof OfflineAudioContext === 'undefined' || !(c instanceof OfflineAudioContext);
   return (type) => {
     if (made[type] !== undefined) return made[type];
+    if (live) { try { made[type] = makeSpace(c, type, dest).input; } catch { made[type] = null; } return made[type]; }
     try {
       const d = SPACE_DEF[type] || SPACE_DEF.hall, cv = c.createConvolver(), hp = c.createBiquadFilter(), lp = c.createBiquadFilter(), g = c.createGain(), inp = c.createGain();
       cv.buffer = makeIR(c, d.sec, { damp: d.damp, pre: d.pre });
