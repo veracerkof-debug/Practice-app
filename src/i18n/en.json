@@ -1622,5 +1622,26 @@
   "snd.verbHint": "“Light” is an algorithm like in phone synthesizers: tens of times cheaper for the processor. “Convolution” is more precise, but with all instruments at once the audio thread may fall behind. Light by default on a phone. Applies immediately.",
   "snd.load": "Audio load",
   "snd.loadShort": "CPU",
-  "snd.loadHint": "Share of time the audio thread spends computing: up to 70 % there is headroom, from 90 % dropouts are likely (fewer voices or “Lite” quality). The same meter is in the mixer drawer."
+  "snd.loadHint": "Share of time the audio thread spends computing: up to 70 % there is headroom, from 90 % dropouts are likely (fewer voices or “Lite” quality). The same meter is in the mixer drawer.",
+  "auto.lyr": "Lyrics automatically",
+  "auto.lyrHint": "Words from the recording with line timing — from the separated vocals, after the stems. Windows version only: the speech recognition model is 574 MB.",
+  "lic.wc.sub": "Speech recognition for lyrics (Windows): the whisper.cpp library, Whisper large-v3-turbo model 574 MB in the installer, no network",
+  "lic.wh.text": "The Whisper model (OpenAI, MIT license) in ggml format with q5_0 quantization from the ggerganov/whisper.cpp project. Runs on the computer only.",
+  "ls.title": "Receive files from the phone",
+  "ls.sw": "Receive over Wi-Fi (LocalSend)",
+  "ls.hint": "The computer appears on the network as “Melete · name”. On the phone, the LocalSend app (open source, free): pick this computer and send recordings, tabs, PDFs or lyrics. Every transfer is confirmed here; files go to the Melete folder and appear in the library.",
+  "ls.ask": "Files from “{from}”",
+  "ls.askText": [
+    "Accept {n} file ({size}): {names}?",
+    "Accept {n} files ({size}): {names}?"
+  ],
+  "ls.accept": "Accept",
+  "ls.got": "Received: {name}",
+  "ls.err": "Receiving did not start: port 53317 is busy or the network is unavailable",
+  "ls.needFolder": "Choose the Melete folder first",
+  "auto.hqHintPc": "Vocals by the Mel-RoFormer model, the rest by HTDemucs on the recording minus vocals, in three passes; about 10× the usual time. All recordings get the regular separation first, then the improved one; the first version stays.",
+  "lic.mr.sub": "Vocals for improved separation (Windows): 464 MB model in the installer, no network",
+  "lic.mr.text": "Mel-Band RoFormer: weights by Kimberley Jensen (MIT license), architecture by Wang et al. (ByteDance), code by Phil Wang and Roman Solovyev (ZFTurbo); ONNX export audiojs/mel-roformer (MIT). Spectrogram and segment stitching are our own code (src-tauri/src/roformer.rs), checked against the @audio/neural-separate reference.",
+  "lic.df.sub": "Noise reduction for recordings (Windows): the DeepFilterNet3 model inside the program, run by tract; no network",
+  "lic.df.text": "DeepFilterNet (Hendrik Schröter et al., MIT and Apache-2.0 licenses) — the deep_filter crate with the built-in DeepFilterNet3 model; tract (Sonos, MIT and Apache-2.0) — neural network inference in Rust."
 }

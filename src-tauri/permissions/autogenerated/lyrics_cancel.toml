@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-lyrics-cancel"
+description = "Enables the lyrics_cancel command without any pre-configured scope."
+commands.allow = ["lyrics_cancel"]
+
+[[permission]]
+identifier = "deny-lyrics-cancel"
+description = "Denies the lyrics_cancel command without any pre-configured scope."
+commands.deny = ["lyrics_cancel"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-denoise-read"
+description = "Enables the denoise_read command without any pre-configured scope."
+commands.allow = ["denoise_read"]
+
+[[permission]]
+identifier = "deny-denoise-read"
+description = "Denies the denoise_read command without any pre-configured scope."
+commands.deny = ["denoise_read"]

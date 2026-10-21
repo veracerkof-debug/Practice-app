@@ -42,6 +42,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": {
+      "models/whisper/": "models/whisper/",
+      "models/roformer/": "models/roformer/"
+    },
     "category": "Music",
     "shortDescription": "Melete — практика музыкантов",
     "longDescription": "Учёт занятий и статистика, метроном, тюнер, пианино, лупер, студия, табы и ноты. Без рекламы и трекинга.",

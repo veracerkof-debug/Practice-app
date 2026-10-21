@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { isDesktop } from '../desktop.js';
 import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
-import { autoMode, autoAna, autoHq, autoPower } from '../autostems.js';
+import { autoMode, autoAna, autoHq, autoPower, autoLyr } from '../autostems.js';
 import { sortable } from '../../ui/hold.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
@@ -188,9 +188,10 @@ function weekHTML(app) {
     '<div class="group"><div class="cell"><span class="grow">' + t('presence.title') + '</span>' + psw('micPresence', !!st.micPresence, t('presence.title')) + '</div></div>' +
     '<p class="ftr">' + t('presence.hint') + '</p>' +
     // медиатека: дорожки и тональность с темпом — сами, в фоне (src/core/autostems.js)
-    '<div class="hdr">' + t('auto.title') + '</div><div class="group">' + (app.jobs && app.jobs.supported() ? '<div class="cellcol">' + seg('autostems', [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']], autoMode(st), t('auto.stems')) + '<div class="segcap">' + t('auto.stemsHint') + '</div></div><div class="cell"><span class="grow">' + t('auto.hq') + '<span class="bksub">' + t('auto.hqHint') + '</span></span>' + psw('autoHq', autoHq(st), t('auto.hq')) + '</div>' +
+    '<div class="hdr">' + t('auto.title') + '</div><div class="group">' + (app.jobs && app.jobs.supported() ? '<div class="cellcol">' + seg('autostems', [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']], autoMode(st), t('auto.stems')) + '<div class="segcap">' + t('auto.stemsHint') + '</div></div><div class="cell"><span class="grow">' + t('auto.hq') + '<span class="bksub">' + t(isDesktop() ? 'auto.hqHintPc' : 'auto.hqHint') + '</span></span>' + psw('autoHq', autoHq(st), t('auto.hq')) + '</div>' +
       '<div class="cellcol">' + seg('autopower', [['charge', t('auto.powerCharge')], ['always', t('auto.powerAlways')]], autoPower(st), t('auto.power')) + '<div class="segcap">' + t('auto.powerHint') + '</div></div>' : '') +
-    '<div class="cell"><span class="grow">' + t('auto.ana') + '</span>' + psw('autoAna', autoAna(st), t('auto.ana')) + '</div></div><p class="ftr">' + t('auto.anaHint') + '</p>' +
+    '<div class="cell"><span class="grow">' + t('auto.ana') + '</span>' + psw('autoAna', autoAna(st), t('auto.ana')) + '</div>' +
+    (app.jobs && app.jobs.lyricsSupported() ? '<div class="cell"><span class="grow">' + t('auto.lyr') + '<span class="bksub">' + t('auto.lyrHint') + '</span></span>' + psw('autoLyr', autoLyr(st), t('auto.lyr')) + '</div>' : '') + '</div><p class="ftr">' + t('auto.anaHint') + '</p>' +
     // звук: буфер (задержка против треска) и режим ресурсов (полный / экономный для слабых телефонов) — src/audio/perf.js
     '<div class="hdr">' + t('snd.title') + '</div><div class="group"><div class="cellcol">' + seg('sndmode', [['fast', t('snd.fast')], ['bal', t('snd.bal')], ['smooth', t('snd.smooth')]], app.audio.mixer.state.mode, t('snd.mode')) + '</div>' +
     '<div class="cellcol">' + seg('sndperf', [['full', t('snd.full')], ['eco', t('snd.eco')]], app.audio.mixer.state.perf, t('snd.perf')) + '</div>' +
@@ -312,7 +313,14 @@ function folderHTML(app) {
     (s.ok ? '<span class="st l2" style="display:block;font-size:13px">' + (F.busy ? t('fold.busy') : F.last ? t('fold.last', { t: new Date(F.last).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit' }) }) : t('fold.ready')) + '</span>' : '') + '</span></div>' +
     '<button class="cell act" data-fold="pick">' + t(s.ok ? 'fold.change' : 'fold.pick') + '</button>' +
     (s.ok ? '<button class="cell act" data-fold="sync">' + t('fold.sync') + '</button><button class="cell act" data-fold="restore">' + t('fold.restore') + '</button><button class="cell act danger" data-fold="forget">' + t('fold.forget') + '</button>' : '') +
-    '</div><p class="ftr">' + t('fold.hint') + '</p>' + (s.ok ? copiesHTML() : '');
+    '</div><p class="ftr">' + t('fold.hint') + '</p>' + (s.ok ? localSendHTML(app) + copiesHTML() : '');
+}
+// Приём файлов с телефона по протоколу LocalSend (Windows): переключатель, адреса компьютера, как слать с телефона
+function localSendHTML(app) {
+  const L = app.localSend;
+  if (!L || !L.available) return '';
+  const on = L.enabled() && L.state.on;
+  return '<div class="hdr">' + t('ls.title') + '</div><div class="group"><div class="cell"><span class="grow">' + t('ls.sw') + (on ? '<span class="bksub">' + esc(L.state.alias) + ' · ' + esc(L.state.ips.join(', ')) + ':53317</span>' : '') + '</span>' + psw('localSend', L.enabled(), t('ls.sw')) + '</div></div><p class="ftr">' + t('ls.hint') + '</p>';
 }
 
 // Копии с подписью в папке (Data/Backups): дата, время и кто сохранил; касание — загрузить (слиянием)
@@ -512,6 +520,7 @@ export function createPanel(app, onChange) {
   function bind() {
     // папка Melete: состояние синхронизации — на странице «Данные и копии»
     if (app.folder) app.folder.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
+    if (app.localSend) app.localSend.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
     // характер Мелеты (страница «Уведомления»)
     bindMelete(layer, () => app.store.state.settings, { save: () => { app.store.settingsChanged(); onChange(); }, rerender: () => render() });
     // свои цвета: при выборе — сразу на экране, сохраняется по закрытию палитры (change)
@@ -663,7 +672,8 @@ export function createPanel(app, onChange) {
         if (k === 'float' && on) canOverlay().then((ok) => { if (!ok) { toast(t('pl.askOverlay')); askOverlay(); } });
         return;
       }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
+      if (d.psw === 'localSend') { app.localSend.set(e.target.checked).then(() => render()); return; }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq' || d.psw === 'autoLyr') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
         onChange();
@@ -748,6 +758,9 @@ export function legalSheet(kind) {
       lic('S-KEY', t('lic.skey.sub'), '<p>© Deezer SA</p><p>' + t('lic.mit') + '</p>') +
       lic('Beat This!', t('lic.bt.sub'), '<p>© Francesco Foscarin, Jan Schlüter, Gerhard Widmer (CPJKU)</p><p>' + t('lic.mit') + '</p>') +
       lic('ChordMini', t('lic.cm.sub'), '<p>© ChordMini authors</p><p>' + t('lic.mit') + '</p>') +
+      lic('Mel-Band RoFormer', t('lic.mr.sub'), '<p>© Kimberley Jensen; © Phil Wang, Roman Solovyev</p><p>' + t('lic.mit') + '</p><p>' + t('lic.mr.text') + '</p>') +
+      lic('DeepFilterNet · tract', t('lic.df.sub'), '<p>© Hendrik Schröter; © Sonos, Inc.</p><p>' + t('lic.df.text') + '</p>') +
+      lic('whisper.cpp · Whisper', t('lic.wc.sub'), '<p>© Georgi Gerganov; © OpenAI</p><p>' + t('lic.mit') + '</p><p>' + t('lic.wh.text') + '</p>') +
       lic('TensorFlow.js', t('lic.tf.sub'), '<p>© Google LLC</p><p>' + t('lic.tf.text') + '</p>') +
       lic('@tonejs/midi', t('lic.tm.sub'), '<p>© Yotam Mann</p><p>' + t('lic.mit') + '</p>') +
       lic('sql.js', t('lic.sqljs.sub'), '<p>© sql.js authors; SQLite — public domain</p><p>' + t('lic.mit') + '</p>') +

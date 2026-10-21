@@ -1,2 +1,4 @@
 target/
 gen/schemas/
+# модель текста песни (build/models.json, скачивается перед сборкой)
+models/

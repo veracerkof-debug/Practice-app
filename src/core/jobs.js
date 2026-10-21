@@ -1,11 +1,15 @@
 // Долгие обработки записей медиатеки — одна за раз, с ходом и отменой: разделение на дорожки (src/audio/stems.js) и
-// снятие нот (src/audio/transcribe.js). Результаты ложатся в медиатеку рядом с записью: дорожки — WAV с пометкой
+// снятие нот (src/audio/transcribe.js), текст песни (src/audio/lyrics.js, только Windows: rec.lyr на самой записи) и
+// шумоподавление (src/audio/denoise.js, только Windows: новый WAV рядом с записью, пометка dn: { src }).
+// Результаты ложатся в медиатеку рядом с записью: дорожки — WAV с пометкой
 // stem: { src, part, mode, hq, db } — обычная и улучшенная (hq) версии живут рядом, ноты — .mid с пометкой trans: { src }. Запускают плеер медиатеки (по кнопке) и
-// фоновая очередь (autostems.js). Подписчики получают состояние: { kind: 'stems' | 'notes', id, stage, frac, stageAt, mode, auto }.
+// фоновая очередь (autostems.js). Подписчики получают состояние: { kind: 'stems' | 'notes' | 'lyrics' | 'denoise', id, stage, frac, stageAt, mode, auto }.
 // Без DOM: имена дорожек — через t() ядра.
 import { t } from '../i18n/index.js';
 import { separate, PARTS_OF, stemEmpty, stemLevelDb, stemsSupported } from '../audio/stems.js';
 import { transcribe } from '../audio/transcribe.js';
+import { transcribeLyrics, lyricsSupported } from '../audio/lyrics.js';
+import { denoise, denoiseSupported } from '../audio/denoise.js';
 import { encodeWav, peaks } from '../audio/voicefx.js';
 import { takeDur } from '../music/midi.js';
 import { log, logErr } from './log.js';
@@ -16,6 +20,9 @@ const base = (r) => String(r.name || '').replace(/\.[a-z0-9]+$/i, '');
 export const stemsOf = (files, id) => files.list('audio').filter((r) => r.stem && r.stem.src === id);
 export const notesOf = (files, id) => files.list('midi').find((r) => r.trans && r.trans.src === id) || null;
 // hq — нужен набор «ночного» качества (обычный не считается)
+// Дорожка вокала записи — для текста песни: улучшенная версия, если есть
+export const vocalsOf = (files, id) => { const v = stemsOf(files, id).filter((r) => r.stem.part === 'vocals'); return v.find((r) => r.stem.hq) || v[0] || null; };
+export const denoisedOf = (files, id) => files.list('audio').find((r) => r.dn && r.dn.src === id) || null;
 export const hasStems = (files, id, mode = null, hq = false) => stemsOf(files, id).some((r) => (!mode || (r.stem.mode || '4') === mode) && (!hq || r.stem.hq));
 
 export function createJobs(files) {
@@ -56,6 +63,27 @@ export function createJobs(files) {
     return r;
   }
 
+  // Текст песни записи rec → rec.lyr (на самой записи; строки с временем)
+  async function runLyrics(rec, src) {
+    const res = await cur.job.promise;
+    rec.lyr = { v: 1, lang: res.lang, lines: res.lines, src, at: Date.now() };
+    delete rec.lyrTried;
+    await files.save(rec);
+    log('jobs', 'текст: ' + res.lines.length + ' строк, ' + (res.lang || '?') + ', ' + src);
+    return rec.lyr;
+  }
+
+  // Очищенная запись → новый WAV (моно 48 кГц) рядом; прежняя очищенная версия заменяется
+  async function runDenoise(rec) {
+    const res = await cur.job.promise;
+    const at = Date.now(), old = denoisedOf(files, rec.id), wav = encodeWav([res.x], res.sr);
+    const r = { id: old ? old.id : 'dn' + at.toString(36), name: base(rec) + ' — ' + t('stems.cleanSuffix') + '.wav', size: wav.length, type: 'audio/wav', kind: 'audio', songs: rec.songs || [], created: at,
+      blob: new Blob([wav], { type: 'audio/wav' }), dur: res.dur, peaks: stemPeaks([res.x]), dn: { src: rec.id, at }, noAuto: true };
+    await files.add(r);
+    log('jobs', 'шум убран: ' + r.name);
+    return r;
+  }
+
   const api = {
     get current() { return cur; },
     busy: () => !!cur,
@@ -76,6 +104,27 @@ export function createJobs(files) {
       cur.job = transcribe(rec.blob, { sens, bends, name: base(rec), onStage: (stage, f) => set({ stage, frac: f, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) }) });
       emit();
       return runNotes(rec).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
+    },
+    lyricsSupported: () => lyricsSupported(),
+    // Текст песни (Windows): по отделённому вокалу, если он есть, иначе по записи целиком
+    lyrics(rec, { auto = false, lang = null } = {}) {
+      if (cur) return Promise.reject(new Error('busy'));
+      if (!lyricsSupported()) return Promise.reject(new Error('web'));
+      const v = vocalsOf(files, rec.id), src = v ? 'vocals' : 'mix';
+      cur = { kind: 'lyrics', id: rec.id, rec, stage: 'decode', frac: 0, auto, t0: Date.now() };
+      cur.job = transcribeLyrics((v || rec).blob, { lang, onStage: (stage, frac) => set({ stage, frac, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) }) });
+      emit();
+      return runLyrics(rec, src).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
+    },
+    denoiseSupported: () => denoiseSupported(),
+    // Убрать шум (Windows): atten — предел ослабления в дБ (null — полностью)
+    denoise(rec, { atten = null } = {}) {
+      if (cur) return Promise.reject(new Error('busy'));
+      if (!denoiseSupported()) return Promise.reject(new Error('web'));
+      cur = { kind: 'denoise', id: rec.id, rec, stage: 'decode', frac: 0, t0: Date.now() };
+      cur.job = denoise(rec.blob, { atten, onStage: (stage, frac) => set({ stage, frac, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) }) });
+      emit();
+      return runDenoise(rec).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
     },
     cancel() { if (cur && cur.job) cur.job.cancel(); },
   };

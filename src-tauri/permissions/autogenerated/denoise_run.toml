@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-denoise-run"
+description = "Enables the denoise_run command without any pre-configured scope."
+commands.allow = ["denoise_run"]
+
+[[permission]]
+identifier = "deny-denoise-run"
+description = "Denies the denoise_run command without any pre-configured scope."
+commands.deny = ["denoise_run"]

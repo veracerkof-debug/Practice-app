@@ -67,3 +67,7 @@
 .wfch i.on{background:var(--tint);color:var(--on-tint)}
 .wft .achord{margin-right:8px;font-weight:700}
 .atimes .achord{margin-right:8px;font-weight:700;color:var(--ink)}
+/* текущая строка текста песни (rec.lyr, Windows: whisper) — под волной, одной строкой */
+.alyr{min-height:22px;padding:2px 2px 0;font-size:15px;line-height:1.3;text-align:center;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alyr.next{color:var(--l2)}
+.lyrprev{margin-top:6px;font-size:14px;line-height:1.35;color:var(--l2)}

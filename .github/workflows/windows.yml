@@ -44,9 +44,12 @@ jobs:
       - name: Модели
         run: npm run models
 
-      # beforeBuildCommand в tauri.conf.json собирает веб-часть (npm run build)
+      # beforeBuildCommand в tauri.conf.json собирает веб-часть (npm run build); whisper.cpp собирается cmake-ом,
+      # привязки Rust берутся готовые (без libclang)
       - name: Сборка установщика
         run: npx tauri build --ci
+        env:
+          WHISPER_DONT_GENERATE_BINDINGS: '1'
 
       - name: Переименовать
         shell: bash

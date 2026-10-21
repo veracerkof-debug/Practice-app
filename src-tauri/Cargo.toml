@@ -24,7 +24,17 @@ tauri-plugin-window-state = "2"
 # дорожки нативно (src/demucs.rs): ONNX Runtime статически (бинарники pyke скачиваются при сборке), FFT
 ort = { version = "2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "tls-rustls", "api-31"] }
 realfft = "3.5"
+# текст песни из записи (src/lyrics.rs): whisper.cpp статически (cmake при сборке), модель — в ресурсах установщика
+whisper-rs = { version = "0.16", default-features = false }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# приём файлов по протоколу LocalSend (src/localsend.rs): маленький HTTP-сервер и адреса сетевых интерфейсов
+tiny_http = "0.12"
+local-ip-address = "0.6"
+# шумоподавление DeepFilterNet3 (src/denoise.rs): модель внутри крейта, выполнение — tract (чистый Rust); крейт на crates.io
+# отстал (0.2.5), берётся из репозитория по метке v0.5.6
+deep_filter = { git = "https://github.com/Rikorose/DeepFilterNet", rev = "978576aa8400552a4ce9730838c635aa30db5e61", default-features = false, features = ["tract", "default-model"] }
+ndarray = "0.15"
 
 [profile.release]
 codegen-units = 1

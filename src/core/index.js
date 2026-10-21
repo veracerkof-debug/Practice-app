@@ -49,6 +49,7 @@ import { ensureCal, eventReminders, liveEvents, kindOf } from './calendar.js';
 import { remindText, remindCtx } from './remindtexts.js';
 import { initShareIn } from './screens/share.js';
 import { initFolder } from './foldersync.js';
+import { initLocalSend } from './localsend.js';
 import { initDesktop } from './desktop.js';
 
 export function boot(root) {
@@ -260,6 +261,9 @@ export function boot(root) {
   app.folder = initFolder(app);
   // компьютер (Tauri): файлы, открытые двойным щелчком, F11
   initDesktop(app);
+  // приём файлов с телефона по протоколу LocalSend (Windows, по переключателю в настройках)
+  app.localSend = initLocalSend(app);
+  app.localSend.init();
   // прошлый запуск закрылся неожиданно — предложить отправить отчёт
   crashOffer(app);
   // касание названия раздела — его стих (в обоих видах)

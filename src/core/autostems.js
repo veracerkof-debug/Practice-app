@@ -3,7 +3,8 @@
 // тональность и темп (settings.autoAna, по умолчанию включено; результат — rec.ana). Порядок — от недавних: сначала
 // то, что недавно слушали (device.audio.used) или добавили. Две очереди: сперва все записи получают обычное разделение,
 // и только когда оно есть у всех — «улучшенное разделение» (settings.autoHq, выкл: три прохода, ×4,5 времени), первая
-// версия при этом остаётся — в плеере можно вернуться к ней.
+// версия при этом остаётся — в плеере можно вернуться к ней. На Windows между ними — текст песни (settings.autoLyr,
+// по умолчанию включено; whisper по отделённому вокалу, поэтому после дорожек; результат — rec.lyr).
 // Когда считать: только в тишине (ничего не звучит, нет занятия и записи — счёт берёт все ядра и помешал бы живому
 // звуку) и, по умолчанию, только на зарядке (settings.autoPower: 'charge' | 'always') — обычно это ночь, за ночь
 // 10–20 песен; зазвучало — текущее разделение прерывается между сегментами и повторится позже. Ход виден в плеере
@@ -15,6 +16,7 @@ export const AUTO_MODES = ['off', '2', '4', '6'];
 export const autoMode = (settings) => (AUTO_MODES.includes(settings.autoStems) ? settings.autoStems : '4');
 export const autoAna = (settings) => settings.autoAna !== false;
 export const autoHq = (settings) => settings.autoHq === true; // улучшенное разделение (вторая очередь)
+export const autoLyr = (settings) => settings.autoLyr !== false; // текст песни (только где есть whisper — Windows)
 export const AUTO_POWER = ['charge', 'always'];
 export const autoPower = (settings) => (AUTO_POWER.includes(settings.autoPower) ? settings.autoPower : 'charge');
 const MAX_SEC = 20 * 60, DELAY_MS = 15000, RETRY_MS = 60000;
@@ -34,11 +36,13 @@ export function createAutoStems(app) {
   let mirOk = false; import('../audio/mir.js').then((m) => { mirOk = m.mirSupported(); schedule(); }).catch(() => {});
   const ok = (r) => !(failed.get(r.id) > Date.now());
   const needsStems = (r) => { const m = autoMode(settings()); return m !== 'off' && jobs.supported() && !hasStems(files, r.id, m) && ok(r); };
+  // текст — после дорожек (по вокалу точнее); дорожки выключены — по записи целиком
+  const needsLyr = (r) => { const m = autoMode(settings()); return autoLyr(settings()) && jobs.lyricsSupported() && !r.lyr && !r.lyrTried && ok(r) && (m === 'off' || !jobs.supported() || hasStems(files, r.id, m)); };
   const needsHq = (r) => { const m = autoMode(settings()); return autoHq(settings()) && m !== 'off' && jobs.supported() && !hasStems(files, r.id, m, true) && ok(r); };
   const usedAt = (r) => Math.max(r.created || 0, ((app.device.audio || {}).used || {})[r.id] || 0);
   const recent = () => files.list('audio').filter(candidate).sort((a, b) => usedAt(b) - usedAt(a));
   // первая очередь — тональность и обычное разделение у всех; вторая — улучшенное, когда первая пуста
-  const next = () => { const L = recent(); return L.find((r) => needsAna(r) || needsStems(r)) || L.find(needsHq) || null; };
+  const next = () => { const L = recent(); return L.find((r) => needsAna(r) || needsStems(r)) || L.find(needsLyr) || L.find(needsHq) || null; };
 
   // Разбор: моделями (src/audio/mir.js — тональность, доли и темп, аккорды; APK и Windows), иначе — своя хрома и
   // огибающая (songanalyze.js). rec.ana: { pc, minor, cents, bpm, bpb, beats, downbeats, chords, v, at }
@@ -71,7 +75,10 @@ export function createAutoStems(app) {
     running = true;
     try {
       if (needsAna(r)) await analyze(r);
-      else {
+      else if (needsLyr(r)) {
+        log('auto', 'текст в фоне: ' + r.name);
+        try { await jobs.lyrics(r, { auto: true }); } catch (e) { if (e && e.message === 'cancel') failed.set(r.id, Date.now() + RETRY_MS); else { r.lyrTried = true; await files.save(r); } }
+      } else {
         const m = autoMode(settings()), hq = !needsStems(r);
         log('auto', 'дорожки в фоне: ' + r.name + ' (' + m + (hq ? ', hq' : '') + ')');
         try { await jobs.separate(r, m, { auto: true, hq }); } catch (e) { if (e && e.message === 'cancel') failed.set(r.id, Date.now() + RETRY_MS); else failed.set(r.id, Date.now() + 6 * 3600000); }
@@ -90,7 +97,9 @@ export function createAutoStems(app) {
     mode: () => autoMode(settings()), // режим из настройки — умолчание и для разделения по кнопке
     hq: () => autoHq(settings()),
     setHq(v) { settings().autoHq = !!v; app.store.settingsChanged(); schedule(1000); }, // переключатель и в плеере, и в настройках — один
-    get pending() { return files.list('audio').filter((r) => candidate(r) && (needsAna(r) || needsStems(r) || needsHq(r))).length; },
+    lyr: () => autoLyr(settings()),
+    setLyr(v) { settings().autoLyr = !!v; app.store.settingsChanged(); schedule(1000); },
+    get pending() { return files.list('audio').filter((r) => candidate(r) && (needsAna(r) || needsStems(r) || needsLyr(r) || needsHq(r))).length; },
   };
   return api;
 }

@@ -113,11 +113,15 @@ export function makeCtx(app, mod) {
       // инструмент записи: название, значок, цвет
       tool: (id) => { const m = (app.modules || []).find((x) => x.id === id); return m ? { name: moduleName(m), icon: m.icon, color: m.color } : null; },
     },
+    // Отправить файл («Поделиться» на Android, «Сохранить как» на Windows): u8, имя, заголовок, тип
+    sendFile: async (u8, name, title, type) => { const { sendFile } = await import('./screens/share.js'); return sendFile(u8, name, title, type); },
     confirmUpload: () => app.confirmUpload(),
     // согласие на загрузку уже дано — выбор файла открывается прямо в нажатии (iPhone иначе его не покажет)
     uploadOk: () => !!app.store.state.settings.upOk,
     // Песни библиотеки — только чтение: [{ id, title, artist, key, text }] (text — есть ли текст с аккордами)
     songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title, artist: s.artist || '', key: s.key || null, text: !!String(s.notes || '').trim() })),
+    // Текст песни (с аккордами) — записать; → true, если песня есть
+    songText(id, text) { const s = app.store.songs().find((x) => x.id === id); if (!s) return false; s.notes = String(text || ''); s.updatedAt = app.store.now(); app.store.save(); return true; },
     // Проекты студии (state.projects, в резервной копии вместе с песнями): list(), get(id), save(p), remove(id)
     projects: {
       list: () => (app.store.state.projects || []).filter((x) => !x.deleted),

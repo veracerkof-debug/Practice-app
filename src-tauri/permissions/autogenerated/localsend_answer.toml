@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-localsend-answer"
+description = "Enables the localsend_answer command without any pre-configured scope."
+commands.allow = ["localsend_answer"]
+
+[[permission]]
+identifier = "deny-localsend-answer"
+description = "Denies the localsend_answer command without any pre-configured scope."
+commands.deny = ["localsend_answer"]

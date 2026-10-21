@@ -13,8 +13,10 @@ import { onHold } from '../../ui/hold.js';
 import { parseChord } from '../../audio/mirpost.js';
 import { pitchShifter } from '../../audio/pitchshift.js';
 import { createStretchPlayer, stretchAvailable } from '../../audio/stretchplayer.js';
-import { MODES, estimateSec } from '../../audio/stems.js';
-import { stemsOf, notesOf } from '../../core/jobs.js';
+import { MODES, estimateSec, hqVocalsModel } from '../../audio/stems.js';
+import { estimateLyricsSec, lineAt, lyricsText, toLrc } from '../../audio/lyrics.js';
+import { stemsOf, notesOf, denoisedOf } from '../../core/jobs.js';
+import { estimateDenoiseSec } from '../../audio/denoise.js';
 import { projectFromStems, projectFromSong, isEmptyProject } from '../../music/project.js';
 import { readMidiSong } from '../../music/daw.js';
 import { after, cancel } from '../../audio/clock.js';
@@ -198,6 +200,15 @@ function listenNotes(rec) {
   return true;
 }
 const jobErr = (e) => { const { t } = ctx; if (e && e.message === 'cancel') ctx.ui.toast(t('job.cancelled')); else if (e && e.message === 'busy') ctx.ui.toast(t('job.busy')); else { ctx.logErr(e); ctx.ui.toast(t('job.fail')); } };
+// Текст из записи → текст песни, к которой она привязана; песни нет — шторка привязки (меню записи)
+function lyricsToSong(tr, sh) {
+  const { t, ui } = ctx, lines = (tr.lyr && tr.lyr.lines) || [], sid = (tr.songs || [])[0], song = sid && ctx.songs().find((s) => s.id === sid);
+  if (!lines.length) return;
+  if (!song) { ui.toast(t('lyr.noSong')); sh.close(); menuSheet(tr.id); return; }
+  const write = () => { if (ctx.songText(song.id, lyricsText(lines))) ui.toast(t('lyr.toSongDone', { name: song.title })); };
+  if (song.text) ui.confirm(t('lyr.replaceTitle'), t('lyr.replaceText', { name: song.title }), write); else write();
+}
+
 function stemsSheet() {
   const { t, ui } = ctx, tr = AU.cur, jobs = ctx.jobs;
   if (!tr || !jobs) return;
@@ -208,7 +219,7 @@ function stemsSheet() {
   let m = (first && first.stem.mode) || (ctx.auto && ctx.auto.mode()) || '4';
   if (!MODES.includes(m)) m = '4';
   const progress = (j, sel) => {
-    const pct = Math.round((j.frac || 0) * 100), run = j.stage === 'separate' || j.stage === 'run', gone = (Date.now() - (j.stageAt || j.t0)) / 1000;
+    const pct = Math.round((j.frac || 0) * 100), run = j.stage === 'separate' || j.stage === 'run' || j.stage === 'lyr' || (j.kind === 'denoise' && j.stage === 'run'), gone = (Date.now() - (j.stageAt || j.t0)) / 1000;
     const left = run && j.frac > 0.02 ? Math.max(0, gone / j.frac - gone) : 0;
     return '<div class="cellcol sjob"><span class="grow">' + ui.esc(t('job.' + j.stage)) + (j.hq ? ' · ' + ui.esc(t('stems.verHq').toLowerCase()) : '') + (run ? ' · <b class="num">' + pct + ' %</b>' + (left ? ' · ' + ui.esc(t('job.left', { t: fmtT(left) })) : '') : '') + '</span><div class="sbar"><b style="width:' + pct + '%"></b></div></div>' +
       '<button class="cell act center" ' + sel + '>' + ui.esc(t('job.cancel')) + '</button>';
@@ -227,7 +238,7 @@ function stemsSheet() {
     if (can && !(j && j.kind === 'stems')) {
       // обе версии есть — выбор; улучшенное включено, а есть только обычная — «Улучшить»
       if (set.length && hasVer(tr, m, true) && hasVer(tr, m, false)) h += '<div class="cellcol"><span>' + ui.esc(t('stems.ver')) + '</span>' + ui.seg('sver', [['std', t('stems.verStd')], ['hq', t('stems.verHq')]], verOf(tr), t('stems.ver')) + '</div>';
-      h += '<button class="cell act" data-shq aria-pressed="' + hq() + '"><span class="grow">' + ui.esc(t('stems.hq')) + '<span class="bksub">' + ui.esc(t('stems.hqHint')) + '</span></span><span class="val">' + (hq() ? '✓' : '') + '</span></button>' +
+      h += '<button class="cell act" data-shq aria-pressed="' + hq() + '"><span class="grow">' + ui.esc(t('stems.hq')) + '<span class="bksub">' + ui.esc(t(hqVocalsModel() ? 'stems.hqHintPc' : 'stems.hqHint')) + '</span></span><span class="val">' + (hq() ? '✓' : '') + '</span></button>' +
         (set.length && hq() && !hasVer(tr, m, true) ? '<button class="cell act center" data-sgo>' + ui.esc(t('stems.improve', { t: fmtT(estimateSec(tr.dur || 60, m, true)) })) + '</button>' : '');
     }
     h += '</div>';
@@ -242,6 +253,25 @@ function stemsSheet() {
       '<button class="cell act" data-nbends aria-pressed="' + !!st().nbends + '"><span class="grow">' + ui.esc(t('notes.bends')) + '<span class="bksub">' + ui.esc(t('notes.bendsHint')) + '</span></span><span class="val">' + (st().nbends ? '✓' : '') + '</span></button>' +
       '<button class="cell act center b" data-ngo>' + ui.esc(t('notes.go')) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
     h += '</div><p class="ftr">' + ui.esc(t(notes ? 'notes.doneHint' : 'notes.hint')) + '</p>';
+    // текст песни — whisper на компьютере (Windows); на телефоне — строка о том, где он есть
+    const lyr = tr.lyr && Array.isArray(tr.lyr.lines) ? tr.lyr : null, canLyr = jobs.lyricsSupported();
+    h += '<div class="hdr">' + ui.esc(t('lyr.hdr')) + '</div><div class="group">';
+    if (j && j.kind === 'lyrics') h += progress(j, 'data-ljcancel');
+    else if (lyr) h += '<div class="cellcol"><span>' + ui.esc(t('lyr.n', { n: lyr.lines.length })) + (lyr.lang ? ' · ' + ui.esc(lyr.lang.toUpperCase()) : '') + '</span><div class="lyrprev">' + lyr.lines.slice(0, 3).map((l) => ui.esc(l.text)).join('<br>') + (lyr.lines.length > 3 ? '<br>…' : '') + '</div></div>' +
+      '<button class="cell act" data-lsong>' + ui.esc(t('lyr.toSong')) + '</button><button class="cell act" data-llrc>' + ui.esc(t('lyr.lrc')) + '</button>' + (canLyr ? '<button class="cell act" data-lgo>' + ui.esc(t('lyr.redo')) + '</button>' : '');
+    else if (canLyr) h += '<button class="cell act center b" data-lgo>' + ui.esc(t('lyr.go', { t: fmtT(estimateLyricsSec(tr.dur || 60)) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
+    else h += '<div class="cellcol"><span class="l2">' + ui.esc(t('lyr.pc')) + '</span></div>';
+    h += '</div><p class="ftr">' + ui.esc(t(lyr ? 'lyr.doneHint' : canLyr ? 'lyr.hint' : 'lyr.pcHint')) + '</p>';
+    // шум — DeepFilterNet на компьютере (Windows); результат — новый файл рядом
+    if (jobs.denoiseSupported() && !tr.dn) {
+      const dn = denoisedOf(ctx.files, tr.id);
+      h += '<div class="hdr">' + ui.esc(t('dn.hdr')) + '</div><div class="group">';
+      if (j && j.kind === 'denoise') h += progress(j, 'data-djcancel');
+      else h += (dn ? '<button class="cell act" data-dplay="' + ui.esc(dn.id) + '"><span class="grow">' + ui.esc(dn.name) + '</span><span class="val">' + ui.esc(t('dn.play')) + '</span></button>' : '') +
+        '<div class="cellcol"><span>' + ui.esc(t('dn.level')) + '</span>' + ui.seg('dnlvl', [['full', t('dn.full')], ['soft', t('dn.soft')]], st().dnlvl || 'full', t('dn.level')) + '</div>' +
+        '<button class="cell act center b" data-dgo>' + ui.esc(t(dn ? 'dn.redo' : 'dn.go', { t: fmtT(estimateDenoiseSec(tr.dur || 60)) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
+      h += '</div><p class="ftr">' + ui.esc(t('dn.hint')) + '</p>';
+    }
     return h;
   };
   let tm = 0;
@@ -267,7 +297,7 @@ function stemsSheet() {
     tick = setInterval(() => { if (job() && el.isConnected) sh.update(); }, 1000);
     el.addEventListener('input', (e) => { const i = e.target.closest('[data-sg]'); if (!i) return; setG(i.dataset.sg, +i.value / 100); apply(sh); });
     el.addEventListener('click', async (e) => {
-      const b = e.target.closest('[data-smute], [data-sreset], [data-sstudio], [data-sgo], [data-shq], [data-sjcancel], [data-njcancel], [data-ngo], [data-nlisten], [data-ntabs], [data-nstudio], [data-nbends], [data-seg="smode"] [data-v], [data-seg="sver"] [data-v], [data-seg="nsens"] [data-v]');
+      const b = e.target.closest('[data-smute], [data-sreset], [data-sstudio], [data-sgo], [data-shq], [data-sjcancel], [data-njcancel], [data-ngo], [data-nlisten], [data-ntabs], [data-nstudio], [data-nbends], [data-lgo], [data-lsong], [data-llrc], [data-ljcancel], [data-dgo], [data-dplay], [data-djcancel], [data-seg="dnlvl"] [data-v], [data-seg="smode"] [data-v], [data-seg="sver"] [data-v], [data-seg="nsens"] [data-v]');
       if (!b) return;
       const d = b.dataset;
       if (d.smute != null) { const k = d.smute, was = val(k); if (was === 0) setG(k, prev[k] || 1); else { prev[k] = was; setG(k, 0); } const i = el.querySelector('[data-sg="' + k + '"]'); if (i) i.value = Math.round(val(k) * 100); apply(sh); return; }
@@ -276,7 +306,13 @@ function stemsSheet() {
       if (b.closest('[data-seg="sver"]')) { (st().pver ??= {})[tr.id] = d.v; ctx.store.save(); if (mixActive(tr)) apply(null); sh.update(); return; }
       if (b.closest('[data-seg="nsens"]')) { st().nsens = d.v; ctx.store.save(); sh.update(); return; }
       if (b.hasAttribute('data-nbends')) { st().nbends = !st().nbends; ctx.store.save(); sh.update(); return; }
-      if (b.hasAttribute('data-sjcancel') || b.hasAttribute('data-njcancel')) { jobs.cancel(); return; }
+      if (b.hasAttribute('data-sjcancel') || b.hasAttribute('data-njcancel') || b.hasAttribute('data-ljcancel') || b.hasAttribute('data-djcancel')) { jobs.cancel(); return; }
+      if (b.closest('[data-seg="dnlvl"]')) { st().dnlvl = d.v; ctx.store.save(); sh.update(); return; }
+      if (b.hasAttribute('data-dgo')) { jobs.denoise(tr, { atten: st().dnlvl === 'soft' ? 18 : null }).then((r) => { ctx.ui.toast(t('dn.saved', { name: r.name })); render(); }).catch(jobErr); sh.update(); return; }
+      if (d.dplay) { const x = ctx.files.get(d.dplay); if (x) { sh.close(); load(x); playEl(); render(); } return; }
+      if (b.hasAttribute('data-lgo')) { jobs.lyrics(tr).then((r) => { ctx.ui.toast(r.lines.length ? t('lyr.saved', { n: r.lines.length }) : t('lyr.none')); render(); }).catch(jobErr); sh.update(); return; }
+      if (b.hasAttribute('data-lsong')) { lyricsToSong(tr, sh); return; }
+      if (b.hasAttribute('data-llrc')) { const name = tr.name.replace(/\.[a-z0-9]+$/i, '') + '.lrc'; ctx.sendFile(new TextEncoder().encode(toLrc(tr.lyr.lines, { title: tr.name.replace(/\.[a-z0-9]+$/i, '') })), name, name, 'text/plain').catch(jobErr); return; }
       if (b.hasAttribute('data-shq')) { if (ctx.auto) ctx.auto.setHq(!hq()); sh.update(); return; }
       if (b.hasAttribute('data-sgo')) { setMode(m); jobs.separate(tr, m, { hq: hq() }).then((r) => { ctx.ui.toast(t(r.stems.length ? 'stems.saved' : 'stems.none')); }).catch(jobErr); sh.update(); return; }
       if (b.hasAttribute('data-ngo')) { jobs.notes(tr, { sens: st().nsens || 'normal', bends: !!st().nbends }).then((r) => { ctx.ui.toast(r.notes ? t('notes.saved', { n: r.notes }) : t('notes.none')); }).catch(jobErr); sh.update(); return; }
@@ -335,9 +371,20 @@ async function engineLoad(t) {
         const dest = ctx.audio.bus('media'), eng = await createStretchPlayer(dest.context, dest);
         ['play', 'pause', 'ended'].forEach((k) => eng.addEventListener(k, PLAY_EV[k]));
         eng.addEventListener('loadedmetadata', () => { const x = AU.cur; if (x && !x.dur && eng.duration) { x.dur = eng.duration; ctx.files.save(x); } render(); });
+        eng.addEventListener('procerror', (e) => ctx.log('движок: ошибка в потоке звука: ' + (e.detail || '?'), 'w'));
+        // самопроверка: короткий тон через узел при нулевой громкости — молчит ли движок на этом устройстве
+        try {
+          const r = await eng.selfTest();
+          if (r) {
+            const info = Math.round(r.db) + ' дБ, ' + r.sampleRate + ' Гц, ' + r.state + ', задержка ' + Math.round(r.lat * 1000) + ' мс, каналов ' + r.channels + (r.err ? ', ошибка: ' + r.err : '');
+            if (r.db < -60) { AU.noEngine = true; ctx.log('движок не прошёл самопроверку — звук через элемент (' + info + ')', 'w'); }
+            else ctx.log('движок: самопроверка ' + info);
+          }
+        } catch (e) { ctx.logErr(e); }
         return eng;
       })();
       AU.eng = await AU.engP;
+      if (AU.noEngine) return false;
     }
     const set = mixActive(t) ? stemsFor(t) : [], key = t.id + ':' + set.map((r) => r.id).join(',');
     if (AU.loadP && AU.loadKey === key) return AU.loadP; // та же запись уже грузится — одна загрузка на всех
@@ -359,9 +406,9 @@ async function engineLoad(t) {
 }
 // Звук — в движок (сразу или при первом воспроизведении, когда появится контекст); видео — элемент
 async function routeTrack(t) {
-  if (isVideo(t) || !stretchAvailable() || AU.noEngine) return false;
-  if (await engineLoad(t)) return true;
-  if (AU.cur === t && !AU.el.getAttribute('src')) { AU.el.src = AU.url; AU.el.playbackRate = AU.rate; } // запасной путь — элемент
+  if (!isVideo(t) && stretchAvailable() && !AU.noEngine && await engineLoad(t)) return true;
+  // запасной путь — элемент: движка нет или он молчит на этом устройстве; элементу — эта запись, не прежняя
+  if (AU.cur === t && AU.el.src !== AU.url) { AU.el.src = AU.url; AU.el.playbackRate = AU.rate; }
   return false;
 }
 
@@ -427,9 +474,9 @@ function load(t) {
   AU.el.playbackRate = AU.rate;
   AU.a = AU.b = null;
   AU.loop = false;
-  const viaEngine = !isVideo(t) && stretchAvailable() && ctx.audio.ready();
-  if (!viaEngine) AU.el.src = AU.url; // видео, нет движка или контекста ещё нет (до первого жеста): элемент, движок — при первом воспроизведении
-  if (!isVideo(t) && stretchAvailable()) routeTrack(t).then(() => render()).catch(() => {});
+  const viaEngine = !isVideo(t) && stretchAvailable() && !AU.noEngine && ctx.audio.ready();
+  if (!viaEngine) AU.el.src = AU.url; // видео, нет движка (или он молчит) или контекста ещё нет (до первого жеста): элемент, движок — при первом воспроизведении
+  if (!isVideo(t) && stretchAvailable() && !AU.noEngine) routeTrack(t).then(() => render()).catch(() => {});
   else applyPitch().catch(() => {});
 }
 
@@ -670,6 +717,7 @@ function controls() {
     list: icb('data-x="alist"', I.list, t('files.btn')),
     time: '<span id="acur" class="num">' + fmtT(pl().currentTime) + '</span>',
     chord: chordsOf(AU.cur).length ? '<b class="achord" id="achord"></b>' : '', // текущий и следующий аккорд (uiTick)
+    lyr: AU.cur.lyr && Array.isArray(AU.cur.lyr.lines) && AU.cur.lyr.lines.length ? '<div class="alyr" id="alyr"><span></span></div>' : '', // текущая строка текста (uiTick)
     sty: (cls) => (ctx.mono ? '' : icb('data-x="astyle"', I.disc, t('styleBtn'), cls)), // в «Минимале» вид закреплён
     back2: !curSong() && ML.view === 'player' ? '<button class="mlback" data-x="mllib">' + t('backLib') + '</button>' : '',
   };
@@ -716,11 +764,11 @@ function playerHTML() {
   const chips = (cls) => '<div class="chips nowrap afiles' + cls + '">' + sf.map((x) => '<button class="chip' + (x.id === AU.cur.id ? ' on' : '') + '" data-x="aload2" data-id="' + x.id + '">' + esc(x.name) + '</button>').join('') + '</div>';
   if (size === 'half') {
     return '<div class="ah2">' + c.back2 + '<div class="arow3">' + (sf.length > 1 ? chips(' sgrow') : '<div class="aname sgrow" style="text-align:left">' + esc(AU.cur.name) + '</div>') +
-      '<div class="vrow tight">' + c.rate + c.key + c.stems + c.sty('sm') + '</div></div><div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' +
+      '<div class="vrow tight">' + c.rate + c.key + c.stems + c.sty('sm') + '</div></div><div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + c.lyr + marksHTML() + '<div class="ctrl5">' +
       c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
   return '<div class="mcard av" style="position:relative">' + c.sty('corner') + c.back2 + (sf.length > 1 ? chips('') : name) + wformHTML('f') +
-    atimes(c, d) + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.stems + '</div><div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
+    atimes(c, d) + c.lyr + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.stems + '</div><div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
 const atimes = (c, d) => '<div class="num l2 atimes">' + c.chord + c.time + '<span>' + (AU.a != null ? 'A ' + fmtT(AU.a) + (AU.b != null ? ' – B ' + fmtT(AU.b) : '') : ctx.t('dragHint')) +
@@ -736,7 +784,7 @@ function videoHTML(c, name, all, sid) {
     return '<div class="ah2 vidh">' + c.back2 + '<div class="arow3"><div class="sgrow" style="min-width:0">' + head + '</div><div class="vrow tight">' + c.rate + c.key + '</div></div>' + vidbox('h') +
       '<div class="wfbox vt">' + wformHTML('s') + '<span class="wft num">' + c.chord + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
-  return '<div class="mcard av vidf">' + c.back2 + head + vidbox('f') + wformHTML('s') + atimes(c, d) + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.stems + '</div><div class="ctrl5">' +
+  return '<div class="mcard av vidf">' + c.back2 + head + vidbox('f') + wformHTML('s') + atimes(c, d) + c.lyr + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.stems + '</div><div class="ctrl5">' +
     c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
@@ -781,6 +829,11 @@ function uiTick() {
       ac.textContent = now ? now + (nxt ? ' → ' + chordTxt(nxt.c, AU.cur) : '') : (nxt ? '→ ' + chordTxt(nxt.c, AU.cur) : '');
       const strip = q('#wfch'); if (strip) { const on = strip.querySelector('.on'); if (on) on.classList.remove('on'); const el = strip.querySelector('[data-ci="' + i + '"]'); if (el) el.classList.add('on'); }
     }
+  }
+  const ly = q('#alyr');
+  if (ly) {
+    const L = AU.cur.lyr.lines, i = lineAt(L, pl().currentTime);
+    if (ly.dataset.i !== String(i)) { ly.dataset.i = i; const nx = i < 0 ? L.find((l) => l.t > pl().currentTime) : null; ly.firstChild.textContent = i >= 0 ? L[i].text : nx ? '… ' + nx.text : ''; ly.classList.toggle('next', i < 0 && !!nx); }
   }
   const mks = host.querySelectorAll('.amk');
   if (mks.length) { const k = currentMark(AU.cur.marks, pl().currentTime); mks.forEach((b, i) => b.classList.toggle('on', i === k)); }

@@ -1587,5 +1587,25 @@
   "snd.verbHint": "«Yengil» — telefon sintezatorlaridagi kabi algoritm: protsessor uchun oʻnlab marta arzon. «Svyortka» aniqroq, ammo barcha asboblar birga chalinganda tovush oqimi ulgurmasligi mumkin. Telefonda sukut boʻyicha — yengil. Darhol amal qiladi.",
   "snd.load": "Tovush yuklamasi",
   "snd.loadShort": "CPU",
-  "snd.loadHint": "Tovush oqimi hisobga sarflaydigan vaqt ulushi: 70 % gacha — zaxira bor, 90 % dan — uzilishlar boʻlishi mumkin (kamroq ovoz yoki «Yengil» sifat). Xuddi shu oʻlchagich miksher pardasida."
+  "snd.loadHint": "Tovush oqimi hisobga sarflaydigan vaqt ulushi: 70 % gacha — zaxira bor, 90 % dan — uzilishlar boʻlishi mumkin (kamroq ovoz yoki «Yengil» sifat). Xuddi shu oʻlchagich miksher pardasida.",
+  "auto.lyr": "Qoʻshiq matni avtomatik",
+  "auto.lyrHint": "Yozuvdagi soʻzlar satr vaqti bilan — ajratilgan vokal boʻyicha, yoʻlaklardan keyin. Faqat Windows versiyasida: nutqni tanish modeli 574 MB.",
+  "lic.wc.sub": "Qoʻshiq matni uchun nutqni tanish (Windows): whisper.cpp kutubxonasi, Whisper large-v3-turbo modeli 574 MB oʻrnatuvchida, tarmoq kerak emas",
+  "lic.wh.text": "Whisper modeli (OpenAI, MIT litsenziyasi) ggml formatida q5_0 kvantlash bilan, ggerganov/whisper.cpp loyihasidan. Faqat kompyuterda bajariladi.",
+  "ls.title": "Telefondan fayllarni qabul qilish",
+  "ls.sw": "Wi-Fi orqali qabul qilish (LocalSend)",
+  "ls.hint": "Kompyuter tarmoqda «Melete · ism» sifatida koʻrinadi. Telefonda — LocalSend ilovasi (ochiq kod, bepul): shu kompyuterni tanlab, yozuvlar, tablar, PDF yoki matnlarni yuborish. Har bir uzatish shu yerda tasdiqlanadi, fayllar Melete jildiga tushadi va mediatekada paydo boʻladi.",
+  "ls.ask": "«{from}» dan fayllar",
+  "ls.askText": [
+    "{n} fayl ({size}) qabul qilinsinmi: {names}?"
+  ],
+  "ls.accept": "Qabul qilish",
+  "ls.got": "Qabul qilindi: {name}",
+  "ls.err": "Qabul yoqilmadi: 53317 porti band yoki tarmoq yoʻq",
+  "ls.needFolder": "Avval Melete jildini tanlash kerak",
+  "auto.hqHintPc": "Vokal — Mel-RoFormer modeli bilan, qolgani — vokalsiz yozuv boʻyicha HTDemucs, uch oʻtishda; odatdagidan taxminan 10 baravar uzoq. Avval barcha yozuvlar oddiy ajratishni oladi, keyin — yaxshilanganini; birinchi versiya qoladi.",
+  "lic.mr.sub": "Yaxshilangan ajratish uchun vokal (Windows): 464 MB model oʻrnatuvchida, tarmoq kerak emas",
+  "lic.mr.text": "Mel-Band RoFormer: Kimberley Jensen ogʻirliklari (MIT litsenziyasi), Wang va b. (ByteDance) arxitekturasi, Phil Wang va Roman Solovyev (ZFTurbo) kodi; ONNX toʻplami audiojs/mel-roformer (MIT). Spektr va segmentlarni ulash — oʻz kodimiz (src-tauri/src/roformer.rs), @audio/neural-separate etaloni bilan solishtirilgan.",
+  "lic.df.sub": "Yozuvlarda shovqinni kamaytirish (Windows): DeepFilterNet3 modeli dastur ichida, bajarish — tract; tarmoq kerak emas",
+  "lic.df.text": "DeepFilterNet (Hendrik Schröter va b., MIT va Apache-2.0 litsenziyalari) — oʻrnatilgan DeepFilterNet3 modeli bilan deep_filter kreyti; tract (Sonos, MIT va Apache-2.0) — Rust da neyron tarmoqlarni bajarish."
 }

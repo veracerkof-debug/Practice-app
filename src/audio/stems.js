@@ -14,6 +14,9 @@ import { isDesktop } from '../core/desktop.js';
 
 let Native = Capacitor.isNativePlatform() ? registerPlugin('Stems') : null;
 if (!Native && isDesktop()) import('./stemsdesktop.js').then((m) => { Native = m.desktopStems; }).catch(() => {});
+// Адаптер Windows или плагин Android: у прокси Capacitor «есть» любое свойство (и desktop, и pushRaw — функции),
+// поэтому различать только по платформе
+const onDesktop = () => !Capacitor.isNativePlatform() && isDesktop();
 export const stemsNative = () => !!Native || isDesktop();
 // В веб-сборке моделей нет (рабочий поток подменён пустышкой) — разделение недоступно, кнопки прячутся
 export const stemsSupported = () => !(typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__);
@@ -54,7 +57,10 @@ export const stemsThreads = () => (Native || isDesktop() ? Math.max(1, Math.min(
 // ×1,9, на одном ×4,5
 // hq — «ночное» качество (три прохода со сдвигом и шаг окна вдвое короче): ≈ ×4,5
 export const HQ_MUL = 4.5;
-export const estimateSec = (dur, mode = '4', hq = false) => Math.round(dur * (Native || isDesktop() ? (isDesktop() ? 0.5 : 2) : stemsThreads() > 1 ? 2.5 : 5.5) * (mode === '6' ? 1.5 : 1) * (hq ? HQ_MUL : 1));
+export const estimateSec = (dur, mode = '4', hq = false) => (hq && isDesktop() ? Math.round(dur * 5 * (mode === '6' ? 1.2 : 1)) // RoFormer ≈ ×2,5 + HTDemucs в три прохода
+  : Math.round(dur * (Native || isDesktop() ? (isDesktop() ? 0.5 : 2) : stemsThreads() > 1 ? 2.5 : 5.5) * (mode === '6' ? 1.5 : 1) * (hq ? HQ_MUL : 1)));
+// Улучшенное разделение на компьютере — вокал моделью Mel-RoFormer (src-tauri/src/roformer.rs), остальное — HTDemucs по инструменталу
+export const hqVocalsModel = () => isDesktop();
 
 let worker = null, ready = null, readyModel = '';
 // Рабочий поток с моделью (stems.worker.js): создаётся один раз на модель, модель грузится один раз; другая модель — заново
@@ -91,7 +97,7 @@ async function sendChannel(ch, data, onFrac, isCancelled) {
   const u8 = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
   for (let i = 0; i < u8.length; i += CHUNK) {
     if (isCancelled()) throw new Error('cancel');
-    if (Native.desktop) await Native.pushRaw(ch, u8.subarray(i, i + CHUNK)); else await Native.push({ ch, b64: b64(u8.subarray(i, i + CHUNK)) });
+    if (onDesktop()) await Native.pushRaw(ch, u8.subarray(i, i + CHUNK)); else await Native.push({ ch, b64: b64(u8.subarray(i, i + CHUNK)) });
     onFrac((i + CHUNK) / u8.length);
   }
 }
@@ -119,7 +125,7 @@ function separateNative(blob, onStage, mode, hq) {
       const { files, total } = await Native.run({ model: mode === '6' ? '6' : '4', hq: !!hq });
       running = false;
       const raw = {};
-      for (const k of Object.keys(files)) raw[k] = Native.desktop ? await Native.readPart(k, total) : await readPart(files[k], total);
+      for (const k of Object.keys(files)) raw[k] = onDesktop() ? await Native.readPart(k, total) : await readPart(files[k], total);
       return { parts: partsForMode(raw, mode), mix: { left, right }, dur, sr: SR };
     } finally {
       running = false;

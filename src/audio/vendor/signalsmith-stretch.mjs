@@ -1,5 +1,5 @@
-// Signalsmith Stretch 1.3.2 (MIT, © Signalsmith Audio Ltd) — копия пакета signalsmith-stretch с двумя правками Melete
-// (ищи «Melete»): 1) в неактивном состоянии узел не читает вход (с numberOfInputs: 0 он падал на первом кванте);
+// Signalsmith Stretch 1.3.2 (MIT, © Signalsmith Audio Ltd) — копия пакета signalsmith-stretch с тремя правками Melete
+// (ищи «Melete»): 3) ошибка внутри process() уходит наружу сообщением 'error' → onprocessorerror; 1) в неактивном состоянии узел не читает вход (с numberOfInputs: 0 он падал на первом кванте);
 // 2) ветка «живой вход» включается только явно (processorOptions.liveInput): Android WebView подаёт на неподключённый
 // вход канал нулей, и без правки узел молча обрабатывал эту тишину вместо загруженных буферов — медиатека не звучала.
 let module = {}, exports = {};
@@ -239,7 +239,12 @@ function registerWorkletProcessor(Module, audioNodeKey) {
 			}
 		}
 
+		// Melete: ошибка внутри process() — сообщением наружу (иначе процессор молча умирает), один раз
 		process(inputList, outputList, parameters) {
+			try { return this.processInner(inputList, outputList, parameters); }
+			catch (e) { if (!this.errSent) { this.errSent = true; try { this.port.postMessage(['error', String((e && e.message) || e)]); } catch (_) {} } throw e; }
+		}
+		processInner(inputList, outputList, parameters) {
 			if (!this.wasmReady) {
 				outputList.forEach(output => {
 					output.forEach(channel => {
@@ -422,6 +427,10 @@ SignalsmithStretch = ((Module, audioNodeKey) => {
 			if (id == 'time') {
 				audioNode.inputTime = value;
 				if (timeUpdateCallback) timeUpdateCallback(value);
+			}
+			if (id == 'error') { // Melete: ошибка процессора — как processorerror
+				let ev = new Event('processorerror'); ev.message = value;
+				if (audioNode.onprocessorerror) audioNode.onprocessorerror(ev);
 			}
 			if (id in requestMap) {
 				requestMap[id](value);

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-denoise-push"
+description = "Enables the denoise_push command without any pre-configured scope."
+commands.allow = ["denoise_push"]
+
+[[permission]]
+identifier = "deny-denoise-push"
+description = "Denies the denoise_push command without any pre-configured scope."
+commands.deny = ["denoise_push"]

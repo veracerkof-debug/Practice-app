@@ -1,5 +1,5 @@
 {
-  "_": "Тяжёлые модели для APK и Windows (DECISIONS: размер и тяжёлые модули). В репозиторий не кладутся: скачиваются перед сборкой (build/fetch-models.mjs) и проверяются по sha256; в веб-сборку не идут",
+  "_": "Тяжёлые модели для APK и Windows (DECISIONS: размер и тяжёлые модули). В репозиторий не кладутся: скачиваются перед сборкой (build/fetch-models.mjs) и проверяются по sha256; в веб-сборку не идут. Поле platform: \"windows\" — только для Windows-сборки (src-tauri/models/, ресурсы установщика; скачивается на Windows или с MODELS_ALL=1)",
   "models": [
     {
       "file": "public/models/demucs/htdemucs_embedded.onnx",
@@ -54,6 +54,22 @@
       "sha256": "1faee8e1cf168300afe0f47517e76836ac200c3841b0fb430fad7dfea5ad6394",
       "bytes": 17080550,
       "what": "ChordMini ChordNet 2E1D (MIT; ONNX musetric/chordmini-onnx) — аккорды записи, 170 видов; лог-CQT считает src/music/cqt.js"
+    },
+    {
+      "file": "src-tauri/models/whisper/ggml-large-v3-turbo-q5_0.bin",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
+      "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+      "bytes": 574041195,
+      "platform": "windows",
+      "what": "Whisper large-v3-turbo (OpenAI, MIT; ggml q5_0, ggerganov/whisper.cpp) — текст песни из записи на компьютере (src-tauri/src/lyrics.rs); в APK не идёт"
+    },
+    {
+      "file": "src-tauri/models/roformer/mel-roformer.fp16.onnx",
+      "url": "https://huggingface.co/audiojs/mel-roformer/resolve/main/mel-roformer.fp16.onnx",
+      "sha256": "adcbbb826f12453fbb86652b503242d565a9c81cdef1bca2fe0e54752eba91ef",
+      "bytes": 464050097,
+      "platform": "windows",
+      "what": "Mel-Band RoFormer, вокал (веса Kimberley Jensen, MIT; ONNX fp16 audiojs/mel-roformer) — «улучшенное разделение» на компьютере (src-tauri/src/roformer.rs); в APK не идёт"
     }
   ]
 }

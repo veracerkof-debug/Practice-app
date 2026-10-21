@@ -37,7 +37,10 @@ export async function createStretchPlayer(c, dest) {
     return u;
   }
   let A = await mk(), B = null; // A — звучит, B — запасной (создаётся при первой смене дорожек)
-  const refreshLatency = async (u = A) => { try { const l = await u.node.latency(); if (typeof l === 'number' && l > 0) { u.lat = l; if (u === A) lat = l; } } catch { /* */ } };
+  // задержка узла — только разумная (секунды, не отсчёты и не NaN): иначе отрезок включился бы через часы
+  const refreshLatency = async (u = A) => { try { const l = await u.node.latency(); if (typeof l === 'number' && l > 0 && l < 2) { u.lat = l; if (u === A) lat = l; } } catch { /* */ } };
+  // ошибка внутри процессора — наружу событием (процессор после неё молчит навсегда)
+  A.node.onprocessorerror = (e) => p.dispatchEvent(Object.assign(new Event('procerror'), { detail: (e && e.message) || 'processorerror' }));
   // outputTime — когда вступает (ключ обёртки; в README он назван output), output — поле отрезка
   const schedOn = (u, o) => { const t = lead(); return u.node.schedule({ output: t, outputTime: t, ...o }); };
   const sched = (o) => schedOn(A, o);
@@ -49,6 +52,34 @@ export async function createStretchPlayer(c, dest) {
     playbackRate: { get: () => rate, set(r) { rate = Math.max(0.25, Math.min(4, +r || 1)); if (playing) { pos = cur(); posAt = now(); sched({ input: pos, rate }); } else sched({ rate }); } },
     ended: { get: () => ended },
   });
+  // Самопроверка: 0,3 с тона в узел при нулевой громкости, замер на выходе узла (до громкости) → { db, sampleRate,
+  // state, lat, channels, err } или null, если контекст не идёт. Тишина — движок на этом устройстве не звучит
+  p.selfTest = async () => {
+    if (c.state !== 'running') return null;
+    const n = Math.round(c.sampleRate * 0.3), L = new Float32Array(n), R = new Float32Array(n);
+    for (let i = 0; i < n; i++) { L[i] = R[i] = 0.5 * Math.sin((2 * Math.PI * 440 * i) / c.sampleRate); }
+    const an = c.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0;
+    const was = A.g.gain.value;
+    A.g.gain.value = 0;
+    A.node.connect(an);
+    let db = -180, err = '';
+    try {
+      await A.node.addBuffers([L, R]);
+      await refreshLatency();
+      sched({ active: true, input: 0, rate: 1, semitones: 0 });
+      await new Promise((r) => setTimeout(r, Math.round(lat * 1000) + 250));
+      const buf = new Float32Array(an.fftSize);
+      an.getFloatTimeDomainData(buf);
+      let e = 0; for (const v of buf) e += v * v;
+      db = 20 * Math.log10(Math.sqrt(e / buf.length) + 1e-9);
+    } catch (e) { err = String((e && e.message) || e); }
+    finally {
+      try { stopAll(); await A.node.dropBuffers(); } catch { /* */ }
+      try { A.node.disconnect(an); } catch { /* */ }
+      A.g.gain.value = was;
+    }
+    return { db, sampleRate: c.sampleRate, state: c.state, lat, channels: A.node.channelCount, err };
+  };
   // Запись (Blob) → в узел; старое вычищается. Вернёт длительность
   p.load = async (blob) => {
     const my = ++gen;
