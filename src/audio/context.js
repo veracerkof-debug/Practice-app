@@ -33,8 +33,20 @@ export function getContext(mode = 'bal') {
     loadReverbWorklet(ctx); // лёгкая реверберация (spaces.js) — модуль грузится сразу
     try { spaces.hall = makeSpace(ctx, 'hall', comp); reverb = spaces.hall.input; } catch { reverb = null; }
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state === 'suspended' && !held) ctx.resume();
   return ctx;
+}
+
+// Пауза из шторки уведомлений (player.js): контекст заморожен и не оживает сам — ни по касанию экрана, ни по его
+// включению (иначе звук возвращался, а кнопка в шторке показывала «Продолжить»); снимает её кнопка в шторке или
+// «играть» в приложении (release)
+let held = false;
+export const isHeld = () => held;
+export function hold(on) {
+  held = !!on;
+  const c = peekContext();
+  if (!c || c.state === 'closed') return;
+  (held ? c.suspend() : c.resume()).catch(() => {});
 }
 
 // Уже созданный контекст (или null) — без создания и без resume
@@ -138,16 +150,20 @@ export function installUnlock(getMode = () => 'bal') {
     playbackSession();
     const c = getContext(getMode());
     if (!c) return;
-    if (c.state !== 'running') c.resume().catch(() => {});
+    if (c.state !== 'running' && !held) c.resume().catch(() => {});
     if (!primed) { // тишина в один отсчёт — после неё Safari считает звук разрешённым
       primed = true;
       try { const s = c.createBufferSource(); s.buffer = c.createBuffer(1, 1, c.sampleRate); s.connect(c.destination); s.start(0); } catch { /* */ }
     }
   };
-  const onGesture = () => { if (!primed || !ctx || ctx.state !== 'running' || (silentEl && silentEl.paused && !document.hidden)) kick(); };
+  // касание окна инструмента или сессии снимает паузу из шторки: человек взялся играть
+  const onGesture = (e) => {
+    if (held && e && e.target && e.target.closest && e.target.closest('.tview, .session')) hold(false);
+    if (!primed || !ctx || ctx.state !== 'running' || (silentEl && silentEl.paused && !document.hidden)) kick();
+  };
   ['pointerup', 'touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, onGesture, { capture: true, passive: true }));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { if (silentEl) silentEl.pause(); return; }
-    if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {});
+    if (ctx && ctx.state !== 'running' && ctx.state !== 'closed' && !held) ctx.resume().catch(() => {});
   });
 }

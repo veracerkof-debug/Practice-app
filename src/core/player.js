@@ -8,7 +8,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { t } from '../i18n/index.js';
 import { BUSES, mixKey, MIX_MAX } from '../audio/mixer.js';
-import { peekContext } from '../audio/context.js';
+import { peekContext, hold, isHeld } from '../audio/context.js';
 import { log } from './log.js';
 
 const P = Capacitor.isNativePlatform() ? registerPlugin('Player') : null;
@@ -21,7 +21,7 @@ export const askOverlay = () => P && P.askOverlay().catch(() => {});
 export function initPlayer(app) {
   if (!P) return;
   const mixer = app.audio.mixer, seen = new Map(); // шина → когда звучала (выключенные остаются в списке ещё минуту)
-  let paused = false, sig = '';
+  let sig = '';
   const raw = (k) => { const v = mixer.state[k]; return v == null ? 1 : v; };
 
   function sources(now = Date.now()) {
@@ -31,17 +31,17 @@ export function initPlayer(app) {
       return { id: b, name: t('mix.' + (b === 'media' ? 'media' : b)), vol: raw(k), on: !(mixer.state.mute || {})[k] };
     });
   }
+  // пауза — заморозка контекста с удержанием (context.js: hold): касание экрана и его включение её не снимают;
+  // «играть» в приложении снимает (release в модулях) — тогда и кнопка в шторке снова «Пауза»
   const pause = (on) => {
-    const c = peekContext();
-    if (!c) return;
-    paused = on;
-    (on ? c.suspend() : c.resume()).catch(() => {});
+    if (!peekContext()) return;
+    hold(on);
     log('player', on ? 'пауза из шторки' : 'продолжить из шторки');
   };
   const nudge = (d) => sources().filter((s) => s.on).forEach((s) => mixer.set(s.id, Math.max(0, Math.min(MIX_MAX, s.vol + d))));
 
   P.addListener('control', ({ action, bus, value }) => {
-    if (action === 'toggle') pause(!paused);
+    if (action === 'toggle') pause(!isHeld());
     else if (action === 'down') nudge(-0.1);
     else if (action === 'up') nudge(0.1);
     else if (action === 'vol' && BUSES.includes(bus)) mixer.set(bus, Math.max(0, Math.min(MIX_MAX, +value)));
@@ -55,7 +55,7 @@ export function initPlayer(app) {
     const c = bgCtl(app.store.state.settings), list = sources();
     const tool = !!document.querySelector('.tview, .session');
     const state = {
-      playing: !paused, sounding: list.length > 0, sources: list,
+      playing: !isHeld(), sounding: list.length > 0, sources: list,
       labels: { pause: t('pl.pause'), play: t('pl.play'), down: t('pl.down'), up: t('pl.up'), open: t('pl.open'), title: t('pl.title'), none: t('pl.none') },
     };
     const msg = { state: JSON.stringify(state), notify: c.notify, float: c.float, pip: c.pip && tool && list.length > 0, aspect: Math.max(0.45, Math.min(2.3, innerWidth / innerHeight)) };
@@ -66,5 +66,5 @@ export function initPlayer(app) {
   }
   setInterval(sync, 1000);
   document.addEventListener('visibilitychange', () => sync(true));
-  app.player = { sync, get paused() { return paused; }, pause };
+  app.player = { sync, get paused() { return isHeld(); }, pause };
 }

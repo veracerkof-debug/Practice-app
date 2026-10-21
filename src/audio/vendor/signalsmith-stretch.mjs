@@ -1,5 +1,5 @@
 // Signalsmith Stretch 1.3.2 (MIT, © Signalsmith Audio Ltd) — копия пакета signalsmith-stretch с тремя правками Melete
-// (ищи «Melete»): 3) ошибка внутри process() уходит наружу сообщением 'error' → onprocessorerror; 1) в неактивном состоянии узел не читает вход (с numberOfInputs: 0 он падал на первом кванте);
+// (ищи «Melete»): 3) ошибка внутри process() уходит наружу сообщением 'error' → onprocessorerror; 4) чтение окна на стыке двух кусков записи (в оригинале — RangeError и тишина); 1) в неактивном состоянии узел не читает вход (с numberOfInputs: 0 он падал на первом кванте);
 // 2) ветка «живой вход» включается только явно (processorOptions.liveInput): Android WebView подаёт на неподключённый
 // вход канал нулей, и без правки узел молча обрабатывал эту тишину вместо загруженных буферов — медиатека не звучала.
 let module = {}, exports = {};
@@ -319,22 +319,25 @@ function registerWorkletProcessor(Module, audioNodeKey) {
 					buffers.forEach(b => b.fill(0, 0, blockSamples));
 					inputSamples = audioSamples;
 				}
-				while (audioBufferIndex < this.audioBuffers.length && audioSamples < inputSamplesEnd) {
+				// Melete (правка 4): в оригинале inputSamples не сдвигался, а audioSamples после частично прочитанного куска
+				// переставал быть началом следующего — окно на стыке двух кусков (запись уходит в узел кусками по 30 с)
+				// копировало больше, чем влезает: RangeError «offset is out of bounds», процессор умирал, дальше тишина
+				while (audioBufferIndex < this.audioBuffers.length && inputSamples < inputSamplesEnd) {
 					let audioBuffer = this.audioBuffers[audioBufferIndex];
-					let startIndex = inputSamples - audioSamples; // start index within the audio buffer
-					let bufferEnd = audioSamples + audioBuffer[0].length;
-					// how many samples to copy: min(how many left in the buffer, how many more we need)
-					let count = Math.min(audioBuffer[0].length - startIndex, inputSamplesEnd - inputSamples);
-					if (count > 0) {
+					let length = audioBuffer[0].length;
+					let bufferEnd = audioSamples + length;
+					if (inputSamples < bufferEnd) {
+						let startIndex = inputSamples - audioSamples; // start index within the audio buffer
+						// how many samples to copy: min(how many left in the buffer, how many more we need)
+						let count = Math.min(length - startIndex, inputSamplesEnd - inputSamples);
 						buffers.forEach((buffer, c) => {
 							let channelBuffer = audioBuffer[c%audioBuffer.length];
-							buffer.subarray(blockSamples).set(channelBuffer.subarray(startIndex, startIndex + count));
+							buffer.subarray(blockSamples, blockSamples + count).set(channelBuffer.subarray(startIndex, startIndex + count));
 						});
-						audioSamples += count;
+						inputSamples += count;
 						blockSamples += count;
-					} else { // we're already past this buffer - skip it
-						audioSamples += audioBuffer[0].length;
 					}
+					audioSamples = bufferEnd;
 					++audioBufferIndex;
 				}
 				if (blockSamples < this.bufferLength) {

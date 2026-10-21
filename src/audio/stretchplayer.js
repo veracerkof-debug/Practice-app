@@ -7,6 +7,7 @@
 // loadedmetadata / play / pause / ended / error — модуль медиатеки обращается к обоим одинаково.
 // Узлов два (A и B): дорожки записи пересводятся в запасной узел, пока звучит рабочий, и подхватываются
 // перекрёстным затуханием в 60 мс — смена громкости дорожки на ходу не рвёт звук и не сбивает положение.
+import { isHeld } from './context.js';
 let loading = null;
 const lib = () => loading || (loading = import('./vendor/signalsmith-stretch.mjs').then((m) => m.default));
 
@@ -107,7 +108,7 @@ export async function createStretchPlayer(c, dest) {
   };
   p.play = async () => {
     if (playing) return;
-    try { if (c.state !== 'running') await c.resume(); } catch { /* по жесту */ }
+    try { if (c.state !== 'running' && !isHeld()) await c.resume(); } catch { /* по жесту */ } // пауза из шторки держит контекст
     if (ended || pos >= dur - 0.03) { pos = 0; ended = false; }
     playing = true; posAt = now();
     sched({ active: true, input: pos, rate, semitones: semi, formantCompensation: formant });

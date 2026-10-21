@@ -5,6 +5,7 @@
 // Интерфейс — как у stretchplayer.js: currentTime, duration, paused, playbackRate, play(), pause(), load(blob),
 // loadParts(blobs, gains), setMix(gains), события loadedmetadata / play / pause / ended / error.
 // Раскодированные дорожки держатся как Int16 (вдвое меньше float); в узлы уходят куски по 2 с с запасом 1,2 с.
+import { isHeld } from './context.js';
 const CHUNK_SEC = 2, AHEAD = 1.2, TICK_MS = 250;
 const toI16 = (f) => { const o = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const v = f[i]; o[i] = v >= 1 ? 32767 : v <= -1 ? -32768 : (v * 32767) | 0; } return o; };
 
@@ -103,7 +104,7 @@ export async function createBufferPlayer(c, dest) {
   p.setPitch = () => {}; // сдвиг высоты здесь невозможен
   p.play = async () => {
     if (playing) return;
-    try { if (c.state !== 'running') await c.resume(); } catch { /* по жесту */ }
+    try { if (c.state !== 'running' && !isHeld()) await c.resume(); } catch { /* по жесту */ } // пауза из шторки держит контекст
     if (ended || pos >= len - 1) { pos = 0; ended = false; }
     playing = true;
     startFrom(pos);

@@ -496,7 +496,13 @@ async function engineLoad(t) {
         const wire = (eng) => {
           ['play', 'pause', 'ended'].forEach((k) => eng.addEventListener(k, PLAY_EV[k]));
           eng.addEventListener('loadedmetadata', () => { const x = AU.cur; if (x && !x.dur && eng.duration) { x.dur = eng.duration; ctx.files.save(x); } render(); });
-          eng.addEventListener('procerror', (e) => ctx.log('движок: ошибка в потоке звука: ' + (e.detail || '?'), 'w'));
+          // ошибка в потоке звука — процессор узла мёртв, дальше он молчит: сразу запасной движок с того же места,
+          // не дожидаясь сторожа (он работает только после «играть» из приложения)
+          eng.addEventListener('procerror', (e) => {
+            ctx.log('движок: ошибка в потоке звука: ' + (e.detail || '?'), 'w');
+            const t = AU.cur;
+            if (t && AU.eng === eng && !AU.engLite && !AU.noEngine) engineFallback(t, 'ошибка в потоке звука');
+          });
           return eng;
         };
         // запасной движок на обычных узлах (bufferplayer.js): когда AudioWorklet Signalsmith на устройстве молчит —
@@ -619,6 +625,7 @@ function setRate(r) {
 
 const playEl = async () => {
   const t = AU.cur;
+  ctx.audio.release(); // «играть» снимает паузу из шторки уведомлений
   if (t && !AU.engOn && !isVideo(t) && stretchAvailable() && AU.engFor !== t) { // контекста не было при выборе — теперь жест есть
     const at = AU.el.currentTime || 0;
     if (await routeTrack(t)) { if (at) AU.eng.currentTime = at; }
