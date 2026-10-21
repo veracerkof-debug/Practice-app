@@ -71,3 +71,36 @@
 .alyr{min-height:22px;padding:2px 2px 0;font-size:15px;line-height:1.3;text-align:center;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .alyr.next{color:var(--l2)}
 .lyrprev{margin-top:6px;font-size:14px;line-height:1.35;color:var(--l2)}
+
+/* панель плеера: виды «Волна / Дорожки / Текст / Аккорды» (full и half) — поверхность занимает всё между шапкой и транспортом */
+.mcard.av.pv{display:flex;flex-direction:column;min-height:0}
+.pview{flex:1;min-height:80px;overflow:auto;overscroll-behavior:contain;border-radius:10px}
+.pempty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;color:var(--l2);font-size:14px;padding:16px;background:var(--fill)}
+.pvsw{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex:none;margin-top:4px}
+.pvb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 4px;border-radius:12px;background:transparent;color:var(--l2);font-size:11px;line-height:1;min-height:44px}
+.pvb svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pvb.on{background:var(--fill);color:var(--tint)}
+.mono .pvb span{display:none}
+/* дорожки: строки микшера, ползунки на всю ширину */
+.pstems{display:flex;flex-direction:column;gap:2px;padding:4px 0}
+.pstems .stemrow{padding:8px 10px;border-radius:10px;background:var(--fill)}
+.pstems .pic svg,.stemrow .pic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;display:block}
+.pstems .stemrow input[type=range]{height:28px}
+.pstbtns{display:flex;gap:8px;justify-content:center;padding:6px 0}
+/* текст: строки, текущая крупнее и ярче */
+.plyr{padding:28% 12px;text-align:center}
+.plyr p{margin:0;padding:6px 0;font-size:17px;line-height:1.3;color:var(--l2);transition:color .2s,transform .2s;cursor:pointer}
+.plyr p.on{color:var(--ink);font-weight:700;font-size:20px}
+/* аккорды: такт — строка ячеек по долям, номер такта слева; текущая ячейка — акцентом */
+.pchords{display:flex;flex-direction:column;justify-content:flex-start;gap:6px;padding:2px 0}
+.chbar{flex:none}
+.chbar{display:grid;grid-template-columns:22px repeat(var(--n,4),1fr);gap:4px;align-items:stretch}
+.chbn{align-self:center;font-size:11px;color:var(--l2);text-align:center}
+.chc{width:100%;height:52px;min-height:52px;border-radius:9px;background:var(--fill);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;padding:0 4px;overflow:hidden}
+.chc b{white-space:nowrap}
+.chbar.on .chc{background:color-mix(in srgb,var(--tint) 16%,var(--fill))}
+.chc.on{background:var(--tint);color:var(--on-tint)}
+.pchords.flat{flex-direction:row;flex-wrap:wrap;align-content:flex-start}
+.pchords.flat .chc{flex-direction:column;gap:2px;min-width:64px;font-size:17px}
+.pchords.flat .chc .num{font-size:11px;font-weight:400;color:inherit;opacity:.7}
+.pchords.flat .chc.no{color:var(--l2)}

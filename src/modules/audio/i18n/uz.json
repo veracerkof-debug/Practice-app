@@ -223,5 +223,15 @@
   "dn.soft": "Yumshoq",
   "dn.saved": "Tayyor: {name}",
   "dn.hint": "Ovoz va nutq yozuvidagi xona shovqini, gʻuvillash va shitirlash — DeepFilterNet modeli bilan, kompyuterda. Asl nusxa qoladi; tozalangan yozuv — yonida yangi fayl. «Yumshoq» fonning bir qismini qoldiradi, ovoz tabiiyroq.",
-  "job.denoise": "Shovqin olib tashlanmoqda"
+  "job.denoise": "Shovqin olib tashlanmoqda",
+  "pv.wave": "Toʻlqin",
+  "pv.stems": "Yoʻlaklar",
+  "pv.text": "Matn",
+  "pv.chords": "Akkordlar",
+  "pv.click": "Yozuv zarblari boʻyicha chertish",
+  "pv.noChords": "Akkordlar aniqlanmadi",
+  "pv.waitChords": "Akkordlar va taktlar yozuv tahlilidan keyin chiqadi — u ilova jim boʻlganda oʻzi ishlaydi",
+  "pv.noText": "Matn hali yoʻq",
+  "pv.noStems": "Yoʻlaklar hali yoʻq",
+  "key.lite": "Bu qurilmada ovoz dvigateli ishlamaydi: yoʻlaklar va aylantirish bor, tonallik mavjud emas, tezlik balandlikni oʻzgartiradi"
 }

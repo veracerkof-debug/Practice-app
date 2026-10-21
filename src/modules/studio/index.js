@@ -31,7 +31,8 @@ import { onHold, holdMenu } from '../../ui/hold.js';
 import { keyLabel } from '../../music/transpose.js';
 import { mName } from '../../music/notes.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="4" height="4" rx="1"/><rect x="10" y="4" width="4" height="4" rx="1"/><rect x="17" y="4" width="4" height="4" rx="1"/><rect x="3" y="11" width="4" height="4" rx="1"/><rect x="17" y="11" width="4" height="4" rx="1"/><rect x="3" y="18" width="18" height="2.5" rx="1"/></svg>';
+// значок студии: плейлист — три дорожки с клипами разной длины и бегунок
+const ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="9" height="4" rx="1.3"/><rect x="14" y="4.5" width="7" height="4" rx="1.3"/><rect x="6" y="10" width="12" height="4" rx="1.3"/><rect x="3" y="15.5" width="6" height="4" rx="1.3"/><rect x="11" y="15.5" width="10" height="4" rx="1.3"/><path d="M9.5 2.5v19" style="stroke-width:1.4"/></svg>';
 const I = {
   play: '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" style="fill:currentColor"/></svg>',
   stop: '<svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" style="fill:currentColor"/></svg>',
@@ -180,7 +181,7 @@ function render() {
       { audition: (m, hold) => seq.audition(ctrack(), m, { hold }), release: (k) => seq.release(k), change: () => { save(); if (roll) roll.draw(); const rk = host.querySelector('.rack'); if (rk && ctrack().kind === 'drums') { const b = V.bar; host.querySelector('.rack').outerHTML = stepsHTML(ctx, p, clip().data, b, ctrack().color).replace(/^<div class="rack"/, '<div class="rack"'); if (offSteps) offSteps(); offSteps = stepsGestures(host.querySelector('.rack'), () => clip().data, { change: () => save(), audition: (lane) => seq.audition(ctrack(), lane) }); } },
         toggleOct: (d) => { st().m0 = Math.max(OCT_LO, Math.min(OCT_HI, m0() + 12 * d)); ctx.store.save(); render(); } });
   }
-  if (V.view === 'mix') offMix = mixerBind(host, p, seq, { vol: (tr, v) => { tr.vol = v; p.updatedAt = Date.now(); }, pan: (tr, v) => seq.setTrackPan(tr, v), save: () => save(),
+  if (V.view === 'mix') offMix = mixerBind(host, p, seq, { vol: (tr, v) => { seq.setTrackVol(tr, v); p.updatedAt = Date.now(); }, pan: (tr, v) => seq.setTrackPan(tr, v), save: () => save(),
     mute: (tr) => { tr.mute = !tr.mute; save(); render(); }, solo: (tr) => { tr.solo = !tr.solo; save(); render(); }, fx: (tr) => trackSheet(tr), sound: (tr) => trackSheet(tr), master: () => { if (ctx.openMixer) ctx.openMixer(); } });
   const rh = host.querySelector('#stroll');
   if (rh) {

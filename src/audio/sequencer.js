@@ -58,12 +58,16 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     let x = chains.get(tr.id);
     if (!x || x.c !== c) {
       if (x) x.chain.dispose();
-      const chain = createFxChain(c, tr.fx), pan = c.createStereoPanner ? c.createStereoPanner() : c.createGain(), auto = c.createGain();
+      // громкость дорожки — отдельным узлом (vol): фейдер микшера действует сразу и на уже звучащие ноты и записи
+      const chain = createFxChain(c, tr.fx), pan = c.createStereoPanner ? c.createStereoPanner() : c.createGain(), auto = c.createGain(), vol = c.createGain();
       if (pan.pan) pan.pan.value = tr.pan || 0;
-      chain.output.connect(auto).connect(pan).connect(mixer.bus(tr.kind === 'audio' ? 'media' : 'theory'));
-      chains.set(tr.id, (x = { chain, fx: tr.fx, pan, auto, an: null, c }));
+      vol.gain.value = tr.vol == null ? 1 : tr.vol;
+      chain.output.connect(vol).connect(auto).connect(pan).connect(mixer.bus(tr.kind === 'audio' ? 'media' : 'theory'));
+      chains.set(tr.id, (x = { chain, fx: tr.fx, pan, auto, vol, an: null, c }));
       if (metersOn) meterOn(x);
     } else if (x.fx !== tr.fx) { x.fx = tr.fx; x.chain.set(tr.fx); } // правка в шторке дорожки — новый объект
+    const v = tr.vol == null ? 1 : tr.vol;
+    if (Math.abs(x.vol.gain.value - v) > 1e-4) x.vol.gain.setTargetAtTime(v, c.currentTime, 0.02);
     return x.chain.input;
   }
   const meterOn = (x) => { if (x.an) return; const an = x.c.createAnalyser(); an.fftSize = 512; an.smoothingTimeConstant = 0.5; x.pan.connect(an); x.an = an; x.buf = new Float32Array(an.fftSize); };
@@ -101,7 +105,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       for (const n of notes) {
         if (n.t < inLoop) continue;
         if (n.t >= inLoop + 1 || n.t >= loop.b) break;
-        const at = beatT + (n.t - inLoop + swingOf(p, n.t)) * spb, out = trackOut(p, n.tr), g = n.tr.vol * (n.gain || 1);
+        const at = beatT + (n.t - inLoop + swingOf(p, n.t)) * spb, out = trackOut(p, n.tr), g = n.gain || 1; // громкость дорожки — узел vol в trackOut
         if (n.drum) { hit(n.tr, n.drum, out, at, n.v * g); continue; }
         if (n.tr.inst === 'sample') { const buf = n.tr.sample && n.tr.sample.fileId && readyBuf(n.tr.sample.fileId); if (buf) sampleNote(buf, out, n.tr, n.m, at, n.d * spb, n.v * g); continue; }
         const key = 'sq' + seq++, patch = presetOf(n.tr.inst) || presetOf('piano');
@@ -130,7 +134,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       if (!b) continue;
       b = await b;
       if (!b || !playing || t0 !== myT0) continue;
-      const out = trackOut(p, tr), off = Math.min(cl.data.off || 0, b.duration - 0.01), span = Math.max(0.01, b.duration - off), vol = tr.vol * (cl.gain == null ? 1 : cl.gain);
+      const out = trackOut(p, tr), off = Math.min(cl.data.off || 0, b.duration - 0.01), span = Math.max(0.01, b.duration - off), vol = cl.gain == null ? 1 : cl.gain;
       for (const w of windows(p)) {
         const s0 = Math.max(cl.at, w.s0), s1 = Math.min(cl.at + cl.len, w.s1);
         if (s1 - s0 < 1e-6) continue;
@@ -260,6 +264,8 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     },
     // Эффекты и панорама дорожки изменены (шторка, микшер): применить к живой цепочке сразу
     setTrackFx(tr, fx) { tr.fx = fx; const x = chains.get(tr.id); if (x) { x.fx = fx; x.chain.set(fx); } },
+    // громкость дорожки — сразу, на ходу (узел vol), и в проект
+    setTrackVol(tr, v) { tr.vol = v; const x = chains.get(tr.id); if (x) x.vol.gain.setTargetAtTime(v, x.c.currentTime, 0.02); },
     setTrackPan(tr, v) { tr.pan = v; const x = chains.get(tr.id); if (x && x.pan.pan && !(playing && tr.auto && tr.auto.pan)) x.pan.pan.setTargetAtTime(v, x.c.currentTime, 0.02); },
     // Точки автоматизации изменились (плейлист): пересчитать огибающие на ходу
     autoChanged() { if (playing) scheduleAuto(getProject()); },

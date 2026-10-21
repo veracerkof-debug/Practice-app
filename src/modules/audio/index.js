@@ -13,6 +13,7 @@ import { onHold } from '../../ui/hold.js';
 import { parseChord } from '../../audio/mirpost.js';
 import { pitchShifter } from '../../audio/pitchshift.js';
 import { createStretchPlayer, stretchAvailable } from '../../audio/stretchplayer.js';
+import { createBufferPlayer } from '../../audio/bufferplayer.js';
 import { MODES, estimateSec, hqVocalsModel } from '../../audio/stems.js';
 import { estimateLyricsSec, lineAt, lyricsText, toLrc } from '../../audio/lyrics.js';
 import { stemsOf, notesOf, denoisedOf } from '../../core/jobs.js';
@@ -20,6 +21,7 @@ import { estimateDenoiseSec } from '../../audio/denoise.js';
 import { projectFromStems, projectFromSong, isEmptyProject } from '../../music/project.js';
 import { readMidiSong } from '../../music/daw.js';
 import { after, cancel } from '../../audio/clock.js';
+import { voice } from '../../audio/metronome.js';
 import { fmtDur } from '../../core/format.js';
 import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
 
@@ -43,12 +45,16 @@ const I = {
   full: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   sel: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8 12.3 2.8 2.7L16.2 9.5"/></svg>',
   trash: '<svg viewBox="0 0 24 24"><path d="M4.5 7h15M10 7V4.5h4V7M6.5 7l1 12.5h9l1-12.5"/></svg>',
+  wave: '<svg viewBox="0 0 24 24"><path d="M3 12h2l2-5 3 10 3-7 2 4 2-2h4"/></svg>',
+  text: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 11h12M4 16h16M4 21h8"/></svg>',
+  chords: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 5v14M15 5v14M3 12h18"/></svg>',
+  click: '<svg viewBox="0 0 24 24"><path d="M9 3h6l3 16H6z"/><path d="M12 14 17 6M5 19h14"/><circle cx="12" cy="14" r="1.6" fill="currentColor"/></svg>',
 };
 const MB = 1048576;
 
 /* ---------- плеер (один на приложение, играет и при закрытом окне) ---------- */
 
-const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0, eng: null, engP: null, engOn: false, engFor: null, partsFor: null, loadP: null, loadKey: '', noEngine: false };
+const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0, eng: null, engP: null, engOn: false, engFor: null, partsFor: null, loadP: null, loadKey: '', noEngine: false, engLite: false };
 // Дорожки записи (src/core/jobs.js: файлы с stem.src — эта запись); набор — выбранный режим (st().pmode[id]),
 // иначе режим с наибольшим числом дорожек; версия — выбранная (st().pver[id]: 'hq' | 'std'), иначе улучшенная, если есть
 const PART_ORDER = ['vocals', 'inst', 'drums', 'bass', 'guitar', 'piano', 'other'];
@@ -66,6 +72,51 @@ const hasVer = (t, mode, hq) => !!stemSets(t)[mode + (hq ? 'hq' : '')];
 const mixOf = (t) => ((st().pmix || {})[t.id]) || {};
 const mixActive = (t) => Object.values(mixOf(t)).some((v) => v !== 1);
 const blobsOf = (list) => { const o = {}; list.forEach((r) => { o[r.stem.part] = r.blob; }); return o; };
+// Громкости дорожек (st().pmix[id][part], 0…1,5; 1 — не хранится): правка, применение в движок, строки микшера —
+// одни и те же для шторки и для вида «Дорожки» в плеере
+const MIX_PREV = {};
+let mixTm = 0;
+const mixVal = (t, k) => { const g = mixOf(t); return g[k] == null ? 1 : g[k]; };
+function mixSet(t, k, v) { const all = st().pmix || (st().pmix = {}), mx = all[t.id] || (all[t.id] = {}); mx[k] = Math.max(0, Math.min(1.5, Math.round(v * 20) / 20)); if (mx[k] === 1) delete mx[k]; if (!Object.keys(mx).length) delete all[t.id]; }
+function mixToggle(t, k) { const was = mixVal(t, k); if (was === 0) mixSet(t, k, (MIX_PREV[t.id] || {})[k] || 1); else { (MIX_PREV[t.id] ??= {})[k] = was; mixSet(t, k, 0); } }
+// в движок: на ходу — setMix (пересведение без разрыва); исходник ↔ дорожки — перезагрузка с того же места
+function mixApply(t) {
+  ctx.store.save();
+  clearTimeout(mixTm);
+  mixTm = setTimeout(async () => {
+    if (AU.cur !== t) return;
+    if (AU.engOn && AU.partsFor === t && mixActive(t)) { AU.eng.setMix(mixOf(t)); return; }
+    const at = pl().currentTime, was = !pl().paused;
+    if (await engineLoad(t)) { AU.eng.currentTime = at; if (was) AU.eng.play().catch(() => {}); }
+    render();
+  }, 200);
+}
+const PART_ICON = {
+  vocals: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg>',
+  inst: '<svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
+  drums: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="8" rx="8" ry="3"/><path d="M4 8v8c0 1.7 3.6 3 8 3s8-1.3 8-3V8M3 3l6 4M21 3l-6 4"/></svg>',
+  bass: '<svg viewBox="0 0 24 24"><path d="M15 3l6 6-9 9a4 4 0 1 1-5.7-5.7z"/><path d="M14 7l3 3"/></svg>',
+  guitar: '<svg viewBox="0 0 24 24"><path d="M19 3l2 2-7 7"/><path d="M12 10a4 4 0 0 0-5.5 1.5A3.5 3.5 0 0 0 4 15a4 4 0 1 0 6 4 3.5 3.5 0 0 0 3.5-2.5A4 4 0 0 0 15 11z"/></svg>',
+  piano: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v8M12 5v8M16 5v8M8 19v-6M12 19v-6M16 19v-6"/></svg>',
+  other: '<svg viewBox="0 0 24 24"><path d="M4 12h3l2-5 3 10 3-7 2 4h3"/></svg>',
+};
+// строки микшера дорожек: значок, название, ползунок, выкл
+function stemRowsHTML(t, set) {
+  const { ui } = ctx, tr = ctx.t;
+  return set.map((r) => { const k = r.stem.part, v = mixVal(t, k), mu = v === 0; return '<div class="cellcol stemrow' + (mu ? ' mu' : '') + '" data-srow="' + k + '"><div class="row"><span class="pic">' + (PART_ICON[k] || PART_ICON.other) + '</span><span class="grow">' + ui.esc(tr('part.' + k)) + '</span><b class="num" data-sv="' + k + '">' + Math.round(v * 100) + ' %</b>' +
+    '<button class="ic sm plain" data-smute="' + k + '" aria-pressed="' + mu + '" aria-label="' + ui.esc(tr(mu ? 'stems.unmute' : 'stems.mute', { name: tr('part.' + k) })) + '">' + (mu ? I.mute : I.vol) + '</button></div>' +
+    '<input type="range" min="0" max="150" step="5" value="' + Math.round(v * 100) + '" data-sg="' + k + '" aria-label="' + ui.esc(tr('part.' + k)) + '"></div>'; }).join('');
+}
+// обновить строки по текущим громкостям (без перерисовки)
+function refreshStemRows(root, t) {
+  root.querySelectorAll('[data-srow]').forEach((row) => {
+    const k = row.dataset.srow, v = mixVal(t, k), b = row.querySelector('[data-sv]'), mu = row.querySelector('[data-smute]'), i = row.querySelector('[data-sg]');
+    if (b) b.textContent = Math.round(v * 100) + ' %';
+    if (i && document.activeElement !== i) i.value = Math.round(v * 100);
+    if (mu) { mu.setAttribute('aria-pressed', v === 0); mu.innerHTML = v === 0 ? I.mute : I.vol; }
+    row.classList.toggle('mu', v === 0);
+  });
+}
 // Что играет сейчас: звук — движок Signalsmith (src/audio/stretchplayer.js: скорость и тональность одним алгоритмом,
 // без <audio>-элемента), видео — элемент. Интерфейс у обоих как у медиа-элемента
 const pl = () => (AU.engOn ? AU.eng : AU.el);
@@ -104,9 +155,10 @@ function snapBeat(t, sec) {
 }
 const keyTxt = () => { const [p, c] = pitchOf(AU.cur); return p || c ? (p > 0 ? '+' : p < 0 ? '−' : '±') + Math.abs(p) + (c ? (c > 0 ? ' +' : ' −') + Math.abs(c) + '¢' : '') : '0'; };
 const formantOn = () => !!st().formant; // сохранять форманты (голос) — по умолчанию нет: на музыке слышен «призрак» оригинала
+let liteTold = false;
 async function applyPitch() {
   const [p, c] = pitchOf(AU.cur);
-  if (AU.engOn) { AU.eng.setPitch(p, c, formantOn()); return; }
+  if (AU.engOn) { if (AU.eng.lite) { if ((p || c) && !liteTold) { liteTold = true; ctx.ui.toast(ctx.t('key.lite')); } return; } AU.eng.setPitch(p, c, formantOn()); return; }
   if (!AU.shift && !p && !c) return; // пока сдвига не было — звук идёт напрямую, без Web Audio
   if (!ctx.audio.unlock()) return;
   const dest = ctx.audio.bus('media');
@@ -130,6 +182,94 @@ function setPitch(p, c) {
 const NOTE_M = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'], NOTE_m = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'B♭', 'B'];
 const keyName = (pc, minor) => (minor ? NOTE_m : NOTE_M)[((pc % 12) + 12) % 12] + (minor ? 'm' : '');
 const sgn = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v);
+/* ---------- панель плеера: волна, дорожки, текст, аккорды ---------- */
+const PVIEWS = ['wave', 'stems', 'text', 'chords'];
+const pview = () => (PVIEWS.includes(st().pview) ? st().pview : 'wave');
+const PV = { cells: [], bars: [] }; // сетка аккордов: времена ячеек и номер такта каждой
+// Такты и доли записи: по сильным долям (rec.ana.downbeats), доли между ними — ячейки; без разбора — пусто
+function chordGrid(t) {
+  const a = t.ana || {}, D = Array.isArray(a.downbeats) ? a.downbeats : [], B = Array.isArray(a.beats) ? a.beats : [], dur = t.dur || pl().duration || 0;
+  if (D.length < 2 || !B.length) return [];
+  const bars = [];
+  let bi = 0;
+  for (let i = 0; i < D.length && bars.length < 600; i++) {
+    const s0 = D[i], s1 = i + 1 < D.length ? D[i + 1] : dur || s0 + (D[i] - D[i - 1]);
+    while (bi < B.length && B[bi] < s0 - 0.02) bi++;
+    const cells = [];
+    for (let k = bi; k < B.length && B[k] < s1 - 0.02 && cells.length < 12; k++) cells.push(B[k]);
+    if (!cells.length) cells.push(s0);
+    bars.push({ t: s0, cells });
+  }
+  return bars;
+}
+function chordsViewHTML(t) {
+  const { ui } = ctx, tr = ctx.t, bars = chordGrid(t), L = chordsOf(t);
+  PV.cells = []; PV.bars = [];
+  if (!bars.length) {
+    if (!L.length) return '<div class="pview pempty"><span>' + ui.esc(tr(t.anaTried ? 'pv.noChords' : 'pv.waitChords')) + '</span></div>';
+    // аккорды без долей — лентой
+    return '<div class="pview pchords flat">' + L.map((c, i) => '<button class="chc' + (c.c ? '' : ' no') + '" data-ci="' + i + '" data-bt="' + c.t + '"><b>' + (c.c ? ui.esc(chordTxt(c.c, t)) : '·') + '</b><span class="num">' + fmtT(c.t) + '</span></button>').join('') + '</div>';
+  }
+  const n = Math.max(...bars.map((b) => b.cells.length));
+  let prev = -1, h = '<div class="pview pchords" id="pchords" style="--n:' + Math.min(n, 8) + '">';
+  bars.forEach((b, bi) => {
+    h += '<div class="chbar" data-bar="' + bi + '"><span class="chbn num">' + (bi + 1) + '</span>';
+    b.cells.forEach((ct) => {
+      const ci = chordAt(t, ct + 0.04), label = ci !== prev && ci >= 0 && L[ci].c ? chordTxt(L[ci].c, t) : ci !== prev && ci >= 0 && !L[ci].c ? '·' : '';
+      prev = ci;
+      h += '<button class="chc" data-bt="' + ct + '" data-k="' + PV.cells.length + '">' + (label ? '<b>' + ui.esc(label) + '</b>' : '') + '</button>';
+      PV.cells.push(ct); PV.bars.push(bi);
+    });
+    h += '</div>';
+  });
+  return h + '</div>';
+}
+function lyricsViewHTML(t) {
+  const { ui } = ctx, tr = ctx.t, L = t.lyr && Array.isArray(t.lyr.lines) ? t.lyr.lines : [];
+  if (!L.length) return '<div class="pview pempty"><span>' + ui.esc(tr(ctx.jobs && ctx.jobs.lyricsSupported() ? 'pv.noText' : 'lyr.pc')) + '</span>' + (ctx.jobs && ctx.jobs.lyricsSupported() ? '<button class="btn sm" data-x="astems">' + ui.esc(tr('lyr.go', { t: fmtT(estimateLyricsSec(t.dur || 60)) })) + '</button>' : '') + '</div>';
+  return '<div class="pview plyr" id="plyr">' + L.map((l, i) => '<p data-li="' + i + '" data-bt="' + l.t + '">' + ui.esc(l.text) + '</p>').join('') + '</div>';
+}
+function stemsViewHTML(t) {
+  const { ui } = ctx, tr = ctx.t, set = stemsFor(t);
+  if (!set.length) {
+    const j = ctx.jobs && ctx.jobs.current && ctx.jobs.current.id === t.id && ctx.jobs.current.kind === 'stems' ? ctx.jobs.current : null;
+    return '<div class="pview pempty"><span>' + ui.esc(j ? tr('job.' + j.stage) + (j.frac ? ' · ' + Math.round(j.frac * 100) + ' %' : '') : tr(ctx.jobs && ctx.jobs.supported() ? 'pv.noStems' : 'stems.web')) + '</span>' + (ctx.jobs && ctx.jobs.supported() && !j ? '<button class="btn sm" data-x="astems">' + ui.esc(tr('stems.go', { t: fmtT(estimateSec(t.dur || 60, (ctx.auto && ctx.auto.mode()) || '4', !!(ctx.auto && ctx.auto.hq()))) })) + '</button>' : '') + '</div>';
+  }
+  return '<div class="pview pstems">' + stemRowsHTML(t, set) + '<div class="row pstbtns"><button class="btn sm" data-x="astems">' + ui.esc(tr('stems.btn')) + '</button>' + (mixActive(t) ? '<button class="btn sm" data-x="asreset">' + ui.esc(tr('stems.reset')) + '</button>' : '') + '</div></div>';
+}
+// переключатель видов — одной полосой над транспортом
+function pswHTML() {
+  const tr = ctx.t, v = pview(), ic = { wave: I.wave, stems: I.stems, text: I.text, chords: I.chords };
+  return '<div class="pvsw" role="tablist">' + PVIEWS.map((k) => '<button class="pvb' + (k === v ? ' on' : '') + '" role="tab" aria-selected="' + (k === v) + '" data-x="apv" data-v="' + k + '" aria-label="' + ctx.ui.esc(tr('pv.' + k)) + '">' + ic[k] + '<span>' + ctx.ui.esc(tr('pv.' + k)) + '</span></button>').join('') + '</div>';
+}
+// тело панели по виду (full и half); волна — как раньше
+function pviewHTML(c, d, half) {
+  const t = AU.cur, v = pview();
+  if (v === 'stems') return stemsViewHTML(t) + atimes(c, d, anaTxt(t));
+  if (v === 'text') return lyricsViewHTML(t) + atimes(c, d, anaTxt(t));
+  if (v === 'chords') return chordsViewHTML(t) + atimes(c, d, anaTxt(t));
+  return half ? '<div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + c.lyr + marksHTML() : wformHTML('f') + atimes(c, d) + c.lyr + marksHTML();
+}
+
+/* ---------- щелчки по долям записи (метроном по разбору: rec.ana.beats, сильные — downbeats) ---------- */
+const CL = { timer: 0, last: -1, downs: null, downFor: null };
+const clickOn = () => !!st().pclick && !!(AU.cur && AU.cur.ana && Array.isArray(AU.cur.ana.beats) && AU.cur.ana.beats.length);
+function clickTick() {
+  if (!clickOn() || !AU.cur || pl().paused) { clearInterval(CL.timer); CL.timer = 0; CL.last = -1; return; }
+  const bus = ctx.audio.bus('metro'), ac = bus.context, B = AU.cur.ana.beats, pos = pl().currentTime, rate = AU.rate || 1;
+  if (CL.downFor !== AU.cur) { CL.downFor = AU.cur; CL.downs = new Set((AU.cur.ana.downbeats || []).map((x) => Math.round(x * 100))); }
+  if (CL.last < 0 || CL.last > pos + 0.05 || CL.last < pos - 1.5) CL.last = pos; // старт или перемотка
+  const ahead = pos + 0.35 * rate;
+  let lo = 0, hi = B.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (B[m] <= CL.last) lo = m + 1; else hi = m; }
+  for (let i = lo; i < B.length && B[i] <= ahead; i++) {
+    const at = ac.currentTime + Math.max(0, (B[i] - pos) / rate);
+    voice(ac, bus, at, CL.downs.has(Math.round(B[i] * 100)) ? 2 : 1, 'beep', null);
+    CL.last = B[i];
+  }
+}
+function clickStart() { if (!clickOn() || CL.timer) return; CL.last = -1; CL.timer = setInterval(clickTick, 100); clickTick(); }
+
 function keySheet() {
   const { t, ui } = ctx, song = ctx.song(curSong()), tr = AU.cur;
   const ana = () => (tr.ana && tr.ana.pc != null ? tr.ana : (st().pana || {})[tr.id]);
@@ -213,7 +353,6 @@ function stemsSheet() {
   const { t, ui } = ctx, tr = AU.cur, jobs = ctx.jobs;
   if (!tr || !jobs) return;
   const can = jobs.supported(), hq = () => !!(ctx.auto && ctx.auto.hq());
-  const g = () => mixOf(tr), val = (k) => (g()[k] == null ? 1 : g()[k]), prev = {};
   const job = () => (jobs.current && jobs.current.id === tr.id ? jobs.current : null);
   const first = stemsFor(tr)[0];
   let m = (first && first.stem.mode) || (ctx.auto && ctx.auto.mode()) || '4';
@@ -229,8 +368,7 @@ function stemsSheet() {
     let h = ui.snav(t('stems.title')) + '<div class="group"><div class="cellcol">' + ui.seg('smode', MODES.map((k) => [k, k]), m, t('stems.modeTitle')) + '<div class="segcap">' + ui.esc(t('stems.mode.' + m)) + '</div></div>';
     if (j && j.kind === 'stems') h += progress(j, 'data-sjcancel');
     else if (set.length) {
-      h += set.map((r) => { const k = r.stem.part, v = val(k), mu = v === 0; return '<div class="cellcol stemrow' + (mu ? ' mu' : '') + '"><div class="row"><button class="ic sm plain" data-smute="' + k + '" aria-pressed="' + mu + '" aria-label="' + ui.esc(t(mu ? 'stems.unmute' : 'stems.mute', { name: t('part.' + k) })) + '">' + (mu ? I.mute : I.vol) + '</button><span class="grow">' + ui.esc(t('part.' + k)) + '</span><b class="num" data-sv="' + k + '">' + Math.round(v * 100) + ' %</b></div>' +
-        '<input type="range" min="0" max="150" step="5" value="' + Math.round(v * 100) + '" data-sg="' + k + '" aria-label="' + ui.esc(t('part.' + k)) + '"></div>'; }).join('') +
+      h += stemRowsHTML(tr, set) +
         '<button class="cell act" data-sreset>' + ui.esc(t('stems.reset')) + '</button><button class="cell act" data-sstudio>' + ui.esc(t('stems.toStudio')) + '</button>';
     } else if (can) h += '<button class="cell act center b" data-sgo>' + ui.esc(t('stems.go', { t: fmtT(estimateSec(tr.dur || 60, m, hq())) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
     else h += '<div class="cellcol"><span class="l2">' + ui.esc(t('stems.web')) + '</span></div>';
@@ -274,34 +412,20 @@ function stemsSheet() {
     }
     return h;
   };
-  let tm = 0;
-  // громкости: в движок (на ходу — setMix, пересведение без разрыва; исходник ↔ дорожки — перезагрузка с того же места)
-  const apply = (sh) => {
-    ctx.store.save();
-    clearTimeout(tm);
-    tm = setTimeout(async () => {
-      if (AU.cur !== tr) return;
-      if (AU.engOn && AU.partsFor === tr && mixActive(tr)) { AU.eng.setMix(g()); return; }
-      const at = pl().currentTime, was = !pl().paused;
-      if (await engineLoad(tr)) { AU.eng.currentTime = at; if (was) AU.eng.play().catch(() => {}); }
-      render();
-    }, 200);
-    if (sh) { const el = sh.el; stemsFor(tr, m).forEach((r) => { const k = r.stem.part, b = el.querySelector('[data-sv="' + k + '"]'), mu = el.querySelector('[data-smute="' + k + '"]'); if (b) b.textContent = Math.round(val(k) * 100) + ' %'; if (mu) { mu.setAttribute('aria-pressed', val(k) === 0); mu.innerHTML = val(k) === 0 ? I.mute : I.vol; mu.closest('.stemrow').classList.toggle('mu', val(k) === 0); } }); }
-  };
-  const setG = (k, v) => { const all = st().pmix || (st().pmix = {}), mx = all[tr.id] || (all[tr.id] = {}); mx[k] = Math.max(0, Math.min(1.5, Math.round(v * 20) / 20)); if (mx[k] === 1) delete mx[k]; if (!Object.keys(mx).length) delete all[tr.id]; };
+  const apply = () => mixApply(tr);
   const setMode = (v) => { m = v; (st().pmode ??= {})[tr.id] = v; ctx.store.save(); if (mixActive(tr)) apply(null); };
   let un = null, tick = 0;
   ui.sheet(body, (el, sh) => {
     sh.el = el;
     un = jobs.subscribe(() => { if (el.isConnected) sh.update(); });
     tick = setInterval(() => { if (job() && el.isConnected) sh.update(); }, 1000);
-    el.addEventListener('input', (e) => { const i = e.target.closest('[data-sg]'); if (!i) return; setG(i.dataset.sg, +i.value / 100); apply(sh); });
+    el.addEventListener('input', (e) => { const i = e.target.closest('[data-sg]'); if (!i) return; mixSet(tr, i.dataset.sg, +i.value / 100); mixApply(tr); refreshStemRows(el, tr); });
     el.addEventListener('click', async (e) => {
       const b = e.target.closest('[data-smute], [data-sreset], [data-sstudio], [data-sgo], [data-shq], [data-sjcancel], [data-njcancel], [data-ngo], [data-nlisten], [data-ntabs], [data-nstudio], [data-nbends], [data-lgo], [data-lsong], [data-llrc], [data-ljcancel], [data-dgo], [data-dplay], [data-djcancel], [data-seg="dnlvl"] [data-v], [data-seg="smode"] [data-v], [data-seg="sver"] [data-v], [data-seg="nsens"] [data-v]');
       if (!b) return;
       const d = b.dataset;
-      if (d.smute != null) { const k = d.smute, was = val(k); if (was === 0) setG(k, prev[k] || 1); else { prev[k] = was; setG(k, 0); } const i = el.querySelector('[data-sg="' + k + '"]'); if (i) i.value = Math.round(val(k) * 100); apply(sh); return; }
-      if (b.hasAttribute('data-sreset')) { const all = st().pmix || {}; delete all[tr.id]; el.querySelectorAll('[data-sg]').forEach((i) => { i.value = 100; }); apply(sh); return; }
+      if (d.smute != null) { mixToggle(tr, d.smute); mixApply(tr); refreshStemRows(el, tr); return; }
+      if (b.hasAttribute('data-sreset')) { const all = st().pmix || {}; delete all[tr.id]; mixApply(tr); refreshStemRows(el, tr); return; }
       if (b.closest('[data-seg="smode"]')) { setMode(d.v); sh.update(); return; }
       if (b.closest('[data-seg="sver"]')) { (st().pver ??= {})[tr.id] = d.v; ctx.store.save(); if (mixActive(tr)) apply(null); sh.update(); return; }
       if (b.closest('[data-seg="nsens"]')) { st().nsens = d.v; ctx.store.save(); sh.update(); return; }
@@ -368,23 +492,29 @@ async function engineLoad(t) {
     // на одной шине и гонка загрузок — на телефоне кончалась тишиной)
     if (!AU.eng) {
       AU.engP ??= (async () => {
-        const dest = ctx.audio.bus('media'), eng = await createStretchPlayer(dest.context, dest);
-        ['play', 'pause', 'ended'].forEach((k) => eng.addEventListener(k, PLAY_EV[k]));
-        eng.addEventListener('loadedmetadata', () => { const x = AU.cur; if (x && !x.dur && eng.duration) { x.dur = eng.duration; ctx.files.save(x); } render(); });
-        eng.addEventListener('procerror', (e) => ctx.log('движок: ошибка в потоке звука: ' + (e.detail || '?'), 'w'));
+        const dest = ctx.audio.bus('media');
+        const wire = (eng) => {
+          ['play', 'pause', 'ended'].forEach((k) => eng.addEventListener(k, PLAY_EV[k]));
+          eng.addEventListener('loadedmetadata', () => { const x = AU.cur; if (x && !x.dur && eng.duration) { x.dur = eng.duration; ctx.files.save(x); } render(); });
+          eng.addEventListener('procerror', (e) => ctx.log('движок: ошибка в потоке звука: ' + (e.detail || '?'), 'w'));
+          return eng;
+        };
+        // запасной движок на обычных узлах (bufferplayer.js): когда AudioWorklet Signalsmith на устройстве молчит —
+        // дорожки, перемотка и громкости работают, тональность — нет
+        if (AU.engLite || globalThis.__liteEngine) { AU.engLite = true; return wire(await createBufferPlayer(dest.context, dest)); }
+        const eng = wire(await createStretchPlayer(dest.context, dest));
         // самопроверка: короткий тон через узел при нулевой громкости — молчит ли движок на этом устройстве
         try {
           const r = await eng.selfTest();
           if (r) {
             const info = Math.round(r.db) + ' дБ, ' + r.sampleRate + ' Гц, ' + r.state + ', задержка ' + Math.round(r.lat * 1000) + ' мс, каналов ' + r.channels + (r.err ? ', ошибка: ' + r.err : '');
-            if (r.db < -60) { AU.noEngine = true; ctx.log('движок не прошёл самопроверку — звук через элемент (' + info + ')', 'w'); }
-            else ctx.log('движок: самопроверка ' + info);
+            if (r.db < -60) { AU.engLite = true; ctx.log('движок не прошёл самопроверку — запасной движок без тональности (' + info + ')', 'w'); return wire(await createBufferPlayer(dest.context, dest)); }
+            ctx.log('движок: самопроверка ' + info);
           }
         } catch (e) { ctx.logErr(e); }
         return eng;
       })();
       AU.eng = await AU.engP;
-      if (AU.noEngine) return false;
     }
     const set = mixActive(t) ? stemsFor(t) : [], key = t.id + ':' + set.map((r) => r.id).join(',');
     if (AU.loadP && AU.loadKey === key) return AU.loadP; // та же запись уже грузится — одна загрузка на всех
@@ -502,9 +632,15 @@ const playEl = async () => {
 // прежним путём (pitchShifter). В журнал — предупреждение: по отчёту видно, что на устройстве движок не звучит
 function engineFallback(t, why) {
   const at = pl().currentTime, was = !pl().paused;
-  AU.noEngine = true;
   try { AU.eng.pause(); } catch { /* */ }
   AU.engOn = false; AU.engFor = null; AU.partsFor = null;
+  if (!AU.engLite) { // первый раз — запасной движок на обычных узлах, с того же места
+    AU.engLite = true; AU.engP = null; AU.eng = null; AU.loadP = null; AU.loadKey = '';
+    ctx.log('движок молчит (' + why + ') — запасной движок без тональности', 'w');
+    engineLoad(t).then((ok) => { if (!ok) { engineFallback(t, why); return; } AU.eng.currentTime = at; if (was) AU.eng.play().catch(() => {}); soundCheck(t); render(); });
+    return;
+  }
+  AU.noEngine = true;
   try { AU.el.src = AU.url; AU.el.playbackRate = AU.rate; AU.el.currentTime = at; } catch { /* */ }
   if (was) AU.el.play().catch(() => {});
   if (AU.shift) applyPitch().catch(() => {});
@@ -515,8 +651,9 @@ function engineFallback(t, why) {
 // играющем плеере — предупреждение с подробностями (путь, контекст, шина) — для отчёта о проблеме
 let SC = { an: null, buf: null, id: '' };
 function soundCheck(t) {
-  if (!t || SC.id === t.id) return;
-  SC.id = t.id;
+  const key = t && t.id + (AU.engLite ? ':lite' : '');
+  if (!t || SC.id === key) return;
+  SC.id = key;
   // анализатор подключается сейчас, замер — позже: сразу после подключения в нём ещё нули
   if (!SC.an) { const tp = ctx.audio.tap(); if (!tp) { ctx.log('играет ' + t.name + ': контекста звука нет', 'w'); return; } SC.an = tp.ctx.createAnalyser(); SC.an.fftSize = 2048; SC.an.smoothingTimeConstant = 0; SC.buf = new Float32Array(2048); tp.into(SC.an); }
   setTimeout(() => {
@@ -710,6 +847,8 @@ function controls() {
     key: '<span class="vrow tight akey">' + icb('data-step="akey" data-d="-1"', '♭', t('key.down'), 'sm txt') + '<button class="ratev num" id="keyv" data-x="akeysheet" aria-label="' + t('key.title') + '">' + keyTxt() + '</button>' +
       icb('data-step="akey" data-d="1"', '♯', t('key.up'), 'sm txt') + '</span>',
     stems: ctx.jobs ? icb('data-x="astems"', I.stems, t('stems.btn'), 'sm' + (mixActive(AU.cur) ? ' act' : '')) : '',
+    // щелчки по долям записи (есть разбор) — кнопка-переключатель
+    click: AU.cur.ana && Array.isArray(AU.cur.ana.beats) && AU.cur.ana.beats.length ? '<button class="ic sm' + (st().pclick ? ' act' : '') + '" data-x="aclick" aria-pressed="' + !!st().pclick + '" aria-label="' + t('pv.click') + '">' + I.click + '</button>' : '',
     back: icb('data-x="aback"', I.back5, t('back5')),
     fwd: icb('data-x="afwd"', I.fwd5, t('fwd5')),
     abb: '<button class="ic txt' + (ab === 'on' ? ' act' : '') + '" data-x="aab" aria-pressed="' + (ab === 'on') + '" aria-label="' + t('ab') + '">' + (ab === 'a' ? 'B?' : 'A–B') + '</button>',
@@ -764,14 +903,15 @@ function playerHTML() {
   const chips = (cls) => '<div class="chips nowrap afiles' + cls + '">' + sf.map((x) => '<button class="chip' + (x.id === AU.cur.id ? ' on' : '') + '" data-x="aload2" data-id="' + x.id + '">' + esc(x.name) + '</button>').join('') + '</div>';
   if (size === 'half') {
     return '<div class="ah2">' + c.back2 + '<div class="arow3">' + (sf.length > 1 ? chips(' sgrow') : '<div class="aname sgrow" style="text-align:left">' + esc(AU.cur.name) + '</div>') +
-      '<div class="vrow tight">' + c.rate + c.key + c.stems + c.sty('sm') + '</div></div><div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + c.lyr + marksHTML() + '<div class="ctrl5">' +
+      '<div class="vrow tight">' + c.rate + c.key + c.click + c.stems + c.sty('sm') + '</div></div>' + pviewHTML(c, d, true) + pswHTML() + '<div class="ctrl5">' +
       c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
-  return '<div class="mcard av" style="position:relative">' + c.sty('corner') + c.back2 + (sf.length > 1 ? chips('') : name) + wformHTML('f') +
-    atimes(c, d) + c.lyr + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.stems + '</div><div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
+  return '<div class="mcard av pv" style="position:relative">' + c.sty('corner') + c.back2 + (sf.length > 1 ? chips('') : name) + pviewHTML(c, d, false) +
+    '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.click + c.stems + '</div>' + pswHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
-const atimes = (c, d) => '<div class="num l2 atimes">' + c.chord + c.time + '<span>' + (AU.a != null ? 'A ' + fmtT(AU.a) + (AU.b != null ? ' – B ' + fmtT(AU.b) : '') : ctx.t('dragHint')) +
+// строка времени: аккорд, положение, посередине — A–B, иначе подсказка волны (на волне) или тональность и темп (в других видах)
+const atimes = (c, d, mid = null) => '<div class="num l2 atimes">' + c.chord + c.time + '<span>' + (AU.a != null ? 'A ' + fmtT(AU.a) + (AU.b != null ? ' – B ' + fmtT(AU.b) : '') : mid != null ? esc(mid) : ctx.t('dragHint')) +
   '</span><span id="adur">' + fmtT(d) + '</span></div>';
 
 // Видео: картинка вместо волны и винила, под ней — шкала с A–B и метками
@@ -837,6 +977,27 @@ function uiTick() {
   }
   const mks = host.querySelectorAll('.amk');
   if (mks.length) { const k = currentMark(AU.cur.marks, pl().currentTime); mks.forEach((b, i) => b.classList.toggle('on', i === k)); }
+  // вид «Текст»: текущая строка подсвечена и в поле зрения
+  const pl2 = q('#plyr');
+  if (pl2) {
+    const i = lineAt(AU.cur.lyr.lines, pl().currentTime);
+    if (pl2.dataset.i !== String(i)) { pl2.dataset.i = i; const on = pl2.querySelector('.on'); if (on) on.classList.remove('on'); const el = pl2.querySelector('[data-li="' + i + '"]'); if (el) { el.classList.add('on'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
+  }
+  // вид «Аккорды»: текущая ячейка (доля) и такт
+  const pc = q('#pchords');
+  if (pc && PV.cells.length) {
+    const now = pl().currentTime; let lo = 0, hi = PV.cells.length - 1, k = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (PV.cells[m] <= now + 0.03) { k = m; lo = m + 1; } else hi = m - 1; }
+    if (pc.dataset.k !== String(k)) {
+      const prevBar = pc.dataset.k >= 0 ? PV.bars[+pc.dataset.k] : -1;
+      pc.dataset.k = k;
+      const on = pc.querySelector('.chc.on'); if (on) on.classList.remove('on');
+      const ob = pc.querySelector('.chbar.on'); if (ob) ob.classList.remove('on');
+      const el = pc.querySelector('[data-k="' + k + '"]');
+      if (el) { el.classList.add('on'); const bar = el.parentElement; bar.classList.add('on'); if (PV.bars[k] !== prevBar) bar.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    }
+  }
+  if (!pl().paused && clickOn() && !CL.timer) clickStart();
   const c2 = q('#adur');
   if (c2) c2.textContent = fmtT(d);
   const ap = q('#aplay');
@@ -1227,6 +1388,10 @@ function act(a, el) {
     case 'amlist': marksSheet(); break;
     case 'akeysheet': keySheet(); break;
     case 'astems': stemsSheet(); break;
+    case 'apv': st().pview = el.dataset.v; ctx.store.save(); render(); break;
+    case 'aclick': st().pclick = !st().pclick; ctx.store.save(); if (st().pclick) clickStart(); render(); break;
+    case 'asreset': { const all = st().pmix || {}; delete all[AU.cur.id]; mixApply(AU.cur); render(); break; }
+    case 'apbt': { const bt = +el.dataset.bt; if (Number.isFinite(bt)) { pl().currentTime = bt; CL.last = -1; uiTick(); } break; }
     case 'afs': {
       const v = AU.el, rq = v.requestFullscreen || v.webkitRequestFullscreen;
       if (rq) { v.controls = true; Promise.resolve(rq.call(v)).catch(() => { v.controls = false; }); }
@@ -1246,9 +1411,16 @@ function bind() {
     const k = e.target.closest('[data-step="akey"]');
     if (k) { const [p, c] = pitchOf(AU.cur); setPitch(p + +k.dataset.d, c); return; }
     const x = e.target.closest('[data-x]');
-    if (x) act(x.dataset.x, x);
+    if (x) { act(x.dataset.x, x); return; }
+    // панель плеера: выкл дорожки, ячейка аккорда или строка текста — перемотка
+    const mu = e.target.closest('[data-smute]');
+    if (mu && AU.cur) { mixToggle(AU.cur, mu.dataset.smute); mixApply(AU.cur); refreshStemRows(host, AU.cur); return; }
+    const bt = e.target.closest('[data-bt]');
+    if (bt && AU.cur) act('apbt', bt);
   });
   on(host, 'input', (e) => {
+    const sg = e.target.closest('[data-sg]');
+    if (sg && AU.cur) { mixSet(AU.cur, sg.dataset.sg, +sg.value / 100); mixApply(AU.cur); refreshStemRows(host, AU.cur); return; }
     if (!e.target.hasAttribute('data-mlq')) return;
     ML.q = e.target.value;
     const pos = e.target.selectionStart;

@@ -16,11 +16,12 @@
     </style>
 
 
-    <!-- Заставка: на Android 12+ — системная (светлый фон и знак «Μ beta»), на старых — картинка splash («Μελέτη», beta 1.1) -->
+    <!-- Заставка: на Android 12+ — системная: лицо маскота (значок «Мелетий») на его фоне, не старый знак «Μ»;
+         на старых — картинка splash («Μελέτη») -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
-        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="windowSplashScreenBackground">@color/ic_bg_meletiy</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_meletiy_fg</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>
