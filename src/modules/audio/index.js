@@ -45,16 +45,19 @@ const MB = 1048576;
 
 const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0, eng: null, engOn: false, engFor: null, partsFor: null };
 // Дорожки записи (src/core/jobs.js: файлы с stem.src — эта запись); набор — выбранный режим (st().pmode[id]),
-// иначе режим с наибольшим числом дорожек
+// иначе режим с наибольшим числом дорожек; версия — выбранная (st().pver[id]: 'hq' | 'std'), иначе улучшенная, если есть
 const PART_ORDER = ['vocals', 'inst', 'drums', 'bass', 'guitar', 'piano', 'other'];
 const byPart = (a, b) => PART_ORDER.indexOf(a.stem.part) - PART_ORDER.indexOf(b.stem.part);
-const stemSets = (t) => { const by = {}; (t && ctx ? stemsOf(ctx.files, t.id) : []).forEach((r) => { (by[r.stem.mode || '4'] ??= []).push(r); }); return by; };
-function stemsFor(t, mode = null) {
+const stemSets = (t) => { const by = {}; (t && ctx ? stemsOf(ctx.files, t.id) : []).forEach((r) => { (by[(r.stem.mode || '4') + (r.stem.hq ? 'hq' : '')] ??= []).push(r); }); return by; };
+const verOf = (t) => ((st().pver || {})[t.id] === 'std' ? 'std' : 'hq');
+function stemsFor(t, mode = null, ver = null) {
   if (!t || !ctx) return [];
-  const by = stemSets(t), want = mode || (st().pmode || {})[t.id];
-  const best = (want && by[want]) || Object.values(by).sort((a, b) => b.length - a.length)[0] || [];
+  const by = stemSets(t), want = mode || (st().pmode || {})[t.id], v = ver || verOf(t);
+  const pick = (m) => (v === 'hq' ? by[m + 'hq'] || by[m] : by[m] || by[m + 'hq']);
+  const best = (want && pick(want)) || Object.values(by).sort((a, b) => b.length - a.length)[0] || [];
   return best.sort(byPart);
 }
+const hasVer = (t, mode, hq) => !!stemSets(t)[mode + (hq ? 'hq' : '')];
 const mixOf = (t) => ((st().pmix || {})[t.id]) || {};
 const mixActive = (t) => Object.values(mixOf(t)).some((v) => v !== 1);
 const blobsOf = (list) => { const o = {}; list.forEach((r) => { o[r.stem.part] = r.blob; }); return o; };
@@ -181,7 +184,7 @@ function stemsSheet() {
   const progress = (j, sel) => {
     const pct = Math.round((j.frac || 0) * 100), run = j.stage === 'separate' || j.stage === 'run', gone = (Date.now() - (j.stageAt || j.t0)) / 1000;
     const left = run && j.frac > 0.02 ? Math.max(0, gone / j.frac - gone) : 0;
-    return '<div class="cellcol sjob"><span class="grow">' + ui.esc(t('job.' + j.stage)) + (j.hq ? ' · ' + ui.esc(t('stems.hqShort')) : '') + (run ? ' · <b class="num">' + pct + ' %</b>' + (left ? ' · ' + ui.esc(t('job.left', { t: fmtT(left) })) : '') : '') + '</span><div class="sbar"><b style="width:' + pct + '%"></b></div></div>' +
+    return '<div class="cellcol sjob"><span class="grow">' + ui.esc(t('job.' + j.stage)) + (j.hq ? ' · ' + ui.esc(t('stems.verHq').toLowerCase()) : '') + (run ? ' · <b class="num">' + pct + ' %</b>' + (left ? ' · ' + ui.esc(t('job.left', { t: fmtT(left) })) : '') : '') + '</span><div class="sbar"><b style="width:' + pct + '%"></b></div></div>' +
       '<button class="cell act center" ' + sel + '>' + ui.esc(t('job.cancel')) + '</button>';
   };
   const body = () => {
@@ -195,11 +198,15 @@ function stemsSheet() {
     } else if (can) h += '<button class="cell act center b" data-sgo>' + ui.esc(t('stems.go', { t: fmtT(estimateSec(tr.dur || 60, m, hq())) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
     else h += '<div class="cellcol"><span class="l2">' + ui.esc(t('stems.web')) + '</span></div>';
     // «ночное» качество — один переключатель с настройкой «Дорожки автоматически»: в фоне пересчитает и готовые наборы
-    if (can && !(j && j.kind === 'stems')) h += '<button class="cell act" data-shq aria-pressed="' + hq() + '"><span class="grow">' + ui.esc(t('stems.hq')) + '<span class="bksub">' + ui.esc(t('stems.hqHint')) + '</span></span><span class="val">' + (hq() ? '✓' : '') + '</span></button>' +
-      (set.length && hq() && !set[0].stem.hq ? '<button class="cell act center" data-sgo>' + ui.esc(t('stems.redo', { t: fmtT(estimateSec(tr.dur || 60, m, true)) })) + '</button>' : '');
+    if (can && !(j && j.kind === 'stems')) {
+      // обе версии есть — выбор; улучшенное включено, а есть только обычная — «Улучшить»
+      if (set.length && hasVer(tr, m, true) && hasVer(tr, m, false)) h += '<div class="cellcol"><span>' + ui.esc(t('stems.ver')) + '</span>' + ui.seg('sver', [['std', t('stems.verStd')], ['hq', t('stems.verHq')]], verOf(tr), t('stems.ver')) + '</div>';
+      h += '<button class="cell act" data-shq aria-pressed="' + hq() + '"><span class="grow">' + ui.esc(t('stems.hq')) + '<span class="bksub">' + ui.esc(t('stems.hqHint')) + '</span></span><span class="val">' + (hq() ? '✓' : '') + '</span></button>' +
+        (set.length && hq() && !hasVer(tr, m, true) ? '<button class="cell act center" data-sgo>' + ui.esc(t('stems.improve', { t: fmtT(estimateSec(tr.dur || 60, m, true)) })) + '</button>' : '');
+    }
     h += '</div>';
     if (set.length && absent.length) h += '<p class="ftr">' + ui.esc(t('stems.absent', { list: absent.map((p) => t('part.' + p)).join(', ') })) + '</p>';
-    else h += '<p class="ftr">' + ui.esc((set.length && set[0].stem.hq ? t('stems.hqDone') + ' ' : '') + t(set.length ? 'stems.hint' : can ? 'stems.goHint' : 'stems.webHint')) + '</p>';
+    else h += '<p class="ftr">' + ui.esc(t(set.length ? 'stems.hint' : can ? 'stems.goHint' : 'stems.webHint')) + '</p>';
     // ноты
     h += '<div class="hdr">' + ui.esc(t('notes.hdr')) + '</div><div class="group">';
     if (j && j.kind === 'notes') h += progress(j, 'data-njcancel');
@@ -234,12 +241,13 @@ function stemsSheet() {
     tick = setInterval(() => { if (job() && el.isConnected) sh.update(); }, 1000);
     el.addEventListener('input', (e) => { const i = e.target.closest('[data-sg]'); if (!i) return; setG(i.dataset.sg, +i.value / 100); apply(sh); });
     el.addEventListener('click', async (e) => {
-      const b = e.target.closest('[data-smute], [data-sreset], [data-sstudio], [data-sgo], [data-shq], [data-sjcancel], [data-njcancel], [data-ngo], [data-nlisten], [data-ntabs], [data-nstudio], [data-nbends], [data-seg="smode"] [data-v], [data-seg="nsens"] [data-v]');
+      const b = e.target.closest('[data-smute], [data-sreset], [data-sstudio], [data-sgo], [data-shq], [data-sjcancel], [data-njcancel], [data-ngo], [data-nlisten], [data-ntabs], [data-nstudio], [data-nbends], [data-seg="smode"] [data-v], [data-seg="sver"] [data-v], [data-seg="nsens"] [data-v]');
       if (!b) return;
       const d = b.dataset;
       if (d.smute != null) { const k = d.smute, was = val(k); if (was === 0) setG(k, prev[k] || 1); else { prev[k] = was; setG(k, 0); } const i = el.querySelector('[data-sg="' + k + '"]'); if (i) i.value = Math.round(val(k) * 100); apply(sh); return; }
       if (b.hasAttribute('data-sreset')) { const all = st().pmix || {}; delete all[tr.id]; el.querySelectorAll('[data-sg]').forEach((i) => { i.value = 100; }); apply(sh); return; }
       if (b.closest('[data-seg="smode"]')) { setMode(d.v); sh.update(); return; }
+      if (b.closest('[data-seg="sver"]')) { (st().pver ??= {})[tr.id] = d.v; ctx.store.save(); if (mixActive(tr)) apply(null); sh.update(); return; }
       if (b.closest('[data-seg="nsens"]')) { st().nsens = d.v; ctx.store.save(); sh.update(); return; }
       if (b.hasAttribute('data-nbends')) { st().nbends = !st().nbends; ctx.store.save(); sh.update(); return; }
       if (b.hasAttribute('data-sjcancel') || b.hasAttribute('data-njcancel')) { jobs.cancel(); return; }
@@ -370,6 +378,7 @@ function loopStart() {
 function load(t) {
   st().last = st().last || {};
   st().last[audKey()] = t.id;
+  (st().used ??= {})[t.id] = Date.now(); // недавние — первыми в фоновой очереди (src/core/autostems.js)
   ctx.store.save();
   if (AU.url) URL.revokeObjectURL(AU.url);
   AU.cur = t;

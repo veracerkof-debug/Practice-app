@@ -190,9 +190,10 @@
   "notes.none": "No notes found: quiet recording or no pitch",
   "notes.hint": "Notes from the recording (.mid) go to the library next to it. Best with a single instrument or voice: separate a mix first and transcribe a stem.",
   "notes.doneHint": "The .mid file is in the library next to the recording. In Tabs — as notation and tablature; in the studio — edit, change the sound and tempo.",
-  "stems.hq": "Overnight quality",
-  "stems.hqHint": "4.5× longer, cleaner stem edges. In the background it also redoes finished recordings.",
-  "stems.hqShort": "overnight",
-  "stems.hqDone": "Overnight quality.",
-  "stems.redo": "Redo in overnight quality · ≈ {t}"
+  "stems.hq": "Refined separation",
+  "stems.hqHint": "Three passes instead of one: cleaner stem edges, 4.5× the time. The first version is kept.",
+  "stems.improve": "Refine · ≈ {t}",
+  "stems.ver": "Stem version",
+  "stems.verStd": "First",
+  "stems.verHq": "Refined"
 }

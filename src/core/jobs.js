@@ -1,6 +1,6 @@
 // Долгие обработки записей медиатеки — одна за раз, с ходом и отменой: разделение на дорожки (src/audio/stems.js) и
 // снятие нот (src/audio/transcribe.js). Результаты ложатся в медиатеку рядом с записью: дорожки — WAV с пометкой
-// stem: { src, part, mode, hq, db }, ноты — .mid с пометкой trans: { src }. Запускают плеер медиатеки (по кнопке) и
+// stem: { src, part, mode, hq, db } — обычная и улучшенная (hq) версии живут рядом, ноты — .mid с пометкой trans: { src }. Запускают плеер медиатеки (по кнопке) и
 // фоновая очередь (autostems.js). Подписчики получают состояние: { kind: 'stems' | 'notes', id, stage, frac, stageAt, mode, auto }.
 // Без DOM: имена дорожек — через t() ядра.
 import { t } from '../i18n/index.js';
@@ -28,7 +28,7 @@ export function createJobs(files) {
   async function runStems(rec, mode, hq) {
     const res = await cur.job.promise;
     const stems = [], absent = [], at = Date.now(), parts = PARTS_OF[mode] || PARTS_OF['4'];
-    for (const old of stemsOf(files, rec.id).filter((x) => (x.stem.mode || '4') === mode)) await files.remove(old.id);
+    for (const old of stemsOf(files, rec.id).filter((x) => (x.stem.mode || '4') === mode && !!x.stem.hq === !!hq)) await files.remove(old.id); // другая версия (обычная / улучшенная) остаётся
     for (const part of parts) {
       const s = res.parts[part];
       if (!s) continue;
