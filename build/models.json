@@ -25,6 +25,15 @@
         "from": "SalamanderGrandPianoV3_OggVorbis/ogg/",
         "only": "^([A-G]#?[0-8]v([1-9]|1[0-6])|rel[0-9]+)\\.ogg$"
       },
+      "alt": [
+        {
+          "url": "https://github.com/veracerkof-debug/Practice-app/raw/models/SalamanderGrandPianoV3_ogg.tar.bz2",
+          "sha256": "ec64903999b6c936b0683fec3c741b1da59526c5828af27424b3c3c7e8649042",
+          "bytes": 75841361,
+          "from": "",
+          "what": "зеркало на случай недоступности archive.org (ветка models этого репозитория): те же 568 файлов .ogg из оригинального архива, без вложенных папок"
+        }
+      ],
       "what": "Salamander Grand Piano V3 (Alexander Holm, CC BY 3.0), Ogg Vorbis: 30 нот через малую терцию × 16 слоёв силы удара и 88 звуков отпускания — полный рояль (src/audio/grand.js); признак пакета — pack.json"
     },
     {

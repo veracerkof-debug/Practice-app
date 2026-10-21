@@ -38,7 +38,13 @@ jobs:
       - name: Тесты
         run: npm test
 
-      # Тяжёлые модели (build/models.json): скачиваются с проверкой sha256, в репозитории их нет
+      # Тяжёлые модели (build/models.json): скачиваются с проверкой sha256, в репозитории их нет.
+      # Кэш GitHub Actions по содержимому models.json: без повторной закачки и не зависит от сбоев источников
+      - uses: actions/cache@v4
+        with:
+          path: |
+            public/models
+          key: models-${{ runner.os }}-${{ hashFiles('build/models.json') }}
       - name: Модели
         run: npm run models
 

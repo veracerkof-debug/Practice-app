@@ -11,27 +11,33 @@ import { pipeline } from 'node:stream/promises';
 const { models } = JSON.parse(readFileSync(new URL('./models.json', import.meta.url), 'utf8'));
 const sha = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 
+// Источники по очереди: основной адрес и зеркала (m.alt: [{ url, sha256, bytes, from? }] — свой архив с тем же набором
+// файлов, своя сумма); у каждого — три попытки с паузой. Возвращает { buf, src } — src нужен архиву (другой префикс путей).
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function download(m) {
   let last = null;
-  for (let i = 0; i < 3; i++) {
-    try {
-      console.log('скачиваю: ' + m.url + ' (' + Math.round(m.bytes / 1048576) + ' МБ)');
-      const r = await fetch(m.url, { redirect: 'follow' });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const buf = Buffer.from(await r.arrayBuffer());
-      const h = createHash('sha256').update(buf).digest('hex');
-      if (h !== m.sha256) throw new Error('sha256 не сходится: ' + h);
-      return buf;
-    } catch (e) { last = e; console.log('попытка ' + (i + 1) + ': ' + e.message); }
+  for (const src of [m, ...(m.alt || [])]) {
+    for (let i = 0; i < 3; i++) {
+      try {
+        console.log('скачиваю: ' + src.url + ' (' + Math.round(src.bytes / 1048576) + ' МБ)');
+        const r = await fetch(src.url, { redirect: 'follow' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const buf = Buffer.from(await r.arrayBuffer());
+        const h = createHash('sha256').update(buf).digest('hex');
+        if (h !== src.sha256) throw new Error('sha256 не сходится: ' + h);
+        return { buf, src };
+      } catch (e) { last = e; console.log('попытка ' + (i + 1) + ': ' + e.message); if (i < 2) await wait(3000 * (i + 1)); }
+    }
+    if (src !== m) console.log('зеркало не ответило: ' + src.url); else if (m.alt && m.alt.length) console.log('основной адрес не ответил — пробую зеркало');
   }
   throw last;
 }
 
-// Архив → файлы в m.extract.dir; pack.json — { sha256 архива, files: [...] }
-async function extract(m, buf) {
+// Архив → файлы в m.extract.dir; pack.json — { sha256 основного архива (признак набора, откуда бы ни скачали), files: [...] }
+async function extract(m, { buf, src }) {
   const { default: unbzip2 } = await import('unbzip2-stream');
   const { default: tar } = await import('tar-stream');
-  const { dir, from = '', only = '.' } = m.extract, re = new RegExp(only), files = [];
+  const { dir, only = '.' } = m.extract, from = src.from ?? (m.extract.from || ''), re = new RegExp(only), files = [];
   mkdirSync(dir, { recursive: true });
   const ex = tar.extract();
   ex.on('entry', (hdr, stream, next) => {
@@ -58,7 +64,7 @@ for (const m of models) {
   }
   if (existsSync(m.file) && statSync(m.file).size === m.bytes && sha(m.file) === m.sha256) { console.log('есть: ' + m.file); continue; }
   try {
-    const buf = await download(m);
+    const { buf } = await download(m);
     mkdirSync(dirname(m.file), { recursive: true });
     writeFileSync(m.file, buf);
     console.log('готово: ' + m.file);
