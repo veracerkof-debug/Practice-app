@@ -45,7 +45,7 @@ const MB = 1048576;
 
 /* ---------- плеер (один на приложение, играет и при закрытом окне) ---------- */
 
-const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0, eng: null, engOn: false, engFor: null, partsFor: null };
+const AU = { el: null, cur: null, url: null, rate: 1, a: null, b: null, loop: false, step: false, raf: 0, eng: null, engP: null, engOn: false, engFor: null, partsFor: null, loadP: null, loadKey: '' };
 // Дорожки записи (src/core/jobs.js: файлы с stem.src — эта запись); набор — выбранный режим (st().pmode[id]),
 // иначе режим с наибольшим числом дорожек; версия — выбранная (st().pver[id]: 'hq' | 'std'), иначе улучшенная, если есть
 const PART_ORDER = ['vocals', 'inst', 'drums', 'bass', 'guitar', 'piano', 'other'];
@@ -327,21 +327,33 @@ const PLAY_EV = {
 async function engineLoad(t) {
   if (!stretchAvailable() || !ctx.audio.unlock()) return false;
   try {
+    // Движок создаётся один раз, даже если выбор записи и нажатие «играть» пришли одновременно (иначе два движка
+    // на одной шине и гонка загрузок — на телефоне кончалась тишиной)
     if (!AU.eng) {
-      const dest = ctx.audio.bus('media');
-      AU.eng = await createStretchPlayer(dest.context, dest);
-      ['play', 'pause', 'ended'].forEach((k) => AU.eng.addEventListener(k, PLAY_EV[k]));
-      AU.eng.addEventListener('loadedmetadata', () => { const x = AU.cur; if (x && !x.dur && AU.eng.duration) { x.dur = AU.eng.duration; ctx.files.save(x); } render(); });
+      AU.engP ??= (async () => {
+        const dest = ctx.audio.bus('media'), eng = await createStretchPlayer(dest.context, dest);
+        ['play', 'pause', 'ended'].forEach((k) => eng.addEventListener(k, PLAY_EV[k]));
+        eng.addEventListener('loadedmetadata', () => { const x = AU.cur; if (x && !x.dur && eng.duration) { x.dur = eng.duration; ctx.files.save(x); } render(); });
+        return eng;
+      })();
+      AU.eng = await AU.engP;
     }
-    AU.engFor = t;
-    const set = mixActive(t) ? stemsFor(t) : [];
-    if (set.length) { AU.partsFor = t; await AU.eng.loadParts(blobsOf(set), mixOf(t)); } else { AU.partsFor = null; await AU.eng.load(t.blob); }
-    if (AU.engFor !== t || AU.cur !== t) return false; // пока грузили — выбрали другое
-    AU.eng.playbackRate = AU.rate;
-    AU.engOn = true;
-    try { if (!AU.el.paused) AU.el.pause(); AU.el.removeAttribute('src'); AU.el.load(); } catch { /* */ }
-    applyPitch().catch(() => {});
-    return true;
+    const set = mixActive(t) ? stemsFor(t) : [], key = t.id + ':' + set.map((r) => r.id).join(',');
+    if (AU.loadP && AU.loadKey === key) return AU.loadP; // та же запись уже грузится — одна загрузка на всех
+    AU.engFor = t; AU.loadKey = key;
+    AU.loadP = (async () => {
+      try {
+        if (set.length) { AU.partsFor = t; await AU.eng.loadParts(blobsOf(set), mixOf(t)); } else { AU.partsFor = null; await AU.eng.load(t.blob); }
+        if (AU.engFor !== t || AU.cur !== t) return false; // пока грузили — выбрали другое
+        ctx.log('движок: ' + t.name + (set.length ? ' (дорожки ' + set.length + ')' : '') + ', ' + Math.round(AU.eng.duration) + ' с');
+        AU.eng.playbackRate = AU.rate;
+        AU.engOn = true;
+        try { if (!AU.el.paused) AU.el.pause(); AU.el.removeAttribute('src'); AU.el.load(); } catch { /* */ }
+        applyPitch().catch(() => {});
+        return true;
+      } finally { if (AU.loadKey === key) AU.loadP = null; }
+    })();
+    return await AU.loadP;
   } catch (e) { ctx.logErr(e); return false; }
 }
 // Звук — в движок (сразу или при первом воспроизведении, когда появится контекст); видео — элемент
@@ -434,8 +446,31 @@ const playEl = async () => {
     if (await routeTrack(t)) { if (at) AU.eng.currentTime = at; }
   }
   if (AU.shift && !AU.engOn) applyPitch().catch(() => {});
-  return pl().play().catch(() => ctx.ui.toast(ctx.t('cantPlay')));
+  const r = pl().play().catch(() => ctx.ui.toast(ctx.t('cantPlay')));
+  soundCheck(t);
+  return r;
 };
+// Сторож тишины — в журнал: через 2,5 с игры замеряется уровень на выходе приложения (после компрессора); тишина при
+// играющем плеере — предупреждение с подробностями (путь, контекст, шина) — для отчёта о проблеме
+let SC = { an: null, buf: null, id: '' };
+function soundCheck(t) {
+  if (!t || SC.id === t.id) return;
+  SC.id = t.id;
+  // анализатор подключается сейчас, замер — позже: сразу после подключения в нём ещё нули
+  if (!SC.an) { const tp = ctx.audio.tap(); if (!tp) { ctx.log('играет ' + t.name + ': контекста звука нет', 'w'); return; } SC.an = tp.ctx.createAnalyser(); SC.an.fftSize = 2048; SC.an.smoothingTimeConstant = 0; SC.buf = new Float32Array(2048); tp.into(SC.an); }
+  setTimeout(() => {
+    try {
+      if (AU.cur !== t || pl().paused) return;
+      const tp = ctx.audio.tap(); if (!tp) return;
+      SC.an.getFloatTimeDomainData(SC.buf);
+      let e = 0, bad = 0; for (const v of SC.buf) { if (!Number.isFinite(v)) bad++; e += v * v; }
+      const db = Math.round(20 * Math.log10(Math.sqrt(e / SC.buf.length) + 1e-9));
+      const info = (AU.engOn ? 'движок' : 'элемент') + ', ' + tp.ctx.state + ', шина ' + ctx.audio.mixer.value('media') + ', ' + Math.round(pl().currentTime * 10) / 10 + ' с, ' + (t.type || '?');
+      if (db < -60 || bad) ctx.log('играет ' + t.name + ', а на выходе тишина (' + db + ' дБ' + (bad ? ', NaN' : '') + '): ' + info, 'w');
+      else ctx.log('играет ' + t.name + ': ' + db + ' дБ, ' + info);
+    } catch (e) { ctx.logErr(e); }
+  }, 2500);
+}
 
 // Выбранный в этом месте файл (свободная практика или песня) ждёт готовым
 function autoAudio() {
