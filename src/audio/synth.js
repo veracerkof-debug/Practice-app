@@ -265,7 +265,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
         lg.connect(lp);
         os.push(...airVoice(c, lg, s.layer, f, t, { ...opt, fade: 3 }).srcs);
       }
-      if (s.hall) sendToHall(g, s.hall);
+      if (s.hall) sendToHall(g, s.hall, mixer.wet(busName, 'cathedral'));
     } else if (s.cho > 0.04) { const d = 4 + s.cho * 10; osc(-d, 0.55); osc(d, 0.55); } else osc(0, 1);
     if (s.fm) { // частотная модуляция: синус-модулятор, индекс спадает от удара к ровному звучанию
       const mo = c.createOscillator(), mg = c.createGain(), mf = f * s.fm.ratio, dev = mf * knobVal(s, 'fmi');

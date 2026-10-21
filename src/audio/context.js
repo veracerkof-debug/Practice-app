@@ -68,12 +68,14 @@ export function addTap(dest) {
 }
 export const now = () => (ctx ? ctx.currentTime : 0);
 
-// Мягко отправить узел в реверберацию с заданным уровнем; возвращает узел посыла
-export function sendToReverb(node, level) {
+// Мягко отправить узел в реверберацию с заданным уровнем; возвращает узел посыла.
+// via — узел микшера (mixer.wet), повторяющий громкость шины: посыл становится пост-фейдерным — ползунок и
+// выключение шины глушат и хвост реверберации (без via хвост шёл мимо микшера)
+export function sendToReverb(node, level, via = null) {
   if (!reverb || !ctx) return null;
   const s = ctx.createGain();
   s.gain.value = level;
-  node.connect(s).connect(reverb);
+  node.connect(s).connect(via || reverb);
   return s;
 }
 
@@ -106,9 +108,11 @@ function spaceNode(type) {
   } catch { spaces[type] = null; }
   return spaces[type];
 }
-// Посыл узла в пространство (уровень 0…1); возвращает узел посыла или null
-export function sendToSpace(node, type, level) {
-  const sp = spaceNode(type);
+// Вход пространства (для пост-фейдерных посылов микшера); null — нет контекста
+export const spaceInput = (type) => spaceNode(type);
+// Посыл узла в пространство (уровень 0…1); возвращает узел посыла или null; via — см. sendToReverb
+export function sendToSpace(node, type, level, via = null) {
+  const sp = via || spaceNode(type);
   if (!sp) return null;
   const s = ctx.createGain();
   s.gain.value = level;
@@ -117,7 +121,7 @@ export function sendToSpace(node, type, level) {
 }
 // Длинный зал для пэдов (поклонение) — то же пространство «собор»
 // Посыл в длинный зал (уровень 0…1); возвращает узел посыла или null
-export const sendToHall = (node, level) => sendToSpace(node, 'cathedral', level);
+export const sendToHall = (node, level, via = null) => sendToSpace(node, 'cathedral', level, via);
 
 // MIDI → Гц при заданном строе A4
 export const midiFreq = (m, a4 = 440) => a4 * Math.pow(2, (m - 69) / 12);

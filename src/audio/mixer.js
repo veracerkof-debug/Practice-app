@@ -1,6 +1,6 @@
 // Микшер: шина на каждый источник, громкость 0…1.5, выключение звука.
 // Состояние — объект device.mix (как в прототипе: { metro, piano, drone, audio, theory, mode, mute }).
-import { getContext, masterNode, reverbNode, directOut } from './context.js';
+import { getContext, masterNode, reverbNode, directOut, spaceInput } from './context.js';
 import { createFxChain, normalizeFx, fxIsFlat } from './fx.js';
 import { setPerf, resolvePerf, setEngine, ENGINES } from './perf.js';
 
@@ -26,7 +26,7 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
   normalizeMix(mx);
   setPerf(resolvePerf(mx.perf));
   setEngine(mx.engine);
-  const nodes = {}, sends = {}, chains = {}, probes = {}, subs = new Set();
+  const nodes = {}, sends = {}, chains = {}, probes = {}, subs = new Set(), wets = {};
   let saveTm = 0;
   const saveLater = () => { clearTimeout(saveTm); saveTm = setTimeout(() => onChange(mx), 250); }; // правка эффектов — десятки раз в секунду при ведении точки
 
@@ -40,6 +40,7 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
   const apply = () => {
     // плавно, чтобы не щёлкало
     Object.entries(nodes).forEach(([bus, g]) => g.gain.setTargetAtTime(value(bus), g.context.currentTime, 0.03));
+    Object.entries(wets).forEach(([k, g]) => g.gain.setTargetAtTime(value(k.split(':')[0]), g.context.currentTime, 0.03));
     subs.forEach((fn) => fn(mx));
   };
 
@@ -69,6 +70,20 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
         }
       }
       return (nodes[name] = g);
+    },
+
+    // Пост-фейдерная точка посыла шины в пространство ('hall' — общая реверберация, 'cathedral', 'room', 'plate'):
+    // узел с громкостью шины перед пространством. Голоса шлют свои посылы сюда (context.js: sendToHall(…, via)) —
+    // ползунок и выключение шины глушат и хвост реверберации. null — контекста ещё нет
+    wet(name, type = 'hall') {
+      const k = name + ':' + type;
+      if (wets[k]) return wets[k];
+      const c = getContext(mx.mode), sp = c && (type === 'hall' ? reverbNode() : spaceInput(type));
+      if (!sp) return null;
+      const g = c.createGain();
+      g.gain.value = value(name);
+      g.connect(sp);
+      return (wets[k] = g);
     },
 
     // Уровень посыла шины в реверберацию (пианино — из пресета)

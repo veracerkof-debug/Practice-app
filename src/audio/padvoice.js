@@ -17,8 +17,9 @@ export const PAD_SOUNDS = [...Object.keys(AIR_PADS), 'shimmer', ...Object.keys(S
 const LVL = { soft: 0.152, pad: 0.205, bow: 0.224, choir: 0.5, glass: 0.147, shimmer: 0.15 };
 
 // hall — посыл в длинный зал (поклонение, src/audio/context.js), 0…1
-export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5, move = 0.5, hall = 0, uni = 0 } = {}) {
-  if (AIR_PADS[sound]) return airPadVoice(c, dest, AIR_PADS[sound], { a4, hall, uni });
+// via — пост-фейдерная точка посыла в длинный зал (mixer.wet(bus, 'cathedral')), чтобы микшер глушил и хвост
+export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5, move = 0.5, hall = 0, uni = 0, via = null } = {}) {
+  if (AIR_PADS[sound]) return airPadVoice(c, dest, AIR_PADS[sound], { a4, hall, uni, via });
   const snd = PAD_SOUNDS.includes(sound) ? sound : 'soft', bright0 = snd === 'shimmer' ? 0.62 : SOUNDS[snd], t0 = c.currentTime + 0.003;
   const freq = (m) => a4 * Math.pow(2, (m - 69) / 12);
   const lp = c.createBiquadFilter(), amp = c.createGain(), vol = c.createGain(), out = c.createGain();
@@ -26,7 +27,7 @@ export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5,
   lp.Q.value = snd === 'pad' ? 1.3 : 0.5;
   amp.gain.value = 0;
   lp.connect(vol).connect(out).connect(dest);
-  if (hall > 0) sendToHall(out, hall);
+  if (hall > 0) sendToHall(out, hall, via);
   // «хор» — форманты гласной «а», как в пэдах
   if (snd === 'choir') {
     const mix = c.createGain();
@@ -132,14 +133,14 @@ export function createPadVoice(c, dest, sound = 'soft', { a4 = 440, width = 0.5,
 // Воздушный пэд: тот же порядок вызовов (start, pitch, fx, release). Зал — всегда, хотя бы немного: без него
 // воздушный звук теряет пространство
 const AIR_LVL = 0.19;
-function airPadVoice(c, dest, kind, { a4 = 440, hall = 0, uni = 0 } = {}) {
+function airPadVoice(c, dest, kind, { a4 = 440, hall = 0, uni = 0, via = null } = {}) {
   const freq = (m) => a4 * Math.pow(2, (m - 69) / 12);
   const amp = c.createGain(), vol = c.createGain(), out = c.createGain(), lp = c.createBiquadFilter();
   lp.type = 'lowpass';
   lp.Q.value = 0;
   lp.frequency.value = 18000;
   lp.connect(amp).connect(vol).connect(out).connect(dest);
-  sendToHall(out, Math.max(0.45, hall));
+  sendToHall(out, Math.max(0.45, hall), via);
   amp.gain.value = 0;
   const vibG = c.createGain(), vib = c.createOscillator(), tr = c.createOscillator(), trG = c.createGain();
   vib.frequency.value = 5;

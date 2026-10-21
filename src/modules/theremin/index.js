@@ -338,7 +338,7 @@ function midiIn(e) {
     if (!ctx.audio.unlock()) return;
     const dest = ctx.audio.bus('glider');
     if (!dest) return;
-    if (!S.bus || S.bus.ctx !== dest.context) { S.bus = createFxBus(dest.context, dest); S.bus.ctx = dest.context; }
+    if (!S.bus || S.bus.ctx !== dest.context) { S.bus = createFxBus(dest.context, dest, ctx.audio.mixer.wet('glider')); S.bus.ctx = dest.context; }
     if (rv.has(e.id)) rv.get(e.id).release();
     const s = cfg(), x = e.x || {}, a4 = { a4: ctx.audio.mf(69) };
     // из записи — тот же голос и звук; с клавиатуры и из чужого файла — текущий звук терменвокса
@@ -455,13 +455,13 @@ function playAlong(ch) {
   if (!key) return;
   const dest = ctx.audio.bus('glider');
   if (!dest) return;
-  if (!S.bus || S.bus.ctx !== dest.context) { S.bus = createFxBus(dest.context, dest); S.bus.ctx = dest.context; }
+  if (!S.bus || S.bus.ctx !== dest.context) { S.bus = createFxBus(dest.context, dest, ctx.audio.mixer.wet('glider')); S.bus.ctx = dest.context; }
   // звуки аккорда — тесно, от баса аккорда в малой октаве
   const ms = notesOf(ch.frets).filter((m) => m != null), pcs = [...new Set(ms.map((m) => m % 12))], root = Math.min(...ms) % 12;
   const notes = pcs.map((pc) => 48 + root + ((pc - root + 12) % 12)).sort((a, b) => a - b);
   const sound = PAD_SOUNDS.includes(s.csound) ? s.csound : padOf(s.sound) || 'soft', vo = { ...voiceFx(s.fx, 0), volGain: ALONG_GAIN };
   ctx.audio.mixer.setReverb('glider', 0.45);
-  S.cv = notes.map((m) => { const v = createPadVoice(dest.context, S.bus.input, sound, { a4: ctx.audio.mf(69) }); v.start(m, vo); return v; });
+  S.cv = notes.map((m) => { const v = createPadVoice(dest.context, S.bus.input, sound, { a4: ctx.audio.mf(69), via: ctx.audio.mixer.wet('glider', 'cathedral') }); v.start(m, vo); return v; });
 }
 
 // Соло: высота руки — высота звука; пальцы — голоса гармонии (chords.js: harmOf)
@@ -472,11 +472,11 @@ function playSolo(s, h, sign, t, o, dest) {
     const pad = padOf(s.sound);
     if (pad) { // пэд под рукой: нота плавно ведётся рукой, вторая рука — громкость (и что назначено)
       ctx.audio.mixer.setReverb('glider', 0.75);
-      S.voice = createPadVoice(dest.context, S.bus.input, pad, { a4: ctx.audio.mf(69) });
+      S.voice = createPadVoice(dest.context, S.bus.input, pad, { a4: ctx.audio.mf(69), via: ctx.audio.mixer.wet('glider', 'cathedral') });
     } else {
       const p = patch(s);
       ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
-      S.voice = createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) });
+      S.voice = createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69), hallVia: ctx.audio.mixer.wet('glider', 'cathedral') });
     }
     S.voice.start(m, o);
   } else {
@@ -498,7 +498,7 @@ function harmony(s, m, sign, t, o, dest) {
   const offs = harmOffsets(S.hk, m, { root: s.ckey, mode: s.cmode }), ho = { ...o, volGain: (o.volGain ?? 1) * HARM_GAIN / Math.sqrt(Math.max(1, offs.length)) }; // три голоса блок-аккорда — не громче одного
   if (!S.hv) {
     const p = patch(s);
-    S.hv = offs.map((d) => { const v = createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) }); v.start(m + d, ho); return v; });
+    S.hv = offs.map((d) => { const v = createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69), hallVia: ctx.audio.mixer.wet('glider', 'cathedral') }); v.start(m + d, ho); return v; });
   } else S.hv.forEach((v, i) => { v.pitch(m + offs[i], s.snap === 'note' ? 0.03 : 0.02); v.fx(ho); });
 }
 
@@ -530,7 +530,7 @@ function playChord(s, h, sign, t, o, dest, lean = 0, tilt = 0) {
   const vo = { ...o, volGain: (o.volGain ?? 1) * CHORD_GAIN }, plan = chordPlan(notes), changed = notes !== S.cnotes;
   // звук аккордов: как соло или пэд (тембры модуля «Пэды»)
   const pad = PAD_SOUNDS.includes(s.csound) ? s.csound : s.csound === 'same' ? padOf(s.sound) : null, p = pad ? null : patch(s);
-  const make = (i) => (pad ? createPadVoice(dest.context, S.bus.input, pad, { a4: ctx.audio.mf(69), uni: SLOT[i].uni || 0 }) : createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69) }));
+  const make = (i) => (pad ? createPadVoice(dest.context, S.bus.input, pad, { a4: ctx.audio.mf(69), uni: SLOT[i].uni || 0, via: ctx.audio.mixer.wet('glider', 'cathedral') }) : createGlideVoice(dest.context, S.bus.input, p, { hold: true, a4: ctx.audio.mf(69), hallVia: ctx.audio.mixer.wet('glider', 'cathedral') }));
   if (!S.cv) { ctx.audio.mixer.setReverb('glider', pad ? 0.45 : (p.rev || 0) * 0.9); S.cv = Array(SLOT.length).fill(null); }
   plan.forEach((m, i) => {
     const fx = { ...vo, volGain: vo.volGain * SLOT[i].g };
@@ -658,7 +658,7 @@ function onHands(list, t) {
     if (s.mode !== 'chord' && s.stilt !== 'off') { const k = s.stilt, v = Math.max(0, Math.min(1, (Math.abs(lean) - 12) / 40)); o[k] = Math.max(o[k] || 0, v); }
     const dest = ctx.audio.bus('glider');
     if (dest) {
-      if (!S.bus || S.bus.ctx !== dest.context) { S.bus = createFxBus(dest.context, dest); S.bus.ctx = dest.context; }
+      if (!S.bus || S.bus.ctx !== dest.context) { S.bus = createFxBus(dest.context, dest, ctx.audio.mixer.wet('glider')); S.bus.ctx = dest.context; }
       if (s.mode === 'chord') playChord(s, a.pitch, sign, t, o, dest, lean, tilt);
       else playSolo(s, a.pitch, sign, t, o, dest);
       const b = busFx(s.fx, [0]);

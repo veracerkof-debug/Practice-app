@@ -174,7 +174,7 @@ function listen() {
   if (!dest) return;
   const p = patch(s);
   ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
-  if (!bus || bus.ctx !== dest.context) { bus = createFxBus(dest.context, dest); bus.ctx = dest.context; }
+  if (!bus || bus.ctx !== dest.context) { bus = createFxBus(dest.context, dest, ctx.audio.mixer.wet('glider')); bus.ctx = dest.context; }
   const beat = 60000 / mel.bpm, el = document.createElement('i');
   el.className = 'gltc demo';
   host.querySelector('#gltouch').appendChild(el);
@@ -186,7 +186,7 @@ function listen() {
     if (P.k >= mel.notes.length) { stopListen(); return; }
     const [m, d] = mel.notes[P.k], y = 0.35;
     if (P.voice) P.voice.release();
-    P.voice = createGlideVoice(dest.context, bus.input, p, { hold: false, a4: ctx.audio.mf(69) });
+    P.voice = createGlideVoice(dest.context, bus.input, p, { hold: false, a4: ctx.audio.mf(69), hallVia: ctx.audio.mixer.wet('glider', 'cathedral') });
     P.voice.start(m, voiceFx(s.fx, y));
     const c = cfg();
     el.style.left = midiToPos(m, c.lo, c.width) * 100 + '%'; el.style.top = (1 - y) * 100 + '%';
@@ -250,8 +250,8 @@ function down(e) {
   const s = cfg(), p = patch(s), dest = ctx.audio.bus('glider');
   if (!dest) return;
   ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
-  if (!bus || bus.ctx !== dest.context) { bus = createFxBus(dest.context, dest); bus.ctx = dest.context; }
-  const a = at(e, pad), voice = createGlideVoice(dest.context, bus.input, p, { hold: s.hold, a4: ctx.audio.mf(69) });
+  if (!bus || bus.ctx !== dest.context) { bus = createFxBus(dest.context, dest, ctx.audio.mixer.wet('glider')); bus.ctx = dest.context; }
+  const a = at(e, pad), voice = createGlideVoice(dest.context, bus.input, p, { hold: s.hold, a4: ctx.audio.mf(69), hallVia: ctx.audio.mixer.wet('glider', 'cathedral') });
   voice.start(a.m, voiceFx(s.fx, a.y));
   const el = document.createElement('i');
   el.className = 'gltc';
@@ -302,9 +302,9 @@ function midiIn(e) {
     if (!dest) return;
     const p = patch(s);
     ctx.audio.mixer.setReverb('glider', (p.rev || 0) * 0.9);
-    if (!bus || bus.ctx !== dest.context) { bus = createFxBus(dest.context, dest); bus.ctx = dest.context; }
+    if (!bus || bus.ctx !== dest.context) { bus = createFxBus(dest.context, dest, ctx.audio.mixer.wet('glider')); bus.ctx = dest.context; }
     if (touches.has(key)) midiIn({ k: 'off', id: e.id });
-    const y = e.y ?? 0.3, voice = createGlideVoice(dest.context, bus.input, p, { hold: false, a4: ctx.audio.mf(69) });
+    const y = e.y ?? 0.3, voice = createGlideVoice(dest.context, bus.input, p, { hold: false, a4: ctx.audio.mf(69), hallVia: ctx.audio.mixer.wet('glider', 'cathedral') });
     voice.start(e.m, voiceFx(s.fx, y));
     const el = document.createElement('i');
     el.className = 'gltc';

@@ -86,9 +86,27 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
   installUnlock(() => device.mix.mode);
 
   let n = 0, loadMeter = null;
+  // Подробности для журнала при перегрузке: буфер и задержка выхода, частота, режим, голоса, экран
+  const diag = () => {
+    const c = peekContext();
+    if (!c) return '';
+    const ms = (s) => Math.round((s || 0) * 1000) + ' мс';
+    return 'буфер ' + ms(c.baseLatency) + ', выход ' + ms(c.outputLatency) + ', ' + c.sampleRate + ' Гц, режим ' + device.mix.mode + '/' + device.mix.perf + '/' + device.mix.engine +
+      ', голосов ' + synth.voiceCount + (drone.on ? ', пэды' : '') + (metro.running ? ', метроном' : '') + ', экран ' + (typeof document !== 'undefined' ? document.visibilityState : '?');
+  };
+  // Экран погас при звуке: нагрузка в момент и через 20 с (так видно, душит ли телефон процессор при блокировке)
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
+    if (!loadMeter || !audio.onLoadLog) return;
+    const pct = () => Math.round(loadMeter.value * 100) + ' %';
+    if (document.visibilityState === 'hidden') {
+      if (!synth.voiceCount && !drone.on && !metro.running) return;
+      audio.onLoadLog('экран погашен: нагрузка ' + pct() + ' · ' + diag());
+      after(20000, () => { if (document.visibilityState === 'hidden') audio.onLoadLog('через 20 с без экрана: нагрузка ' + pct() + ', пик ' + Math.round(loadMeter.peak * 100) + ' %'); });
+    } else audio.onLoadLog('экран включён: нагрузка ' + pct());
+  });
   const audio = {
     // Нагрузка звукового потока (load.js): создаётся с контекстом, читают микшер и настройки
-    get load() { const c = peekContext(); if (!c) return null; if (!loadMeter) { loadMeter = createLoadMeter(c, (m) => audio.onLoadLog && audio.onLoadLog(m)); loadMeter.start(); } return loadMeter; },
+    get load() { const c = peekContext(); if (!c) return null; if (!loadMeter) { loadMeter = createLoadMeter(c, (m) => audio.onLoadLog && audio.onLoadLog(m), diag); loadMeter.start(); } return loadMeter; },
     onLoadLog: null, // ядро подставляет запись в журнал
     mixer, synth, drone, metro,
     unlock: () => !!getContext(device.mix.mode),   // вызвать на первом жесте пользователя

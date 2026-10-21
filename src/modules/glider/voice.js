@@ -53,7 +53,8 @@ function driveStage(c, kind) {
 }
 
 // Общая шина глайдера: вход → эхо → выход в шину микшера; отдельно — посыл в общую реверберацию
-export function createFxBus(c, dest) {
+// revVia — пост-фейдерная точка посыла в реверберацию (mixer.wet(bus)); без неё хвост шёл мимо микшера
+export function createFxBus(c, dest, revVia = null) {
   const input = c.createGain(), out = c.createGain(), delay = c.createDelay(2), fb = c.createGain(), wet = c.createGain(), send = c.createGain();
   input.connect(out);
   input.connect(delay);
@@ -62,7 +63,7 @@ export function createFxBus(c, dest) {
   out.connect(dest);
   fb.gain.value = 0; wet.gain.value = 0; send.gain.value = 0;
   const rv = reverbNode();
-  if (rv) out.connect(send).connect(rv);
+  if (revVia || rv) out.connect(send).connect(revVia || rv);
   delay.delayTime.value = 0.32;
   return {
     input,
@@ -78,7 +79,8 @@ export function createFxBus(c, dest) {
 }
 
 // Голос: c — AudioContext, dest — вход шины, patch — звук (как у пианино), hold — держать звук, пока палец на месте
-export function createGlideVoice(c, dest, patch, { hold = true, a4 = 440 } = {}) {
+// hallVia — пост-фейдерная точка посыла в длинный зал (mixer.wet(bus, 'cathedral'))
+export function createGlideVoice(c, dest, patch, { hold = true, a4 = 440, hallVia = null } = {}) {
   const s = patch, kind = s.kind || 'soft', t0 = c.currentTime + 0.003;
   const lp = c.createBiquadFilter(), amp = c.createGain(), vol = c.createGain(), out = c.createGain();
   const od = driveStage(c, 'drive'), fz = driveStage(c, 'fuzz');
@@ -97,7 +99,7 @@ export function createGlideVoice(c, dest, patch, { hold = true, a4 = 440 } = {})
   // воздушный звук (airsound.js) собирается в start(): там уже известна нота
   const os = [], dets = s.air ? [] : s.cho > 0.04 ? [-(4 + s.cho * 10), 4 + s.cho * 10] : [0];
   let air = null;
-  if (s.hall) sendToHall(out, s.hall);
+  if (s.hall) sendToHall(out, s.hall, hallVia);
   dets.forEach((d) => {
     const o = c.createOscillator(), g = c.createGain();
     o.setPeriodicWave(synWave(c, kind, s.tone));

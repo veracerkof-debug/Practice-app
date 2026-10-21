@@ -15,6 +15,7 @@ export function reportSheet(app) {
     '<button class="cell act" data-rpt="show">' + t('report.show') + '</button></div>' +
     '<pre class="rptpre" hidden></pre>' +
     '<button class="btn fill rptsend" data-rpt="send" style="width:100%;margin-top:16px">' + t('report.send') + '</button>' +
+    '<button class="btn rptcopy" data-rpt="copy" style="width:100%;margin-top:8px">' + t('report.copy') + '</button>' +
     '<p class="ftr">' + t('report.how', { email: REPORT_EMAIL }) + '</p>');
   const el = api.el, what = el.querySelector('.rptwhat'), pre = el.querySelector('.rptpre');
   const text = () => reportText(app, what.value, withLog);
@@ -32,6 +33,11 @@ export function reportSheet(app) {
       if (shown) pre.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       return;
     }
+    if (b.dataset.rpt === 'copy') { // текст целиком в буфер обмена — вставить в чат или письмо без файла
+      b.disabled = true;
+      try { await copyText(await text()); toast(t('report.copied')); } catch (err) { logErr('report', err); toast(t('report.copyFail')); } finally { b.disabled = false; }
+      return;
+    }
     b.disabled = true;
     try {
       log('report', 'отправка отчёта' + (withLog ? ' с журналом' : ''));
@@ -43,6 +49,16 @@ export function reportSheet(app) {
       toast(t('report.fail'));
     } finally { b.disabled = false; }
   });
+}
+
+// В буфер обмена: navigator.clipboard, если нет (старый WebView, нет разрешения) — скрытое поле и execCommand
+async function copyText(txt) {
+  try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(txt); return; } } catch { /* запасной путь */ }
+  const ta = document.createElement('textarea');
+  ta.value = txt; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+  document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, txt.length);
+  const ok = document.execCommand('copy'); ta.remove();
+  if (!ok) throw new Error('copy');
 }
 
 // После неожиданного закрытия — одно предложение отправить отчёт (через пару секунд после запуска)
