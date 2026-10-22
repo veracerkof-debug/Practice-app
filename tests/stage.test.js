@@ -61,3 +61,17 @@ describe('капо', () => {
     expect(it.key.pc).toBe(7); // звучит по-прежнему G
   });
 });
+
+// Автопрокрутка и длительность (ночь 22.10.2026)
+describe('автопрокрутка', () => {
+  it('включена по умолчанию; длительность — из минусовки, иначе своя', () => {
+    const it0 = itemOf({}, song, [{ id: 'f1', name: 'минус.mp3', songs: ['s1'], dur: 212.4 }]);
+    expect([it0.scroll, it0.dur]).toEqual([true, 212]);
+    const ev = { songs: ['s1'] };
+    setItem(ev, 's1', { scroll: false, dur: 185, track: '' });
+    const it1 = itemOf(ev, song, []);
+    expect([it1.scroll, it1.dur]).toEqual([false, 185]);
+    setItem(ev, 's1', { dur: 99999 });
+    expect(itemOf(ev, song, []).dur).toBe(3600);
+  });
+});

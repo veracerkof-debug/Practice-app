@@ -1677,5 +1677,19 @@
   "stage.capo": "Капо",
   "stage.capoN": "капо {n}",
   "stage.capoSub": "формы {k}",
-  "stage.capoHint": "аккорды формами на ладов ниже; 0 — без капо"
+  "stage.capoHint": "аккорды формами на ладов ниже; 0 — без капо",
+  "stage.scroll": "Автопрокрутка",
+  "stage.scrollTrack": "по минусовке, точно за ней",
+  "stage.scrollDur": "по длительности песни",
+  "stage.dur": "Длительность",
+  "stage.durSub": "для автопрокрутки без минусовки; ±15 с",
+  "stage.pedal": "Педаль листает",
+  "stage.pedalPage": "страницу",
+  "stage.pedalSong": "песню",
+  "stage.night": "Ночь: чёрный фон, крупнее",
+  "stage.nightOff": "Обычный вид",
+  "stage.scrollOn": "Включить автопрокрутку",
+  "stage.scrollOff": "Выключить автопрокрутку",
+  "stage.scrollPaused": "Прокрутка на паузе",
+  "stage.scrollResumed": "Прокрутка идёт"
 }

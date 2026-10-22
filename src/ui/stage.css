@@ -45,3 +45,14 @@
 .sgitem{text-align:left;display:flex;flex-direction:column;min-width:0;padding:2px 0}
 .sgitem b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sgv{min-width:3ch;text-align:center;display:inline-block}
+
+/* автопрокрутка: тонкая полоска хода у правого края текста */
+.sgtext{position:relative}
+.sgprog{position:sticky;top:0;float:right;width:3px;height:calc(100% - 4px);border-radius:2px;background:rgba(255,255,255,.08);margin-left:6px}
+.sgprog i{display:block;width:100%;height:0;border-radius:2px;background:#E8C27A;transition:height .25s linear}
+/* «Ночь»: чёрный фон, крупнее, только три кнопки */
+.stage.night{background:#000;color:#fff}
+.stage.night .sgtext{font-size:1.3em}
+.stage.night .sgchips,.stage.night .sgic.txt,.stage.night .sgnext{display:none}
+.stage.night .sgtext .chd{color:#FFD97A}
+.stage.night .sgbtn{background:rgba(255,255,255,.12)}

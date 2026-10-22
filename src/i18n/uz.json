@@ -1619,5 +1619,19 @@
   "stage.capo": "Kapo",
   "stage.capoN": "kapo {n}",
   "stage.capoSub": "{k} shakllari",
-  "stage.capoHint": "akkord shakllari pastroq pardalarda; 0 — kaposiz"
+  "stage.capoHint": "akkord shakllari pastroq pardalarda; 0 — kaposiz",
+  "stage.scroll": "Avto-aylantirish",
+  "stage.scrollTrack": "minus bilan aniq birga",
+  "stage.scrollDur": "qoʻshiq davomiyligi boʻyicha",
+  "stage.dur": "Davomiylik",
+  "stage.durSub": "minussiz avto-aylantirish uchun; ±15 s",
+  "stage.pedal": "Pedal varaqlaydi",
+  "stage.pedalPage": "sahifani",
+  "stage.pedalSong": "qoʻshiqni",
+  "stage.night": "Tun: qora fon, kattaroq",
+  "stage.nightOff": "Oddiy koʻrinish",
+  "stage.scrollOn": "Avto-aylantirishni yoqish",
+  "stage.scrollOff": "Avto-aylantirishni oʻchirish",
+  "stage.scrollPaused": "Aylantirish toʻxtatildi",
+  "stage.scrollResumed": "Aylantirish davom etadi"
 }

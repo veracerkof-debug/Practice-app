@@ -42,6 +42,9 @@ export function itemOf(ev, song, files = []) {
     track,
     tr,
     capo: o.capo != null ? capoClamp(o.capo) : capoClamp(song.capo),
+    // автопрокрутка текста: по минусовке (точно за ней) или по длительности песни (сек; по умолчанию — длительность записи)
+    scroll: o.scroll != null ? !!o.scroll : true,
+    dur: o.dur != null ? Math.max(0, Math.round(+o.dur || 0)) : Math.round(+((tracks.find((r) => r.id === track) || {}).dur) || 0),
     text: o.text != null ? !!o.text : !!song.notes,
     key: key ? shiftKey(key, tr) : null,
     srcKey: key,
@@ -55,6 +58,7 @@ export function setItem(ev, songId, patch) {
   if (cur.bpm != null) cur.bpm = clampBpm(cur.bpm);
   if (cur.tr != null) cur.tr = Math.max(-TR_MAX, Math.min(TR_MAX, Math.round(cur.tr)));
   if (cur.capo != null) cur.capo = capoClamp(cur.capo);
+  if (cur.dur != null) cur.dur = Math.max(0, Math.min(3600, Math.round(+cur.dur || 0)));
   all[songId] = cur;
   return ev;
 }

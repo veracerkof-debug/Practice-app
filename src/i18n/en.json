@@ -1655,5 +1655,19 @@
   "stage.capo": "Capo",
   "stage.capoN": "capo {n}",
   "stage.capoSub": "{k} shapes",
-  "stage.capoHint": "chord shapes a few frets lower; 0 — no capo"
+  "stage.capoHint": "chord shapes a few frets lower; 0 — no capo",
+  "stage.scroll": "Auto-scroll",
+  "stage.scrollTrack": "follows the backing track exactly",
+  "stage.scrollDur": "by song length",
+  "stage.dur": "Length",
+  "stage.durSub": "for auto-scroll without a backing track; ±15 s",
+  "stage.pedal": "Pedal turns",
+  "stage.pedalPage": "page",
+  "stage.pedalSong": "song",
+  "stage.night": "Night: black, larger",
+  "stage.nightOff": "Normal view",
+  "stage.scrollOn": "Turn auto-scroll on",
+  "stage.scrollOff": "Turn auto-scroll off",
+  "stage.scrollPaused": "Scroll paused",
+  "stage.scrollResumed": "Scrolling"
 }
