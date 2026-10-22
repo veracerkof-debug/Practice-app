@@ -34,6 +34,28 @@ export function yin(buf, sr, minRms = 0.008) {
   return sr / (best + sh);
 }
 
+// Уточнение частоты по фазе (как в тюнерах с «фазовым вокодером»): YIN даёт период с шагом отсчёта — на низких струнах
+// это 2–3 цента и дрожащая стрелка. Берём фазу основной гармоники f0 в двух окнах со сдвигом H отсчётов: разность фаз
+// за H отсчётов и даёт точную частоту. Оценка принимается, только если отличается от грубой меньше чем на 3 %
+// (иначе это не та гармоника). Чистая функция, без состояния; yin() не трогаем — её сверяет тест паритета.
+// Окно — Блэкмана–Харриса на всю длину кадра минус сдвиг (4096 − 512): боковые лепестки ниже −90 дБ, вторая гармоника
+// низкой струны не искажает фазу основной (с окном Ханна на 2048 ошибка доходила до полуцента).
+export function refinePitch(buf, f0, sr, H = 512, N = buf ? buf.length - H : 0) {
+  if (!f0 || !buf || N < 1024 || buf.length < N + H) return f0;
+  const w = (2 * Math.PI * f0) / sr;
+  let re0 = 0, im0 = 0, re1 = 0, im1 = 0;
+  for (let i = 0; i < N; i++) {
+    const t = (2 * Math.PI * i) / (N - 1), win = 0.35875 - 0.48829 * Math.cos(t) + 0.14128 * Math.cos(2 * t) - 0.01168 * Math.cos(3 * t);
+    const c = Math.cos(w * i), sn = Math.sin(w * i), x0 = buf[i] * win, x1 = buf[i + H] * win;
+    re0 += x0 * c; im0 -= x0 * sn; re1 += x1 * c; im1 -= x1 * sn;
+  }
+  if (Math.hypot(re0, im0) < 1e-6 || Math.hypot(re1, im1) < 1e-6) return f0;
+  let d = Math.atan2(im1, re1) - Math.atan2(im0, re0) - w * H;
+  d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); // в пределах ±π
+  const f = f0 + (d * sr) / (2 * Math.PI * H);
+  return Math.abs(f / f0 - 1) < 0.03 ? f : f0;
+}
+
 // Сглаживание: медиана последних 5 значений; сброс при скачке больше 5 %
 export function createPitchSmoother(size = 5) {
   const h = [];

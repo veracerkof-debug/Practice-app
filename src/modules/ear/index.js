@@ -13,7 +13,7 @@ import {
   normalizeEarData, record, accuracy, earStreak, ntProgress, dictationStep, pitchCents, pitchTol, DG_KINDS, DG_MODES, romanOf, dgScale,
 } from '../../music/ear.js';
 import { swipe } from '../../ui/gestures.js';
-import { yin, createPitchSmoother } from '../../audio/pitch.js';
+import { yin, refinePitch, createPitchSmoother } from '../../audio/pitch.js';
 import { noiseBuf } from '../../audio/waves.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 
@@ -225,7 +225,9 @@ async function micStart() {
   if (!host) { micStop(); return; }
   smooth = createPitchSmoother();
   micTimer = setInterval(() => {
-    let f = yin(mic.read(), mic.sampleRate);
+    const buf = mic.read();
+    let f = yin(buf, mic.sampleRate);
+    if (f) f = refinePitch(buf, f, mic.sampleRate);
     if (f && (f < 25 || f > 4200)) f = 0;
     if (!f) { if (Date.now() - lastT > 1400) pitch(0); return; }
     lastT = Date.now();

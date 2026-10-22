@@ -8,7 +8,7 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { yin, createPitchSmoother } from '../../audio/pitch.js';
+import { yin, refinePitch, createPitchSmoother } from '../../audio/pitch.js';
 import { TUNINGS, TOL, STYLES, normalizeTuner, curTuning, reading, inRange, mName, splitN } from '../../music/tuning.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M9 3v8a3 3 0 0 0 6 0V3M12 14v7"/></svg>';
@@ -173,7 +173,9 @@ function markTuned() {
 
 function tick() {
   if (!mic) return;
-  let f = yin(mic.read(), mic.sampleRate, SENS[st().sens] ?? SENS.normal);
+  const buf = mic.read();
+  let f = yin(buf, mic.sampleRate, SENS[st().sens] ?? SENS.normal);
+  if (f) f = refinePitch(buf, f, mic.sampleRate); // точнее на низких струнах: по фазе, без дрожания
   if (f && !inRange(f)) f = 0;
   if (!f) {
     if (R && Date.now() - lastT > SILENCE_MS) { R = null; okSince = 0; showText(); }
