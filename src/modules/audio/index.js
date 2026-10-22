@@ -11,6 +11,7 @@ import { fileSongs, inSong, linkSong } from '../../core/files.js';
 import { SH, FL } from '../../music/notes.js';
 import { onHold } from '../../ui/hold.js';
 import { parseChord } from '../../audio/mirpost.js';
+import { shapeFor, diagramSVG, degreeOf } from './chordview.js';
 import { pitchShifter } from '../../audio/pitchshift.js';
 import { createStretchPlayer, stretchAvailable } from '../../audio/stretchplayer.js';
 import { createBufferPlayer } from '../../audio/bufferplayer.js';
@@ -205,27 +206,41 @@ function chordGrid(t) {
   }
   return bars;
 }
+// Вид «Аккорды»: сверху — «сейчас» (аккорд крупно, ступень в тональности, схема на грифе; следующий — и через сколько
+// долей), ниже — такты по сильным долям записи, по четыре в ряд (на компьютере — больше): аккорды внутри такта — по
+// долям, цвет — функция (тоника, субдоминанта, доминанта), в текущем такте — полоса хода. Касание такта — перемотка.
+// Аккорды считает компьютер (ансамбль моделей, src/audio/mir.worker.js); со сдвигом высоты всё пересчитывается.
+function chordInfo(t, c) {
+  const p = parseChord(c);
+  if (!p) return null;
+  const a = t.ana || {}, [semi] = pitchOf(t), pc = (((p.pc + semi) % 12) + 12) % 12, sh = shapeFor(pc, p.q), dg = degreeOf(p.pc, p.q, a.pc ?? null, !!a.minor);
+  return { txt: chordTxt(c, t), deg: dg.deg, fn: dg.fn, frets: sh ? sh.frets : null, barre: sh ? sh.barre : null };
+}
+const nowHTML = () => '<div class="chnow" id="chnow" aria-live="polite"><div class="chcur"><b id="chn">—</b><span class="chdeg num" id="chdeg"></span></div><div class="chdg" id="chdg"></div>' +
+  '<div class="chnx"><span class="l2">→</span><b id="chx"></b><span class="chin num" id="chin"></span></div></div>';
 function chordsViewHTML(t) {
   const { ui } = ctx, tr = ctx.t, bars = chordGrid(t), L = chordsOf(t);
-  PV.cells = []; PV.bars = [];
-  if (!bars.length) {
-    if (!L.length) return '<div class="pview pempty"><span>' + ui.esc(tr(t.anaTried ? 'pv.noChords' : 'pv.waitChords')) + '</span></div>';
-    // аккорды без долей — лентой
-    return '<div class="pview pchords flat">' + L.map((c, i) => '<button class="chc' + (c.c ? '' : ' no') + '" data-ci="' + i + '" data-bt="' + c.t + '"><b>' + (c.c ? ui.esc(chordTxt(c.c, t)) : '·') + '</b><span class="num">' + fmtT(c.t) + '</span></button>').join('') + '</div>';
-  }
-  const n = Math.max(...bars.map((b) => b.cells.length));
-  let prev = -1, h = '<div class="pview pchords" id="pchords" style="--n:' + Math.min(n, 8) + '">';
+  PV.cells = []; PV.bars = []; PV.barT = [];
+  if (!L.length) return '<div class="pview pempty"><span>' + ui.esc(tr(t.anaTried ? 'pv.noChords' : ctx.jobs && ctx.jobs.notesSupported() ? 'pv.waitChords' : 'pv.chordsPc')) + '</span></div>';
+  if (!bars.length) // аккорды без долей — лентой
+    return '<div class="pview pchords flat" id="pchords">' + nowHTML() + '<div class="chflat">' + L.map((c, i) => { const inf = chordInfo(t, c.c); return '<button class="chc fn-' + ((inf && inf.fn) || 'x') + (c.c ? '' : ' no') + '" data-ci="' + i + '" data-bt="' + c.t + '"><b>' + (inf ? ui.esc(inf.txt) : '·') + '</b><span class="num">' + fmtT(c.t) + '</span></button>'; }).join('') + '</div></div>';
+  let h = '<div class="pview pchords" id="pchords">' + nowHTML() + '<div class="chgrid">', last = '';
   bars.forEach((b, bi) => {
-    h += '<div class="chbar" data-bar="' + bi + '"><span class="chbn num">' + (bi + 1) + '</span>';
-    b.cells.forEach((ct) => {
-      const ci = chordAt(t, ct + 0.04), label = ci !== prev && ci >= 0 && L[ci].c ? chordTxt(L[ci].c, t) : ci !== prev && ci >= 0 && !L[ci].c ? '·' : '';
-      prev = ci;
-      h += '<button class="chc" data-bt="' + ct + '" data-k="' + PV.cells.length + '">' + (label ? '<b>' + ui.esc(label) + '</b>' : '') + '</button>';
-      PV.cells.push(ct); PV.bars.push(bi);
-    });
-    h += '</div>';
+    const t1 = bi + 1 < bars.length ? bars[bi + 1].t : b.t + (b.cells.length ? (b.cells[b.cells.length - 1] - b.t) * (b.cells.length / Math.max(1, b.cells.length - 1)) : 2), len = Math.max(0.01, t1 - b.t);
+    const parts = [];
+    for (let i = Math.max(0, chordAt(t, b.t + 0.02)); i < L.length && L[i].t < t1 - 0.05; i++) {
+      const a0 = Math.max(b.t, L[i].t), a1 = Math.min(t1, L[i].t + L[i].d);
+      if (a1 - a0 < len * 0.12 && parts.length) continue; // короче полудоли — не дробить такт
+      parts.push({ c: L[i].c, f: Math.max(0.15, (a1 - a0) / len) });
+    }
+    if (!parts.length) parts.push({ c: null, f: 1 });
+    const fn0 = (chordInfo(t, parts[0].c) || {}).fn || 'x';
+    h += '<button class="chb fn-' + fn0 + '" data-bt="' + b.t + '" data-bar="' + bi + '" aria-label="' + ui.esc(tr('pv.bar', { n: bi + 1 })) + '"><span class="chbn num">' + (bi + 1) + '</span><span class="chps">' +
+      parts.map((p) => { const inf = chordInfo(t, p.c), txt = inf ? inf.txt : '·', rep = parts.length === 1 && txt === last; if (inf) last = txt; return '<i class="fn-' + ((inf && inf.fn) || 'x') + (rep ? ' rep' : '') + '" style="flex:' + p.f.toFixed(2) + '">' + ui.esc(txt) + '</i>'; }).join('') +
+      '</span><i class="chpg"></i></button>';
+    PV.barT.push(b.t);
   });
-  return h + '</div>';
+  return h + '</div></div>';
 }
 function lyricsViewHTML(t) {
   const { ui } = ctx, tr = ctx.t, L = t.lyr && Array.isArray(t.lyr.lines) ? t.lyr.lines : [];
@@ -250,7 +265,7 @@ function pviewHTML(c, d, half) {
   const t = AU.cur, v = pview();
   if (v === 'stems') return stemsViewHTML(t) + atimes(c, d, anaTxt(t));
   if (v === 'text') return lyricsViewHTML(t) + atimes(c, d, anaTxt(t));
-  if (v === 'chords') return chordsViewHTML(t) + atimes(c, d, anaTxt(t));
+  if (v === 'chords') return chordsViewHTML(t) + atimes({ ...c, chord: '' }, d, anaTxt(t)); // «сейчас» — в самом виде, строка под ним не нужна
   return half ? '<div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + c.lyr + marksHTML() : wformHTML('f') + atimes(c, d) + c.lyr + marksHTML();
 }
 
@@ -1017,18 +1032,30 @@ function uiTick() {
     const i = lineAt(AU.cur.lyr.lines, pl().currentTime);
     if (pl2.dataset.i !== String(i)) { pl2.dataset.i = i; const on = pl2.querySelector('.on'); if (on) on.classList.remove('on'); const el = pl2.querySelector('[data-li="' + i + '"]'); if (el) { el.classList.add('on'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
   }
-  // вид «Аккорды»: текущая ячейка (доля) и такт
+  // вид «Аккорды»: «сейчас» (аккорд, ступень, схема; следующий и через сколько долей) и текущий такт с полосой хода
   const pc = q('#pchords');
-  if (pc && PV.cells.length) {
-    const now = pl().currentTime; let lo = 0, hi = PV.cells.length - 1, k = -1;
-    while (lo <= hi) { const m = (lo + hi) >> 1; if (PV.cells[m] <= now + 0.03) { k = m; lo = m + 1; } else hi = m - 1; }
-    if (pc.dataset.k !== String(k)) {
-      const prevBar = pc.dataset.k >= 0 ? PV.bars[+pc.dataset.k] : -1;
-      pc.dataset.k = k;
-      const on = pc.querySelector('.chc.on'); if (on) on.classList.remove('on');
-      const ob = pc.querySelector('.chbar.on'); if (ob) ob.classList.remove('on');
-      const el = pc.querySelector('[data-k="' + k + '"]');
-      if (el) { el.classList.add('on'); const bar = el.parentElement; bar.classList.add('on'); if (PV.bars[k] !== prevBar) bar.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  if (pc) {
+    const now = pl().currentTime, L = chordsOf(AU.cur), i = chordAt(AU.cur, now + 0.03);
+    if (pc.dataset.i !== String(i)) {
+      pc.dataset.i = i;
+      const inf = i >= 0 ? chordInfo(AU.cur, L[i].c) : null, nx = L.slice(i + 1).find((c) => c.c), ninf = nx ? chordInfo(AU.cur, nx.c) : null;
+      const set = (id, v) => { const el = q('#' + id); if (el) el.textContent = v; };
+      set('chn', inf ? inf.txt : '—'); set('chdeg', inf ? inf.deg : ''); set('chx', ninf ? ninf.txt : '');
+      const cn = q('#chnow'); if (cn) cn.dataset.fn = (inf && inf.fn) || 'x';
+      const dg = q('#chdg'); if (dg) dg.innerHTML = inf && inf.frets ? diagramSVG(inf.frets, { barre: inf.barre }) : '';
+      const fc = pc.querySelector('.chc.on'); if (fc) fc.classList.remove('on');
+      const ff = pc.querySelector('.chc[data-ci="' + i + '"]'); if (ff) { ff.classList.add('on'); ff.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }); }
+    }
+    // через сколько долей смена (по долям записи), иначе — секунды
+    const nx = L.slice(i + 1).find((c) => c.c), inn = q('#chin');
+    if (inn) { const B = (AU.cur.ana && AU.cur.ana.beats) || []; let txt = ''; if (nx) { const n = B.filter((b) => b > now + 0.02 && b <= nx.t + 0.02).length; txt = B.length ? ctx.tn('pv.inBeats', n) : Math.max(0, Math.round(nx.t - now)) + ' ' + ctx.t('pv.sec'); } if (inn.textContent !== txt) inn.textContent = txt; }
+    if (PV.barT && PV.barT.length) {
+      let lo = 0, hi = PV.barT.length - 1, k = -1;
+      while (lo <= hi) { const m = (lo + hi) >> 1; if (PV.barT[m] <= now + 0.03) { k = m; lo = m + 1; } else hi = m - 1; }
+      const cur = pc.querySelector('.chb.on');
+      if (pc.dataset.k !== String(k)) { pc.dataset.k = k; if (cur) { cur.classList.remove('on'); cur.style.removeProperty('--p'); } const el = pc.querySelector('.chb[data-bar="' + k + '"]'); if (el) { el.classList.add('on'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } }
+      const on = pc.querySelector('.chb.on');
+      if (on && k >= 0) { const t1 = PV.barT[k + 1] ?? (k > 0 ? PV.barT[k] + (PV.barT[k] - PV.barT[k - 1]) : PV.barT[k] + 2); on.style.setProperty('--p', Math.max(0, Math.min(1, (now - PV.barT[k]) / Math.max(0.01, t1 - PV.barT[k]))).toFixed(3)); }
     }
   }
   if (!pl().paused && clickOn() && !CL.timer) clickStart();

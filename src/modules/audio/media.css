@@ -104,3 +104,37 @@
 .pchords.flat .chc{flex-direction:column;gap:2px;min-width:64px;font-size:17px}
 .pchords.flat .chc .num{font-size:11px;font-weight:400;color:inherit;opacity:.7}
 .pchords.flat .chc.no{color:var(--l2)}
+/* Вид «Аккорды» (chordview.js): «сейчас» — аккорд крупно, ступень, схема на грифе, следующий; такты — по четыре в ряд,
+   аккорды внутри такта по долям, цвет — функция в тональности; в текущем такте — полоса хода (--p) */
+.pchords{gap:10px}
+.chnow{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,auto);align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:var(--cell);box-shadow:0 1px 0 var(--sep);--fc:var(--tint)}
+.chnow[data-fn="t"]{--fc:var(--tint)}.chnow[data-fn="s"]{--fc:#5F8568}.chnow[data-fn="d"]{--fc:#A75750}.chnow[data-fn="x"]{--fc:var(--l2)}
+.chcur{display:flex;align-items:baseline;gap:8px;min-width:0}
+.chcur b{font-size:clamp(34px,10cqi,64px);line-height:1;font-weight:800;color:var(--fc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chdeg{font-size:19px;color:var(--l2);font-weight:700}
+.chdg{width:76px;height:92px}
+.chdia{width:100%;height:100%;display:block}
+.chdia .fr,.chdia .st{stroke:var(--l3);stroke-width:1.2}
+.chdia .nut{fill:var(--ink)}
+.chdia .dot{fill:var(--fc)}
+.chdia .op{fill:none;stroke:var(--ink);stroke-width:1.4}
+.chdia .mk{fill:var(--l2);font-size:11px;text-anchor:middle}
+.chdia .fn{fill:var(--l2);font-size:10px}
+.chnx{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0}
+.chnx b{font-size:22px;font-weight:700;white-space:nowrap}
+.chin{font-size:12px;color:var(--l2);white-space:nowrap}
+.chgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px}
+.chb{position:relative;height:58px;border-radius:10px;background:var(--fill);overflow:hidden;padding:0;display:block;text-align:left}
+.chbn{position:absolute;left:6px;top:3px;font-size:10px;color:var(--l2)}
+.chps{position:absolute;inset:14px 4px 6px;display:flex;gap:2px}
+.chps i{font-style:normal;display:flex;align-items:center;justify-content:center;min-width:0;border-radius:6px;font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.chps i.fn-t{background:color-mix(in srgb,var(--tint) 16%,transparent)}
+.chps i.fn-s{background:color-mix(in srgb,#5F8568 16%,transparent)}
+.chps i.fn-d{background:color-mix(in srgb,#A75750 16%,transparent)}
+.chps i.rep{color:var(--l2);font-weight:500}
+.chpg{position:absolute;left:0;bottom:0;height:3px;width:calc(var(--p,0) * 100%);background:var(--tint);border-radius:0 2px 2px 0;transition:width .12s linear}
+.chb.on{box-shadow:inset 0 0 0 2px var(--tint);background:color-mix(in srgb,var(--tint) 8%,var(--fill))}
+.chflat{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.chflat .chc.on{background:var(--tint);color:var(--on-tint)}
+.pchords{container-type:inline-size}
+@container (min-width: 700px){ .chgrid{grid-template-columns:repeat(8,minmax(0,1fr))} .chb{height:64px} .chdg{width:92px;height:112px} }
