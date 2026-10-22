@@ -8,6 +8,7 @@
 import { t } from '../i18n/index.js';
 import { separate, PARTS_OF, stemEmpty, stemLevelDb, stemsSupported } from '../audio/stems.js';
 import { transcribe } from '../audio/transcribe.js';
+import { transcribeYmt, ymtAvailable } from '../audio/ymt.js';
 import { transcribeLyrics, lyricsSupported } from '../audio/lyrics.js';
 import { denoise, denoiseSupported } from '../audio/denoise.js';
 import { encodeWav, peaks } from '../audio/voicefx.js';
@@ -27,10 +28,24 @@ export const vocalsOf = (files, id) => { const v = stemsOf(files, id).filter((r)
 export const denoisedOf = (files, id) => files.list('audio').find((r) => r.dn && r.dn.src === id) || null;
 export const hasStems = (files, id, mode = null, hq = false) => stemsOf(files, id).some((r) => (!mode || (r.stem.mode || '4') === mode) && (!hq || r.stem.hq));
 
+// Снятие нот: на компьютере с моделями YourMT3+ — все инструменты по партиям (src/audio/ymt.js); без них — Basic Pitch
+function notesJob(blob, opts) {
+  let inner = null, cancelled = false;
+  const promise = (async () => {
+    const ymt = await ymtAvailable();
+    if (cancelled) throw new Error('cancel');
+    inner = ymt ? transcribeYmt(blob, { onStage: opts.onStage }) : transcribe(blob, opts);
+    return inner.promise;
+  })();
+  return { promise, cancel() { cancelled = true; if (inner) inner.cancel(); } };
+}
+
 export function createJobs(files) {
   const subs = new Set();
   let cur = null; // { kind, id, rec, stage, frac, mode, job }
   const emit = () => subs.forEach((fn) => { try { fn(cur); } catch { /* */ } });
+  let pro = false; // модели YourMT3+ на месте (компьютер) — все инструменты по партиям; проверка один раз
+  if (isDesktop()) ymtAvailable().then((v) => { pro = !!v; if (pro) emit(); }).catch(() => {});
   const set = (patch) => { if (!cur) return; Object.assign(cur, patch); emit(); };
 
   // Разделить запись rec в режиме mode ('2' | '4' | '6') → { stems: [записи], absent: [части] }
@@ -70,14 +85,32 @@ export function createJobs(files) {
     const ev = bends ? res.ev : notesToEventsSec(notes, map);
     return { ev, mid, notes: notes.length, score: { v: 1, bpm: map.bpm || bpm, num: bpb, inst, grid: 4, beats: !!(ana && ana.beats && ana.beats.length >= 4), notes } };
   }
+  // Все инструменты записи (YourMT3+ на компьютере, src/audio/ymt.js): одна сетка долей на все партии, по дорожке .mid
+  // на партию (программа General MIDI, ударные — 10-й канал); события игры — все партии с высотой (послушать роялем);
+  // score.notes — главная партия (больше всех нот), score.parts — состав. Инструмент студии — по программе дорожки
+  function withRhythmParts(rec, res) {
+    const ana = rec.ana || null, pitched = res.parts.filter((p) => !p.drum);
+    const bpm = (ana && ana.bpm) || (res.tempo && res.tempo.bpm) || 120, bpb = (ana && ana.bpb) || 4;
+    const map = ana && ana.beats && ana.beats.length >= 4 ? beatMap(ana.beats, bpm, { downbeats: ana.downbeats, bpb })
+      : beatMap(null, bpm, { offset: fitOffset(pitched.flatMap((p) => p.raw.map((n) => n.t)), 60 / bpm) });
+    const parts = res.parts.map((p) => ({ ...p, notes: quantizeNotes(p.raw, map, { div: 4 }) })).filter((p) => p.notes.length);
+    const name = (p) => t('ymt.part.' + p.key);
+    const mid = writeMidiTracks({ bpm: map.bpm || bpm, num: bpb, den: 4, name: base(rec), key: ana && ana.pc != null ? { pc: ana.pc, minor: !!ana.minor } : null,
+      tracks: parts.map((p) => ({ name: name(p), program: p.drum ? null : p.program, ...(p.drum ? { ch: 9 } : {}), notes: p.notes })) });
+    const main = parts.filter((p) => !p.drum).sort((a, b) => b.notes.length - a.notes.length)[0] || parts[0] || { notes: [] };
+    const ev = notesToEventsSec(parts.filter((p) => !p.drum).flatMap((p) => p.notes), map);
+    const count = parts.reduce((a, p) => a + p.notes.length, 0);
+    return { ev, mid, notes: count, score: { v: 1, bpm: map.bpm || bpm, num: bpb, inst: null, grid: 4, beats: !!(ana && ana.beats && ana.beats.length >= 4), notes: main.notes,
+      parts: parts.map((p) => ({ key: p.key, program: p.program, drum: p.drum, n: p.notes.length })), model: 'ymt' } };
+  }
   async function runNotes(rec, bends) {
     const res = await cur.job.promise;
     const at = Date.now(), old = notesOf(files, rec.id);
-    const q = res.raw ? withRhythm(rec, res, bends) : { ev: res.ev, mid: res.mid, notes: res.notes, score: null };
+    const q = res.parts ? withRhythmParts(rec, res) : res.raw ? withRhythm(rec, res, bends) : { ev: res.ev, mid: res.mid, notes: res.notes, score: null };
     const r = { id: old ? old.id : 'tn' + at.toString(36), name: base(rec) + ' — ' + t('stems.notesSuffix') + '.mid', size: q.mid.length, type: 'audio/midi', kind: 'midi', tool: 'piano', songs: rec.songs || [],
       created: at, blob: new Blob([q.mid], { type: 'audio/midi' }), take: { v: 1, ev: q.ev }, dur: takeDur(q.ev), notes: q.notes, trans: { src: rec.id }, ...(q.score ? { score: q.score } : {}) };
     await files.add(r);
-    log('jobs', 'ноты: ' + q.notes + (q.score ? ', темп ' + q.score.bpm + (q.score.beats ? ' по долям записи' : ' ровный') + ', ' + q.score.inst : ''));
+    log('jobs', 'ноты: ' + q.notes + (q.score ? ', темп ' + q.score.bpm + (q.score.beats ? ' по долям записи' : ' ровный') + ', ' + (q.score.parts ? q.score.parts.map((p) => p.key + ' ' + p.n).join(', ') + (res.secs ? ', ' + Math.round(res.secs) + ' с' : '') : q.score.inst) : ''));
     return r;
   }
 
@@ -118,11 +151,13 @@ export function createJobs(files) {
     },
     // Снятие нот — только компьютер (DECISIONS «Телефон лёгкий, тяжёлое — компьютер»); телефон получает готовые ноты синхронизацией
     notesSupported: () => isDesktop(),
+    notesPro: () => pro,
     notes(rec, { sens = 'normal', bends = false } = {}) {
       if (cur) return Promise.reject(new Error('busy'));
       if (!isDesktop()) return Promise.reject(new Error('web'));
       cur = { kind: 'notes', id: rec.id, rec, stage: 'load', frac: 0, t0: Date.now() };
-      cur.job = transcribe(rec.blob, { sens, bends, name: base(rec), onStage: (stage, f) => set({ stage, frac: f, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) }) });
+      const onStage = (stage, f) => set({ stage, frac: f, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) });
+      cur.job = notesJob(rec.blob, { sens, bends, name: base(rec), onStage });
       emit();
       return runNotes(rec, bends).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
     },

@@ -61,7 +61,8 @@ const ATP = { on: false, sf: false, playing: false, want: false, speed: 1, metro
 const loadLib = () => AT.lib || (AT.lib = import('@coderline/alphatab').catch((e) => { AT.lib = null; throw e; }));
 // Партия без струн (ноты из студии, фортепиано) в профиле «только табы» не рисуется — для неё нотный стан
 const stringed = (sc) => !sc || sc.tracks.some((tr) => tr.staves.some((x) => x.tuning && x.tuning.length));
-const prof = (at) => (st().prof === 'both' ? at.StaveProfile.ScoreTab : stringed(AT.score) ? at.StaveProfile.Tab : at.StaveProfile.Score);
+// MIDI и файлы студий: у каждой партии свой стан — гитара и бас табулатурой (строй из MusicXML), остальные нотами
+const prof = (at) => (st().prof === 'both' ? at.StaveProfile.ScoreTab : isDaw(AT.cur) ? at.StaveProfile.Default : stringed(AT.score) ? at.StaveProfile.Tab : at.StaveProfile.Score);
 
 /* ---------- PDF: один просмотр на приложение (как и alphaTab) ---------- */
 
@@ -247,7 +248,7 @@ async function openDaw(rec) {
     song.name = song.name || rec.name;
     AT.proj = projectFromSong(song);
     if (isEmptyProject(AT.proj)) { AT.state = 'error'; render(); ctx.ui.toast(ctx.t('dawNoNotes')); return; }
-    if (st().prof !== 'both') { AT.api.settings.display.staveProfile = at.StaveProfile.Score; AT.api.updateSettings(); } // партии без струн
+    if (st().prof !== 'both') { AT.api.settings.display.staveProfile = at.StaveProfile.Default; AT.api.updateSettings(); } // стан по партии: табы у гитары и баса, ноты у остальных
     const sc = at.importer.ScoreLoader.loadScoreFromBytes(new TextEncoder().encode(projectXML(AT.proj, { title: rec.name.replace(/\.[a-z0-9]+$/i, '') })), AT.api.settings);
     // ударные из MusicXML: у инструментов партии нет головок нот (alphaTab рисует пусто) — обычные головки, звук остаётся
     const F = at.model.MusicFontSymbol;

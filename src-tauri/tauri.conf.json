@@ -45,7 +45,8 @@
     ],
     "resources": {
       "models/whisper/": "models/whisper/",
-      "models/roformer/": "models/roformer/"
+      "models/roformer/": "models/roformer/",
+      "models/ymt/": "models/ymt/"
     },
     "category": "Music",
     "shortDescription": "Melete — практика музыкантов",

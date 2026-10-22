@@ -480,7 +480,7 @@ export function projectFromSong(song) {
   if (song.key) p.key = { pc: ((song.key.pc % 12) + 12) % 12, minor: !!song.key.minor };
   p.tracks = [];
   const src = (song.tracks || []).filter((t) => t.notes && t.notes.length);
-  src.forEach((t, i) => p.tracks.push(newTrack(t.drums ? 'drums' : 'notes', i, { name: String(t.name || '').slice(0, 30), inst: t.drums ? 'piano' : instOfProgram(t.program) })));
+  src.forEach((t, i) => p.tracks.push(newTrack(t.drums ? 'drums' : 'notes', i, { name: String(t.name || '').slice(0, 30), inst: t.drums ? 'piano' : instOfProgram(t.program), ...(t.drums || t.program == null ? {} : { gm: t.program }) })));
   const chunk = BARS_MAX * p.num;
   src.forEach((t, i) => {
     const tr = p.tracks[i], end = Math.max(1, ...t.notes.map((n) => n.t + n.d)), count = Math.ceil(end / chunk - 1e-6);

@@ -19,6 +19,7 @@ import { modesHere, estimateSec, hqVocalsModel } from '../../audio/stems.js';
 import { estimateLyricsSec, lineAt, lyricsText, toLrc } from '../../audio/lyrics.js';
 import { stemsOf, notesOf, denoisedOf } from '../../core/jobs.js';
 import { estimateDenoiseSec } from '../../audio/denoise.js';
+import { estimateYmtSec } from '../../audio/ymt.js';
 import { projectFromStems, projectFromSong, isEmptyProject } from '../../music/project.js';
 import { readMidiSong } from '../../music/daw.js';
 import { after, cancel } from '../../audio/clock.js';
@@ -405,9 +406,11 @@ function stemsSheet() {
     // ноты
     h += '<div class="hdr">' + ui.esc(t('notes.hdr')) + '</div><div class="group">';
     if (j && j.kind === 'notes') h += progress(j, 'data-njcancel');
-    else if (notes) h += '<button class="cell act" data-nlisten aria-pressed="' + !!LN + '"><span class="grow">' + ui.esc(t('notes.n', { n: notes.notes || 0 })) + '</span><span class="val">' + ui.esc(t(LN ? 'notes.stop' : 'notes.listen')) + '</span></button>' +
+    else if (notes) h += '<button class="cell act" data-nlisten aria-pressed="' + !!LN + '"><span class="grow">' + ui.esc(t('notes.n', { n: notes.notes || 0 })) + (notes.score && notes.score.parts ? '<span class="bksub">' + ui.esc(notes.score.parts.map((p) => t('ymt.part.' + p.key)).join(' · ')) + '</span>' : '') + '</span><span class="val">' + ui.esc(t(LN ? 'notes.stop' : 'notes.listen')) + '</span></button>' +
       '<button class="cell act" data-ntabs>' + ui.esc(t('notes.toTabs')) + '</button>' + (ctx.hasTool('studio') ? '<button class="cell act" data-nstudio>' + ui.esc(t('notes.toStudio')) + '</button>' : '') + (jobs.notesSupported() ? '<button class="cell act" data-ngo>' + ui.esc(t('notes.redo')) + '</button>' : '');
     else if (!jobs.notesSupported()) h += '<div class="cellcol"><span class="l2">' + ui.esc(t('notes.pcOnly')) + '</span></div>'; // телефон: ноты снимает компьютер
+    else if (jobs.notesPro && jobs.notesPro()) h += '<div class="cellcol"><span class="l2">' + ui.esc(t('notes.proHint')) + '</span></div>' +
+      '<button class="cell act center b" data-ngo>' + ui.esc(t('notes.goPro', { t: fmtT(estimateYmtSec(tr.dur || 60)) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
     else h += '<div class="cellcol"><span>' + ui.esc(t('notes.sens')) + '</span>' + ui.seg('nsens', [['normal', t('notes.sensNormal')], ['high', t('notes.sensHigh')]], st().nsens || 'normal', t('notes.sens')) + '</div>' +
       '<button class="cell act" data-nbends aria-pressed="' + !!st().nbends + '"><span class="grow">' + ui.esc(t('notes.bends')) + '<span class="bksub">' + ui.esc(t('notes.bendsHint')) + '</span></span><span class="val">' + (st().nbends ? '✓' : '') + '</span></button>' +
       '<button class="cell act center b" data-ngo>' + ui.esc(t('notes.go')) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');

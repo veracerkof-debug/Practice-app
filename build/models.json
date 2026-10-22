@@ -107,6 +107,27 @@
       "bytes": 464050097,
       "platform": "windows",
       "what": "Mel-Band RoFormer, вокал (веса Kimberley Jensen, MIT; ONNX fp16 audiojs/mel-roformer) — «улучшенное разделение» на компьютере (src-tauri/src/roformer.rs); в APK не идёт"
+    },
+    {
+      "file": "src-tauri/models/ymt/ymt_enc.onnx",
+      "parts": [
+        "https://github.com/veracerkof-debug/Practice-app/raw/models/ymt_enc.onnx.part0",
+        "https://github.com/veracerkof-debug/Practice-app/raw/models/ymt_enc.onnx.part1"
+      ],
+      "sha256": "7ff7f961da476691e4275a5e8ca4208e65624fb7baa58e60a7ade0ffc2ed249c",
+      "bytes": 112929907,
+      "platform": "windows",
+      "optional": true,
+      "what": "YourMT3+ (Chang и др., 2024; код GPL-3.0, веса Apache-2.0; mimbres/YourMT3, YPTF.MoE+Multi, mc13_256_g4_all_v7…_nops) — кодировщик: волна 16 кГц → ключи и значения перекрёстного внимания (build/ymt/export.py); файл больше 100 МБ — двумя частями"
+    },
+    {
+      "file": "src-tauri/models/ymt/ymt_dec.onnx",
+      "url": "https://github.com/veracerkof-debug/Practice-app/raw/models/ymt_dec.onnx",
+      "sha256": "9d0512cfa6e2de853eca60b7994ac9b588f5551d67dc80a6eae9c4cafe643ae2",
+      "bytes": 92797219,
+      "platform": "windows",
+      "optional": true,
+      "what": "YourMT3+ — шаг многоканального декодера T5 (13 групп инструментов, кеш [P,L,2,N,H,DK]); ноты со слуха на компьютере (src-tauri/src/notes.rs)"
     }
   ]
 }

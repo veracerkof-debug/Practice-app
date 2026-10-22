@@ -11,6 +11,7 @@ mod roformer;
 mod denoise;
 mod localsend;
 mod sync; // связь с телефоном: посредник между телефоном в сети и окном (src/core/sync.js)
+mod notes; // ноты со слуха: YourMT3+ (src/audio/ymt.js, src/music/mt3.js)
 mod guest; // раздача в своей сети: гости открывают песни в браузере (src/core/guest.js, docs/guest-web.md)
 
 use std::path::PathBuf;
@@ -217,11 +218,13 @@ pub fn run() {
         .manage(sync::SyncSrv::default())
         .manage(guest::GuestSrv::default())
         .manage(denoise::Denoise::default())
+        .manage(notes::Notes::default())
         .on_permission_request(|_, kind| match kind {
             PermissionKind::Microphone | PermissionKind::Camera => PermissionResponse::Allow,
             _ => PermissionResponse::Default,
         })
         .invoke_handler(tauri::generate_handler![allow_dir, startup_files, stems_begin, stems_push, stems_run, stems_read, stems_cancel, stems_clean,
+            notes::notes_supported, notes::notes_begin, notes::notes_push, notes::notes_run, notes::notes_cancel, notes::notes_clean,
             lyrics::lyrics_supported, lyrics::lyrics_begin, lyrics::lyrics_push, lyrics::lyrics_run, lyrics::lyrics_cancel, lyrics::lyrics_clean,
             localsend::localsend_start, localsend::localsend_stop, localsend::localsend_status, localsend::localsend_answer,
             sync::sync_start, sync::sync_stop, sync::sync_status, sync::sync_body, sync::sync_reply,

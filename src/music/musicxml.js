@@ -6,6 +6,7 @@
 // Чистые функции, без DOM.
 import { songNotes, songBeats, chordName, clipsOf, DRUM_MIDI } from './project.js';
 import { keyLabel } from './transpose.js';
+import { fretNotes, tuningFor } from './tabfinger.js';
 
 const DIV = 4; // делений на четверть
 const STEPS = ['C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B'];
@@ -44,12 +45,18 @@ function pitchXML(m, flats) {
 
 // Партия: ноты дорожки по тактам. Нота через тактовую черту делится на части с лигой; одновременно начинающиеся
 // ноты — аккорд (<chord/>), длина аккорда — по самой длинной
+// Струнные с грифом (дорожка из .mid с программой гитары 24–31 или баса 32–39): строй для табулатуры, иначе null
+export const fretKind = (tr) => (tr.kind !== 'notes' || tr.gm == null ? null : tr.gm >= 24 && tr.gm <= 31 ? 'guitar' : tr.gm >= 32 && tr.gm <= 39 ? 'bass' : null);
+const TSTEP = ['C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B'], TALT = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
+const staffTuning = (tuning) => '<staff-details><staff-lines>' + tuning.length + '</staff-lines>' + tuning.map((m, i) => '<staff-tuning line="' + (i + 1) + '"><tuning-step>' + TSTEP[m % 12] + '</tuning-step>' + (TALT[m % 12] ? '<tuning-alter>1</tuning-alter>' : '') + '<tuning-octave>' + (Math.floor(m / 12) - 1) + '</tuning-octave></staff-tuning>').join('') + '</staff-details>';
+
 export function partXML(tr, p, { flats = false, notes = songNotes(p).filter((n) => n.tr === tr), bars = Math.ceil(songBeats(p) / p.num), pid = 'P1' } = {}) {
-  const drums = tr.kind === 'drums';
+  const drums = tr.kind === 'drums', fk = fretKind(tr), tuning = fk ? tuningFor(fk, notes) : null;
+  const tab = tuning ? fretNotes(notes, tuning) : null; // струна и лад каждой ноты (src/music/tabfinger.js)
   const beatDiv = DIV * (4 / p.den), barDiv = beatDiv * p.num, end = barDiv * bars, segs = [];
-  notes.forEach((n) => {
+  notes.forEach((n, i) => {
     let s = Math.round(n.t * beatDiv), e = Math.min(end, Math.round((n.t + n.d) * beatDiv));
-    while (s < e) { const b1 = (Math.floor(s / barDiv) + 1) * barDiv, x = Math.min(e, b1); segs.push({ s, e: x, m: n.m, from: s > Math.round(n.t * beatDiv), cont: x < e }); s = x; }
+    while (s < e) { const b1 = (Math.floor(s / barDiv) + 1) * barDiv, x = Math.min(e, b1); segs.push({ s, e: x, m: n.m, from: s > Math.round(n.t * beatDiv), cont: x < e, tf: tab ? tab[i] : null }); s = x; }
   });
   segs.sort((a, b) => a.s - b.s || a.m - b.m);
   const low = !drums && segs.length && segs.reduce((a, n) => a + n.m, 0) / segs.length < 55; // низкая партия (бас) — басовый ключ
@@ -59,7 +66,7 @@ export function partXML(tr, p, { flats = false, notes = songNotes(p).filter((n) 
   for (let b = 0; b < bars; b++) {
     const b0 = b * barDiv, b1 = b0 + barDiv;
     let x = '<measure number="' + (b + 1) + '">';
-    if (b === 0) x += '<attributes><divisions>' + DIV + '</divisions><key><fifths>' + fifthsOf(p.key) + '</fifths><mode>' + (p.key.minor ? 'minor' : 'major') + '</mode></key><time><beats>' + p.num + '</beats><beat-type>' + p.den + '</beat-type></time><clef>' + clef + '</clef></attributes>' +
+    if (b === 0) x += '<attributes><divisions>' + DIV + '</divisions><key><fifths>' + fifthsOf(p.key) + '</fifths><mode>' + (p.key.minor ? 'minor' : 'major') + '</mode></key><time><beats>' + p.num + '</beats><beat-type>' + p.den + '</beat-type></time><clef>' + clef + '</clef>' + (tuning ? staffTuning(tuning) : '') + '</attributes>' +
       '<direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>' + p.bpm + '</per-minute></metronome></direction-type><sound tempo="' + p.bpm + '"/></direction>';
     let at = b0;
     const inBar = segs.filter((n) => n.s >= b0 && n.s < b1);
@@ -72,7 +79,7 @@ export function partXML(tr, p, { flats = false, notes = songNotes(p).filter((n) 
         group.forEach((n, j) => {
           const stop = k > 0 || n.from, start = k < parts.length - 1 || n.cont;
           x += '<note>' + (j ? '<chord/>' : '') + (drums ? drumXML(n.m) + '<duration>' + d + '</duration><instrument id="' + pid + '-I' + n.m + '"/><voice>1</voice><type>' + type + '</type>' + (DRUM_X.has(n.m) ? '<notehead>x</notehead>' : '')
-            : pitchXML(n.m, flats) + '<duration>' + d + '</duration><voice>1</voice><type>' + type + '</type>' + (stop ? '<tie type="stop"/>' : '') + (start ? '<tie type="start"/>' : '')) + '</note>';
+            : pitchXML(n.m, flats) + '<duration>' + d + '</duration><voice>1</voice><type>' + type + '</type>' + (stop ? '<tie type="stop"/>' : '') + (start ? '<tie type="start"/>' : '') + (n.tf ? '<notations><technical><string>' + n.tf.s + '</string><fret>' + n.tf.f + '</fret></technical></notations>' : '')) + '</note>';
         });
       });
       at = e;

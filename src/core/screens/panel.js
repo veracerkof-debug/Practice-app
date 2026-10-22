@@ -835,6 +835,8 @@ export function legalSheet(kind) {
       lic('S-KEY', t('lic.skey.sub'), '<p>© Deezer SA</p><p>' + t('lic.mit') + '</p>') +
       lic('Beat This!', t('lic.bt.sub'), '<p>© Francesco Foscarin, Jan Schlüter, Gerhard Widmer (CPJKU)</p><p>' + t('lic.mit') + '</p>') +
       lic('ChordMini', t('lic.cm.sub'), '<p>© ChordMini authors</p><p>' + t('lic.mit') + '</p>') +
+      lic('UVR MDX-Net', t('lic.mdx.sub'), '<p>© Anjok07, Kimberley Jensen (Ultimate Vocal Remover); © KUIELab</p><p>' + t('lic.mit') + '</p>') +
+      lic('YourMT3+', t('lic.ymt.sub'), '<p>© Sungkyun Chang, Emmanouil Benetos, Holger Kirchhoff, Simon Dixon</p><p>' + t('lic.ymt.text') + '</p>') +
       lic('Mel-Band RoFormer', t('lic.mr.sub'), '<p>© Kimberley Jensen; © Phil Wang, Roman Solovyev</p><p>' + t('lic.mit') + '</p><p>' + t('lic.mr.text') + '</p>') +
       lic('DeepFilterNet · tract', t('lic.df.sub'), '<p>© Hendrik Schröter; © Sonos, Inc.</p><p>' + t('lic.df.text') + '</p>') +
       lic('whisper.cpp · Whisper', t('lic.wc.sub'), '<p>© Georgi Gerganov; © OpenAI</p><p>' + t('lic.mit') + '</p><p>' + t('lic.wh.text') + '</p>') +

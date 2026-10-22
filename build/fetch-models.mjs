@@ -11,6 +11,7 @@ import { pipeline } from 'node:stream/promises';
 const { models } = JSON.parse(readFileSync(new URL('./models.json', import.meta.url), 'utf8'));
 const sha = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 
+// Файл больше 100 МБ (предел GitHub на файл) лежит частями: parts — адреса по порядку, склеиваются, сумма — у целого.
 // Источники по очереди: основной адрес и зеркала (m.alt: [{ url, sha256, bytes, from? }] — свой архив с тем же набором
 // файлов, своя сумма); у каждого — три попытки с паузой. Возвращает { buf, src } — src нужен архиву (другой префикс путей).
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -19,10 +20,14 @@ async function download(m) {
   for (const src of [m, ...(m.alt || [])]) {
     for (let i = 0; i < 3; i++) {
       try {
-        console.log('скачиваю: ' + src.url + ' (' + Math.round(src.bytes / 1048576) + ' МБ)');
-        const r = await fetch(src.url, { redirect: 'follow' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const buf = Buffer.from(await r.arrayBuffer());
+        console.log('скачиваю: ' + (src.url || src.parts[0]) + (src.parts ? ' (' + src.parts.length + ' части)' : '') + ' (' + Math.round(src.bytes / 1048576) + ' МБ)');
+        const bufs = [];
+        for (const u of src.parts || [src.url]) {
+          const r = await fetch(u, { redirect: 'follow' });
+          if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + u);
+          bufs.push(Buffer.from(await r.arrayBuffer()));
+        }
+        const buf = Buffer.concat(bufs);
         const h = createHash('sha256').update(buf).digest('hex');
         if (h !== src.sha256) throw new Error('sha256 не сходится: ' + h);
         return { buf, src };
@@ -70,7 +75,8 @@ for (const m of models) {
     console.log('готово: ' + m.file);
   } catch (e) {
     // optional — модель, без которой приложение работает (запасной путь); её отсутствие сборку не роняет
-    if (m.optional) { console.warn('пропущено (необязательная): ' + m.file + ' — ' + e.message); continue; }
+    // папка остаётся (ресурсы установщика ссылаются на неё), приложение без файла модели прячет функцию
+    if (m.optional) { mkdirSync(dirname(m.file), { recursive: true }); writeFileSync(m.file + '.missing', e.message + '\n'); console.warn('пропущено (необязательная): ' + m.file + ' — ' + e.message); continue; }
     console.error('не удалось: ' + m.file + ' — ' + e.message); process.exit(1);
   }
 }
