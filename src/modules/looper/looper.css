@@ -80,3 +80,4 @@
 .lpeditcv{display:block;width:100%;height:96px;border-radius:12px;touch-action:none}
 .lpedit .lpnudge{gap:2px;padding:6px 0 2px}
 .lpedit .lpnudge .lpshv{min-width:72px}
+.lpbtn{touch-action:pan-y} /* смахивание по кнопке влево-вправо (отмена / вернуть слой) — не перехватывается прокруткой */

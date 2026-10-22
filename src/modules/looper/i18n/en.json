@@ -60,5 +60,10 @@
   "editHint": "Loop window: drag the middle — shift, the corners — trim.",
   "earlier1": "Layer 1 ms earlier",
   "later1": "Layer 1 ms later",
-  "fx": "Layer sound"
+  "fx": "Layer sound",
+  "do.replace": "Replace",
+  "replaceOn": "Replace: the old take is erased as you play",
+  "multiplied": "Loop doubled: {n}",
+  "redone": "Layer restored",
+  "noRedo": "Nothing to restore"
 }

@@ -121,11 +121,11 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       rec.total += data.length;
       return;
     }
-    // наложение: сложить в буфер слоя по месту в петле
+    // наложение: сложить в буфер слоя по месту в петле; замена — ещё и стереть под рукой в верхнем слое
     const s = S(), len = s.len, lenSec = len / sr;
     let pos = Math.round((((at - s.t0) % lenSec) + lenSec) % lenSec * sr);
-    const b = rec.buf;
-    for (let i = 0; i < data.length; i++) { b[pos] += data[i]; if (++pos >= len) pos = 0; }
+    const b = rec.buf, R = rec.replace ? rec.replace.buf : null, M = rec.mask;
+    for (let i = 0; i < data.length; i++) { b[pos] += data[i]; if (R) { R[pos] = 0; M[pos] = 1; } if (++pos >= len) pos = 0; }
     rec.got += data.length;
   }
 
@@ -165,7 +165,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       const s = S(), sr = c ? c.sampleRate : 44100;
       return { state, slot: cur, len: s.len / sr, layers: s.layers.map((L) => ({ gain: L.gain, mute: !!L.mute, shift: Math.round((L.shift || 0) / sr * 1000), margin: Math.round((L.margin || 0) / sr * 1000), trim: { ...(L.trim || { a: 0, b: 1 }) }, fx: normalizeFx(L.fx), ver: L.ver || 0 })), slots: slots.map((x) => x.layers.length),
         pos: c && s.len && (state === 'play' || state === 'dub') ? ((((c.currentTime - s.t0) % (s.len / sr)) + s.len / sr) % (s.len / sr)) / (s.len / sr) : state === 'rec' && rec ? Math.min(1, (c.currentTime - rec.start) / MAX_SEC) : 0,
-        recSec: state === 'rec' && rec ? c.currentTime - rec.start : 0, mon: monOn, mic: !!mic };
+        recSec: state === 'rec' && rec ? c.currentTime - rec.start : 0, mon: monOn, mic: !!mic, replace: state === 'dub' && !!(rec && rec.replace), canRedo: api.canRedo };
     },
     setShift(ms) { shift = (+ms || 0) / 1000; },
     setMonitor(on) { monOn = !!on; if (mon) mon.gain.setTargetAtTime(monOn ? 1 : 0, c.currentTime, 0.02); emit(); },
@@ -219,12 +219,23 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       state = 'dub';
       emit();
     },
+    // Наложение уже идёт (первое касание) — превратить его в замену (второе касание сразу следом)
+    toReplace() {
+      const s = S();
+      if (state !== 'dub' || !rec || rec.replace || !s.layers.length) return false;
+      rec.replace = s.layers[s.layers.length - 1]; rec.mask = new Uint8Array(s.len);
+      emit();
+      return true;
+    },
     stopDub() {
       if (state !== 'dub' || !rec) return;
       const s = S(), r = rec;
       rec = null;
       state = 'play';
-      if (r.got > 0) { const L = { buf: r.buf, full: r.buf, margin: 0, shift: 0, trim: { a: 0, b: 1 }, fx: FX_DEF(), gain: 1, mute: false }; s.layers.push(L); startLayer(L); }
+      if (r.replace && r.got > 0) { // замена: стёртый отрезок верхнего слоя — в его полной записи тоже, слой перезапускается с новым буфером
+        const L = r.replace; for (let i = 0; i < s.len; i++) if (r.mask[i]) L.full[i] = 0; L.ver = (L.ver || 0) + 1; restart(L, s);
+      }
+      if (r.got > 0) { const L = { buf: r.buf, full: r.buf, margin: 0, shift: 0, trim: { a: 0, b: 1 }, fx: FX_DEF(), gain: 1, mute: false }; s.layers.push(L); startLayer(L); s.undone = null; }
       emit();
     },
     // Главная кнопка: пусто → запись; запись → петля; играет → наложение; наложение → петля
@@ -250,7 +261,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       state = 'idle';
       emit();
     },
-    // Отменить последний слой (при наложении — само наложение)
+    // Отменить последний слой (при наложении — само наложение); снятый слой можно вернуть (redo), пока не записан новый
     undo() {
       const s = S();
       if (state === 'dub') { rec = null; state = 'play'; emit(); return true; }
@@ -259,9 +270,53 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       if (!L) return false;
       if (L.node) { try { L.node.src.stop(); L.node.src.disconnect(); } catch { /* */ } s.srcs = s.srcs.filter((x) => x !== L.node.src); }
       freeChain(L);
+      s.undone = { L, len: s.len };
       if (!s.layers.length) { s.len = 0; state = 'idle'; }
       emit();
       return true;
+    },
+    // Вернуть снятый слой
+    redo() {
+      const s = S(), u = s.undone;
+      if (!u || s.layers.length >= MAX_LAYERS) return false;
+      s.undone = null;
+      if (!s.layers.length) { s.len = u.len; s.t0 = c.currentTime; state = 'play'; }
+      if (u.L.buf.length !== s.len) return false; // петля с тех пор стала другой длины
+      s.layers.push(u.L);
+      if (state === 'play' || state === 'dub') startLayer(u.L);
+      emit();
+      return true;
+    },
+    get canRedo() { const s = S(); return !!(s.undone && (!s.layers.length || s.undone.L.buf.length === s.len)); },
+    // Multiply: удлинить петлю в k раз (новые слои — на всю длину, старые звучат по кругу внутри: буфер повторяется).
+    // Можно на ходу: позиция в петле сохраняется — старая петля просто продолжает крутиться, записывать можно в любую часть.
+    multiply(k = 2) {
+      const s = S(), n = Math.max(2, Math.round(k));
+      if (!s.len || state === 'rec' || state === 'dub') return false;
+      const sr = c.sampleRate, newLen = s.len * n;
+      if (newLen > MAX_SEC * sr) return false;
+      const now = c.currentTime, lenSec = s.len / sr, phase = (((now - s.t0) % lenSec) + lenSec) % lenSec;
+      s.layers.forEach((L) => {
+        const full = new Float32Array(newLen + (L.margin || 0));
+        for (let i = 0; i < newLen; i++) full[i] = L.buf[i % s.len];
+        L.full = full; L.margin = L.margin || 0; L.shift = 0; L.trim = { a: 0, b: 1 }; L.buf = full.slice(0, newLen); L.ver = (L.ver || 0) + 1;
+      });
+      s.len = newLen;
+      s.t0 = now - phase; // та же фаза в новой, длинной петле
+      s.undone = null;
+      if (state === 'play') s.layers.forEach((L) => restart(L, s));
+      emit();
+      return true;
+    },
+    // Replace: записать поверх, стирая то, что под рукой — слой, по которому пишут, глушится на отрезке записи
+    async startReplace() {
+      const s = S();
+      if (!s.len || state !== 'play' || !s.layers.length) return;
+      await openMic();
+      const L = s.layers[s.layers.length - 1];
+      rec = { buf: new Float32Array(s.len), got: 0, replace: L, from: null, mask: new Uint8Array(s.len) };
+      state = 'dub';
+      emit();
     },
     clear() { api.stop(); const s = S(); s.layers.forEach(freeChain); s.layers = []; s.len = 0; emit(); },
     // Сдвиг слоя, мс: вперёд (+, звук раньше — хвост из записи с запасом) или назад (−); наложения — по кругу.

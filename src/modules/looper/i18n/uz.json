@@ -58,5 +58,10 @@
   "editHint": "Halqa oynasi: oʻrtasidan surish — siljish, burchaklaridan — kesish.",
   "earlier1": "Qatlam 1 ms oldinga",
   "later1": "Qatlam 1 ms keyinga",
-  "fx": "Qatlam tovushi"
+  "fx": "Qatlam tovushi",
+  "do.replace": "Almashtirish",
+  "replaceOn": "Almashtirish: eski yozuv chalganingizda oʻchadi",
+  "multiplied": "Halqa ikki barobar uzun: {n}",
+  "redone": "Qatlam qaytarildi",
+  "noRedo": "Qaytaradigan narsa yoʻq"
 }

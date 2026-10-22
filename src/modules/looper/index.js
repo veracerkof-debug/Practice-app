@@ -10,6 +10,7 @@ import el from './i18n/el.json';
 import { createLooper, SLOTS, MAX_SEC } from '../../audio/looper.js';
 import { encodeWav } from '../../audio/voicefx.js';
 import { onHold, holdMenu, holdRepeat } from '../../ui/hold.js';
+import { swipe } from '../../ui/gestures.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.6 5.9"/><path d="M4 18.5V14h4.5"/><circle cx="12" cy="12" r="2" style="fill:currentColor"/></svg>';
 const I = {
@@ -38,7 +39,7 @@ const peaksCache = new Map(); // слой (номер:версия:точек) �
 const curView = () => (size === 'strip' ? 'ring' : VIEWS.includes(st().view) ? st().view : 'ring');
 const reelsView = () => curView() === 'reels';
 const tracksView = () => curView() === 'tracks';
-let live = null; // ведение слоя пальцем: { i, shift } — живой показ до отпускания
+let live = null, unswipe = null; // ведение слоя пальцем: { i, shift } — живой показ до отпускания
 const st = () => ctx.store.all();
 const metro = () => ctx.audio.metro;
 const barSec = () => { const m = metro().cfg; return (60 / m.bpm) * Math.max(1, m.num); };
@@ -50,7 +51,7 @@ const fmt = (s) => { s = Math.max(0, s); const m = Math.floor(s / 60), x = Math.
 
 function view() {
   const { t, ui } = ctx, S = lp ? lp.state : { state: 'idle', layers: [], slots: [0, 0, 0, 0], slot: 0, len: 0, pos: 0 }, s = S.state;
-  const small = size === 'quarter' || size === 'strip', lab = arm ? 'cancel' : s === 'idle' && S.len ? 'resume' : s; // пауза: петля есть — «Играть»
+  const small = size === 'quarter' || size === 'strip', lab = arm ? 'cancel' : s === 'idle' && S.len ? 'resume' : s === 'dub' && S.replace ? 'replace' : s; // пауза: петля есть — «Играть»; замена — своя подпись
   const main = '<button class="lpbtn ' + s + (arm ? ' arm' : '') + '" data-x="main" aria-label="' + ui.esc(t('do.' + lab)) + '">' +
     '<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="lptrack" cx="50" cy="50" r="' + R + '"/><circle class="lpring" cx="50" cy="50" r="' + R + '" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - (S.pos || 0))).toFixed(1) + '"/></svg>' +
     '<span class="lpic">' + (arm ? '<b class="lpcount">' + (arm.n + 1) + '</b>' : lab === 'resume' ? ui.icons.play : s === 'idle' ? I.rec : s === 'rec' ? I.stop : s === 'play' ? I.plus : I.stop) + '</span>' +
@@ -292,6 +293,15 @@ async function main() {
   try { await lp.tap(withMetro() ? barSec() : 0); } catch (e) { fail(e); }
   render();
 }
+// Касание кнопки: как раньше; второе касание сразу следом во время петли — наложение становится заменой
+// (старое под рукой стирается, как replace на педалях)
+let lastTap = 0;
+async function mainTap() {
+  const now = performance.now(), S = lp.state;
+  if (S.state === 'dub' && !S.replace && now - lastTap < 400) { lastTap = 0; if (lp.toReplace()) { ctx.ui.toast(ctx.t('replaceOn')); render(); } return; }
+  lastTap = now;
+  await main();
+}
 function disarm() { arm = null; if (offBeat) { offBeat(); offBeat = null; } }
 function stopAll() { disarm(); lp.stop(); if (withMetro() && metro().running) metro().stop(); render(); }
 
@@ -311,7 +321,9 @@ async function save() {
 function act(x, el) {
   const i = el && el.dataset.i != null ? +el.dataset.i : -1;
   switch (x) {
-    case 'main': main(); break;
+    case 'main': mainTap(); break;
+    case 'redo': ctx.ui.toast(ctx.t(lp.redo() ? 'redone' : 'noRedo')); render(); break;
+    case 'multiply': if (lp.multiply(2)) { ctx.ui.toast(ctx.t('multiplied', { n: ctx.tn('bars', Math.max(1, Math.round(lp.state.len / barSec()))) })); render(); } break;
     case 'stop': stopAll(); break;
     case 'undo': if (arm) { disarm(); render(); } else { ctx.ui.toast(ctx.t(lp.undo() ? 'undone' : 'nothing')); render(); } break;
     case 'save': save(); break;
@@ -330,7 +342,8 @@ function onKey(e) {
   const k = e.key;
   if (k === ' ' || k === 'Enter' || k === 'PageDown') { e.preventDefault(); main(); }
   else if (k === 'PageUp') { e.preventDefault(); stopAll(); }
-  else if (k === 'ArrowUp' || k === 'ArrowDown') { e.preventDefault(); act('undo'); }
+  else if (k === 'ArrowUp' || k === 'ArrowLeft') { e.preventDefault(); act('undo'); }
+  else if (k === 'ArrowDown' || k === 'ArrowRight') { e.preventDefault(); act('redo'); }
 }
 
 export default {
@@ -354,13 +367,17 @@ export default {
     bindDrag(host); // вести катушку или дорожку — сдвиг слоя
     holdRepeat(host, '.lpwrap [data-nd]', nudgeAct);
     // удержание кнопки — отмена последнего слоя; удержание слоя — убрать его
-    onHold(host, '[data-x="main"]', () => act('undo'));
+    // удержание кнопки: петля играет — удлинить вдвое (multiply), иначе — отменить (как было)
+    onHold(host, '[data-x="main"]', () => { const S = lp.state; if (S.state === 'play' && S.len) act('multiply'); else act('undo'); });
+    // смахивание по кнопке: влево — отменить слой, вправо — вернуть снятый
+    unswipe = swipe(host, { min: 50, left: () => act('undo'), right: () => act('redo'), ok: (ev) => !!ev.target.closest('[data-x="main"]') });
     onHold(host, '.lplayer, .lplane:not(.lpnone), .lpreel:not(.lpnone)', (row) => holdMenu(row, [{ icon: I.x, label: c.t('removeLayer'), danger: true, run: () => { lp.removeLayer(+row.dataset.li); render(); } }], c.t('layerN', { n: +row.dataset.li + 1 })));
     render();
   },
   resize(sz) { size = sz; render(); },
   // Окно закрыто: петля звучит дальше (как Hold у пианино), пока не остановят — удобно играть под неё в другом инструменте
   unmount() {
+    if (unswipe) { unswipe(); unswipe = null; }
     cancelAnimationFrame(raf);
     disarm();
     offs.splice(0).forEach((f) => f());
