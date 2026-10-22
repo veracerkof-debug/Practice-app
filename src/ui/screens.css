@@ -403,3 +403,14 @@ a.cell{color:inherit;text-decoration:none}
 .heavy p{margin:0;max-width:34ch;color:var(--l2);line-height:1.4}
 .heavy .hvnote{color:var(--ink)}
 .heavy a.cell{margin-top:10px;width:auto;padding:0 22px;text-decoration:none;border-radius:14px;background:var(--tint);color:var(--on-tint)}
+
+/* самопроверка (screens/selfcheck.js): строка — отметка, название, итог */
+.ckrow{display:flex;align-items:center;gap:12px;min-height:48px;padding:8px 14px}
+.ckrow+.ckrow{border-top:1px solid var(--sep)}
+.ckrow .psub{display:block;margin-top:2px;white-space:normal;font-size:13px;line-height:1.3;color:var(--l2)}
+.ckst{flex:0 0 28px;height:28px;display:grid;place-items:center;border-radius:50%;background:var(--fill);color:var(--l2);font-weight:700;font-size:15px}
+.ckrow[data-st="run"] .ckst{animation:ckspin 1s linear infinite;border:2px solid var(--fill);border-top-color:var(--tint);background:none}
+.ckrow[data-st="ok"] .ckst{background:color-mix(in srgb,var(--green,#2f9e55) 18%,transparent);color:var(--green,#2f9e55)}
+.ckrow[data-st="warn"] .ckst{background:color-mix(in srgb,#d08a00 18%,transparent);color:#d08a00}
+.ckrow[data-st="fail"] .ckst{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
+@keyframes ckspin{to{transform:rotate(360deg)}}

@@ -75,6 +75,7 @@
   `folder.js` — папка Melete на устройстве (Data, Media, Tabs, PDF, Lyrics; синхронизация в обе стороны), `foldersync.js` — когда синхронизировать; Android — `FolderPlugin.java`.
   `appicon.js` — иконка приложения на выбор (рисунки — `src/ui/appicons.js`, PNG — `build/appicons.mjs`, Android — `IconPlugin.java` и activity-ярлыки `IconActivities.java`).
   `log.js` — технический журнал на устройстве (3 ч, без личного); `report.js` — отчёт о проблеме (отправляет человек через «Поделиться»).
+  `selfcheck.js` — самопроверка на устройстве (звук, часы, нагрузка, движок плеера, микрофон, запись, IndexedDB, место, модели, экран; экран — `screens/selfcheck.js`, панель рядом с отчётом; итог — в журнал).
   `mastery.js` — лиги (самоцвет по часам практики в приложении; званий нет); `tama.js` — Мелета-тамагочи на занятии (`tamatexts.js` — реплики, экран — `src/ui/tama.js`).
   `recorder.js` — запись в инструментах (звук приложения, микрофон, видео модуля → медиатека; MIDI — сама игра, файл .mid; кнопка — `screens/rec.js`);
   `midi.js` — воспроизведение MIDI-записей в инструменте и MIDI-клавиатура (Android — `MidiPlugin.java`, веб — Web MIDI); инструмент с MIDI отдаёт `midiIn`/`midiStop`;
@@ -162,6 +163,7 @@
 - `npm run build` — сборка в `dist/`
 - `npm run preview` — посмотреть собранную версию
 - `npm test` — тесты (Vitest). `tests/parity.test.js` сверяет ядро с функциями из `legacy/practice.html`
+- `npm run e2e` — сквозные проверки в браузере (Playwright + Chromium, `tests/e2e/*.spec.js`, общее — `tests/e2e/melete.js`; сервер Vite поднимается сам). Идут в GitHub Actions при каждом пуше (`.github/workflows/e2e.yml`); красное — чинить до того, как автор возьмёт сборку. В контейнере Claude: `PW_CHROMIUM=/opt/pw-browsers/chromium npm run e2e`. Новая функция — строка-проверка туда же.
 - `npx cap sync android` / `npx cap run android -l --external` — Android с живой перезагрузкой
 - Веб-версия (отдельная от APK, для знакомства; память — в браузере: постоянное хранилище и service worker, `src/core/webmemory.js`, `public/sw.js`) собирается GitHub Actions (`.github/workflows/web.yml`) → ветка `gh-pages` → https://veracerkof-debug.github.io/Practice-app/
 - Windows-установщик собирает GitHub Actions (`.github/workflows/windows.yml`, Tauri) при каждом пуше → релиз «pre», файл `Melete-Setup.exe`; локально — `npm run win` (нужны Rust и Windows), `npm run win:dev` — окно с живой перезагрузкой

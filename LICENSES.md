@@ -56,6 +56,7 @@
 | Компонент | Лицензия |
 |---|---|
 | Vite, Vitest, @capacitor/cli | MIT |
+| @playwright/test — сквозные проверки в браузере (tests/e2e) | Apache-2.0 |
 | @coderline/alphatab-vite — подключение воркеров alphaTab при сборке | MPL-2.0 |
 
 ## Демо-набор

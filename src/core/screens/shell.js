@@ -13,6 +13,7 @@ import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditin
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView, toolsTab, setToolsTab } from './tools.js';
 import { reportSheet } from './report.js';
+import { checkSheet } from './selfcheck.js';
 import { songImportMenu } from './songimport.js';
 import { shareSheet, shareMenu } from './share.js';
 import { createPanel, legalSheet, unverifiedSheet } from './panel.js';
@@ -169,6 +170,7 @@ export function createShell(app, root) {
       if (tabsNow().includes('bible')) { unmountBible(); go('bible'); } else openToolView(app, 'bible', render); // есть вкладка — в неё
     }
     else if (d.act === 'report') reportSheet(app);
+    else if (d.act === 'check') checkSheet(app);
     else if (d.act === 'legal') legalSheet(d.v);
     else if (d.act === 'streak') streakSheet(app);
     else if (d.act === 'unver') unverifiedSheet(app);

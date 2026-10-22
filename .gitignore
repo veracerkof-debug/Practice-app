@@ -2,6 +2,9 @@
 node_modules/
 dist/
 .vite/
+# сквозные проверки (Playwright): отчёт и трассы падений
+playwright-report/
+test-results/
 
 # Android (появится на этапе 3)
 android/app/build/

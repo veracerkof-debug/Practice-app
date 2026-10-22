@@ -1,0 +1,51 @@
+# Сквозные проверки приложения в браузере (tests/e2e/, Playwright + Chromium): все инструменты во всех размерах окна,
+# узкий телефон, панель и страницы, самопроверка, студия (пауза), лупер под нагрузкой, плеер, слух, метроном,
+# капо, сцена. При каждом пуше — рядом со сборками; красное — чинится до того, как сборку возьмут тестировать.
+# Поддельные микрофон и камера браузера, звук в никуда, сети нет. Отчёт с трассами падений — в артефактах запуска.
+name: E2E (browser)
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths-ignore: ['**.md', 'docs/**', 'android/**', 'src-tauri/**', 'build/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Зависимости
+        run: npm ci
+
+      - name: Браузер
+        run: npx playwright install --with-deps chromium
+
+      - name: Сквозные проверки
+        run: npm run e2e
+        env:
+          CI: 1
+
+      - name: Отчёт (при падении)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14
