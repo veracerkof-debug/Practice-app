@@ -1,5 +1,7 @@
 // Хозяин модулей: создаёт ctx по контракту (MODULE_SPEC.md), монтирует модуль в окно,
 // учитывает время инструмента, открытого вне сессии.
+import { isDesk } from '../ui/desk.js';
+import { keyLabel } from './qwerty.js';
 import { getLang, makeT, makeTn, fmtNum, CORE_DICTS as coreDicts } from '../i18n/index.js';
 import { ui } from '../ui/index.js';
 import { createToolView, toolViewMs, toolViewVisibility, saveToolView, recordToolTime, trackMode, countsWhileHidden, FREE_TAGS, freeTagName } from './session.js';
@@ -160,6 +162,9 @@ export function makeCtx(app, mod) {
     // Открыть другой инструмент (например, пианино с подсветкой гаммы)
     openTool: (id) => app.openTool && app.openTool(id),
     // Есть ли другой модуль и включён ли он (кнопки «В студию» прячутся, когда студия выключена)
+    // игра с клавиатуры компьютера (qwerty.js): подпись клавиши для ноты — только в режиме компьютера (ui/desk.js)
+    desk: () => isDesk(),
+    keyLabel: (m) => (isDesk() && app.midi ? keyLabel(m, app.midi.qwerty.base) : ''),
     hasTool: (id) => !!moduleById(id) && isOn(app.store.state.settings, id),
     // Открыть инструмент с переданными настройками (например, «Табы» на файле: { lastTab, sec })
     openIn(id, patch) { Object.assign(app.device[id] ??= {}, patch); app.saveDevice(); if (app.openTool) app.openTool(id); },

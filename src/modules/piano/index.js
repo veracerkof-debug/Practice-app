@@ -28,6 +28,7 @@ const PEDAL = ['off', 'sus', 'hold'];
 const offs = [], ptr = new Map(), hold = { mode: 0, k: new Map() };
 // MIDI: ноты с клавиатуры и из записи (id → { key, m }) и сколько раз подсвечена клавиша
 const mi = new Map(), lit = new Map();
+let lastW = 0; // ширина окна при последней отрисовке: на компьютере от неё число клавиш
 
 const P = () => ctx.store.all();
 const rotated = () => false; // поворачивается весь экран (rotate ниже), клавиатура внутри окна — нет
@@ -40,14 +41,19 @@ function view() {
   const hl = ctx.shared.get('highlight');
   const pk = (attrs, icon, lab, on) => '<button class="pk' + (on ? ' on' : '') + '" ' + attrs + ' aria-label="' + lab + '" title="' + lab + '"' +
     (on != null ? ' aria-pressed="' + !!on + '"' : '') + '>' + icon + '</button>';
+  // компьютер, широкое окно: клавиш столько, сколько помещается (≈ 58 px на белую), но не меньше выбранного —
+  // на клавиатуре компьютера две с половиной октавы, их видно целиком
+  const wpx = host ? host.clientWidth : 0;
+  lastW = wpx;
+  const nw = ctx.desk && ctx.desk() && wpx > 900 ? Math.max(p.size, Math.min(29, Math.floor(wpx / 58))) : p.size;
   const bar = '<div class="pbar"><div class="pgrp">' + pk('data-step="poct" data-d="-1"', '‹', t('octDown')) + '<span class="num pval">' + mName(m0) + '–' +
-    mName(lastWhite(m0, p.size)) + '</span>' + pk('data-step="poct" data-d="1"', '›', t('octUp')) + '</div><div class="pgrp">' +
+    mName(lastWhite(m0, nw)) + '</span>' + pk('data-step="poct" data-d="1"', '›', t('octUp')) + '</div><div class="pgrp">' +
     pk('data-step="pkeys" data-d="-1"', I.minus, t('keysLess')) + pk('data-step="pkeys" data-d="1"', I.plus, t('keysMore')) +
     (panelOn() ? '' : pk('data-x="psound"', I.wave, t('sound'))) +
     (full ? '<button class="pk txt2' + (hold.mode ? ' on' : '') + '" data-x="phold" aria-pressed="' + !!hold.mode + '" aria-label="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '" title="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '">' + '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 20h12M9 20l2-12h2l2 12" style="fill:none;stroke:currentColor;stroke-width:2"/>' + (hold.mode === 2 ? '<circle cx="12" cy="5" r="2" style="fill:currentColor"/>' : '') + '</svg></i><span class="bt">' + (hold.mode === 1 ? 'Sus' : 'Hold') + '</span></button>' +
       pk('data-x="pdual"', I.dual, t('dual'), !!p.dual) + pk('data-x="prot"', I.rot, t('rotate'), !!p.rot) : '') + '</div></div>';
   const hlBtn = hl ? '<button class="pk txt on hlp" data-x="hloff" aria-label="' + t('hlOff') + '">' + ui.esc(hl.label) + ' ×</button>' : '';
-  const kb = (m) => kbHTML(m, p.size, hl ? hl.pcs : null, hl ? hl.root : null);
+  const kb = (m) => kbHTML(m, nw, hl ? hl.pcs : null, hl ? hl.root : null, ctx.keyLabel);
   const syn = panelOn() ? '<div class="psyn">' + synBody(ctx, true) + '</div>' : '';
   const inner = '<div class="pwrap' + (syn ? ' wsyn' : '') + '">' + syn + (syn ? '' : '<div class="lastnote num" id="lastnote" aria-live="polite"></div>') + hlBtn + bar +
     '<div class="kbs">' + (dual ? kb(m0 + 12) : '') + kb(m0) + '</div></div>';
@@ -236,9 +242,14 @@ export default {
     if (ctx.audio.synth.preload) ctx.audio.synth.preload(); // записи рояля — заранее, пока смотрят на клавиши
     render();
     bind();
-    ro = new ResizeObserver(() => layout());
+    // ширина сильно изменилась (окно компьютера растянули) — клавиш стало больше или меньше: перерисовать
+    ro = new ResizeObserver(() => { if (ctx.desk && ctx.desk() && host && Math.abs(host.clientWidth - lastW) > 58) render(); else layout(); });
     ro.observe(host);
     unsubShared = ctx.shared.subscribe((k) => { if (k === 'highlight') render(); });
+    // подписи клавиш компьютера: сменилась октава (↑ ↓) или режим компьютера — перерисовать клавиши
+    const re = () => render();
+    window.addEventListener('melete:qwerty', re); window.addEventListener('melete:desk', re);
+    offs.push(() => { window.removeEventListener('melete:qwerty', re); window.removeEventListener('melete:desk', re); });
   },
   resize(sz) { size = sz; render(); },
   unmount() {

@@ -8,6 +8,7 @@ import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
 import { autoMode, autoAna, autoHq, autoPower, autoLyr } from '../autostems.js';
 import { sortable } from '../../ui/hold.js';
+import { isDesk } from '../../ui/desk.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
 import { dayKey, weekday, weekStart } from '../time.js';
@@ -484,15 +485,19 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const body = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML }[page](app);
-    layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub ? '<button class="ic sm plain" data-pp="root" aria-label="' + esc(t('panel.back')) + '">' + icons.back + '</button>' : '<span></span>') +
+    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML };
+    // Компьютер (ui/desk.js): две колонки, как настройки системы — слева профиль и разделы, справа выбранный раздел
+    const desk = isDesk(), shown = desk && page === 'root' ? 'me' : page;
+    const body = desk ? '<div class="pdesk"><aside class="pdnav">' + rootHTML(app) + '</aside><section class="pdpage" data-shown="' + shown + '">' + PAGE_HTML[shown](app) + '</section></div>' : PAGE_HTML[page](app);
+    layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub && !desk ? '<button class="ic sm plain" data-pp="root" aria-label="' + esc(t('panel.back')) + '">' + icons.back + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
+    if (desk) { const cur = layer.querySelector('.pdnav [data-pp="' + shown + '"]'); if (cur) cur.setAttribute('aria-current', 'page'); }
     // переход между страницами: вперёд — справа, назад в корень — слева; перерисовка той же страницы — без движения
-    if (lastPage && lastPage !== page) layer.firstChild.classList.add(page === 'root' ? 'pback' : 'pfwd');
+    if (lastPage && lastPage !== page && !desk) layer.firstChild.classList.add(page === 'root' ? 'pback' : 'pfwd');
     layer.scrollTop = lastPage && lastPage !== page ? 0 : y;
     lastPage = page;
     if (page === 'look') mountSizePreview(app, layer);
-    if (page === 'root') mountStones(app, layer);
+    if (page === 'root' || desk) mountStones(app, layer);
     // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»
     if (page === 'data') { coreHelp(app, 'folder'); if (copies === null) loadCopies(app, () => { if (page === 'data') render(); }); }
     if (page === 'mascot') { coreHelp(app, 'melete'); mountMelete(layer); }

@@ -280,6 +280,7 @@
   "report.crashText": "Dasturchiga hisobot yuborish sababni topishga yordam beradi. Yuborishdan oldin hisobotni koʻrish mumkin.",
   "report.later": "Hozir emas",
   "report.toReport": "Hisobotga",
+  "qw.octave": "Z tugmasi — {n}",
   "check.title": "Oʻz-oʻzini tekshirish",
   "check.sub": "ovoz, yozuv, xotira, modellar — shu qurilmada",
   "check.intro": "Ilova ovoz, ovoz oqimi soati, pleer, mikrofon, yozuv, xotira, modellar va ekranni oʻzi tekshiradi. Qisqa past signal eshitiladi. Natija jurnalga va muammo hisobotiga tushadi; hech narsa yuborilmaydi.",

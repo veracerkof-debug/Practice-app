@@ -10,15 +10,16 @@ export function lastWhite(m, n) {
   for (;;) { if (WHITE.includes(m % 12)) { wi++; if (wi === n) return m; } m++; }
 }
 
-// nw белых клавиш от m0; hl — подсвеченные ступени (Set), root — тоника
-export function kbHTML(m0, nw, hl, root) {
+// nw белых клавиш от m0; hl — подсвеченные ступени (Set), root — тоника; keys(m) — подпись клавиши компьютера (или '')
+export function kbHTML(m0, nw, hl, root, keys = null) {
   let ws = '', bs = '', wi = 0, m = m0;
+  const kq = (n) => { const s = keys ? keys(n) : ''; return s ? '<i class="kq" aria-hidden="true">' + s + '</i>' : ''; };
   while (wi < nw) {
     const pc = m % 12, h = hl && hl.has(pc) ? ' hl' + (root === pc ? ' root' : '') : '', nm = mName(m);
     if (WHITE.includes(pc)) {
-      ws += '<div class="w' + h + '" data-m="' + m + '" role="button" aria-label="' + nm + '"><span>' + (pc === 0 ? 'C' + (Math.floor(m / 12) - 1) : '') + '</span></div>';
+      ws += '<div class="w' + h + '" data-m="' + m + '" role="button" aria-label="' + nm + '"><span>' + (pc === 0 ? 'C' + (Math.floor(m / 12) - 1) : '') + '</span>' + kq(m) + '</div>';
       wi++;
-    } else if (wi > 0) bs += '<div class="b' + h + '" data-m="' + m + '" role="button" aria-label="' + nm + '" style="left:' + (wi * 100) / nw + '%"></div>';
+    } else if (wi > 0) bs += '<div class="b' + h + '" data-m="' + m + '" role="button" aria-label="' + nm + '" style="left:' + (wi * 100) / nw + '%">' + kq(m) + '</div>';
     m++;
   }
   return '<div class="kbwrap"><div class="kb" style="--n:' + nw + '">' + ws + bs + '</div></div>';

@@ -35,8 +35,9 @@ export function lpos(l) {
 
 export const wsKey = (a) => (!a ? 'free' : a.type === 'song' ? 'song:' + a.songId : a.type === 'tool' ? 'tool:' + a.tool : 'free');
 
-// Раскладка для сессии a; новая берётся из свободной практики
-export function getWS(device, a) {
+// Раскладка для сессии a; новая берётся из свободной практики. desk — компьютер (ui/desk.js): первая раскладка —
+// два окна рядом, метроном и табы с нотами (на большом экране одно окно на всю ширину пустует)
+export function getWS(device, a, { desk = false } = {}) {
   device.wsMap ??= {};
   const k = wsKey(a);
   let w = device.wsMap[k];
@@ -44,7 +45,7 @@ export function getWS(device, a) {
     if (k.startsWith('tool:')) w = { layout: 'F', panes: [a.tool], focus: 0 };
     else {
       const base = device.wsMap.free || device.ws;
-      w = base ? clone(base) : { layout: 'F', panes: DEFAULT_PANES.slice(), focus: 0 };
+      w = base ? clone(base) : desk ? { layout: 'HH', panes: ['metro', 'notes', ...DEFAULT_PANES.filter((x) => x !== 'metro' && x !== 'notes')], focus: 0 } : { layout: 'F', panes: DEFAULT_PANES.slice(), focus: 0 };
     }
     device.wsMap[k] = w;
   }

@@ -15,3 +15,6 @@
 .kb{height:clamp(130px,25vh,200px)}
 .kb .w.held{background:color-mix(in srgb,var(--tint) 45%,#fff)!important}
 .kb .b.held{background:var(--tint)!important}
+/* подпись клавиши компьютера (режим компьютера, ui/desk.js): внизу клавиши, не мешает нажатию */
+.kb .kq{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--l3);pointer-events:none;font-family:ui-monospace,Menlo,Consolas,monospace}
+.kb .b .kq{bottom:8px;color:rgba(255,255,255,.55)}

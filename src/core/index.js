@@ -166,6 +166,8 @@ export function boot(root) {
   app.auto = createAutoStems(app); // дорожки и тональность с темпом — сами, в тишине (autostems.js)
   app.midi = midiRef = createMidi(app);
   app.midi.input.resume();
+  // ↑ ↓ на клавиатуре компьютера — октава: короткая подсказка, какой ноте отвечает Z
+  app.midi.qwerty.onBase = (b) => { toast(t('qw.octave', { n: 'C' + (Math.floor(b / 12) - 1) })); window.dispatchEvent(new Event('melete:qwerty')); };
   // напоминания о практике: расписание на неделю — при запуске, смене настроек и после занятий (с задержкой)
   let remT = 0;
   const remSync = () => { clearTimeout(remT); remT = setTimeout(() => reschedule(store.state, (x) => remindText(x, remindCtx(store.state.settings))), 1500); };

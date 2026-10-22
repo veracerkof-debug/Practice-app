@@ -91,7 +91,7 @@ export function songHTML(app, id) {
   let h = '<div class="navrow"><button class="link" data-go="library">' + BACK + t('songs.title') + '</button>' + '<span class="vrow tight">' + icb('data-act="share" data-sid="' + s.id + '"', SHARE_IC, t('share.title'), 'plain') + icb('data-edit="' + s.id + '"', IC.pen, t('song.edit'), 'plain') + '</span></div>' +
     '<div class="large" style="margin:6px 4px 2px">' + esc(s.title) + '</div><p class="sub" style="margin:0 4px 16px">' + esc([s.artist, s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + '</p>' +
     (g || c || tg.length ? '<div class="tagrow" style="margin:-8px 4px 14px">' + (c ? chipHTML(c) : '') + (g ? chipHTML(g) : '') + tg.map((x) => chipHTML(x)).join('') + '</div>' : '') +
-    '<div class="card shero"><div class="mring">' + mRing(p, 72, scaleOf(app.store.state.settings)) + '</div><div class="grow">' +
+    '<div class="sdcols"><div class="sdmain"><div class="card shero"><div class="mring">' + mRing(p, 72, scaleOf(app.store.state.settings)) + '</div><div class="grow">' +
     // «Только инструменты»: без времени и числа занятий
     (plain ? '' : '<div class="srow" title="' + t('song.time') + '">' + IC.clock + '<b class="num">' + fmtDur(st.total) + '</b></div>' +
     '<div class="srow" title="' + t('song.sessions') + '">' + IC.stack + '<b class="num">' + st.count + '</b><span>' + (st.last ? relDay(st.last) : '—') + '</span></div>') +
@@ -99,8 +99,8 @@ export function songHTML(app, id) {
     '<div class="srow">' + IC.bolt + '<span class="dots" role="img" aria-label="' + esc(t('song.diffAria', { n: s.difficulty })) + '">' + [1, 2, 3, 4, 5].map((i) => '<i class="' + (i <= s.difficulty ? 'on' : '') + '"></i>').join('') + '</span></div></div></div>';
   if (!plain && st.tempo.length >= 2) h += '<div class="card">' + tempoChart(st.tempo, s.targetBpm) + '</div>';
   if (s.notes) h += '<div class="group" style="margin-top:12px"><div class="notes">' + esc(s.notes) + '</div></div>';
-  h += songEventsHTML(app, s.id);
-  h += '<div style="text-align:center;margin-top:28px"><button class="link" data-del="' + s.id + '" style="color:var(--red);font-size:15px">' + t('song.delete') + '</button></div>';
+  h += '</div><div class="sdside">' + songEventsHTML(app, s.id);
+  h += '<div style="text-align:center;margin-top:28px"><button class="link" data-del="' + s.id + '" style="color:var(--red);font-size:15px">' + t('song.delete') + '</button></div></div></div>';
   h += '<div class="fab"><button class="btn fill" data-play="' + s.id + '" aria-label="' + t('song.playAria') + '">' + PLAY + '<span>' + t('song.play') + '</span></button></div>';
   return h;
 }

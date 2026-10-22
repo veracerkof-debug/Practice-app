@@ -137,7 +137,8 @@ function monthHTML(app, cv) {
     h += '</div>';
   }
   h += '</div>';
-  return h + dayHTML(app, cv.sel, prac[dayKey(cv.sel)] || practiceByDay(app, cv.sel, cv.sel + DAY)[dayKey(cv.sel)] || 0);
+  // обёртка: на компьютере (desk.css) месяц слева, выбранный день справа; на телефоне — друг под другом
+  return '<div class="cmonth"><div class="cmg">' + h + '</div><div class="cmd">' + dayHTML(app, cv.sel, prac[dayKey(cv.sel)] || practiceByDay(app, cv.sel, cv.sel + DAY)[dayKey(cv.sel)] || 0) + '</div></div>';
 }
 
 // Церковный режим: чтение этого дня по плану — строкой под событиями; касание открывает Библию

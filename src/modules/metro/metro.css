@@ -156,3 +156,5 @@
 .wpoly{fill:var(--l2);opacity:.55}
 .wpoly.a{fill:var(--tint);opacity:.9}
 .mgrp{font-size:.55em;font-weight:600;color:var(--l2)}
+/* боком (широкое окно): колесо — квадрат по высоте, без потолка ширины, иначе центр вытягивается в овал */
+@container (min-aspect-ratio: 5/4){ .mwheel{max-width:none} }

@@ -292,6 +292,7 @@
   "report.crashText": "Sending a report to the developer helps find the cause. The report can be reviewed before sending.",
   "report.later": "Not now",
   "report.toReport": "Open report",
+  "qw.octave": "Key Z — {n}",
   "check.title": "Self-check",
   "check.sub": "sound, recording, storage, models — on this device",
   "check.intro": "The app checks its own sound, audio clock, player, microphone, recording, storage, models and screen. A short quiet tone will play. The result goes to the log and the problem report; nothing is sent.",

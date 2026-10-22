@@ -6,6 +6,7 @@
 import '../../ui/session.css';
 import { t } from '../../i18n/index.js';
 import { esc, icb, sheet, snav, toast, leave, icons } from '../../ui/index.js';
+import { isDesk } from '../../ui/desk.js';
 import { fmtDur, fmtClock } from '../format.js';
 import { getPct, ensureLib } from '../library.js';
 import { isOn } from '../settings.js';
@@ -121,7 +122,7 @@ export function createSessionScreen(app) {
     if (!app.active) return;
     if (layer) return;
     const a = app.active, tm = a.type === 'tool', hide = st().showClock === false || !!st().toolsOnly;
-    w = fixWS(getWS(device, a), sessionGroups(st(), song()), a);
+    w = fixWS(getWS(device, a, { desk: isDesk() }), sessionGroups(st(), song()), a);
     layer = document.createElement('div');
     layer.innerHTML = '<div class="session' + (tm ? ' toolmode' : '') + '" role="dialog" aria-modal="true" aria-label="' + esc(t('ses.aria')) + '"><div class="sin">' +
       '<div class="shd">' + icb('data-s="hide"', IC.down, t('ses.hide'), 'sm') +
@@ -130,7 +131,7 @@ export function createSessionScreen(app) {
       '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + icb('data-s="finish"', IC.check, t(st().toolsOnly ? 'ses.close' : 'ses.finish'), 'sm done') + '</div>' +
       '<div class="ws"></div></div>' +
       (tm ? '' : '<div class="sdock"><div class="tbar" id="tpills" role="tablist" aria-label="' + esc(t('ses.tools')) + '">' +
-        dockGroups(st(), song()).map((g) => '<button class="tb" data-pill="' + g + '" role="tab" aria-label="' + esc(groupName(st(), g)) + '" title="' + esc(groupName(st(), g)) + '">' + groupIcon(g) + '</button>').join('') +
+        dockGroups(st(), song()).map((g) => '<button class="tb" data-pill="' + g + '" role="tab" aria-label="' + esc(groupName(st(), g)) + '" title="' + esc(groupName(st(), g)) + '">' + groupIcon(g) + '<span class="tl" aria-hidden="true">' + esc(groupName(st(), g)) + '</span></button>').join('') +
         '</div></div>') + '</div>';
     document.body.appendChild(layer);
     layer.pureExit = () => (pureI >= 0 ? (setPanePure(-1), true) : false);

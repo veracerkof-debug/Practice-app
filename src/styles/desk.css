@@ -1,0 +1,120 @@
+/* Режим компьютера (html.desk — ui/desk.js: окно от 1024 px и мышь, или приложение для Windows).
+   Основа — первый принцип: экран большой, значит каждый экран использует ширину, а не тянет телефонную колонку.
+   Навигация — полосой слева (как в настольных приложениях), содержимое — на всю ширину в несколько колонок,
+   окна сессии — рядом друг с другом, шторки — диалогом по центру. Телефон и планшет пальцем этого не видят.
+   Подключается последним из стилей экранов (main.js) — уточняет их, не меняя порядка правил внутри них. */
+
+html.desk { --rail: 92px; }
+.tab .tl, .tb .tl { display: none; } /* подписи вкладок — только на компьютере */
+
+/* ---------- навигация: полоса слева ---------- */
+html.desk .tabbar {
+  top: 0; bottom: 0; left: 0; right: auto; width: var(--rail);
+  border-top: 0; border-right: .5px solid var(--sep);
+  padding: 18px 0 18px; display: flex; flex-direction: column;
+}
+html.desk .tabbar .in {
+  max-width: none; margin: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; overflow-x: hidden;
+}
+html.desk .tab { min-height: 64px; padding: 8px 4px; gap: 4px; }
+html.desk .tab .tl { display: block; font-size: 11.5px; font-weight: 600; line-height: 1.15; max-width: 84px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.desk .tab svg { width: 26px; height: 26px; }
+html.desk .tab::before { top: 8px; margin-top: 0; width: 56px; height: 32px; margin-left: -28px; }
+html.desk .tab:hover { color: var(--ink); }
+
+/* содержимое — справа от полосы, на всю ширину */
+html.desk #app > .wrap, html.desk main.wrap {
+  margin-left: var(--rail); max-width: none; padding: 20px 40px 48px;
+}
+html.desk main.wrap > * { max-width: 1680px; margin-left: auto; margin-right: auto; }
+html.desk .topbar { min-height: 48px; }
+
+/* ---------- главная: три колонки, «Начать практику» — во всю ширину ---------- */
+html.desk .hcta { min-height: 72px; font-size: 20px; margin: 10px 0 18px; }
+html.desk .qgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+html.desk .qbtn { max-height: 120px; }
+
+/* ---------- песни: карточки сеткой ---------- */
+html.desk .slist { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; }
+html.desk .hlist .slist { grid-template-columns: 1fr; }
+html.desk .stile3 { min-height: 92px; }
+/* страница песни: сведения и текст — слева, календарь — справа */
+html.desk .sdcols { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); gap: 24px; align-items: start; }
+html.desk .sdcols .notes { max-height: none; }
+html.desk .sdside { position: sticky; top: 16px; }
+html.desk .fab { left: calc(50% + var(--rail) / 2); }
+
+/* ---------- календарь: месяц слева, день справа ---------- */
+html.desk .cmonth { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+html.desk .cmd { position: sticky; top: 16px; }
+html.desk .cmd .cday-h { margin-top: 0; }
+
+/* ---------- инструменты: плотная сетка ---------- */
+html.desk .tgrid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important; grid-auto-rows: 150px; gap: 14px; }
+html.desk .tcard2.wide { grid-column: span 1; }
+html.desk .tcard2:hover { box-shadow: 0 4px 18px rgba(0, 0, 0, .08); }
+
+/* ---------- настройки: разделы слева, раздел справа ---------- */
+html.desk #panelLayer { left: var(--rail); }
+html.desk #panelLayer .wrap { max-width: none; padding: 12px 40px 40px; }
+html.desk .pdesk { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 36px; align-items: start; max-width: 1500px; margin: 0 auto; }
+html.desk .pdnav { position: sticky; top: 12px; max-height: calc(100vh - 80px); overflow-y: auto; padding-right: 4px; }
+html.desk .pdnav .cell[aria-current="page"] { background: color-mix(in srgb, var(--tint) 12%, var(--cell)); }
+html.desk .pdnav .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+html.desk .pdpage { min-width: 0; }
+html.desk .pdpage > .large:first-child { margin-top: 4px; }
+
+/* ---------- шторки: диалог по центру, шире ---------- */
+html.desk .sheet { max-width: 720px; max-height: 86vh; border-radius: 18px; }
+html.desk .scrim { left: var(--rail); }
+
+/* ---------- инструмент вне сессии ---------- */
+html.desk .tview { left: var(--rail); }
+html.desk .tvbody { max-width: none; padding: 12px 24px 16px; }
+html.desk .btab { height: calc(100dvh - 44px); }
+
+/* ---------- сессия: окна на всю ширину, панель инструментов — полосой слева ---------- */
+html.desk .session { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+html.desk .session .sin { grid-column: 2; grid-row: 1; max-width: none; padding: 10px 20px 16px; }
+html.desk .session .sdock {
+  grid-column: 1; grid-row: 1; border-top: 0; border-right: .5px solid var(--sep); padding: 14px 0; overflow-y: auto; overflow-x: hidden;
+}
+html.desk .session .tbar { flex-direction: column; max-width: none; padding: 0 8px; gap: 4px; justify-content: flex-start; align-items: stretch; overflow: visible; }
+html.desk .session .tb { width: auto; height: auto; min-height: 60px; flex-direction: column; gap: 3px; padding: 6px 2px; }
+html.desk .session .tb svg { width: 24px; height: 24px; }
+html.desk .session .tb .tl { display: block; font-size: 11px; font-weight: 600; max-width: 74px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.desk .session .tb.used::after { bottom: auto; top: 6px; left: auto; right: 10px; margin: 0; }
+html.desk .session .tb:hover { color: var(--ink); }
+html.desk .ws { margin: 8px 0 0; gap: 12px; }
+html.desk .session .ws > .pane.toolhost { padding: 14px; }
+html.desk .session .toolmode { grid-template-columns: minmax(0, 1fr); }
+html.desk .session.toolmode .sin { grid-column: 1; }
+
+/* ---------- инструменты в широком окне ---------- */
+/* пианино: ручки звука — одной невысокой полосой, остальное — клавишам */
+html.desk .pwrap.wsyn .psyn { flex: 0 0 200px; height: 200px; }
+/* главная — сеткой: неделя, лига, слово; «Начать» во всю ширину; быстрый доступ, события, песни */
+html.desk .hlist { columns: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
+html.desk .hlist .hblk { min-width: 0; }
+html.desk .hlist .hblk[data-hb="week"] { grid-column: 1; grid-row: 1; }
+html.desk .hlist .hblk[data-hb="league"] { grid-column: 2; grid-row: 1; }
+html.desk .hlist .hblk[data-hb="voice"] { grid-column: 3; grid-row: 1; }
+html.desk .hlist:not(:has(.hblk[data-hb="voice"])) .hblk[data-hb="league"] { grid-column: 2 / span 2; }
+html.desk .hlist .hblk[data-hb="start"] { grid-column: 1 / -1; grid-row: 2; }
+html.desk .hlist .hblk[data-hb="quick"] { grid-column: 1; grid-row: 3; }
+html.desk .hlist .hblk[data-hb="events"] { grid-column: 2; grid-row: 3; }
+html.desk .hlist .hblk[data-hb="songs"] { grid-column: 3; grid-row: 3; }
+html.desk .hlist:not(:has(.hblk[data-hb="events"])) .hblk[data-hb="songs"] { grid-column: 2 / span 2; }
+html.desk .hlist:not(:has(.hblk[data-hb="events"])) .hblk[data-hb="songs"] .slist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html.desk .hlist .hblk[data-hb="reading"] { grid-column: 1; }
+html.desk .hlist .hblk[data-hb="week"] > .hcard, html.desk .hlist .hblk[data-hb="league"] > * { height: 100%; }
+html.desk .hlist .hblk[data-hb="league"] .gemrow { margin-top: 0; min-height: 100%; padding: 18px 22px; }
+html.desk .hlist .hblk[data-hb="quick"] .hhdr, html.desk .hlist .hblk[data-hb="events"] .hhdr, html.desk .hlist .hblk[data-hb="songs"] .hhdr { margin-top: 0; }
+@media (max-width: 1380px) {
+  html.desk .hlist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html.desk .hlist .hblk[data-hb="voice"], html.desk .hlist .hblk[data-hb="songs"] { grid-column: 1 / -1; grid-row: auto; }
+  html.desk .hlist .hblk[data-hb="songs"] .slist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html.desk .hlist .hblk[data-hb="league"] { grid-column: 2; }
+}
+/* календарь: месяц помещается в окно */
+html.desk .cday { min-height: 92px; }

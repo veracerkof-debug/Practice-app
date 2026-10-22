@@ -44,7 +44,7 @@ export function createShell(app, root) {
     // вкладок может быть много (до 10): узкие — полоса прокручивается пальцем
     tabs.style.gridTemplateColumns = 'repeat(' + list.length + ',minmax(52px,1fr))';
     // вкладки — только значки (решение автора): название — в подсказке и для чтения с экрана
-    tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + ' aria-label="' + esc(tabName(k)) + '" title="' + esc(tabName(k)) + '">' + tabIcon(k) + '</button>').join('');
+    tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + ' aria-label="' + esc(tabName(k)) + '" title="' + esc(tabName(k)) + '">' + tabIcon(k) + '<span class="tl" aria-hidden="true">' + esc(tabName(k)) + '</span></button>').join('');
   };
   // Удержание вкладки — меню: модуль-вкладку вернуть в инструменты, обычную убрать; ведение — порядок
   function tabHoldMenu(b) {
@@ -75,12 +75,15 @@ export function createShell(app, root) {
 
   // «Минимал» без текста: рабочие экраны рисуются без слов (i18n: bareScope)
   const render = () => bareScope(renderNow);
+  // окно компьютера сузили до телефонного или растянули обратно — вкладки и раскладка экрана меняются: перерисовать
+  window.addEventListener('melete:desk', () => render());
   function renderNow() {
     // первый запуск: до конца регистрации — только заставка (поздние перерисовки — файлы, синхронизация — не в счёт)
     if (root.classList.contains('starting')) return;
     leagueCheck(app);
     renderTabs();
-    document.documentElement.style.setProperty('--tabh', tabs.parentElement.offsetHeight + 'px');
+    // на компьютере полоса — слева во всю высоту: снизу её нет (ui/desk.js)
+    document.documentElement.style.setProperty('--tabh', (document.documentElement.classList.contains('desk') ? 0 : tabs.parentElement.offsetHeight) + 'px');
     const tm = tabModuleOf(app.store.state.settings, view.tab);
     if (tm) { renderTabModule(tm); return; }
     unmountBible();

@@ -7,6 +7,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { createDecoder, takeDur } from '../music/midi.js';
 import { log } from './log.js';
+import { installQwerty, BASE_DEF } from './qwerty.js';
 
 const Native = Capacitor.isNativePlatform() ? registerPlugin('Midi') : null;
 export const SPEEDS = [0.5, 0.75, 1];
@@ -158,6 +159,28 @@ export function createMidi(app) {
       },
     },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
+    // Клавиатура компьютера (qwerty.js): нижний ряд от «До» базовой октавы, верхний — октавой выше
+    qwerty: { get base() { return (app.device && app.device.qwertyBase) || BASE_DEF; }, onBase: null },
   };
+  // Клавиши компьютера → тот же вход, что у MIDI-клавиатуры. Слушает инструмент, открытый последним; в сессии
+  // с несколькими окнами — только если выбрано его окно (иначе клавиши у лупера, метронома и других)
+  const qTarget = () => {
+    const tg = target();
+    if (!tg || play || typeof document === 'undefined') return null;
+    const f = document.querySelector('.ws .pane.focus');
+    return !f || f.dataset.group === tg.id ? tg : null;
+  };
+  installQwerty({
+    active: () => !!qTarget(),
+    send: (e) => {
+      const tg = qTarget();
+      if (!tg) return;
+      try { tg.mod.midiIn(e); } catch (err) { log('midi', 'клавиатура компьютера: ' + (err && err.message)); }
+      app.rec && app.rec.midiEv(tg.id, e);
+    },
+    getBase: () => api.qwerty.base,
+    setBase: (b) => { if (app.device) { app.device.qwertyBase = b; app.saveDevice && app.saveDevice(); } },
+    onBase: (b) => api.qwerty.onBase && api.qwerty.onBase(b),
+  });
   return api;
 }

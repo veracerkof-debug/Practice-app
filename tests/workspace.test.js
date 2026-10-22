@@ -84,3 +84,16 @@ describe('рабочее пространство — действия', () => {
     expect([w.focus, w.panes[0], w.panes.length]).toEqual([0, 'notes', 7]);
   });
 });
+
+import { getWS as getWS2 } from '../src/core/workspace.js';
+describe('раскладка на компьютере', () => {
+  it('первая свободная практика — два окна: метроном и табы', () => {
+    const w = getWS2({}, null, { desk: true });
+    expect(w.layout).toBe('HH');
+    expect(w.panes.slice(0, 2)).toEqual(['metro', 'notes']);
+  });
+  it('сохранённая раскладка не меняется', () => {
+    const d = { wsMap: { free: { layout: 'F', panes: ['tuner'], focus: 0 } } };
+    expect(getWS2(d, null, { desk: true }).layout).toBe('F');
+  });
+});
