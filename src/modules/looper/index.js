@@ -39,7 +39,7 @@ const peaksCache = new Map(); // слой (номер:версия:точек) �
 const curView = () => (size === 'strip' ? 'ring' : VIEWS.includes(st().view) ? st().view : 'ring');
 const reelsView = () => curView() === 'reels';
 const tracksView = () => curView() === 'tracks';
-let live = null, unswipe = null; // ведение слоя пальцем: { i, shift } — живой показ до отпускания
+let live = null, unswipe = null, frame = 0; // ведение слоя пальцем: { i, shift } — живой показ до отпускания
 const st = () => ctx.store.all();
 const metro = () => ctx.audio.metro;
 const barSec = () => { const m = metro().cfg; return (60 / m.bpm) * Math.max(1, m.num); };
@@ -90,7 +90,22 @@ function view() {
 /* ---------- катушки и дорожки: рисунок ---------- */
 
 const peaks = (i, L, n) => { const k = i + ':' + L.ver + ':' + n; let p = peaksCache.get(k); if (!p) { p = lp.peaks(i, n); if (p) { if (peaksCache.size > 64) peaksCache.clear(); peaksCache.set(k, p); } } return p; };
-const fit = (cv) => { const r = cv.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1), w = Math.max(1, Math.round(r.width * d)), h = Math.max(1, Math.round(r.height * d)); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; } return [w, h, d]; };
+// Размер холста: getBoundingClientRect на каждом кадре для каждого слоя заставлял браузер пересчитывать раскладку — измеряем раз в 30 кадров
+const fitCache = new WeakMap();
+const fit = (cv) => {
+  let f = fitCache.get(cv);
+  if (!f || ++f.n >= 30) { const r = cv.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1); f = { n: 0, w: Math.max(1, Math.round(r.width * d)), h: Math.max(1, Math.round(r.height * d)), d }; fitCache.set(cv, f); }
+  if (cv.width !== f.w || cv.height !== f.h) { cv.width = f.w; cv.height = f.h; }
+  return [f.w, f.h, f.d];
+};
+// Готовая картинка волны слоя (кольцо или полоса) — рисуется один раз на версию слоя и размер, в кадре только копируется:
+// четыре слоя по 96 отрезков на каждом кадре лагали на телефоне
+const imgCache = new Map();
+function staticImg(key, w, h, draw) {
+  let e = imgCache.get(key);
+  if (!e) { if (imgCache.size > 32) imgCache.clear(); const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d')); e = cv; imgCache.set(key, e); }
+  return e;
+}
 let css = null;
 const colors = () => css || (css = (() => { const s = getComputedStyle(host); return { tint: s.getPropertyValue('--tint').trim(), fill: s.getPropertyValue('--fill').trim(), ink: s.getPropertyValue('--ink').trim(), l2: s.getPropertyValue('--l2').trim(), red: '#D9534F' }; })());
 
@@ -102,26 +117,31 @@ function drawReel(cv, i, L, pos, S) {
   g.clearRect(0, 0, w, h);
   g.beginPath(); g.arc(cx, cy, R * 0.98, 0, Math.PI * 2); g.fillStyle = C.fill; g.fill();
   if (!L) { g.beginPath(); g.arc(cx, cy, r0, 0, Math.PI * 2); g.strokeStyle = C.l2; g.globalAlpha = 0.35; g.setLineDash([4, 6]); g.lineWidth = 2; g.stroke(); g.setLineDash([]); g.globalAlpha = 1; return; }
-  const N = 96, pk = peaks(i, L, N), rot = -(pos + liveDelta(i, L, S)) * Math.PI * 2 - Math.PI / 2; // плёнка идёт мимо головки
-  g.lineWidth = Math.max(1.5, (Math.PI * 2 * r0) / N * 0.6); g.lineCap = 'round';
-  g.strokeStyle = L.mute ? C.l2 : S.state === 'dub' && i === S.layers.length - 1 ? C.red : C.tint;
-  g.globalAlpha = L.mute ? 0.35 : 0.9;
-  for (let k = 0; k < N; k++) {
-    const a = rot + (k / N) * Math.PI * 2, len = r0 + (r1 - r0) * (0.08 + 0.92 * (pk ? pk[k] : 0));
-    g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len); g.stroke();
-  }
-  g.globalAlpha = 1;
+  const N = 96, rot = -(pos + liveDelta(i, L, S)) * Math.PI * 2; // плёнка идёт мимо головки
+  const color = L.mute ? C.l2 : S.state === 'dub' && i === S.layers.length - 1 ? C.red : C.tint;
+  const ring = staticImg('r:' + i + ':' + L.ver + ':' + w + ':' + h + ':' + color + ':' + !!L.mute, w, h, (q) => {
+    const pk = peaks(i, L, N);
+    q.lineWidth = Math.max(1.5, (Math.PI * 2 * r0) / N * 0.6); q.lineCap = 'round'; q.strokeStyle = color; q.globalAlpha = L.mute ? 0.35 : 0.9;
+    for (let k = 0; k < N; k++) {
+      const a = (k / N) * Math.PI * 2 - Math.PI / 2, len = r0 + (r1 - r0) * (0.08 + 0.92 * (pk ? pk[k] : 0));
+      q.beginPath(); q.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); q.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len); q.stroke();
+    }
+  });
+  g.save(); g.translate(cx, cy); g.rotate(rot); g.drawImage(ring, -cx, -cy); g.restore();
   // ось и головка
   g.beginPath(); g.arc(cx, cy, r0 * 0.5, 0, Math.PI * 2); g.fillStyle = C.ink; g.globalAlpha = L.mute ? 0.25 : 0.85; g.fill(); g.globalAlpha = 1;
   g.beginPath(); g.moveTo(cx - 5, cy - R); g.lineTo(cx + 5, cy - R); g.lineTo(cx, cy - R + 9); g.closePath(); g.fillStyle = C.ink; g.fill();
 }
 // Дорожка: волна слева направо, ход — линия
 function drawLane(cv, i, L, pos, S) {
-  const [w, h] = fit(cv), g = cv.getContext('2d'), C = colors(), N = Math.max(24, Math.floor(w / 3)), pk = peaks(i, L, N), bw = w / N, off = -liveDelta(i, L, S) * w;
+  const [w, h] = fit(cv), g = cv.getContext('2d'), C = colors(), N = Math.max(24, Math.floor(w / 3)), off = -liveDelta(i, L, S) * w;
   g.clearRect(0, 0, w, h);
-  g.fillStyle = L.mute ? C.l2 : C.tint; g.globalAlpha = L.mute ? 0.35 : 0.85;
-  for (let k = 0; k < N; k++) { const v = pk ? pk[k] : 0, bh = Math.max(2, v * (h - 4)); let x = k * bw + off; if (x < -bw) x += w; else if (x > w) x -= w; g.fillRect(x + bw * 0.2, (h - bh) / 2, bw * 0.6, bh); }
-  g.globalAlpha = 1;
+  const bars = staticImg('l:' + i + ':' + L.ver + ':' + w + ':' + h + ':' + !!L.mute, w, h, (q) => {
+    const pk = peaks(i, L, N), bw = w / N;
+    q.fillStyle = L.mute ? C.l2 : C.tint; q.globalAlpha = L.mute ? 0.35 : 0.85;
+    for (let k = 0; k < N; k++) { const v = pk ? pk[k] : 0, bh = Math.max(2, v * (h - 4)); q.fillRect(k * bw + bw * 0.2, (h - bh) / 2, bw * 0.6, bh); }
+  });
+  if (off) { const o = ((off % w) + w) % w; g.drawImage(bars, o, 0); g.drawImage(bars, o - w, 0); } else g.drawImage(bars, 0, 0); // сдвиг при ведении — картинка по кругу
   if (pos >= 0) { g.fillStyle = C.ink; g.fillRect(pos * w - 1, 0, 2, h); }
 }
 function drawAll() {
@@ -144,7 +164,7 @@ function tick() {
   const S = lp.state, ring = host.querySelector('.lpring'), tm = host.querySelector('.lptime');
   if (ring) ring.setAttribute('stroke-dashoffset', (C * (1 - S.pos)).toFixed(1));
   if (tm && S.state === 'rec') tm.textContent = fmt(S.recSec) + ' / ' + fmt(MAX_SEC);
-  if (reelsView() || tracksView()) drawAll();
+  if ((reelsView() || tracksView()) && ((frame++ & 1) === 0 || live)) drawAll(); // волны — через кадр (30 в секунду хватает глазу); при ведении — каждый
   if (S.state !== 'idle' || live) raf = requestAnimationFrame(tick);
 }
 
