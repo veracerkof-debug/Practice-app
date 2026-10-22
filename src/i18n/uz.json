@@ -1615,5 +1615,9 @@
   "lic.mr.sub": "Yaxshilangan ajratish uchun vokal (Windows): 464 MB model oʻrnatuvchida, tarmoq kerak emas",
   "lic.mr.text": "Mel-Band RoFormer: Kimberley Jensen ogʻirliklari (MIT litsenziyasi), Wang va b. (ByteDance) arxitekturasi, Phil Wang va Roman Solovyev (ZFTurbo) kodi; ONNX toʻplami audiojs/mel-roformer (MIT). Spektr va segmentlarni ulash — oʻz kodimiz (src-tauri/src/roformer.rs), @audio/neural-separate etaloni bilan solishtirilgan.",
   "lic.df.sub": "Yozuvlarda shovqinni kamaytirish (Windows): DeepFilterNet3 modeli dastur ichida, bajarish — tract; tarmoq kerak emas",
-  "lic.df.text": "DeepFilterNet (Hendrik Schröter va b., MIT va Apache-2.0 litsenziyalari) — oʻrnatilgan DeepFilterNet3 modeli bilan deep_filter kreyti; tract (Sonos, MIT va Apache-2.0) — Rust da neyron tarmoqlarni bajarish."
+  "lic.df.text": "DeepFilterNet (Hendrik Schröter va b., MIT va Apache-2.0 litsenziyalari) — oʻrnatilgan DeepFilterNet3 modeli bilan deep_filter kreyti; tract (Sonos, MIT va Apache-2.0) — Rust da neyron tarmoqlarni bajarish.",
+  "stage.capo": "Kapo",
+  "stage.capoN": "kapo {n}",
+  "stage.capoSub": "{k} shakllari",
+  "stage.capoHint": "akkord shakllari pastroq pardalarda; 0 — kaposiz"
 }

@@ -1673,5 +1673,9 @@
   "lic.mr.sub": "Вокал для улучшенного разделения (Windows): модель 464 МБ в установщике, сеть не нужна",
   "lic.mr.text": "Mel-Band RoFormer: веса Kimberley Jensen (лицензия MIT), архитектура Wang и др. (ByteDance), код Phil Wang и Roman Solovyev (ZFTurbo); ONNX-сборка audiojs/mel-roformer (MIT). Спектр и склейка сегментов — свой код (src-tauri/src/roformer.rs), сверен с эталоном @audio/neural-separate.",
   "lic.df.sub": "Шумоподавление записей (Windows): модель DeepFilterNet3 внутри программы, выполнение — tract; сеть не нужна",
-  "lic.df.text": "DeepFilterNet (Hendrik Schröter и др., лицензии MIT и Apache-2.0) — крейт deep_filter с встроенной моделью DeepFilterNet3; tract (Sonos, MIT и Apache-2.0) — выполнение нейросетей на Rust."
+  "lic.df.text": "DeepFilterNet (Hendrik Schröter и др., лицензии MIT и Apache-2.0) — крейт deep_filter с встроенной моделью DeepFilterNet3; tract (Sonos, MIT и Apache-2.0) — выполнение нейросетей на Rust.",
+  "stage.capo": "Капо",
+  "stage.capoN": "капо {n}",
+  "stage.capoSub": "формы {k}",
+  "stage.capoHint": "аккорды формами на ладов ниже; 0 — без капо"
 }

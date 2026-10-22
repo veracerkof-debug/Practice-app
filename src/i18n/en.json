@@ -1651,5 +1651,9 @@
   "lic.mr.sub": "Vocals for improved separation (Windows): 464 MB model in the installer, no network",
   "lic.mr.text": "Mel-Band RoFormer: weights by Kimberley Jensen (MIT license), architecture by Wang et al. (ByteDance), code by Phil Wang and Roman Solovyev (ZFTurbo); ONNX export audiojs/mel-roformer (MIT). Spectrogram and segment stitching are our own code (src-tauri/src/roformer.rs), checked against the @audio/neural-separate reference.",
   "lic.df.sub": "Noise reduction for recordings (Windows): the DeepFilterNet3 model inside the program, run by tract; no network",
-  "lic.df.text": "DeepFilterNet (Hendrik Schröter et al., MIT and Apache-2.0 licenses) — the deep_filter crate with the built-in DeepFilterNet3 model; tract (Sonos, MIT and Apache-2.0) — neural network inference in Rust."
+  "lic.df.text": "DeepFilterNet (Hendrik Schröter et al., MIT and Apache-2.0 licenses) — the deep_filter crate with the built-in DeepFilterNet3 model; tract (Sonos, MIT and Apache-2.0) — neural network inference in Rust.",
+  "stage.capo": "Capo",
+  "stage.capoN": "capo {n}",
+  "stage.capoSub": "{k} shapes",
+  "stage.capoHint": "chord shapes a few frets lower; 0 — no capo"
 }

@@ -10,8 +10,8 @@ import '../../ui/stage.css';
 import { t } from '../../i18n/index.js';
 import { esc, sheet, snav, sw, toast, confirm, icons } from '../../ui/index.js';
 import { lyricsHTML } from '../../music/lyrics.js';
-import { keyLabel } from '../../music/transpose.js';
-import { itemOf, setItem, moveSong, setSongs, tracksOf, barSec, resumeOk, chordsAbove, TR_MAX } from '../stage.js';
+import { keyLabel, shiftKey } from '../../music/transpose.js';
+import { itemOf, setItem, moveSong, setSongs, tracksOf, barSec, resumeOk, chordsAbove, TR_MAX, capoClamp } from '../stage.js';
 import { saveEvent, liveEvents } from '../calendar.js';
 import { metroForSession } from '../session.js';
 import { logErr } from '../log.js';
@@ -77,6 +77,7 @@ function itemSheet(app, evId, songId, back) {
       row(t('stage.count'), sw('sg:count', it.count, t('stage.count')), t('stage.countSub')) + '</div>' +
       '<div class="hdr">' + esc(t('stage.keyHdr')) + '</div><div class="group">' +
       row(t('stage.tr'), step('tr', (it.tr > 0 ? '+' : '') + it.tr, t('stage.tr')), it.key ? keyLabel(it.key) : t('stage.noKey')) +
+      row(t('stage.capo'), step('capo', it.capo || '0', t('stage.capo')), it.capo && it.key ? t('stage.capoSub', { k: keyLabel(shiftKey(it.key, -it.capo)) }) : t('stage.capoHint')) +
       (it.key ? row(t('stage.pad'), sw('sg:pad', it.pad, t('stage.pad')), t('stage.padSub', { key: keyLabel(it.key) })) : '') + '</div>' +
       '<div class="hdr">' + esc(t('stage.track')) + '</div><div class="group">' +
       (tracks.length ? [['', t('stage.noTrack')], ...tracks.map((r) => [r.id, r.name])].map(([id, name]) => '<button class="cell" data-sgtr="' + esc(id) + '"><span class="grow">' + esc(name) + '</span>' +
@@ -97,6 +98,7 @@ function itemSheet(app, evId, songId, back) {
       if ((b = e.target.closest('[data-sgst]'))) {
         const d = +b.dataset.d;
         if (b.dataset.sgst === 'bpm') save({ bpm: (it.bpm || 90) + d * (e.shiftKey ? 10 : 1) });
+        else if (b.dataset.sgst === 'capo') save({ capo: capoClamp(it.capo + d) });
         else save({ tr: Math.max(-TR_MAX, Math.min(TR_MAX, it.tr + d)) });
         sh.update();
       } else if ((b = e.target.closest('[data-sgtr]'))) { save({ track: b.dataset.sgtr }); sh.update(); }
@@ -202,10 +204,10 @@ export function openStage(app, evId, i = 0) {
     const chip = (k, on, label, avail = true) => avail ? '<button class="sgchip' + (on ? ' on' : '') + '" data-sgt="' + k + '" aria-pressed="' + on + '">' + esc(label) + '</button>' : '';
     const trName = it.track ? (audioFiles(app).find((r) => r.id === it.track) || {}).name || '' : '';
     S.el.innerHTML = '<div class="sgtop"><button class="sgic" data-sg="exit" aria-label="' + esc(t('stage.exit')) + '">' + I.x + '</button>' +
-      '<div class="sghead"><b>' + esc(s.title) + '</b><span>' + esc([S.i + 1 + ' / ' + L.length, it.key ? keyLabel(it.key) : '', it.bpm ? it.bpm + ' bpm' : ''].filter(Boolean).join(' · ')) + '</span></div>' +
+      '<div class="sghead"><b>' + esc(s.title) + '</b><span>' + esc([S.i + 1 + ' / ' + L.length, it.key ? keyLabel(it.key) : '', it.capo ? t('stage.capoN', { n: it.capo }) : '', it.bpm ? it.bpm + ' bpm' : ''].filter(Boolean).join(' · ')) + '</span></div>' +
       '<i class="sgbeat" aria-hidden="true"></i>' +
       '<button class="sgic txt" data-sgfs="-2" aria-label="' + esc(t('stage.smaller')) + '">A−</button><button class="sgic txt" data-sgfs="2" aria-label="' + esc(t('stage.bigger')) + '">A+</button></div>' +
-      '<div class="sgtext" style="font-size:' + S.fs + 'px">' + (it.text && s.notes ? '<div class="lyr">' + lyricsHTML(chordsAbove(s.notes), it.tr, it.srcKey) + '</div>' :
+      '<div class="sgtext" style="font-size:' + S.fs + 'px">' + (it.text && s.notes ? '<div class="lyr">' + lyricsHTML(chordsAbove(s.notes), it.tr - it.capo, it.srcKey) + '</div>' :
         '<div class="sgbig">' + esc(s.title) + (s.artist ? '<small>' + esc(s.artist) + '</small>' : '') + '</div>') + '</div>' +
       '<div class="sgchips">' + chip('click', audio.metro.running, t('stage.click') + (it.bpm ? ' ' + it.bpm : '')) + chip('pad', S.padOn, t('stage.pad') + (it.key ? ' ' + keyLabel(it.key) : ''), !!it.key) +
         chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!it.track) + (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : '') + '</div>' +

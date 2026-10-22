@@ -20,7 +20,7 @@ Zip-архив:
   "title": "Репетиция",
   "songs": [
     { "ref": "lx3k…", "title": "…", "artist": "…", "genre": "…", "key": "Am", "targetBpm": 72,
-      "notes": "[Припев]\nAm  F  C  G\n…", "metro": { "bpm": 72, "num": 6, "den": 8 } }
+      "notes": "[Припев]\nAm  F  C  G\n…", "capo": 3, "metro": { "bpm": 72, "num": 6, "den": 8 } }
   ],
   "set": { "ref": "e…", "title": "…", "kind": "rehearsal", "start": 0, "end": 0, "allDay": false,
            "place": "…", "note": "…", "songs": ["lx3k…"] },

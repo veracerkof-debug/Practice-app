@@ -44,3 +44,5 @@
 :is(.tview.pure,.pfull) .notes-root .atbar>:not(.atpl){display:none}
 :is(.tview.pure,.pfull) .notes-root .lyr{padding:12px 16px}
 .notes-root{position:relative}
+
+.trview.capo.on{background:var(--tint);color:var(--on-tint);border-color:transparent}

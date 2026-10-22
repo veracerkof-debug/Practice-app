@@ -102,5 +102,10 @@
   "pasteTab": "Text tab",
   "pasteOpen": "Open",
   "pasteName": "Name",
-  "pasteHint": "String lines from a website or a message: e|--3--5--|… Frets, chords, h/p, slides and bars are recognised; rhythm — by the spacing between notes. Playback as with any tab."
+  "pasteHint": "String lines from a website or a message: e|--3--5--|… Frets, chords, h/p, slides and bars are recognised; rhythm — by the spacing between notes. Playback as with any tab.",
+  "capo.title": "Capo",
+  "capo.n": "Capo {n}",
+  "capo.none": "No capo",
+  "capo.hint": "Capo on fret {n}: sounds in {k}, chords shown as {k2} shapes. Hold the button to remove the capo.",
+  "capo.hint0": "Capo on fret N: the key stays the same, chords are shown as shapes N semitones lower."
 }

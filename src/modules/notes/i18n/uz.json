@@ -101,5 +101,10 @@
   "pasteTab": "Matnli tab",
   "pasteOpen": "Ochish",
   "pasteName": "Nomi",
-  "pasteHint": "Saytdan yoki xabardan tor qatorlari: e|--3--5--|… Pardalar, akkordlar, h/p, slaydlar va taktlar taniladi; ritm — notalar orasidagi masofa boʻyicha. Ijro — oddiy tablardagidek."
+  "pasteHint": "Saytdan yoki xabardan tor qatorlari: e|--3--5--|… Pardalar, akkordlar, h/p, slaydlar va taktlar taniladi; ritm — notalar orasidagi masofa boʻyicha. Ijro — oddiy tablardagidek.",
+  "capo.title": "Kapo",
+  "capo.n": "Kapo {n}",
+  "capo.none": "Kaposiz",
+  "capo.hint": "{n}-pardada kapo: {k} tonalligida jaranglaydi, akkordlar {k2} shakllarida koʻrsatiladi. Tugmani ushlab turish — kaponi olib tashlash.",
+  "capo.hint0": "N-pardada kapo: tonallik oʻsha, akkordlar N yarim ton pastroq shakllarda koʻrsatiladi."
 }

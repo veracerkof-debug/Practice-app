@@ -12,6 +12,7 @@ import { tonicIsMinor } from '../../music/degrees.js';
 import { detectKey, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
 import { isPdf, openPdf, createPdfView, closePdfDoc, sniffPdf } from './pdf.js';
 import { pinch } from '../../ui/gestures.js';
+import { onHold } from '../../ui/hold.js';
 import { readDaw, dawFmt, DAW_FORMATS } from '../../music/daw.js';
 import { projectFromSong, isEmptyProject } from '../../music/project.js';
 import { projectXML } from '../../music/musicxml.js';
@@ -488,16 +489,18 @@ const dstyle = () => (st().dstyle === 'nash' ? 'nash' : 'roman');
 function textBody() {
   const { t } = ctx, song = curSong();
   if (!song) return '<div class="tablist">' + (ctx.songs().length ? textLibHTML() : '<div class="vq l2" style="font-size:14px">' + t('textNeedsSong') + '</div>') + '</div>';
-  const n = song.tr, key = songKey(song);
+  const n = song.tr || 0, key = songKey(song), capo = Math.max(0, Math.min(7, Math.round(+song.capo || 0)));
+  // капо: аккорды формами на capo ладов ниже; касание — выбрать лад, удержание — снять
+  const capoBtn = '<button class="trview capo' + (capo ? ' on' : '') + '" data-x="ncapo" aria-label="' + esc(t('capo.title')) + '">' + esc(capo ? t('capo.n', { n: capo }) + (key ? ' · ' + keyLabel(shiftKey(key, n - capo)) : '') : t('capo.title')) + '</button>';
   const keyBtn = key ? '<button class="trkey num" data-x="nkey" aria-label="' + esc(t('tr.pick')) + '">' + esc(keyLabel(key)) + (n ? ' → <b>' + esc(keyLabel(shiftKey(key, n))) + '</b>' : '') + '</button>' : '';
   return '<div class="ntools">' + icb('data-x="nlib"', I.list, t('lib.title'), 'sm') + '<span class="sgrow aname" style="text-align:left">' + esc(song.title) + '</span></div><div class="ntools"><div class="vrow tight">' + icb('data-x="ntr" data-d="-1"', I.minus, t('trDown'), 'sm') + '<span class="num trv">' + (n > 0 ? '+' : '') + n + '</span>' +
-    icb('data-x="ntr" data-d="1"', I.plus, t('trUp'), 'sm') + keyBtn +
+    icb('data-x="ntr" data-d="1"', I.plus, t('trUp'), 'sm') + keyBtn + capoBtn +
     // вид: аккорды или ступени (римские цифры / нэшвиллская запись — в выборе тональности)
     (key ? '<button class="trview" data-x="nview" aria-pressed="' + (viewOf() === 'degrees') + '" aria-label="' + esc(t(viewOf() === 'degrees' ? 'deg.toChords' : 'deg.toDegrees')) + '">' +
       (viewOf() === 'degrees' ? (dstyle() === 'nash' ? '1 4 5' : 'I IV V') : 'C F G') + '</button>' : '') + '</div>' +
     (big() ? '<div class="vrow tight">' + icb('data-x="nfs" data-d="-1"', 'A−', t('smaller'), 'sm txt') + icb('data-x="nfs" data-d="1"', 'A+', t('bigger'), 'sm txt') + icb('data-x="nedit"', I.pen, t('editText'), 'sm') + '</div>' : '') + '</div>' +
     (song.notes
-      ? '<div class="lyr" style="font-size:' + (st().fs || 15) + 'px">' + lyricsHTML(song.notes, n, key, { view: viewOf(), style: dstyle() }) + '</div>'
+      ? '<div class="lyr" style="font-size:' + (st().fs || 15) + 'px">' + lyricsHTML(song.notes, n - capo, key, { view: viewOf(), style: dstyle() }) + '</div>'
       : '<div class="vq l2" style="font-size:14px">' + t('textEmpty') + '<button class="btn sm" data-x="nedit" style="margin-top:8px">' + t('addText') + '</button></div>');
 }
 
@@ -550,6 +553,17 @@ function pasteSheet() {
     st().sec = 'tabs'; ctx.store.save();
     openTab(rec);
   }));
+}
+
+// Капо: лад 0…7; аккорды показываются формами, подпись — что звучит
+function capoSheet() {
+  const { t, ui } = ctx, song = curSong();
+  if (!song) return;
+  const key = songKey(song), cur = Math.max(0, Math.min(7, Math.round(+song.capo || 0)));
+  ui.sheet(() => ui.snav(t('capo.title')) + '<div class="group"><div class="cellcol trgrid">' + Array.from({ length: 8 }, (_, i) => '<button type="button" class="pill num" data-capo="' + i + '" aria-pressed="' + (i === cur) + '">' +
+    (i ? i : esc(t('capo.none'))) + '</button>').join('') + '</div></div>' +
+    '<p class="ftr">' + esc(key ? (cur ? t('capo.hint', { n: cur, k: keyLabel(shiftKey(key, song.tr || 0)), k2: keyLabel(shiftKey(key, (song.tr || 0) - cur)) }) : t('capo.hint0')) : t('capo.hint0')) + '</p>',
+  (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-capo]'); if (!b) return; updCur({ capo: +b.dataset.capo }); sh.close(); render(); }));
 }
 
 // Выбор тональности напрямую: 12 вариантов того же наклонения, «Исходная» — сброс сдвига
@@ -687,6 +701,7 @@ function act(a, el) {
     case 'nfs': st().fs = Math.max(11, Math.min(40, (st().fs || 15) + +el.dataset.d)); ctx.store.save(); render(); break;
     case 'nedit': lyricsEdit(); break;
     case 'nkey': keySheet(); break;
+    case 'ncapo': capoSheet(); break;
     case 'nview': st().view = viewOf() === 'degrees' ? 'chords' : 'degrees'; ctx.store.save(); render(); break;
     case 'tadd': addFile(); break;
     case 'topen': if (x) openTab(x); break;
@@ -742,6 +757,7 @@ export default {
   accepts: (f) => f.type === 'application/pdf' || /\.(gp[3-8x]?|xml|musicxml|mxl|capx?|txt|tab|pdf|midi?|als|rpp|flp)$/i.test(f.name),
   drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
   mount(el, c, sz = 'full') {
+    onHold(el, '[data-x="ncapo"]', () => { const s = curSong(); if (s && s.capo) { updCur({ capo: 0 }); render(); c.ui.toast(c.t('capo.none')); } });
     host = el; ctx = c; size = sz;
     input = document.createElement('input');
     input.type = 'file';

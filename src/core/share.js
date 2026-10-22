@@ -14,7 +14,7 @@ import { setsOf } from './quotes.js';
 export const SHARE_FORMAT = 'melete', SHARE_V = 1, SHARE_EXT = '.melete', SHARE_MIME = 'application/octet-stream';
 
 // Поля песни, которые уходят команде
-const SONG_FIELDS = ['title', 'artist', 'genre', 'key', 'targetBpm', 'notes'];
+const SONG_FIELDS = ['title', 'artist', 'genre', 'key', 'targetBpm', 'notes', 'capo'];
 // Поля события-сет-листа
 const SET_FIELDS = ['title', 'kind', 'start', 'end', 'allDay', 'place', 'note'];
 

@@ -174,7 +174,7 @@ export function makeCtx(app, mod) {
     // (библиотека текстов и аккордов в «Табах и текстах»)
     song(id) {
       const s = id ? app.store.songById(id) : app.active && app.active.songId && app.store.songById(app.active.songId);
-      return s ? { id: s.id, title: s.title, notes: s.notes || '', tr: s.tr || 0, key: s.key || null } : null;
+      return s ? { id: s.id, title: s.title, notes: s.notes || '', tr: s.tr || 0, capo: s.capo || 0, key: s.key || null } : null;
     },
     // Правка песни (без id — текущей сессии): только текст с аккордами (notes) и транспонирование (tr)
     updateSong(patch, id) {
@@ -182,6 +182,7 @@ export function makeCtx(app, mod) {
       if (!s) return;
       if ('notes' in patch) s.notes = String(patch.notes);
       if ('tr' in patch) s.tr = Math.max(-11, Math.min(11, Math.round(+patch.tr || 0)));
+      if ('capo' in patch) { const v = Math.max(0, Math.min(7, Math.round(+patch.capo || 0))); if (v) s.capo = v; else delete s.capo; } // капо: формы аккордов ниже, звучит та же тональность
       s.updatedAt = app.store.now();
       app.store.save();
     },

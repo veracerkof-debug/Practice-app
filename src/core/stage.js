@@ -20,6 +20,9 @@ export function songKey(song) {
 
 const clampBpm = (v) => Math.max(20, Math.min(300, Math.round(+v || 0)));
 export const TR_MAX = 6;
+// Капо: аккорды показываются формами на capo ладов ниже, звучит та же тональность (у песни — song.capo, в сет-листе — своё)
+export const CAPO_MAX = 7;
+export const capoClamp = (v) => Math.max(0, Math.min(CAPO_MAX, Math.round(+v || 0)));
 
 // Записи песни, подходящие для минусовки (аудио)
 export const tracksOf = (files, songId) => (files || []).filter((r) => (!r.kind || r.kind === 'audio') && fileSongs(r).includes(songId));
@@ -38,6 +41,7 @@ export function itemOf(ev, song, files = []) {
     pad: o.pad != null ? !!o.pad && !!key : !!key && !track,
     track,
     tr,
+    capo: o.capo != null ? capoClamp(o.capo) : capoClamp(song.capo),
     text: o.text != null ? !!o.text : !!song.notes,
     key: key ? shiftKey(key, tr) : null,
     srcKey: key,
@@ -50,6 +54,7 @@ export function setItem(ev, songId, patch) {
   Object.entries(patch).forEach(([k, v]) => { if (v == null) delete cur[k]; else cur[k] = v; });
   if (cur.bpm != null) cur.bpm = clampBpm(cur.bpm);
   if (cur.tr != null) cur.tr = Math.max(-TR_MAX, Math.min(TR_MAX, Math.round(cur.tr)));
+  if (cur.capo != null) cur.capo = capoClamp(cur.capo);
   all[songId] = cur;
   return ev;
 }

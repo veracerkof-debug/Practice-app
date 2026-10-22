@@ -41,3 +41,23 @@ describe('сет-лист', () => {
     expect(lyricsHTML(chordsAbove('[G]Слово'), 2)).toContain('<b class="chd">A</b>');
   });
 });
+
+// Капо (ночь 22.10.2026): у песни — song.capo, в сет-листе — своё; аккорды формами ниже, звучит та же тональность
+import { capoClamp, CAPO_MAX } from '../src/core/stage.js';
+describe('капо', () => {
+  it('по умолчанию — из песни, в пределах 0…7; своё в пункте сет-листа', () => {
+    expect(itemOf({}, { ...song, capo: 3 }, []).capo).toBe(3);
+    expect(itemOf({}, { ...song, capo: 12 }, []).capo).toBe(CAPO_MAX);
+    expect(itemOf({}, song, []).capo).toBe(0);
+    const ev = { songs: ['s1'] };
+    setItem(ev, 's1', { capo: 2 });
+    expect(itemOf(ev, { ...song, capo: 5 }, []).capo).toBe(2);
+    expect(capoClamp(-1)).toBe(0); expect(capoClamp('4')).toBe(4);
+  });
+  it('формы: капо 3 в G показывает E-формы, а звучит G', () => {
+    const it = itemOf({}, { ...song, capo: 3 }, []);
+    const html = lyricsHTML(chordsAbove(song.notes), it.tr - it.capo, it.srcKey);
+    expect(html).toMatch(/>E</); expect(html).toMatch(/>A</); // G→E, C→A
+    expect(it.key.pc).toBe(7); // звучит по-прежнему G
+  });
+});
