@@ -99,5 +99,11 @@
   "help.1": "Tempo — wheel, arrows, typing or “Tap”.",
   "help.2": "Tap a beat: accent, normal or silent.",
   "help.3": "Meter and subdivision below; swing, speed-up and silent signals in settings.",
-  "help.tip": "Start 10–20 BPM below the clean tempo."
+  "help.tip": "Start 10–20 BPM below the clean tempo.",
+  "poly.bar": "Per bar",
+  "poly.beat": "Per beat",
+  "poly.ftrBeat": "A second voice plays {n} even hits on every beat (triplets against duplets); the first hit of each group is accented.",
+  "meter.groups": "Beat groups",
+  "meter.even": "Even",
+  "meter.noGroups": "Groups are for signatures of 5 beats and more"
 }

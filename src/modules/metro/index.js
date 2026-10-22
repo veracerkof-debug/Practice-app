@@ -5,7 +5,7 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { defaultAccents, tempoName } from '../../audio/metronome.js';
+import { defaultAccents, tempoName, GROUPINGS, accentsOfGroups, groupsLabel } from '../../audio/metronome.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><path d="M8 21h8l-3-17h-2zM12 14l5-7"/></svg>';
 
@@ -104,7 +104,8 @@ function wheelHTML() {
 function view() {
   const c = cfg(), { t, ui } = ctx, meterTxt = c.num + '/' + c.den;
   const tile = (attrs, inner, lab) => '<button class="mtile" ' + attrs + ' aria-label="' + ui.esc(lab) + '" title="' + ui.esc(lab) + '">' + inner + '</button>';
-  const meter = tile('data-s="meter"', '<b class="num">' + meterTxt + '</b>', t('meterBtn', { meter: meterTxt }));
+  const gl = groupsLabel(c.accents); // 7/8 · 3+2+2
+  const meter = tile('data-s="meter"', '<b class="num">' + meterTxt + (gl ? '<small class="mgrp"> ' + gl + '</small>' : '') + '</b>', t('meterBtn', { meter: meterTxt + (gl ? ' ' + gl : '') }));
   const sub = tile('data-x="msub"', SUBICON[c.sub], t('subBtn', { sub: t('sub.' + c.sub) }));
   if (size === 'strip') {
     return '<div class="vs"><div class="beats mini" id="beats"></div>' + sigHTML() + '<div class="srow2">' + meter + ui.icb('data-hold="-1"', ui.icons.left, t('slower'), 'round') +
@@ -138,6 +139,9 @@ function drawBeats() {
         s += '<circle class="wacc a' + l + '" cx="' + (100 + 53 * Math.cos(am)).toFixed(1) + '" cy="' + (100 + 53 * Math.sin(am)).toFixed(1) + '" r="' + (l === 3 ? 2.2 : 1.6) + '"/>';
       }
     }
+    // полиритм — точки внутри кольца долей: N на такт или N на каждую долю, первая в группе крупнее
+    const pn = Math.round(c.poly || 0);
+    if (pn >= 2) { const tot = c.polyPer === 'beat' ? pn * n : pn; for (let k = 0; k < tot; k++) { const a = ((-90 + (360 * k) / tot) * Math.PI) / 180; s += '<circle class="wpoly' + (k % pn ? '' : ' a') + '" cx="' + (100 + 40 * Math.cos(a)).toFixed(1) + '" cy="' + (100 + 40 * Math.sin(a)).toFixed(1) + '" r="' + (k % pn ? 1.4 : 2.2) + '"/>'; } }
     wb.innerHTML = s;
   }
   const b = host.querySelector('#beats');
@@ -254,9 +258,14 @@ function meterSheet() {
     ui.seg('den', [[2, '1/2'], [4, '1/4'], [8, '1/8'], [16, '1/16']], den, t('meter.den')) + '</div></div>' +
     '<div class="hdr">' + t('meter.common') + '</div><div class="group"><div class="cellcol" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">' +
     METERS.map(([n, d]) => '<button class="pill num" data-pre="' + n + '/' + d + '" aria-pressed="' + (n === num && d === den) + '">' + n + '/' + d + '</button>').join('') +
-    '</div></div><p class="ftr">' + t('meter.ftr') + '</p>',
+    '</div></div><div class="hdr">' + t('meter.groups') + '</div><div class="group"><div class="cellcol" id="grpbox"></div></div><p class="ftr">' + t('meter.ftr') + '</p>',
   (el, sh) => {
+    let groups = groupsLabel(c.accents);
+    setTimeout(() => { const box = el.querySelector('#grpbox'); if (box && !box.innerHTML) grpRef(); }, 0);
+    const grpRef = () => { const box = el.querySelector('#grpbox'), list = GROUPINGS[num] || []; if (!box) return; box.innerHTML = list.length ? '<div class="pickrow">' + [['', t('meter.even')], ...list.map((g) => [g, g])].map(([g, l]) => '<button type="button" class="lchip pick num' + ((groups || '') === g ? ' on' : '') + '" data-grp="' + g + '" aria-pressed="' + ((groups || '') === g) + '" style="--c:var(--tint);--t:var(--on-tint)">' + l + '</button>').join('') + '</div>' : '<span class="l2" style="font-size:14px">' + t('meter.noGroups') + '</span>'; };
     const ref = () => {
+      if (!(GROUPINGS[num] || []).includes(groups)) groups = '';
+      grpRef();
       el.querySelector('#mview').textContent = num + '/' + den;
       el.querySelector('#nv').textContent = num;
       el.querySelectorAll('[data-pre]').forEach((p) => p.setAttribute('aria-pressed', p.dataset.pre === num + '/' + den));
@@ -269,8 +278,10 @@ function meterSheet() {
       if (sg) { den = +sg.dataset.v; ref(); return; }
       const pr = e.target.closest('[data-pre]');
       if (pr) { [num, den] = pr.dataset.pre.split('/').map(Number); ref(); return; }
+      const gp = e.target.closest('[data-grp]');
+      if (gp) { groups = gp.dataset.grp; grpRef(); return; }
       if (e.target.closest('#ok')) {
-        c.num = num; c.den = den; c.accents = defaultAccents(num, den);
+        c.num = num; c.den = den; c.accents = groups && GROUPINGS[num] && GROUPINGS[num].includes(groups) ? accentsOfGroups(groups) : defaultAccents(num, den);
         M().restartBeat({ bar: true });
         M().save();
         sh.close();
@@ -304,8 +315,9 @@ async function moreSheet() {
     ui.seg('sub2', [1, 2, 3, 4].map((n) => [n, t('subdiv.' + n)]), c.sub, t('subdiv')) + '</div>' +
     (c.sub === 2 ? '<div class="cell"><span class="grow">' + t('swing') + '</span>' + ui.sw('swing', c.swing, t('swing')) + '</div>' : '') + '</div>' +
     '<div class="hdr">' + t('poly') + '</div><div class="group"><div class="cellcol">' +
-    ui.seg('poly', [[0, t('poly.off')], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6'], [7, '7']], c.poly || 0, t('poly')) + '</div></div>' +
-    '<p class="ftr">' + t('poly.ftr', { n: c.poly || 3, num: c.num }) + '</p>' +
+    ui.seg('poly', [[0, t('poly.off')], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6'], [7, '7']], c.poly || 0, t('poly')) + '</div>' +
+    (c.poly >= 2 ? '<div class="cellcol">' + ui.seg('polyper', [['bar', t('poly.bar')], ['beat', t('poly.beat')]], c.polyPer === 'beat' ? 'beat' : 'bar', t('poly')) + '</div>' : '') + '</div>' +
+    '<p class="ftr">' + (c.polyPer === 'beat' && c.poly >= 2 ? t('poly.ftrBeat', { n: c.poly }) : t('poly.ftr', { n: c.poly || 3, num: c.num })) + '</p>' +
     '<div class="hdr">' + t('trainer') + '</div><div class="group"><div class="cell"><span class="grow">' + t('on') + '</span>' + ui.sw('tr', c.trainer.on, t('trainer')) + '</div>' +
     (c.trainer.on ? '<div class="cell"><span class="grow">' + t('tr.step') + '</span>' + val(t('tr.stepVal', { n: c.trainer.step })) + ui.stepper('tstep', t('tr.stepLbl')) + '</div>' +
       '<div class="cell"><span class="grow">' + t('tr.every') + '</span>' + val(tn('tr.everyVal', c.trainer.every)) + ui.stepper('tevery', t('tr.everyLbl')) + '</div>' +
@@ -328,6 +340,7 @@ async function moreSheet() {
         if (k === 'adj') { ctx.store.set('adj', v); sh.update(); render(); return; }
         if (k === 'sound') c.sound = v;
         else if (k === 'poly') c.poly = +v;
+        else if (k === 'polyper') c.polyPer = v === 'beat' ? 'beat' : 'bar';
         else { c.sub = +v; M().restartBeat(); }
         changed();
         return;

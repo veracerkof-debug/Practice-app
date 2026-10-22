@@ -96,5 +96,11 @@
   "help.1": "Temp — gʻildirak, strelkalar, kiritish yoki «Tap».",
   "help.2": "Hissaga bosish — urgʻu, oddiy yoki jimlik.",
   "help.3": "Oʻlchov va boʻlinish — pastda; svinq, tezlashish va tovushsiz signallar — sozlamalarda.",
-  "help.tip": "Toza tempdan 10–20 zarba sekinroq boshlash."
+  "help.tip": "Toza tempdan 10–20 zarba sekinroq boshlash.",
+  "poly.bar": "Taktga",
+  "poly.beat": "Hissaga",
+  "poly.ftrBeat": "Ikkinchi ovoz har hissaga {n} marta teng uradi (triolʼ duolʼga qarshi); har guruhning birinchi zarbi urgʻuli.",
+  "meter.groups": "Hissa guruhlari",
+  "meter.even": "Tekis",
+  "meter.noGroups": "Guruhlar — 5 va undan koʻp hissali oʻlchamlar uchun"
 }

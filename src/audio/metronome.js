@@ -48,11 +48,29 @@ export const isMutedBar = (cfg, bar) => cfg.gap.on && bar % (cfg.gap.play + cfg.
 
 // Полиритм: cfg.poly ударов второго голоса ровно на такт (3 при 4/4 — «3 против 4»); 0 — выключен.
 // Длина такта — по долям без свинга (свинг только внутри восьмых). → времена ударов от начала такта barStart
+// cfg.polyPer: 'bar' (по умолчанию) — N ударов на такт; 'beat' — N ударов на каждую долю (триоли против дуолей).
+// Первый удар каждой группы (индекс кратен N) — с акцентом.
 export function polyTimes(cfg, barStart) {
   const n = Math.round(cfg.poly || 0);
   if (n < 2) return [];
-  const bar = (60 / cfg.bpm) * cfg.num;
+  const beat = 60 / cfg.bpm;
+  if (cfg.polyPer === 'beat') return Array.from({ length: n * cfg.num }, (_, k) => barStart + (beat * k) / n);
+  const bar = beat * cfg.num;
   return Array.from({ length: n }, (_, k) => barStart + (bar * k) / n);
+}
+// Группировка долей (5 = 2+3, 7 = 3+2+2): акценты — сильный на первой доле, средний на началах групп, остальные обычные
+export const GROUPINGS = { 5: ['2+3', '3+2'], 7: ['2+2+3', '3+2+2', '2+3+2'], 8: ['3+3+2', '3+2+3', '2+3+3'], 9: ['3+3+3', '2+2+2+3', '3+2+2+2'], 10: ['3+3+2+2', '2+2+3+3'], 11: ['3+3+3+2', '2+2+3+2+2'], 12: ['3+3+3+3', '4+4+4', '2+2+2+3+3'] };
+export function accentsOfGroups(groups) {
+  const g = String(groups).split('+').map((x) => Math.max(1, Math.round(+x || 0))), out = [];
+  g.forEach((n, i) => { for (let k = 0; k < n; k++) out.push(k === 0 ? (i === 0 ? 3 : 2) : 1); });
+  return out;
+}
+// Группировка по акцентам: «3+2+2» или '' (ровные доли, до 4 долей — не подписывается)
+export function groupsLabel(accents) {
+  if (!accents || accents.length <= 4) return '';
+  const starts = accents.map((a, i) => (i === 0 || a >= 2 ? i : -1)).filter((i) => i >= 0);
+  if (starts.length < 2) return '';
+  return starts.map((s, i) => (i + 1 < starts.length ? starts[i + 1] : accents.length) - s).join('+');
 }
 
 // Один шаг: событие текущей позиции и переход к следующей. Тренер может поднять cfg.bpm
@@ -148,7 +166,7 @@ export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = 
         const ev = step(pos, m.cfg);
         if (ev.level) voice(c, mixer.bus('metro'), next, ev.level, m.cfg.sound, noise);
         // второй голос полиритма — на начале такта, другим тембром (бип против клика и дерева, дерево против бипа)
-        if (ev.b === 0 && ev.s === 0 && !ev.silent && m.cfg.poly >= 2) polyTimes(m.cfg, next).forEach((t, k) => voice(c, mixer.bus('metro'), t, k ? 1 : 2, m.cfg.sound === 'beep' ? 'wood' : 'beep', noise));
+        if (ev.b === 0 && ev.s === 0 && !ev.silent && m.cfg.poly >= 2) polyTimes(m.cfg, next).forEach((t, k) => voice(c, mixer.bus('metro'), t, k % Math.round(m.cfg.poly) ? 1 : 2, m.cfg.sound === 'beep' ? 'wood' : 'beep', noise));
         m.queue.push({ t: next, b: ev.b, s: ev.s, bar: ev.bar, silent: ev.silent });
         if (m.queue.length > 256) m.queue.splice(0, m.queue.length - 128); // свёрнуто — анимация не разбирает очередь
         // Сигналы без звука (вспышка, вибрация): только доли, не дробления; через сколько мс удар станет слышен
