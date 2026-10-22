@@ -70,7 +70,7 @@ const UNDO_MAX = 40;
 
 let host = null, ctx = null, size = 'full', seq = null, roll = null, pl = null, offs = [], raf = 0, offSteps = null, offLive = null, offMix = null;
 // экран: { view: 'list' | 'song' | 'clip' | 'mix', pid, cid, bar, live (запись живого ввода) }; отмена и повтор: снимки проекта (JSON)
-const V = { view: 'list', pid: null, cid: null, bar: 0, live: false, auto: null }; // auto — { tr, kind }: правка огибающей дорожки
+const V = { view: 'list', pid: null, cid: null, bar: 0, live: false, auto: null, clipPos: 0, cursor: 0 }; // auto — { tr, kind }: правка огибающей дорожки
 const undo = { pid: null, last: '', stack: [], redo: [] };
 let clipBuf = null; // буфер обмена: слепок клипа (clipCopy)
 let R = null; // идущая запись: { kind: 'track' | 'mix', cap, input, tap, tr, from, lat, p }
@@ -204,10 +204,11 @@ function render() {
       empty: (tr, beat, x, y) => emptyMenu(anchorAt(x, y), tr, beat),
       ruler: (beat, x, y) => rulerMenu(anchorAt(x, y), beat),
       region: () => { save(); if (seq.playing && !R) seq.start(pl.cursor); },
-      seek: (beat) => { if (seq.playing && !R) seq.start(beat); },
+      seek: (beat) => { V.cursor = beat; if (seq.playing && !R) seq.start(beat); },
       change: () => save(),
     });
     pl.select(V.cid);
+    pl.cursor = V.cursor || 0; // плейлист создаётся заново при каждой перерисовке — курсор живёт в V (пауза продолжает с места)
   }
   tickPos();
 }
@@ -215,8 +216,8 @@ function render() {
 function tickPos() {
   cancelAnimationFrame(raf);
   if (!host || !seq) return;
-  const p = proj(), el = host.querySelector('#stpos'), b = seq.pos();
-  if (p && el) el.textContent = !seq.playing ? '1.1' : b < 0 ? '−' + Math.ceil(-b) : (Math.floor(b / p.num) + 1) + '.' + (Math.floor(b % p.num) + 1); // отсчёт — обратный
+  const p = proj(), el = host.querySelector('#stpos'), b = seq.playing ? seq.pos() : (V.view === 'song' ? V.cursor : V.clipPos) || 0; // на паузе — место, откуда продолжится
+  if (p && el) el.textContent = b < 0 ? '−' + Math.ceil(-b) : (Math.floor(b / p.num) + 1) + '.' + (Math.floor(b % p.num) + 1); // отсчёт — обратный
   if (pl) { pl.pos(b); if (b >= 0) pl.follow(b); }
   if (V.view === 'clip' && clip()) {
     const per = dataBeats(p, clip().data), inData = b >= 0 && per ? b % per : -1;
@@ -589,8 +590,14 @@ function act(x, el) {
     case 'new': { const np = newProject({ songId: ctx.session && ctx.session.songId || null }); ctx.projects.save(np); V.pid = np.id; V.view = 'song'; V.cid = null; V.bar = 0; render(); break; }
     case 'back': if (R) stopRec(); seq.stop(); V.view = 'list'; V.pid = null; V.cid = null; render(); break;
     case 'toSong': V.view = 'song'; V.auto = null; render(); break;
-    case 'play': if (R) { R.stopped = true; stopRec(); break; } if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('err.sound')); return; } seq.toggle(V.view === 'song' && pl ? pl.cursor : 0); render(); break;
-    case 'rewind': if (R) break; if (seq.playing) seq.start(0); else if (pl) { pl.cursor = 0; } tickPos(); break;
+    case 'play': { // пауза: стоп запоминает место, следующий старт — оттуда (в начало — кнопкой перемотки)
+      if (R) { R.stopped = true; stopRec(); break; }
+      if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('err.sound')); return; }
+      if (seq.playing) { const b = seq.pos(); if (b >= 0) { if (V.view === 'song') { V.cursor = b; if (pl) pl.cursor = b; } else V.clipPos = b; } seq.stop(); }
+      else seq.start(V.view === 'song' ? (pl ? pl.cursor : V.cursor || 0) : V.clipPos || 0);
+      render(); break;
+    }
+    case 'rewind': if (R) break; V.clipPos = 0; V.cursor = 0; if (seq.playing) seq.start(0); else if (pl) { pl.cursor = 0; } tickPos(); break;
     case 'click': seq.click = !seq.click; render(); break;
     case 'undo': undoStep(); break;
     case 'redo': undoStep(true); break;
