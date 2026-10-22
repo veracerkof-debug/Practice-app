@@ -6,14 +6,23 @@
       "url": "https://huggingface.co/timcsy/demucs-web-onnx/resolve/main/htdemucs_embedded.onnx",
       "sha256": "e5e425c17683f163a472462eb5f5a4ffcd11c31858d57fbd0833b012d8b88077",
       "bytes": 180534758,
-      "what": "HTDemucs v4 (Meta, MIT) в ONNX со встроенными весами — разделение записи на вокал, ударные, бас, остальное (модуль «Дорожки»)"
+      "what": "HTDemucs v4 (Meta, MIT) в ONNX со встроенными весами — разделение записи на вокал, ударные, бас, остальное (модуль «Дорожки»); только компьютер (телефон — вокал и инструментал MDX-Net)",
+      "platform": "windows"
     },
     {
       "file": "public/models/demucs/htdemucs_6s.onnx",
       "url": "https://huggingface.co/Andremi/audioweb-models/resolve/main/demucs_htdemucs_6s_s78_fp16w_ca.onnx",
       "sha256": "05079e586874d966ceb1b8bca286f38f78d5602ed2c51d475a4092839891e0d5",
       "bytes": 55439704,
-      "what": "HTDemucs 6s (Meta, MIT; ONNX с STFT снаружи, fp16, Andremi/audioweb-models) — шесть дорожек: ударные, бас, остальное, вокал, гитара, клавиши (модуль «Дорожки», режим «6»)"
+      "what": "HTDemucs 6s (Meta, MIT; ONNX с STFT снаружи, fp16, Andremi/audioweb-models) — шесть дорожек: ударные, бас, остальное, вокал, гитара, клавиши (модуль «Дорожки», режим «6»); только компьютер (телефон — вокал и инструментал MDX-Net)",
+      "platform": "windows"
+    },
+    {
+      "file": "public/models/mdx/vocals.onnx",
+      "url": "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/MDXNet/UVR-MDX-NET_Main_406.onnx",
+      "sha256": "f158816a44eef1f0ba0f48b813cbfcf460ed1c70a754af3609ade44aaf7d1b23",
+      "bytes": 66759214,
+      "what": "UVR MDX-Net Main 406 (Anjok07, Kimberley Jensen; архитектура KUIELab MDX-Net; MIT) — вокал и инструментал на телефоне (src/audio/mdx.js, Mdx.java); STFT снаружи"
     },
     {
       "file": "public/models/piano/pack.json",
@@ -62,7 +71,26 @@
       "url": "https://huggingface.co/musetric/chordmini-onnx/resolve/main/chordnet.onnx",
       "sha256": "1faee8e1cf168300afe0f47517e76836ac200c3841b0fb430fad7dfea5ad6394",
       "bytes": 17080550,
-      "what": "ChordMini ChordNet 2E1D (MIT; ONNX musetric/chordmini-onnx) — аккорды записи, 170 видов; лог-CQT считает src/music/cqt.js"
+      "what": "ChordMini ChordNet 2E1D (MIT) — запасная модель аккордов компьютера, если нет btc_cl/chordnet_cl; на телефоне аккордов из записи нет",
+      "platform": "windows"
+    },
+    {
+      "file": "public/models/mir/btc_cl.onnx",
+      "url": "https://github.com/veracerkof-debug/Practice-app/raw/models/btc_cl.onnx",
+      "sha256": "fff082bb04aa69b01f124bbc18e7e19b88efd86644dc13a600531097cab63929",
+      "bytes": 13064449,
+      "platform": "windows",
+      "optional": true,
+      "what": "BTC CL из ChordMini (MIT; ptnghia-j/ChordMini, checkpoints/btc_model_best.pth) → ONNX с нормировкой признаков внутри (build/chords/export.py) — аккорды на компьютере, 170 видов"
+    },
+    {
+      "file": "public/models/mir/chordnet_cl.onnx",
+      "url": "https://github.com/veracerkof-debug/Practice-app/raw/models/chordnet_cl.onnx",
+      "sha256": "314ea24be5798241b72d257064b7b98fb6ff9f7e547f0c15ed099430756e4a59",
+      "bytes": 9574027,
+      "platform": "windows",
+      "optional": true,
+      "what": "ChordNet 2E1D CL из ChordMini (MIT; checkpoints/2e1d_model_best.pth) → ONNX с нормировкой признаков внутри (build/chords/export.py) — вторая модель ансамбля аккордов компьютера"
     },
     {
       "file": "src-tauri/models/whisper/ggml-large-v3-turbo-q5_0.bin",

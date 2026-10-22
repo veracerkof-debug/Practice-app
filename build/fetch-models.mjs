@@ -68,5 +68,9 @@ for (const m of models) {
     mkdirSync(dirname(m.file), { recursive: true });
     writeFileSync(m.file, buf);
     console.log('готово: ' + m.file);
-  } catch (e) { console.error('не удалось: ' + m.file + ' — ' + e.message); process.exit(1); }
+  } catch (e) {
+    // optional — модель, без которой приложение работает (запасной путь); её отсутствие сборку не роняет
+    if (m.optional) { console.warn('пропущено (необязательная): ' + m.file + ' — ' + e.message); continue; }
+    console.error('не удалось: ' + m.file + ' — ' + e.message); process.exit(1);
+  }
 }

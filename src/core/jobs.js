@@ -14,6 +14,7 @@ import { encodeWav, peaks } from '../audio/voicefx.js';
 import { takeDur, writeMidiTracks } from '../music/midi.js';
 import { beatMap, fitOffset, quantizeNotes, instForNotes, notesToEventsSec } from '../music/quantize.js';
 import { log, logErr } from './log.js';
+import { isDesktop } from './desktop.js';
 
 const stemPeaks = (ch) => { const pk = peaks(ch, 600), mx = Math.max(1e-6, ...pk); return Array.from(pk, (v) => Math.round((v / mx) * 100) / 100); };
 const base = (r) => String(r.name || '').replace(/\.[a-z0-9]+$/i, '');
@@ -115,8 +116,11 @@ export function createJobs(files) {
       emit();
       return runStems(rec, mode, hq).then((r) => { onDone(r); return r; }).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
     },
+    // Снятие нот — только компьютер (DECISIONS «Телефон лёгкий, тяжёлое — компьютер»); телефон получает готовые ноты синхронизацией
+    notesSupported: () => isDesktop(),
     notes(rec, { sens = 'normal', bends = false } = {}) {
       if (cur) return Promise.reject(new Error('busy'));
+      if (!isDesktop()) return Promise.reject(new Error('web'));
       cur = { kind: 'notes', id: rec.id, rec, stage: 'load', frac: 0, t0: Date.now() };
       cur.job = transcribe(rec.blob, { sens, bends, name: base(rec), onStage: (stage, f) => set({ stage, frac: f, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) }) });
       emit();

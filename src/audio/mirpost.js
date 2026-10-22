@@ -16,6 +16,33 @@ export const parseChord = (lab) => { if (!lab || lab === 'X' || lab === 'N') ret
 
 // Логиты [frames × NL] → отрезки [{ t, d, c }] (t — начало, с; d — длительность; c — подпись):
 // сглаживание скользящим средним по 9 кадрам, argmax, слияние одинаковых соседей; X и N — «нет аккорда» (c: null)
+// Метки по кадрам → отрезки { t, d, c } (c — аккорд или null для «нет аккорда»)
+export function segmentsFromLabels(lab, frameSec) {
+  const segs = [];
+  for (let t = 0; t < lab.length; t++) {
+    const l = CHORD_LABELS[lab[t]], c = l === 'X' || l === 'N' ? null : l;
+    const last = segs[segs.length - 1];
+    if (last && last.c === c) last.n++; else segs.push({ t0: t, n: 1, c });
+  }
+  return segs.map((s) => ({ t: Math.round(s.t0 * frameSec * 100) / 100, d: Math.round(s.n * frameSec * 100) / 100, c: s.c }));
+}
+// Сглаживание по времени (Витерби): аккорд держится, пока смена не окупит штраф pen (в натуральных логарифмах).
+// logp — log-вероятности кадров [frames × NL] → метки кадров
+export function viterbiLabels(logp, frames, NL, pen = 4) {
+  if (!frames) return new Int16Array(0);
+  let score = Float64Array.from(logp.subarray(0, NL)), next = new Float64Array(NL);
+  const from = new Int16Array(frames * NL); // -1 — остался, иначе — откуда пришёл
+  for (let t = 1; t < frames; t++) {
+    let bi = 0; for (let k = 1; k < NL; k++) if (score[k] > score[bi]) bi = k;
+    const sw = score[bi] - pen;
+    for (let j = 0; j < NL; j++) { const st = score[j]; if (st >= sw) { next[j] = st; from[t * NL + j] = -1; } else { next[j] = sw; from[t * NL + j] = bi; } next[j] += logp[t * NL + j]; }
+    [score, next] = [next, score];
+  }
+  const lab = new Int16Array(frames);
+  let j = 0; for (let k = 1; k < NL; k++) if (score[k] > score[j]) j = k;
+  for (let t = frames - 1; t >= 0; t--) { lab[t] = j; const f = from[t * NL + j]; if (t > 0 && f >= 0) j = f; }
+  return lab;
+}
 export function segmentsOf(logits, frames, NL, frameSec, { smooth = 9 } = {}) {
   const h = smooth >> 1, lab = new Int16Array(frames), acc = new Float32Array(NL);
   for (let t = 0; t < frames; t++) {

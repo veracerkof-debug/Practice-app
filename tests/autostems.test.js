@@ -6,7 +6,7 @@ function mkApp(settings, waits = () => false) {
   const all = [];
   const files = { list: (k) => all.filter((r) => k === 'audio' && (!r.kind || r.kind === 'audio')), subscribe: () => {}, add: (r) => all.push(r) };
   const jobs = { supported: () => true, lyricsSupported: () => false, busy: () => false, current: null };
-  return { files, jobs, all, store: { state: { settings } }, device: {}, audio: {}, soundingAudio: () => false, syncCli: { waits } };
+  return { files, jobs, all, store: { state: { settings } }, device: {}, audio: {}, soundingAudio: () => false, syncCli: { waits }, isDesk: true };
 }
 const rec = (id, extra = {}) => ({ id, kind: 'audio', blob: {}, created: Date.now(), ...extra });
 const stem = (src, mode) => ({ id: src + mode, kind: 'audio', stem: { src, part: 'vocals', mode } });

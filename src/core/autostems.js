@@ -13,10 +13,12 @@
 // телефон (rec.want: { stems, hq }), если своё разделение не выключено. Ход виден в плеере
 // и в уведомлении (background.js). Очередь переживает закрытие окон, но не приложения: после запуска встанет снова.
 import { hasStems } from './jobs.js';
+import { isDesktop } from './desktop.js';
 import { log } from './log.js';
 
 export const AUTO_MODES = ['off', '2', '4', '6'];
-export const autoMode = (settings) => (AUTO_MODES.includes(settings.autoStems) ? settings.autoStems : '4');
+// Телефон — только вокал и инструментал (MDX-Net): прежние «4» и «6» становятся «2»; компьютер — все режимы, по умолчанию 4
+export const autoMode = (settings, desk = isDesktop()) => { const m = AUTO_MODES.includes(settings.autoStems) ? settings.autoStems : desk ? '4' : '2'; return !desk && m !== 'off' ? '2' : m; };
 export const autoAna = (settings) => settings.autoAna !== false;
 export const autoHq = (settings) => settings.autoHq === true; // улучшенное разделение (вторая очередь)
 export const autoLyr = (settings) => settings.autoLyr !== false; // текст песни (только где есть whisper — Windows)
@@ -29,6 +31,7 @@ export const IDLE_MS = 90000;
 
 export function createAutoStems(app) {
   const { files, jobs } = app;
+  const desk = app.isDesk ?? isDesktop();
   let timer = 0, running = false, failed = new Map(); // id → когда можно пробовать снова
   const settings = () => app.store.state.settings;
   let lastInput = Date.now();
@@ -42,12 +45,14 @@ export function createAutoStems(app) {
   const candidate = (r) => r.kind === 'audio' && !r.stem && r.blob && !(r.type || '').startsWith('video/') && !r.noAuto && (!r.dur || r.dur <= MAX_SEC);
   // v < 2 — старый разбор (без долей и аккордов): пересчитать моделями, когда они есть
   const pcWaits = (r, kind) => !!(app.syncCli && app.syncCli.waits(r, kind)); // посчитает компьютер — не тратить телефон
-  const needsAna = (r) => autoAna(settings()) && !r.anaTried && (!r.ana || (!(r.ana.v >= 2) && mirOk)) && !pcWaits(r, 'ana');
+  // компьютер: v < 3 — аккорды прежней моделью или их нет — пересчитать ансамблем аккордов компьютера (mir.worker.js: chordsPc)
+  const ANA_V = desk ? 3 : 2;
+  const needsAna = (r) => autoAna(settings()) && !r.anaTried && (!r.ana || (!(r.ana.v >= ANA_V) && mirOk)) && !pcWaits(r, 'ana');
   let mirOk = false; import('../audio/mir.js').then((m) => { mirOk = m.mirSupported(); schedule(); }).catch(() => {});
   const ok = (r) => !(failed.get(r.id) > Date.now());
   // режим записи: свой, а запись с телефона — как просил телефон (rec.want); своё выключено — не считаем
-  const modeOf = (r) => { const m = autoMode(settings()); return m !== 'off' && r.want && ['2', '4', '6'].includes(r.want.stems) ? r.want.stems : m; };
-  const hqOf = (r) => autoHq(settings()) || !!(r.want && r.want.hq && autoMode(settings()) !== 'off');
+  const modeOf = (r) => { const m = autoMode(settings(), desk); return m !== 'off' && r.want && ['2', '4', '6'].includes(r.want.stems) ? r.want.stems : m; };
+  const hqOf = (r) => autoHq(settings()) || !!(r.want && r.want.hq && autoMode(settings(), desk) !== 'off');
   const needsStems = (r) => { const m = modeOf(r); return m !== 'off' && jobs.supported() && !hasStems(files, r.id, m) && ok(r) && !pcWaits(r, 'stems'); };
   // текст — после дорожек (по вокалу точнее); дорожки выключены — по записи целиком
   const needsLyr = (r) => { const m = modeOf(r); return autoLyr(settings()) && jobs.lyricsSupported() && !r.lyr && !r.lyrTried && ok(r) && (m === 'off' || !jobs.supported() || hasStems(files, r.id, m)); };
@@ -64,9 +69,10 @@ export function createAutoStems(app) {
     try {
       const { mirSupported, analyzeMir } = await import('../audio/mir.js');
       if (mirSupported()) {
-        ana = analyzeMir(r.blob);
+        // телефон — тональность, доли и темп; аккорды — только компьютер (тяжёлые модели, точнее)
+        ana = analyzeMir(r.blob, { what: desk ? ['key', 'beats', 'chords'] : ['key', 'beats'] });
         const a = await ana.promise;
-        r.ana = { pc: a.key.pc, minor: a.key.minor, conf: a.key.conf, cents: a.key.cents ?? null, bpm: a.beats.bpm || null, bpb: a.beats.beatsPerBar || null, beats: a.beats.beats, downbeats: a.beats.downbeats, chords: a.chords, v: 2, at: Date.now() };
+        r.ana = { pc: a.key.pc, minor: a.key.minor, conf: a.key.conf, cents: a.key.cents ?? null, bpm: a.beats.bpm || null, bpb: a.beats.beatsPerBar || null, beats: a.beats.beats, downbeats: a.beats.downbeats, ...(a.chords ? { chords: a.chords } : {}), v: ANA_V, at: Date.now() };
       } else {
         const { analyzeAudio } = await import('./songanalyze.js');
         const a = await analyzeAudio(r.blob);
@@ -111,12 +117,12 @@ export function createAutoStems(app) {
     kick: () => schedule(1000),
     waitsPc: (r) => pcWaits(r, 'stems') && !hasStems(files, r.id), // плеер: «посчитает компьютер»
     quiet, playing, // для связи с компьютером: фоновая синхронизация — только в тишине, приём — не во время музыки
-    want: () => ({ stems: autoMode(settings()), hq: autoHq(settings()) }), // какие дорожки нужны этому устройству
+    want: () => ({ stems: autoMode(settings(), desk), hq: autoHq(settings()) }), // какие дорожки нужны этому устройству
     // что это устройство считает само (компьютер сообщает телефону)
-    caps: () => ({ stems: jobs.supported() ? autoMode(settings()) : 'off', ana: autoAna(settings()) && mirOk, lyr: autoLyr(settings()) && jobs.lyricsSupported() }),
+    caps: () => ({ stems: jobs.supported() ? autoMode(settings(), desk) : 'off', ana: autoAna(settings()) && mirOk, lyr: autoLyr(settings()) && jobs.lyricsSupported() }),
     power: () => autoPower(settings()),
     setPower(v) { settings().autoPower = v; app.store.settingsChanged(); schedule(1000); },
-    mode: () => autoMode(settings()), // режим из настройки — умолчание и для разделения по кнопке
+    mode: () => autoMode(settings(), desk), // режим из настройки — умолчание и для разделения по кнопке
     hq: () => autoHq(settings()),
     setHq(v) { settings().autoHq = !!v; app.store.settingsChanged(); schedule(1000); }, // переключатель и в плеере, и в настройках — один
     lyr: () => autoLyr(settings()),

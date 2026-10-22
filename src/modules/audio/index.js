@@ -14,7 +14,7 @@ import { parseChord } from '../../audio/mirpost.js';
 import { pitchShifter } from '../../audio/pitchshift.js';
 import { createStretchPlayer, stretchAvailable } from '../../audio/stretchplayer.js';
 import { createBufferPlayer } from '../../audio/bufferplayer.js';
-import { MODES, estimateSec, hqVocalsModel } from '../../audio/stems.js';
+import { modesHere, estimateSec, hqVocalsModel } from '../../audio/stems.js';
 import { estimateLyricsSec, lineAt, lyricsText, toLrc } from '../../audio/lyrics.js';
 import { stemsOf, notesOf, denoisedOf } from '../../core/jobs.js';
 import { estimateDenoiseSec } from '../../audio/denoise.js';
@@ -359,7 +359,9 @@ function stemsSheet() {
   const job = () => (jobs.current && jobs.current.id === tr.id ? jobs.current : null);
   const first = stemsFor(tr)[0];
   let m = (first && first.stem.mode) || (ctx.auto && ctx.auto.mode()) || '4';
-  if (!MODES.includes(m)) m = '4';
+  // телефон — только вокал и инструментал, компьютер — 2 / 4 / 6; уже посчитанные на телефоне 4 и 6 дорожек — видны
+  const MODES = [...new Set([...modesHere(), ...(first ? [first.stem.mode || '4'] : [])])].sort();
+  if (!MODES.includes(m)) m = MODES.includes('4') ? '4' : '2';
   const progress = (j, sel) => {
     const pct = Math.round((j.frac || 0) * 100), run = j.stage === 'separate' || j.stage === 'run' || j.stage === 'lyr' || (j.kind === 'denoise' && j.stage === 'run'), gone = (Date.now() - (j.stageAt || j.t0)) / 1000;
     const left = run && j.frac > 0.02 ? Math.max(0, gone / j.frac - gone) : 0;
@@ -368,7 +370,7 @@ function stemsSheet() {
   };
   const body = () => {
     const j = job(), set = stemsFor(tr, m), notes = notesOf(ctx.files, tr.id), absent = ((tr.stemsAbsent && tr.stemsAbsent[m]) || []);
-    let h = ui.snav(t('stems.title')) + '<div class="group"><div class="cellcol">' + ui.seg('smode', MODES.map((k) => [k, k]), m, t('stems.modeTitle')) + '<div class="segcap">' + ui.esc(t('stems.mode.' + m)) + '</div></div>';
+    let h = ui.snav(t('stems.title')) + '<div class="group"><div class="cellcol">' + (MODES.length > 1 ? ui.seg('smode', MODES.map((k) => [k, k]), m, t('stems.modeTitle')) : '') + '<div class="segcap">' + ui.esc(t('stems.mode.' + m)) + '</div></div>';
     if (j && j.kind === 'stems') h += progress(j, 'data-sjcancel');
     else if (set.length) {
       h += stemRowsHTML(tr, set) +
@@ -389,7 +391,8 @@ function stemsSheet() {
     h += '<div class="hdr">' + ui.esc(t('notes.hdr')) + '</div><div class="group">';
     if (j && j.kind === 'notes') h += progress(j, 'data-njcancel');
     else if (notes) h += '<button class="cell act" data-nlisten aria-pressed="' + !!LN + '"><span class="grow">' + ui.esc(t('notes.n', { n: notes.notes || 0 })) + '</span><span class="val">' + ui.esc(t(LN ? 'notes.stop' : 'notes.listen')) + '</span></button>' +
-      '<button class="cell act" data-ntabs>' + ui.esc(t('notes.toTabs')) + '</button>' + (ctx.hasTool('studio') ? '<button class="cell act" data-nstudio>' + ui.esc(t('notes.toStudio')) + '</button>' : '') + '<button class="cell act" data-ngo>' + ui.esc(t('notes.redo')) + '</button>';
+      '<button class="cell act" data-ntabs>' + ui.esc(t('notes.toTabs')) + '</button>' + (ctx.hasTool('studio') ? '<button class="cell act" data-nstudio>' + ui.esc(t('notes.toStudio')) + '</button>' : '') + (jobs.notesSupported() ? '<button class="cell act" data-ngo>' + ui.esc(t('notes.redo')) + '</button>' : '');
+    else if (!jobs.notesSupported()) h += '<div class="cellcol"><span class="l2">' + ui.esc(t('notes.pcOnly')) + '</span></div>'; // телефон: ноты снимает компьютер
     else h += '<div class="cellcol"><span>' + ui.esc(t('notes.sens')) + '</span>' + ui.seg('nsens', [['normal', t('notes.sensNormal')], ['high', t('notes.sensHigh')]], st().nsens || 'normal', t('notes.sens')) + '</div>' +
       '<button class="cell act" data-nbends aria-pressed="' + !!st().nbends + '"><span class="grow">' + ui.esc(t('notes.bends')) + '<span class="bksub">' + ui.esc(t('notes.bendsHint')) + '</span></span><span class="val">' + (st().nbends ? '✓' : '') + '</span></button>' +
       '<button class="cell act center b" data-ngo>' + ui.esc(t('notes.go')) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');

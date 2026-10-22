@@ -1,4 +1,6 @@
-// Разделение записи на дорожки (вокал, ударные, бас, остальное) — модель HTDemucs (Meta, MIT). Всё на устройстве:
+// Разделение записи на дорожки. Телефон (и браузер) — вокал и инструментал моделью UVR MDX-Net (mdx.js, Mdx.java; ~67 МБ,
+// MIT): качественно и без компьютера. Компьютер — ещё 4 и 6 дорожек (HTDemucs, Meta, MIT) и улучшенный вокал (RoFormer);
+// их моделей в APK нет (DECISIONS «Телефон лёгкий, тяжёлое — компьютер»). Всё на устройстве:
 // модель — файл models/demucs/… из сборки (build/models.json), сеть не нужна. Два движка с одной моделью:
 // • Android — нативный ONNX Runtime на всех ядрах (плагин Stems: StemsPlugin.java, Demucs.java) — WebView не даёт
 //   WebAssembly больше одного потока, нативно в разы быстрее; запись уходит в плагин файлом, дорожки читаются
@@ -25,10 +27,12 @@ const SR = 44100;
 // Режимы: '2' — вокал и инструментал (из четырёх дорожек: остальное суммируется), '4' — вокал, ударные, бас,
 // остальное (модель htdemucs, 180 МБ), '6' — ещё гитара и клавиши (htdemucs_6s, 55 МБ, fp16). Порядок — как показывать
 export const MODES = ['2', '4', '6'];
+// Режимы этого устройства: телефон и браузер — только вокал и инструментал; компьютер — все
+export const modesHere = () => (isDesktop() ? MODES : ['2']);
 export const PARTS_OF = { '2': ['vocals', 'inst'], '4': ['vocals', 'drums', 'bass', 'other'], '6': ['vocals', 'drums', 'bass', 'guitar', 'piano', 'other'] };
 export const PARTS = PARTS_OF['4'];
 export const ALL_PARTS = ['vocals', 'inst', 'drums', 'bass', 'guitar', 'piano', 'other'];
-const modelOf = (mode) => (mode === '6' ? 'models/demucs/htdemucs_6s.onnx' : 'models/demucs/htdemucs_embedded.onnx');
+const modelOf = (mode) => (mode === '6' ? 'models/demucs/htdemucs_6s.onnx' : mode === '4' ? 'models/demucs/htdemucs_embedded.onnx' : 'models/mdx/vocals.onnx');
 // Дорожка «пуста» (в записи этого инструмента нет), если её энергия ниже микса на столько дБ
 export const EMPTY_DB = -25;
 export function stemLevelDb(part, mix) {
@@ -40,6 +44,7 @@ export const stemEmpty = (part, mix) => stemLevelDb(part, mix) < EMPTY_DB;
 // Из дорожек модели (drums, bass, other, vocals[, guitar, piano]) — дорожки режима: '2' складывает всё, кроме вокала
 export function partsForMode(raw, mode) {
   const out = {};
+  if (mode === '2' && raw.inst) return { vocals: raw.vocals, inst: raw.inst }; // MDX-Net: сразу вокал и инструментал
   if (mode === '2') {
     out.vocals = raw.vocals;
     const n = raw.vocals.left.length, left = new Float32Array(n), right = new Float32Array(n);
@@ -58,6 +63,7 @@ export const stemsThreads = () => (Native || isDesktop() ? Math.max(1, Math.min(
 // hq — «ночное» качество (три прохода со сдвигом и шаг окна вдвое короче): ≈ ×4,5
 export const HQ_MUL = 4.5;
 export const estimateSec = (dur, mode = '4', hq = false) => (hq && isDesktop() ? Math.round(dur * 5 * (mode === '6' ? 1.2 : 1)) // RoFormer ≈ ×2,5 + HTDemucs в три прохода
+  : !isDesktop() && mode === '2' ? Math.round(dur * (Native ? 2.5 : stemsThreads() > 1 ? 3 : 7) * (hq ? 2 : 1)) // MDX-Net: «улучшенное» — два прохода
   : Math.round(dur * (Native || isDesktop() ? (isDesktop() ? 0.5 : 2) : stemsThreads() > 1 ? 2.5 : 5.5) * (mode === '6' ? 1.5 : 1) * (hq ? HQ_MUL : 1)));
 // Улучшенное разделение на компьютере — вокал моделью Mel-RoFormer (src-tauri/src/roformer.rs), остальное — HTDemucs по инструменталу
 export const hqVocalsModel = () => isDesktop();
@@ -122,7 +128,8 @@ function separateNative(blob, onStage, mode, hq) {
       onStage('separate', 0);
       sub = await Native.addListener('progress', ({ f }) => onStage('separate', Math.min(1, f || 0)));
       running = true;
-      const { files, total } = await Native.run({ model: mode === '6' ? '6' : '4', hq: !!hq });
+      // Android: '2' — вокал и инструментал (Mdx.java); компьютер: '2' — из четырёх дорожек HTDemucs (или RoFormer при hq)
+      const { files, total } = await Native.run({ model: onDesktop() ? (mode === '6' ? '6' : '4') : mode === '2' ? '2' : mode, hq: !!hq });
       running = false;
       const raw = {};
       for (const k of Object.keys(files)) raw[k] = onDesktop() ? await Native.readPart(k, total) : await readPart(files[k], total);

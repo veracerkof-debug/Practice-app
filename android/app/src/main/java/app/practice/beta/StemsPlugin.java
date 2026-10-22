@@ -13,7 +13,8 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-// «Дорожки» нативно (Demucs.java, ONNX Runtime на всех ядрах): WebView не даёт WebAssembly больше одного потока,
+// «Дорожки» нативно (ONNX Runtime на всех ядрах): на телефоне — вокал и инструментал (Mdx.java, UVR MDX-Net);
+// Demucs.java (4/6 дорожек) — его модели только в программе для Windows, в APK их нет. WebView не даёт WebAssembly больше одного потока,
 // а здесь считают все ядра — в разы быстрее. Протокол: begin() → push({ ch, b64 }) кусками float32 LE обоих
 // каналов → run() (ход — событие progress { f }) → { files: { drums, bass, other, vocals } } — файлы float32 LE
 // с чередованием L R в кэше, JS читает их по Capacitor.convertFileSrc и кладёт в медиатеку; clean() — убрать.
@@ -21,9 +22,9 @@ import java.io.OutputStream;
 // На время счёта — частичный wake lock: экран можно гасить, приложение не закрывать.
 @CapacitorPlugin(name = "Stems")
 public class StemsPlugin extends Plugin {
-    private static final String MODEL4 = "models/demucs/htdemucs_embedded.onnx", MODEL6 = "models/demucs/htdemucs_6s.onnx";
+    private static final String MODEL2 = "models/mdx/vocals.onnx", MODEL4 = "models/demucs/htdemucs_embedded.onnx", MODEL6 = "models/demucs/htdemucs_6s.onnx";
     private FileOutputStream[] ins = new FileOutputStream[2];
-    private volatile Demucs job = null;
+    private volatile Engine job = null;
     private volatile boolean busy = false;
 
     private File dir() { return new File(getContext().getCacheDir(), "stems"); }
@@ -63,7 +64,8 @@ public class StemsPlugin extends Plugin {
     public void run(PluginCall call) {
         if (busy) { call.reject("busy"); return; }
         busy = true;
-        final String modelAsset = "6".equals(call.getString("model", "4")) ? MODEL6 : MODEL4;
+        final String mode = call.getString("model", "2");
+        final String modelAsset = "6".equals(mode) ? MODEL6 : "4".equals(mode) ? MODEL4 : MODEL2;
         final boolean hq = Boolean.TRUE.equals(call.getBoolean("hq", false));
         final File d = dir();
         try { closeIns(); } catch (Exception e) { busy = false; call.reject(e.getMessage()); return; }
@@ -72,21 +74,21 @@ public class StemsPlugin extends Plugin {
         final Context ctx = getContext();
         Thread th = new Thread(() -> {
             PowerManager.WakeLock lock = null;
-            Demucs dm = null;
+            Engine dm = null;
             try {
                 PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
                 if (pm != null) { lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "melete:stems"); lock.acquire(3 * 60 * 60 * 1000L); }
                 File model = modelFile(ctx, modelAsset);
                 int threads = Math.max(1, Math.min(8, Runtime.getRuntime().availableProcessors()));
-                dm = new Demucs(model.getAbsolutePath(), threads);
+                dm = modelAsset.equals(MODEL2) ? new Mdx(model.getAbsolutePath(), threads) : new Demucs(model.getAbsolutePath(), threads);
                 job = dm;
                 File out = new File(d, "out");
                 dm.separate(new File(d, "in0.f32"), new File(d, "in1.f32"), total, out, (f) -> { JSObject p = new JSObject(); p.put("f", f); notifyListeners("progress", p); }, hq);
                 JSObject files = new JSObject();
-                for (String part : Demucs.partsOf(dm.stems())) files.put(part, new File(out, part + ".f32").getAbsolutePath());
+                for (String part : dm.parts()) files.put(part, new File(out, part + ".f32").getAbsolutePath());
                 JSObject r = new JSObject();
                 r.put("files", files);
-                r.put("stems", dm.stems());
+                r.put("stems", dm.parts().length);
                 r.put("total", total);
                 r.put("threads", threads);
                 call.resolve(r);
@@ -105,7 +107,7 @@ public class StemsPlugin extends Plugin {
 
     @PluginMethod
     public void cancel(PluginCall call) {
-        Demucs j = job;
+        Engine j = job;
         if (j != null) j.cancel();
         call.resolve();
     }

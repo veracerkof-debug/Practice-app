@@ -187,6 +187,7 @@
   "notes.go": "Transcribe notes",
   "notes.saved": "Done: {n} notes",
   "notes.none": "No notes found: quiet recording or no pitch",
+  "notes.pcOnly": "Notes and tabs from a recording are made by the computer (Melete for Windows) — they arrive with sync.",
   "notes.hint": "Notes from the recording (.mid) go to the library next to it. Best with a single instrument or voice: separate a mix first and transcribe a stem.",
   "notes.doneHint": "The .mid file is in the library next to the recording. In Tabs — as notation and tablature; in the studio — edit, change the sound and tempo.",
   "stems.hq": "Refined separation",

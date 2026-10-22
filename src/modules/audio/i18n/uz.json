@@ -186,6 +186,7 @@
   "notes.go": "Notalarni olish",
   "notes.saved": "Tayyor: notalar — {n}",
   "notes.none": "Nota topilmadi: jim yozuv yoki balandliksiz",
+  "notes.pcOnly": "Yozuvdan nota va tablarni kompyuter oladi (Windows uchun Melete) — sinxronlash bilan keladi.",
   "notes.hint": "Yozuvdan notalar (.mid) — mediatekaga, uning yoniga. Eng aniq — bitta cholgʻu yoki ovoz: aralashmani avval ajratib, yoʻlakdan olish yaxshi.",
   "notes.doneHint": ".mid fayli mediatekada yozuv yonida. «Tablar»da — nota va tabulatura, studiyada — tahrirlash, ovoz va tempni oʻzgartirish.",
   "stems.hq": "Takomillashgan ajratish",

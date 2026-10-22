@@ -20,14 +20,12 @@ import java.util.Map;
 // волна и комплексная маска → обратное STFT, сумма, склейка окном. Вход — два файла float32 LE (левый, правый),
 // выход — по файлу float32 LE с чередованием каналов на дорожку (порядок — как у модели).
 // Память: один сегмент за раз, готовые куски пишутся в файл сразу — песня любой длины не держится в куче.
-public final class Demucs {
+public final class Demucs implements Engine {
     public static final int SR = 44100, N = 343980, FFT = 4096, HOP = 1024, BINS = 2048, FRAMES = 336;
     public static final int STRIDE = (int) Math.floor(N * 0.75);
     public static final String[] PARTS4 = { "drums", "bass", "other", "vocals" };
     public static final String[] PARTS6 = { "drums", "bass", "other", "vocals", "guitar", "piano" };
     public static String[] partsOf(int n) { return n == 6 ? PARTS6 : PARTS4; }
-
-    public interface Progress { void at(double frac); }
 
     private final OrtEnvironment env;
     private final OrtSession session;
@@ -36,6 +34,7 @@ public final class Demucs {
     private volatile boolean cancelled = false;
     private int stems = 4; // известно после первого сегмента (по форме выхода)
     public int stems() { return stems; }
+    @Override public String[] parts() { return partsOf(stems); }
 
     public Demucs(String modelPath, int threads) throws Exception {
         env = OrtEnvironment.getEnvironment();
@@ -55,9 +54,9 @@ public final class Demucs {
         waveName = w; specName = sp; interleaved = il;
     }
 
-    public void cancel() { cancelled = true; }
+    @Override public void cancel() { cancelled = true; }
 
-    public void close() { try { session.close(); } catch (Exception e) { /* ignore */ } }
+    @Override public void close() { try { session.close(); } catch (Exception e) { /* ignore */ } }
 
     /* ---------- БПФ ---------- */
 
@@ -149,6 +148,7 @@ public final class Demucs {
     public void separate(File inL, File inR, long total, File outDir, Progress progress) throws Exception { separate(inL, inR, total, outDir, progress, false); }
     // hq — «ночное» качество: шаг окна N/2 вместо 3N/4 и три прохода на сегмент со случайным сдвигом окна до 0,5 с
     // (как shifts у Demucs: положения окна усредняются, края дорожек чище); время ≈ ×4,5
+    @Override
     public void separate(File inL, File inR, long total, File outDir, Progress progress, boolean hq) throws Exception {
         tables();
         if (!outDir.isDirectory() && !outDir.mkdirs()) throw new Exception("outdir");
