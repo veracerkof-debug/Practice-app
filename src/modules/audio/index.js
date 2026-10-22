@@ -470,6 +470,10 @@ function stemsSheet() {
 const anaTxt = (x) => { const a = x.ana; if (!a) return ''; return [a.pc != null ? keyName(a.pc, a.minor) : '', a.bpm ? '♩ ' + a.bpm + (a.bpb ? ' · ' + a.bpb + '/4' : '') : ''].filter(Boolean).join(' '); };
 const stemsTxt = (x) => { if (x.stem) return ''; const n = stemsFor(x).length; return n ? ctx.tn('stemsN', n) : ''; };
 const rateTxt = () => ctx.num(AU.rate, AU.rate * 100 % 10 ? 2 : AU.rate % 1 ? 1 : 0) + '×';
+// Ступени скорости (разбор отрезка: 50 → 75 → 90 → 100 %): четыре значения на устройстве; касание значения скорости — следующая ступень по кругу
+const RATES_DEF = [0.5, 0.75, 0.9, 1];
+const rates = () => { const r = st().rates; return Array.isArray(r) && r.length === 4 ? r.map((x) => Math.max(0.5, Math.min(1.5, +x || 1))) : RATES_DEF.slice(); };
+function nextRate() { const R = rates(), i = R.findIndex((x) => Math.abs(x - AU.rate) < 0.001); return R[(i + 1) % R.length]; }
 const sizeMb = (r) => ctx.t('mb', { n: ctx.num((r.size || 0) / MB, 1) });
 
 // Один элемент на всё: <video> играет и аудио. Он всегда в документе — в окне плеера или в скрытом
@@ -618,6 +622,19 @@ function load(t) {
   if (!viaEngine) AU.el.src = AU.url; // видео, нет движка (или он молчит) или контекста ещё нет (до первого жеста): элемент, движок — при первом воспроизведении
   if (!isVideo(t) && stretchAvailable() && !AU.noEngine) routeTrack(t).then(() => render()).catch(() => {});
   else applyPitch().catch(() => {});
+}
+
+// Шторка одной ступени скорости (удержание кнопки): ползунок 50…150 %, «Как было» — заводские 50/75/90/100
+function rateSheet(i) {
+  const { t, ui } = ctx; if (i < 0) return;
+  const R = rates();
+  ui.sheet(() => ui.snav(t('rpre.title')) + '<div class="group"><div class="cellcol"><span>' + t('rpre.step', { n: i + 1 }) + ' · <b class="num" id="rpv">' + Math.round(R[i] * 100) + ' %</b></span>' +
+    '<input type="range" min="50" max="150" step="5" value="' + Math.round(R[i] * 100) + '" data-rpv aria-label="' + t('rpre.step', { n: i + 1 }) + '"></div></div>' +
+    '<div class="group" style="margin-top:12px"><button class="cell center" data-rpdef>' + t('rpre.def') + '</button></div>',
+  (el, sh) => {
+    el.addEventListener('input', (e) => { if (!e.target.hasAttribute('data-rpv')) return; R[i] = +e.target.value / 100; const v = el.querySelector('#rpv'); if (v) v.textContent = e.target.value + ' %'; st().rates = R.slice().sort((a, b) => a - b); ctx.store.save(); render(); });
+    el.addEventListener('click', (e) => { if (!e.target.closest('[data-rpdef]')) return; delete st().rates; ctx.store.save(); sh.close(); render(); });
+  });
 }
 
 function setRate(r) {
@@ -854,6 +871,9 @@ function controls() {
     play: '<button class="bigplay" data-x="aplay" id="aplay" aria-label="' + t('playPause') + '">' + (pl().paused ? I.play : I.pause) + '</button>',
     rate: icb('data-step="arate" data-d="-1"', I.minus, t('slower'), 'sm') + '<button class="ratev num" id="ratev" data-x="arate1" aria-label="' + t('rate1') + '">' + rateTxt() + '</button>' +
       icb('data-step="arate" data-d="1"', I.plus, t('faster'), 'sm'),
+    // ступени скорости: касание — поставить, удержание — изменить значение ступени
+    rpre: '<span class="rpres" role="group" aria-label="' + t('rpre.title') + '">' + rates().map((r) => '<button class="rpre num' + (Math.abs(r - AU.rate) < 0.001 ? ' act' : '') + '" data-rpre="' + r + '" aria-label="' +
+      t('rpre.aria', { p: Math.round(r * 100) }) + '">' + Math.round(r * 100) + '</button>').join('') + '</span>',
     // тональность без изменения скорости: ♭/♯ — полутон, нажатие на значение — шторка (полутоны, центы, сброс)
     key: '<span class="vrow tight akey">' + icb('data-step="akey" data-d="-1"', '♭', t('key.down'), 'sm txt') + '<button class="ratev num" id="keyv" data-x="akeysheet" aria-label="' + t('key.title') + '">' + keyTxt() + '</button>' +
       icb('data-step="akey" data-d="1"', '♯', t('key.up'), 'sm txt') + '</span>',
@@ -918,7 +938,7 @@ function playerHTML() {
       c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
   return '<div class="mcard av pv" style="position:relative">' + c.sty('corner') + c.back2 + (sf.length > 1 ? chips('') : name) + pviewHTML(c, d, false) +
-    '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.click + c.stems + '</div>' + pswHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
+    '<div class="vrow tight arow2">' + c.rate + c.rpre + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.click + c.stems + '</div>' + pswHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
 // строка времени: аккорд, положение, посередине — A–B, иначе подсказка волны (на волне) или тональность и темп (в других видах)
@@ -935,7 +955,7 @@ function videoHTML(c, name, all, sid) {
     return '<div class="ah2 vidh">' + c.back2 + '<div class="arow3"><div class="sgrow" style="min-width:0">' + head + '</div><div class="vrow tight">' + c.rate + c.key + '</div></div>' + vidbox('h') +
       '<div class="wfbox vt">' + wformHTML('s') + '<span class="wft num">' + c.chord + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
-  return '<div class="mcard av vidf">' + c.back2 + head + vidbox('f') + wformHTML('s') + atimes(c, d) + c.lyr + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.stems + '</div><div class="ctrl5">' +
+  return '<div class="mcard av vidf">' + c.back2 + head + vidbox('f') + wformHTML('s') + atimes(c, d) + c.lyr + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.rpre + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.stems + '</div><div class="ctrl5">' +
     c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
@@ -1364,7 +1384,7 @@ function act(a, el) {
       } else render();
       break;
     case 'astep': AU.step = !AU.step; if (AU.step && AU.b == null) ui.toast(t('stepHint')); render(); break;
-    case 'arate1': setRate(1); render(); break;
+    case 'arate1': setRate(nextRate()); render(); break; // следующая ступень по кругу (…→ 100 % → первая)
     case 'alist': trackSheet(); break;
     case 'aadd': addFile(); break;
     case 'apick': pickSheet(curSong()); break;
@@ -1416,9 +1436,12 @@ function bind() {
   const on = (el, ev, fn, o) => { el.addEventListener(ev, fn, o); offs.push(() => el.removeEventListener(ev, fn, o)); };
   // удержание строки — выбор нескольких файлов (вместо отдельной кнопки); дальше — касания по строкам
   onHold(host, '.mlmain[data-x="mlplay"], .mlmain[data-x="mlsel"]', (el) => { if (!ML.sel) ML.sel = new Set(); ML.sel.add(el.dataset.id); render(); });
+  onHold(host, '.rpre', (el) => rateSheet(rates().findIndex((x) => Math.abs(x - +el.dataset.rpre) < 0.001)));
   on(host, 'click', (e) => {
     const s = e.target.closest('[data-step="arate"]');
-    if (s) { setRate(AU.rate + +s.dataset.d * 0.05); const rv = host.querySelector('#ratev'); if (rv) rv.textContent = rateTxt(); return; }
+    if (s) { setRate(AU.rate + +s.dataset.d * 0.05); const rv = host.querySelector('#ratev'); if (rv) rv.textContent = rateTxt(); host.querySelectorAll('.rpre').forEach((b) => b.classList.toggle('act', Math.abs(+b.dataset.rpre - AU.rate) < 0.001)); return; }
+    const rp = e.target.closest('[data-rpre]');
+    if (rp) { setRate(+rp.dataset.rpre); render(); return; }
     const k = e.target.closest('[data-step="akey"]');
     if (k) { const [p, c] = pitchOf(AU.cur); setPitch(p + +k.dataset.d, c); return; }
     const x = e.target.closest('[data-x]');

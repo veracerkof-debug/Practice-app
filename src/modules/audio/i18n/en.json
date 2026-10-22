@@ -32,7 +32,7 @@
   "playPause": "Play or pause",
   "slower": "Slower",
   "faster": "Faster",
-  "rate1": "Speed, tap for 1×",
+  "rate1": "Speed, tap for the next step",
   "back5": "Back 5 seconds",
   "fwd5": "Forward 5 seconds",
   "ab": "Loop A–B section",
@@ -234,5 +234,9 @@
   "pv.waitChords": "Chords and bars appear after the recording is analyzed — it runs by itself when the app is quiet",
   "pv.noText": "No lyrics yet",
   "pv.noStems": "No stems yet",
-  "key.lite": "The audio engine does not work on this device: stems and seeking work, key shift is unavailable, speed changes pitch"
+  "key.lite": "The audio engine does not work on this device: stems and seeking work, key shift is unavailable, speed changes pitch",
+  "rpre.title": "Speed steps",
+  "rpre.aria": "Speed {p}%",
+  "rpre.step": "Step {n}",
+  "rpre.def": "Reset: 50 · 75 · 90 · 100"
 }

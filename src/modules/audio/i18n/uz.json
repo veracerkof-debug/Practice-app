@@ -31,7 +31,7 @@
   "playPause": "Ijro yoki pauza",
   "slower": "Sekinroq",
   "faster": "Tezroq",
-  "rate1": "Tezlik, 1× uchun bosing",
+  "rate1": "Tezlik, bosish — keyingi pog‘ona",
   "back5": "5 soniya orqaga",
   "fwd5": "5 soniya oldinga",
   "ab": "A–B qismini takrorlash",
@@ -233,5 +233,9 @@
   "pv.waitChords": "Akkordlar va taktlar yozuv tahlilidan keyin chiqadi — u ilova jim boʻlganda oʻzi ishlaydi",
   "pv.noText": "Matn hali yoʻq",
   "pv.noStems": "Yoʻlaklar hali yoʻq",
-  "key.lite": "Bu qurilmada ovoz dvigateli ishlamaydi: yoʻlaklar va aylantirish bor, tonallik mavjud emas, tezlik balandlikni oʻzgartiradi"
+  "key.lite": "Bu qurilmada ovoz dvigateli ishlamaydi: yoʻlaklar va aylantirish bor, tonallik mavjud emas, tezlik balandlikni oʻzgartiradi",
+  "rpre.title": "Tezlik pog‘onalari",
+  "rpre.aria": "Tezlik {p} %",
+  "rpre.step": "{n}-pog‘ona",
+  "rpre.def": "Asli: 50 · 75 · 90 · 100"
 }
