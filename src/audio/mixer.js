@@ -2,7 +2,7 @@
 // Состояние — объект device.mix (как в прототипе: { metro, piano, drone, audio, theory, mode, mute }).
 import { getContext, masterNode, reverbNode, directOut, spaceInput, rebuildSpaces } from './context.js';
 import { createFxChain, normalizeFx, fxIsFlat } from './fx.js';
-import { setPerf, resolvePerf, setEngine, ENGINES, VERBS, setVerb, defaultVerb } from './perf.js';
+import { setPerf, resolvePerf, setEngine, ENGINES, VERBS, setVerb, defaultVerb, desktopApp } from './perf.js';
 
 // Шины по контракту модуля. 'media' хранится в mix под ключом 'audio' (совместимость с прототипом)
 // looper — лупер (слои и монитор), notes — табы и ноты (alphaTab играет своим звуком: шина зеркалит громкость и выключение в masterVolume)
@@ -17,6 +17,9 @@ export function normalizeMix(mx) {
   if (!mx.mute) mx.mute = {};
   if (!mx.mode) mx.mode = 'smooth';
   if (!mx.v2) { mx.v2 = 1; if (mx.mode === 'bal') mx.mode = 'smooth'; } // 2026-10: надёжность важнее задержки — большой буфер по умолчанию
+  // 2026-10-22: на компьютере большой буфер даёт ~0,1 с от нажатия до звука — играть с клавиатуры нельзя; процессор
+  // там сильный, треска при среднем буфере нет. Телефон — как был
+  if (!mx.v3) { mx.v3 = 1; if (desktopApp() && mx.mode === 'smooth') mx.mode = 'bal'; }
   if (!['full', 'eco'].includes(mx.perf)) mx.perf = 'full'; // режим качества (perf.js): по умолчанию полный
   if (!ENGINES.includes(mx.engine)) mx.engine = 'wl'; // движок воздушных голосов: worklet (по умолчанию) или узлы
   if (!VERBS.includes(mx.verb)) mx.verb = defaultVerb(); // реверберация: свёртка или лёгкая (телефон — лёгкая)

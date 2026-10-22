@@ -59,7 +59,7 @@ pub async fn lyrics_run(app: AppHandle, st: State<'_, Lyrics>, lang: Option<Stri
     if st.busy.swap(true, Ordering::Relaxed) { return Err("busy".into()); }
     let path = match model_path(&app) { Some(p) => p, None => { st.busy.store(false, Ordering::Relaxed); return Err("no model".into()); } };
     let cancel = st.cancel.clone();
-    let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).min(16);
+    let threads = crate::work_threads();
     let pcm = { let inp = st.input.lock().map_err(|_| "lock")?; inp.clone() };
     let ctx = st.ctx.clone();
     let app2 = app.clone();

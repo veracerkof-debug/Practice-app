@@ -23,6 +23,8 @@ export const VERBS = ['conv', 'light'];
 export const setVerb = (v) => { PERF.verb = v === 'light' ? 'light' : 'conv'; };
 export const verbLight = () => PERF.verb === 'light';
 // Умолчание: телефон — лёгкая (процессор слабее и режется при погашенном экране), компьютер — свёртка
+// Приложение для компьютера (Tauri): тот же признак, что core/desktop.js, — звуку без зависимости от ядра
+export const desktopApp = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 export const defaultVerb = (nav = typeof navigator !== 'undefined' ? navigator : {}) => (/Android|iPhone|iPad|Mobile/.test(nav.userAgent || '') ? 'light' : 'conv');
 export const eco = () => PERF.level === 'eco';
 export const maxVoices = () => Math.max(8, (eco() ? 10 : 22) - PERF.squeeze * 6);      // голосов синтезатора

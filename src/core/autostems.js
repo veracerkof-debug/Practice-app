@@ -20,12 +20,17 @@ export const autoLyr = (settings) => settings.autoLyr !== false; // текст �
 export const AUTO_POWER = ['charge', 'always'];
 export const autoPower = (settings) => (AUTO_POWER.includes(settings.autoPower) ? settings.autoPower : 'charge');
 const MAX_SEC = 20 * 60, DELAY_MS = 15000, RETRY_MS = 60000;
+// Тишина — это ещё и «человек отошёл»: без касаний, мыши и клавиш IDLE_MS. Открытый инструмент без звука — не тишина:
+// человек читает ноты или вот-вот заиграет, а счёт на всех ядрах дал бы треск на первых нотах (автор, 22.10)
+export const IDLE_MS = 90000;
 
 export function createAutoStems(app) {
   const { files, jobs } = app;
   let timer = 0, running = false, failed = new Map(); // id → когда можно пробовать снова
   const settings = () => app.store.state.settings;
-  const quiet = () => !app.active && !app.soundingAudio() && !(app.rec && app.rec.active) && !jobs.busy() && !(app.audio.metro && app.audio.metro.running);
+  let lastInput = Date.now();
+  const idle = () => Date.now() - lastInput >= IDLE_MS;
+  const quiet = () => idle() && !app.active && !app.soundingAudio() && !(app.rec && app.rec.active) && !jobs.busy() && !(app.audio.metro && app.audio.metro.running);
   // Зарядка: Battery Status API (Chrome, Android WebView); где его нет (Windows, другие браузеры) — считается, что питание есть
   let bat = null, charging = true;
   if (typeof navigator !== 'undefined' && navigator.getBattery) navigator.getBattery().then((b) => { bat = b; charging = b.charging; b.addEventListener('chargingchange', () => { charging = b.charging; schedule(1000); }); }).catch(() => {});
@@ -90,7 +95,11 @@ export function createAutoStems(app) {
   // зазвучало — прервать фоновое разделение (между сегментами), доделает позже
   const onSound = () => { const c = jobs.current; if (c && c.auto) jobs.cancel(); if (ana) ana.cancel(); };
   const api = {
-    start() { files.subscribe(() => schedule()); schedule(DELAY_MS); setInterval(() => { if (!quiet()) onSound(); else schedule(); }, 5000); },
+    start() {
+      files.subscribe(() => schedule()); schedule(DELAY_MS); setInterval(() => { if (!quiet()) onSound(); else schedule(); }, 5000);
+      // касание, мышь, клавиша — сразу прервать фоновый счёт (не ждать проверки раз в 5 с) и отложить следующий
+      if (typeof window !== 'undefined') ['pointerdown', 'keydown', 'wheel'].forEach((k) => window.addEventListener(k, () => { lastInput = Date.now(); onSound(); }, { capture: true, passive: true }));
+    },
     kick: () => schedule(1000),
     power: () => autoPower(settings()),
     setPower(v) { settings().autoPower = v; app.store.settingsChanged(); schedule(1000); },

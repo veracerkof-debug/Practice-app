@@ -112,13 +112,20 @@ fn model_bytes(app: &AppHandle, rel: &str) -> Result<Vec<u8>, String> {
     Err(format!("model not found: {rel}"))
 }
 
+// Потоков на счёт моделей (дорожки, текст): все ядра, кроме двух — звук (поток рендера WebView2) и интерфейс
+// не должны ждать процессор, иначе звук трещит и ноты опаздывают (автор, 22.10: «звук лагает»). 1…14
+pub(crate) fn work_threads() -> usize {
+    let n = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+    n.saturating_sub(2).clamp(1, 14)
+}
+
 #[tauri::command]
 async fn stems_run(app: AppHandle, st: State<'_, Stems>, model: String, hq: bool) -> Result<RunResult, String> {
     if st.busy.swap(true, Ordering::Relaxed) { return Err("busy".into()); }
     let rel = if model == "6" { "models/demucs/htdemucs_6s.onnx" } else { "models/demucs/htdemucs_embedded.onnx" };
     let dir = out_dir(&app);
     let cancel = st.cancel.clone();
-    let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).min(16);
+    let threads = work_threads();
     let (left, right) = { let inp = st.input.lock().map_err(|_| "lock")?; (inp[0].clone(), inp[1].clone()) };
     let app2 = app.clone();
     let engine = st.engine.clone();
