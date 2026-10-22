@@ -370,9 +370,12 @@ function syncHTML(app) {
     '<label class="cell"><span>' + t('sy.addr') + '</span><input class="inp" data-sy="addr" inputmode="decimal" placeholder="192.168.1.23" aria-label="' + esc(t('sy.addr')) + '"></label>' +
     '<label class="cell"><span>' + t('sy.code') + '</span><input class="inp" data-sy="code" inputmode="numeric" maxlength="7" placeholder="000 000" aria-label="' + esc(t('sy.code')) + '"></label>' +
     '<button class="cell act" data-act="sypair"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.pair') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) : t('sy.phHint')) + '</p>';
-  return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + esc(pc.name) + '<span class="psub">' + t('sy.last', { when: ago(pc.last) }) + '</span></span></div>' +
-    '<button class="cell act" data-act="synow"' + (syncBusy ? ' disabled' : '') + '>' + t(syncBusy ? 'sy.busy' : 'sy.now') + '</button>' +
-    '<button class="cell act danger" data-act="sypcforget">' + t('sy.forgetPc') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) : t('sy.what')) + '</p>';
+  const C = app.syncCli, busy = syncBusy || !!(C && C.busy), st = app.store.state.settings, wait = C ? C.waiting() : 0;
+  return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + esc(pc.name) + '<span class="psub">' + t('sy.last', { when: ago(pc.last) }) + (wait ? ' · ' + t('sy.waiting', { n: wait }) : '') + '</span></span></div>' +
+    '<button class="cell act" data-act="synow"' + (busy ? ' disabled' : '') + '>' + t(busy ? 'sy.busy' : 'sy.now') + '</button>' +
+    '<div class="cell"><span class="grow">' + t('sy.pcWork') + '</span>' + psw('pcWork', st.pcWork !== false, t('sy.pcWork')) + '</div>' +
+    '<div class="cell"><span class="grow">' + t('sy.auto') + '</span>' + psw('syncAuto', st.syncAuto !== false, t('sy.auto')) + '</div>' +
+    '<button class="cell act danger" data-act="sypcforget">' + t('sy.forgetPc') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t('sy.what') + ' ' + t('sy.pcWorkHint') + '</p>';
 }
 const syncErr = (e) => t('sy.err.' + ((e && e.reason) || 'unreachable'));
 
@@ -542,6 +545,7 @@ export function createPanel(app, onChange) {
     if (app.folder) app.folder.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
     if (app.localSend) app.localSend.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
     if (app.syncSrv) app.syncSrv.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
+    if (app.syncCli) app.syncCli.subscribe(() => { if (page === 'data' && layer && layer.isConnected && !syncBusy) render(); });
     // характер Мелеты (страница «Уведомления»)
     bindMelete(layer, () => app.store.state.settings, { save: () => { app.store.settingsChanged(); onChange(); }, rerender: () => render() });
     // свои цвета: при выборе — сразу на экране, сохраняется по закрытию палитры (change)
@@ -620,7 +624,7 @@ export function createPanel(app, onChange) {
         const addr = layer.querySelector('[data-sy="addr"]').value, code = layer.querySelector('[data-sy="code"]').value;
         syncBusy = true; syncMsg = t('sy.pairing'); render();
         pair(addr, code, t('sy.phoneName'))
-          .then((pc) => { syncMsg = t('sy.paired', { name: pc.name }); })
+          .then((pc) => { syncMsg = t('sy.paired', { name: pc.name }); if (app.syncCli) app.syncCli.run().then(() => { onChange(); render(); }).catch(() => {}); })
           .catch((e) => { syncMsg = syncErr(e); })
           .finally(() => { syncBusy = false; render(); });
         return;
@@ -628,7 +632,7 @@ export function createPanel(app, onChange) {
       if (g('[data-act="synow"]') && !syncBusy) {
         syncBusy = true; syncMsg = t('sy.step.data'); render();
         const setMsg = (s) => { syncMsg = s.stage === 'data' ? t('sy.step.data') : t('sy.step.' + s.stage, { n: s.done + 1, total: s.total, name: s.name || '' }); render(); };
-        syncNow(app, setMsg)
+        (app.syncCli ? app.syncCli.run(setMsg) : syncNow(app, setMsg))
           .then((r) => { syncMsg = t('sy.done', { songs: r.songs, sessions: r.sessions, up: r.up, down: r.down }); toast(syncMsg); onChange(); })
           .catch((e) => { syncMsg = syncErr(e); toast(syncMsg); })
           .finally(() => { syncBusy = false; render(); });
@@ -705,7 +709,7 @@ export function createPanel(app, onChange) {
       }
       if (d.psw === 'localSend') { app.localSend.set(e.target.checked).then(() => render()); return; }
       if (d.psw === 'syncSrv') { (e.target.checked ? app.syncSrv.start() : app.syncSrv.stop()).then(() => render()).catch(() => { toast(t('sy.err.port')); render(); }); return; }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq' || d.psw === 'autoLyr') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq' || d.psw === 'autoLyr' || d.psw === 'pcWork') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
         onChange();

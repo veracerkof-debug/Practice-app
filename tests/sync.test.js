@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { planFiles, baseOf, manifestOf, handleRequest, pair, syncNow, pcOf, newCode, b64 } from '../src/core/sync.js';
+import { planFiles, baseOf, manifestOf, handleRequest, pair, syncNow, pcOf, newCode, b64, mergeMeta, metaHash, createSyncClient } from '../src/core/sync.js';
 import { createStore } from '../src/core/store.js';
 
 // localStorage для node: и у телефона, и у компьютера своё — переключаем подменой
@@ -12,6 +12,7 @@ function mkFiles() {
     get: (id) => all.get(id),
     add: async (rec) => { const id = rec.id || 'f' + all.size; all.set(id, { ...rec, id, size: rec.blob ? rec.blob.size : rec.size }); return id; },
     remove: async (id) => { all.delete(id); },
+    save: async () => {},
     all,
   };
 }
@@ -47,9 +48,25 @@ describe('связь телефона и компьютера: план файл
     expect(baseOf('http://10.0.0.2:8000/')).toBe('http://10.0.0.2:8000');
     expect(baseOf('')).toBeNull();
   });
-  it('дорожки разделения и модули Библии не синхронизируются', () => {
-    const m = manifestOf([{ id: 'a', blob: bytes(3, 1) }, { id: 's', stem: { src: 'a' }, blob: bytes(3, 1) }, { id: 'b', kind: 'bible', size: 9 }]);
-    expect(m.map((x) => x.id)).toEqual(['a']);
+  it('дорожки синхронизируются, модули Библии — нет', () => {
+    const m = manifestOf([{ id: 'a', blob: bytes(3, 1) }, { id: 's', stem: { src: 'a', part: 'vocals', mode: '4' }, blob: bytes(3, 1) }, { id: 'b', kind: 'bible', size: 9 }]);
+    expect(m.map((x) => x.id)).toEqual(['a', 's']);
+    expect(m[1].k).toBe('s:a:vocals:4:0');
+  });
+  it('одна и та же дорожка с двух устройств не задваивается; пересчитанная заменяет старую', () => {
+    const v = (id) => ({ id, k: 's:a:vocals:4:0' });
+    expect(planFiles([v('s1')], [v('s2')], [])).toMatchObject({ upload: [], download: [] });
+    // на компьютере пересчитали: старая s1 исчезла (была на обоих), пришла s2 с тем же ключом
+    expect(planFiles([v('s1')], [v('s2')], ['s1'])).toMatchObject({ delMine: ['s1'], download: ['s2'], upload: [] });
+  });
+  it('сведения записи сливаются одинаково с обеих сторон', () => {
+    const ph = { id: 'r', songs: ['x'], ana: { v: 1, at: 5, bpm: 100 }, want: { stems: '6' } };
+    const pc = { id: 'r', songs: ['y'], ana: { v: 2, at: 3, bpm: 98 }, lyr: { at: 9, lines: [] }, stemsAbsent: { 4: ['other'] } };
+    const a = { ...ph, ...mergeMeta(ph, pc) }, b = { ...pc, ...mergeMeta(pc, ph) };
+    expect(a.ana.v).toBe(2); expect(a.lyr.at).toBe(9); expect(a.songs.sort()).toEqual(['x', 'y']); expect(b.want).toEqual({ stems: '6' });
+    expect(metaHash(a)).toBe(metaHash(b));
+    expect(mergeMeta(a, b)).toBeNull();
+    expect(planFiles([{ id: 'r', h: metaHash(ph) }], [{ id: 'r', h: metaHash(pc) }]).meta).toEqual(['r']);
   });
   it('код — 6 цифр, base64 туда и обратно', () => {
     expect(newCode()).toMatch(/^\d{6}$/);
@@ -108,5 +125,59 @@ describe('связь телефона и компьютера: целиком', 
     await pair('192.168.1.5', '482913', 'Телефон', H);
     pcCtx.mem.peers = {}; // компьютер забыл телефон
     await expect(syncNow(phone, () => {}, H)).rejects.toMatchObject({ reason: 'key' });
+  });
+
+  it('компьютер посчитал дорожки, разбор и текст — всё приходит на телефон', async () => {
+    await phone.files.add({ id: 'rec', name: 'song.wav', type: 'audio/wav', kind: 'audio', created: 1, blob: bytes(3000, 1) });
+    await pair('192.168.1.5', '482913', 'Телефон', H);
+    await syncNow(phone, () => {}, H, { want: { stems: '6', hq: false } });
+    expect(pc.files.get('rec').want).toEqual({ stems: '6', hq: false }); // режим, который просил телефон
+    // на компьютере фоновая очередь посчитала
+    const r = pc.files.get('rec');
+    r.ana = { v: 2, at: 10, bpm: 92, pc: 9, minor: true }; r.lyr = { v: 1, at: 11, lines: [{ t: 0, s: 'Ой' }] }; r.stemsAbsent = { 6: ['piano'] };
+    for (const part of ['vocals', 'drums']) await pc.files.add({ id: 'sm' + part, name: part + '.wav', kind: 'audio', type: 'audio/wav', blob: bytes(500, 2), stem: { src: 'rec', part, mode: '6', hq: false } });
+    const out = await syncNow(phone, () => {}, H);
+    expect(out).toMatchObject({ down: 2, up: 0, meta: 1 });
+    const p = phone.files.get('rec');
+    expect(p.ana.bpm).toBe(92); expect(p.lyr.lines[0].s).toBe('Ой'); expect(p.stemsAbsent).toEqual({ 6: ['piano'] });
+    expect(phone.files.get('smvocals').stem).toMatchObject({ src: 'rec', part: 'vocals' });
+    // повтор — тихо
+    expect(await syncNow(phone, () => {}, H)).toMatchObject({ down: 0, up: 0, meta: 0 });
+  });
+
+  it('у компьютера звучит музыка — фоновая синхронизация ждёт, ручная идёт', async () => {
+    await pair('192.168.1.5', '482913', 'Телефон', H);
+    pcCtx.busy = () => true;
+    await expect(syncNow(phone, () => {}, H, { auto: true })).rejects.toMatchObject({ reason: 'busy' });
+    await expect(syncNow(phone, () => {}, H)).resolves.toMatchObject({ up: 0 });
+  });
+
+  it('прерванная передача продолжается с того же места', async () => {
+    await phone.files.add({ id: 'big', name: 'big.wav', kind: 'audio', type: 'audio/wav', blob: bytes(5 << 20, 4) });
+    await pair('192.168.1.5', '482913', 'Телефон', H);
+    let n = 0, puts = 0;
+    const H2 = async (m, url, o) => { if (url.includes('/put')) puts++; return H(m, url, o); };
+    await expect(syncNow(phone, () => {}, H2, { stop: () => puts >= 1 && ++n > 1 })).rejects.toMatchObject({ reason: 'stopped' });
+    expect(pc.files.get('big')).toBeUndefined();
+    puts = 0;
+    await syncNow(phone, () => {}, H2);
+    expect(pc.files.get('big').blob.size).toBe(5 << 20);
+    expect(puts).toBe(2); // первый кусок уже был у компьютера: отказ «с какого» + два оставшихся без повтора первого
+  });
+
+  it('телефон ждёт компьютер только для свежих записей и того, что компьютер умеет', async () => {
+    await pair('192.168.1.5', '482913', 'Телефон', H);
+    pcCtx.work = () => ({ stems: '4', ana: true, lyr: true });
+    await syncNow(phone, () => {}, H);
+    let t = Date.now();
+    const C = createSyncClient(phone, { H, now: () => t });
+    phone.store.state.settings.pcWork = true;
+    expect(C.waits({ id: 'n', created: t - 3600000 }, 'stems')).toBe(true);
+    expect(C.waits({ id: 'o', created: t - 2 * 86400000 }, 'stems')).toBe(false); // старая и не на компьютере — считать самому
+    phone.store.state.settings.pcWork = false;
+    expect(C.waits({ id: 'n', created: t - 3600000 }, 'stems')).toBe(false);
+    phone.store.state.settings.pcWork = true;
+    t += 4 * 86400000; // компьютера не было четыре дня
+    expect(C.waits({ id: 'n', created: t - 3600000 }, 'stems')).toBe(false);
   });
 });

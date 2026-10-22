@@ -236,7 +236,7 @@ function stemsViewHTML(t) {
   const { ui } = ctx, tr = ctx.t, set = stemsFor(t);
   if (!set.length) {
     const j = ctx.jobs && ctx.jobs.current && ctx.jobs.current.id === t.id && ctx.jobs.current.kind === 'stems' ? ctx.jobs.current : null;
-    return '<div class="pview pempty"><span>' + ui.esc(j ? tr('job.' + j.stage) + (j.frac ? ' · ' + Math.round(j.frac * 100) + ' %' : '') : tr(ctx.jobs && ctx.jobs.supported() ? 'pv.noStems' : 'stems.web')) + '</span>' + (ctx.jobs && ctx.jobs.supported() && !j ? '<button class="btn sm" data-x="astems">' + ui.esc(tr('stems.go', { t: fmtT(estimateSec(t.dur || 60, (ctx.auto && ctx.auto.mode()) || '4', !!(ctx.auto && ctx.auto.hq()))) })) + '</button>' : '') + '</div>';
+    return '<div class="pview pempty"><span>' + ui.esc(j ? tr('job.' + j.stage) + (j.frac ? ' · ' + Math.round(j.frac * 100) + ' %' : '') : tr(ctx.auto && ctx.auto.waitsPc && ctx.auto.waitsPc(t) ? 'pv.pcWait' : ctx.jobs && ctx.jobs.supported() ? 'pv.noStems' : 'stems.web')) + '</span>' + (ctx.jobs && ctx.jobs.supported() && !j ? '<button class="btn sm" data-x="astems">' + ui.esc(tr('stems.go', { t: fmtT(estimateSec(t.dur || 60, (ctx.auto && ctx.auto.mode()) || '4', !!(ctx.auto && ctx.auto.hq()))) })) + '</button>' : '') + '</div>';
   }
   return '<div class="pview pstems">' + stemRowsHTML(t, set) + '<div class="row pstbtns"><button class="btn sm" data-x="astems">' + ui.esc(tr('stems.btn')) + '</button>' + (mixActive(t) ? '<button class="btn sm" data-x="asreset">' + ui.esc(tr('stems.reset')) + '</button>' : '') + '</div></div>';
 }

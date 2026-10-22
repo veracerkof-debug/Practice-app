@@ -232,6 +232,7 @@
   "pv.noChords": "Akkordlar aniqlanmadi",
   "pv.waitChords": "Akkordlar va taktlar yozuv tahlilidan keyin chiqadi — u ilova jim boʻlganda oʻzi ishlaydi",
   "pv.noText": "Matn hali yoʻq",
+  "pv.pcWait": "Yoʻlaklarni kompyuter hisoblaydi — sinxronlash bilan keladi",
   "pv.noStems": "Yoʻlaklar hali yoʻq",
   "key.lite": "Bu qurilmada ovoz dvigateli ishlamaydi: yoʻlaklar va aylantirish bor, tonallik mavjud emas, tezlik balandlikni oʻzgartiradi",
   "rpre.title": "Tezlik pog‘onalari",

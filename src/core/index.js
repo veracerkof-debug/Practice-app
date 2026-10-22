@@ -44,7 +44,7 @@ import { createRecorder } from './recorder.js';
 import { createJobs } from './jobs.js';
 import { createAutoStems } from './autostems.js';
 import { createMidi } from './midi.js';
-import { createSyncServer } from './sync.js';
+import { createSyncServer, createSyncClient } from './sync.js';
 import { isDesktop } from './desktop.js';
 import { reschedule, rescheduleEvents } from './reminders.js';
 import { ensureCal, eventReminders, liveEvents, kindOf } from './calendar.js';
@@ -270,6 +270,9 @@ export function boot(root) {
   // связь с телефоном (sync.js): на компьютере — сервер в своей сети по переключателю; был включён — включается снова
   app.syncSrv = createSyncServer(app, { isDesktop });
   if (app.syncSrv.avail && app.syncSrv.wasOn()) app.syncSrv.start().catch(() => {});
+  // телефон: фоновая синхронизация и «Считать на компьютере» (sync.js); компьютер сам — сервер
+  app.syncCli = createSyncClient(app);
+  if (!app.syncSrv.avail) app.syncCli.start();
   app.localSend.init();
   // прошлый запуск закрылся неожиданно — предложить отправить отчёт
   crashOffer(app);

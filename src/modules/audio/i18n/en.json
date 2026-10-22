@@ -233,6 +233,7 @@
   "pv.noChords": "Chords could not be detected",
   "pv.waitChords": "Chords and bars appear after the recording is analyzed — it runs by itself when the app is quiet",
   "pv.noText": "No lyrics yet",
+  "pv.pcWait": "The computer will split the stems — they arrive with the next sync",
   "pv.noStems": "No stems yet",
   "key.lite": "The audio engine does not work on this device: stems and seeking work, key shift is unavailable, speed changes pitch",
   "rpre.title": "Speed steps",

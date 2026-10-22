@@ -7,7 +7,10 @@
 // по умолчанию включено; whisper по отделённому вокалу, поэтому после дорожек; результат — rec.lyr).
 // Когда считать: только в тишине (ничего не звучит, нет занятия и записи — счёт берёт все ядра и помешал бы живому
 // звуку) и, по умолчанию, только на зарядке (settings.autoPower: 'charge' | 'always') — обычно это ночь, за ночь
-// 10–20 песен; зазвучало — текущее разделение прерывается между сегментами и повторится позже. Ход виден в плеере
+// 10–20 песен; зазвучало — текущее разделение прерывается между сегментами и повторится позже.
+// Связь с компьютером (sync.js): на телефоне запись, которую посчитает компьютер (app.syncCli.waits), здесь не
+// считается — результаты придут с синхронизацией; на компьютере запись телефона делится в режиме, который просил
+// телефон (rec.want: { stems, hq }), если своё разделение не выключено. Ход виден в плеере
 // и в уведомлении (background.js). Очередь переживает закрытие окон, но не приложения: после запуска встанет снова.
 import { hasStems } from './jobs.js';
 import { log } from './log.js';
@@ -30,6 +33,7 @@ export function createAutoStems(app) {
   const settings = () => app.store.state.settings;
   let lastInput = Date.now();
   const idle = () => Date.now() - lastInput >= IDLE_MS;
+  const playing = () => !!app.active || app.soundingAudio() || !!(app.rec && app.rec.active) || !!(app.audio.metro && app.audio.metro.running);
   const quiet = () => idle() && !app.active && !app.soundingAudio() && !(app.rec && app.rec.active) && !jobs.busy() && !(app.audio.metro && app.audio.metro.running);
   // Зарядка: Battery Status API (Chrome, Android WebView); где его нет (Windows, другие браузеры) — считается, что питание есть
   let bat = null, charging = true;
@@ -37,13 +41,17 @@ export function createAutoStems(app) {
   const powered = () => autoPower(settings()) === 'always' || !bat || charging;
   const candidate = (r) => r.kind === 'audio' && !r.stem && r.blob && !(r.type || '').startsWith('video/') && !r.noAuto && (!r.dur || r.dur <= MAX_SEC);
   // v < 2 — старый разбор (без долей и аккордов): пересчитать моделями, когда они есть
-  const needsAna = (r) => autoAna(settings()) && !r.anaTried && (!r.ana || (!(r.ana.v >= 2) && mirOk));
+  const pcWaits = (r, kind) => !!(app.syncCli && app.syncCli.waits(r, kind)); // посчитает компьютер — не тратить телефон
+  const needsAna = (r) => autoAna(settings()) && !r.anaTried && (!r.ana || (!(r.ana.v >= 2) && mirOk)) && !pcWaits(r, 'ana');
   let mirOk = false; import('../audio/mir.js').then((m) => { mirOk = m.mirSupported(); schedule(); }).catch(() => {});
   const ok = (r) => !(failed.get(r.id) > Date.now());
-  const needsStems = (r) => { const m = autoMode(settings()); return m !== 'off' && jobs.supported() && !hasStems(files, r.id, m) && ok(r); };
+  // режим записи: свой, а запись с телефона — как просил телефон (rec.want); своё выключено — не считаем
+  const modeOf = (r) => { const m = autoMode(settings()); return m !== 'off' && r.want && ['2', '4', '6'].includes(r.want.stems) ? r.want.stems : m; };
+  const hqOf = (r) => autoHq(settings()) || !!(r.want && r.want.hq && autoMode(settings()) !== 'off');
+  const needsStems = (r) => { const m = modeOf(r); return m !== 'off' && jobs.supported() && !hasStems(files, r.id, m) && ok(r) && !pcWaits(r, 'stems'); };
   // текст — после дорожек (по вокалу точнее); дорожки выключены — по записи целиком
-  const needsLyr = (r) => { const m = autoMode(settings()); return autoLyr(settings()) && jobs.lyricsSupported() && !r.lyr && !r.lyrTried && ok(r) && (m === 'off' || !jobs.supported() || hasStems(files, r.id, m)); };
-  const needsHq = (r) => { const m = autoMode(settings()); return autoHq(settings()) && m !== 'off' && jobs.supported() && !hasStems(files, r.id, m, true) && ok(r); };
+  const needsLyr = (r) => { const m = modeOf(r); return autoLyr(settings()) && jobs.lyricsSupported() && !r.lyr && !r.lyrTried && ok(r) && (m === 'off' || !jobs.supported() || hasStems(files, r.id, m)); };
+  const needsHq = (r) => { const m = modeOf(r); return hqOf(r) && m !== 'off' && jobs.supported() && !hasStems(files, r.id, m, true) && ok(r) && !pcWaits(r, 'stems'); };
   const usedAt = (r) => Math.max(r.created || 0, ((app.device.audio || {}).used || {})[r.id] || 0);
   const recent = () => files.list('audio').filter(candidate).sort((a, b) => usedAt(b) - usedAt(a));
   // первая очередь — тональность и обычное разделение у всех; вторая — улучшенное, когда первая пуста
@@ -84,7 +92,7 @@ export function createAutoStems(app) {
         log('auto', 'текст в фоне: ' + r.name);
         try { await jobs.lyrics(r, { auto: true }); } catch (e) { if (e && e.message === 'cancel') failed.set(r.id, Date.now() + RETRY_MS); else { r.lyrTried = true; await files.save(r); } }
       } else {
-        const m = autoMode(settings()), hq = !needsStems(r);
+        const m = modeOf(r), hq = !needsStems(r);
         log('auto', 'дорожки в фоне: ' + r.name + ' (' + m + (hq ? ', hq' : '') + ')');
         try { await jobs.separate(r, m, { auto: true, hq }); } catch (e) { if (e && e.message === 'cancel') failed.set(r.id, Date.now() + RETRY_MS); else failed.set(r.id, Date.now() + 6 * 3600000); }
       }
@@ -101,6 +109,11 @@ export function createAutoStems(app) {
       if (typeof window !== 'undefined') ['pointerdown', 'keydown', 'wheel'].forEach((k) => window.addEventListener(k, () => { lastInput = Date.now(); onSound(); }, { capture: true, passive: true }));
     },
     kick: () => schedule(1000),
+    waitsPc: (r) => pcWaits(r, 'stems') && !hasStems(files, r.id), // плеер: «посчитает компьютер»
+    quiet, playing, // для связи с компьютером: фоновая синхронизация — только в тишине, приём — не во время музыки
+    want: () => ({ stems: autoMode(settings()), hq: autoHq(settings()) }), // какие дорожки нужны этому устройству
+    // что это устройство считает само (компьютер сообщает телефону)
+    caps: () => ({ stems: jobs.supported() ? autoMode(settings()) : 'off', ana: autoAna(settings()) && mirOk, lyr: autoLyr(settings()) && jobs.lyricsSupported() }),
     power: () => autoPower(settings()),
     setPower(v) { settings().autoPower = v; app.store.settingsChanged(); schedule(1000); },
     mode: () => autoMode(settings()), // режим из настройки — умолчание и для разделения по кнопке
