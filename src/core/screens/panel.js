@@ -45,6 +45,7 @@ import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
 import { planSheet } from './bibleplan.js';
+import { pcOf, pair, syncNow, forgetPc } from '../sync.js';
 
 // Значки страниц — оттенки палитры (settings.palette)
 const iconBg = (st, hue) => '--tc:' + hueColor(st, hue);
@@ -340,6 +341,7 @@ function dataHTML(app) {
   const demo = demoLeft(app);
   return '<div class="large">' + t('data.title') + '</div><div class="group"><button class="cell act" data-act="export">' + t('data.export') + '</button><button class="cell act" data-act="import">' + t('data.import') + '</button></div>' +
     '<p class="ftr">' + t('data.hint') + '</p>' +
+    syncHTML(app) +
     folderHTML(app) +
     // демо-набор: песни, табулатуры, ноты, записи и события — показать, как всё устроено; убирается одной кнопкой
     // демо-набор ставится при регистрации; здесь — только убрать (решение автора)
@@ -347,6 +349,32 @@ function dataHTML(app) {
     '<p class="ftr">' + t('demo.hint') + '</p>' : '') +
     '<div class="group" style="margin-top:28px"><button class="cell danger center" data-act="reset">' + t('data.reset') + '</button></div>';
 }
+
+// Связь с компьютером (src/core/sync.js): на компьютере — включить и показать адрес с кодом, на телефоне — ввести их
+// и синхронизировать по кнопке. Ход синхронизации на телефоне — строкой под кнопкой
+let syncMsg = '', syncBusy = false;
+const ago = (ts) => { if (!ts) return t('sy.never'); const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? t('sy.just') : m < 60 ? t('sy.min', { n: m }) : new Date(ts).toLocaleString(); };
+function syncHTML(app) {
+  const S = app.syncSrv;
+  if (S && S.avail) {
+    const st = S.state, peers = S.peers;
+    return '<div class="hdr">' + t('sy.pcTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + t('sy.pcSw') + '</span>' + psw('syncSrv', st.on, t('sy.pcSw')) + '</div>' +
+      (st.on ? '<div class="cellcol sypair"><span class="l2">' + t('sy.addr') + '</span><b class="num sybig">' + esc((st.ips[0] || '—')) + '</b>' + (st.ips.length > 1 ? '<span class="l2">' + esc(st.ips.slice(1).join(', ')) + '</span>' : '') +
+        '<span class="l2" style="margin-top:8px">' + t('sy.code') + '</span><b class="num sybig">' + esc(st.code.slice(0, 3) + ' ' + st.code.slice(3)) + '</b></div>' : '') +
+      peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="syforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>').join('') +
+      '</div><p class="ftr">' + t('sy.pcHint') + '</p>';
+  }
+  if (!Capacitor.isNativePlatform()) return '';
+  const pc = pcOf();
+  if (!pc) return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group">' +
+    '<label class="cell"><span>' + t('sy.addr') + '</span><input class="inp" data-sy="addr" inputmode="decimal" placeholder="192.168.1.23" aria-label="' + esc(t('sy.addr')) + '"></label>' +
+    '<label class="cell"><span>' + t('sy.code') + '</span><input class="inp" data-sy="code" inputmode="numeric" maxlength="7" placeholder="000 000" aria-label="' + esc(t('sy.code')) + '"></label>' +
+    '<button class="cell act" data-act="sypair"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.pair') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) : t('sy.phHint')) + '</p>';
+  return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + esc(pc.name) + '<span class="psub">' + t('sy.last', { when: ago(pc.last) }) + '</span></span></div>' +
+    '<button class="cell act" data-act="synow"' + (syncBusy ? ' disabled' : '') + '>' + t(syncBusy ? 'sy.busy' : 'sy.now') + '</button>' +
+    '<button class="cell act danger" data-act="sypcforget">' + t('sy.forgetPc') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) : t('sy.what')) + '</p>';
+}
+const syncErr = (e) => t('sy.err.' + ((e && e.reason) || 'unreachable'));
 
 // Все инструкции: механизмы приложения и инструменты; «Показывать все снова»
 function helpHTML(app) {
@@ -513,6 +541,7 @@ export function createPanel(app, onChange) {
     // папка Melete: состояние синхронизации — на странице «Данные и копии»
     if (app.folder) app.folder.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
     if (app.localSend) app.localSend.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
+    if (app.syncSrv) app.syncSrv.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
     // характер Мелеты (страница «Уведомления»)
     bindMelete(layer, () => app.store.state.settings, { save: () => { app.store.settingsChanged(); onChange(); }, rerender: () => render() });
     // свои цвета: при выборе — сразу на экране, сохраняется по закрытию палитры (change)
@@ -585,6 +614,26 @@ export function createPanel(app, onChange) {
         }
         return;
       }
+      if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
+      if (g('[data-act="sypcforget"]')) { forgetPc(); syncMsg = ''; render(); return; }
+      if (g('[data-act="sypair"]') && !syncBusy) {
+        const addr = layer.querySelector('[data-sy="addr"]').value, code = layer.querySelector('[data-sy="code"]').value;
+        syncBusy = true; syncMsg = t('sy.pairing'); render();
+        pair(addr, code, t('sy.phoneName'))
+          .then((pc) => { syncMsg = t('sy.paired', { name: pc.name }); })
+          .catch((e) => { syncMsg = syncErr(e); })
+          .finally(() => { syncBusy = false; render(); });
+        return;
+      }
+      if (g('[data-act="synow"]') && !syncBusy) {
+        syncBusy = true; syncMsg = t('sy.step.data'); render();
+        const setMsg = (s) => { syncMsg = s.stage === 'data' ? t('sy.step.data') : t('sy.step.' + s.stage, { n: s.done + 1, total: s.total, name: s.name || '' }); render(); };
+        syncNow(app, setMsg)
+          .then((r) => { syncMsg = t('sy.done', { songs: r.songs, sessions: r.sessions, up: r.up, down: r.down }); toast(syncMsg); onChange(); })
+          .catch((e) => { syncMsg = syncErr(e); toast(syncMsg); })
+          .finally(() => { syncBusy = false; render(); });
+        return;
+      }
       if (g('[data-act="export"]')) {
         exportSheet(app, (r) => {
           if (r.where === 'folder') { toast(t('bk.savedFolder', { name: r.name.replace(/\.json$/, '') })); copies = null; loadCopies(app, render); }
@@ -655,6 +704,7 @@ export function createPanel(app, onChange) {
         return;
       }
       if (d.psw === 'localSend') { app.localSend.set(e.target.checked).then(() => render()); return; }
+      if (d.psw === 'syncSrv') { (e.target.checked ? app.syncSrv.start() : app.syncSrv.stop()).then(() => render()).catch(() => { toast(t('sy.err.port')); render(); }); return; }
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq' || d.psw === 'autoLyr') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });

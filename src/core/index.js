@@ -44,6 +44,8 @@ import { createRecorder } from './recorder.js';
 import { createJobs } from './jobs.js';
 import { createAutoStems } from './autostems.js';
 import { createMidi } from './midi.js';
+import { createSyncServer } from './sync.js';
+import { isDesktop } from './desktop.js';
 import { reschedule, rescheduleEvents } from './reminders.js';
 import { ensureCal, eventReminders, liveEvents, kindOf } from './calendar.js';
 import { remindText, remindCtx } from './remindtexts.js';
@@ -265,6 +267,9 @@ export function boot(root) {
   initDesktop(app);
   // приём файлов с телефона по протоколу LocalSend (Windows, по переключателю в настройках)
   app.localSend = initLocalSend(app);
+  // связь с телефоном (sync.js): на компьютере — сервер в своей сети по переключателю; был включён — включается снова
+  app.syncSrv = createSyncServer(app, { isDesktop });
+  if (app.syncSrv.avail && app.syncSrv.wasOn()) app.syncSrv.start().catch(() => {});
   app.localSend.init();
   // прошлый запуск закрылся неожиданно — предложить отправить отчёт
   crashOffer(app);

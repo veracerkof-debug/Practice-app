@@ -10,6 +10,7 @@ mod lyrics;
 mod roformer;
 mod denoise;
 mod localsend;
+mod sync; // связь с телефоном: посредник между телефоном в сети и окном (src/core/sync.js)
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -212,6 +213,7 @@ pub fn run() {
         .manage(Stems::default())
         .manage(lyrics::Lyrics::default())
         .manage(localsend::LocalSend::default())
+        .manage(sync::SyncSrv::default())
         .manage(denoise::Denoise::default())
         .on_permission_request(|_, kind| match kind {
             PermissionKind::Microphone | PermissionKind::Camera => PermissionResponse::Allow,
@@ -220,6 +222,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![allow_dir, startup_files, stems_begin, stems_push, stems_run, stems_read, stems_cancel, stems_clean,
             lyrics::lyrics_supported, lyrics::lyrics_begin, lyrics::lyrics_push, lyrics::lyrics_run, lyrics::lyrics_cancel, lyrics::lyrics_clean,
             localsend::localsend_start, localsend::localsend_stop, localsend::localsend_status, localsend::localsend_answer,
+            sync::sync_start, sync::sync_stop, sync::sync_status, sync::sync_body, sync::sync_reply,
             denoise::denoise_begin, denoise::denoise_push, denoise::denoise_run, denoise::denoise_read, denoise::denoise_cancel, denoise::denoise_clean])
         .run(tauri::generate_context!())
         .expect("Melete: не удалось запустить окно");
