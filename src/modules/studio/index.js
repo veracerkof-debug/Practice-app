@@ -14,7 +14,7 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { newProject, newTrack, newData, normalizeProject, normalizeData, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, DRUMS, projectEvents, songBars, addClip, dupClip, removeClip, splitClip, clipById, trackOf, clipsOf, dataBeats, isEmptyProject, projectTracks, setRegion, loopOf, setMark, removeMark, markAt, pasteClip, clipCopy, quantizeNotes, secPerBeat, joinClips, clipAt } from '../../music/project.js';
+import { newProject, newTrack, newData, normalizeProject, normalizeData, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, DRUMS, projectEvents, songBars, addClip, dupClip, removeClip, splitClip, clipById, trackOf, clipsOf, dataBeats, isEmptyProject, projectTracks, setRegion, loopOf, setMark, removeMark, markAt, pasteClip, clipCopy, quantizeNotes, humanizeNotes, secPerBeat, joinClips, clipAt } from '../../music/project.js';
 import { createSequencer } from '../../audio/sequencer.js';
 import { createCapture, openInput } from '../../audio/capture.js';
 import { encodeWav, peaks as wavPeaks } from '../../audio/voicefx.js';
@@ -273,7 +273,7 @@ function clipMenu(anchor, c) {
     { icon: I.loop, label: t('clip.loopHere'), run: () => { setRegion(p, c.at, c.at + c.len, 0.25); save(); render(); } },
     { icon: I.mutec, label: t(c.mute ? 'clip.unmute' : 'clip.mute'), run: () => { c.mute = !c.mute; save(); seq.audioChanged(); render(); } },
     { icon: I.vol, label: t('clip.gain'), run: () => clipSheet(c) },
-    ...(tr.kind === 'notes' ? [{ icon: I.tune, label: t('clip.quantize'), run: () => { quantizeNotes(c.data, grid(), dataBeats(p, c.data)); save(); render(); } }] : []),
+    ...(tr.kind === 'notes' ? [{ icon: I.tune, label: t('clip.quantize'), run: () => quantSheet(c) }] : []),
     ...(tr.kind !== 'audio' && clipAt(p, tr, c.at + c.len) ? [{ icon: I.copy, label: t('clip.join'), run: () => { if (joinClips(p, c, clipAt(p, tr, c.at + c.len))) { save(); render(); } else ctx.ui.toast(t('clip.max')); } }] : []),
     ...(tr.kind === 'audio' ? [{ icon: I.file, label: t('tr.pickFile'), run: () => filePicker(c) }, ...(c.data.fileId ? [{ icon: I.wave, label: t('clip.normalize'), run: () => processClip(c, 'normalize') }, { icon: I.wave, label: t('clip.reverse'), run: () => processClip(c, 'reverse') }] : [])] : []),
     { icon: I.del, label: t('clip.delete'), danger: true, run: () => { removeClip(p, c); if (V.cid === c.id) V.cid = null; save(); render(); } },
@@ -297,6 +297,23 @@ function rulerMenu(anchor, beat) {
   ], (Math.floor(beat / p.num) + 1) + '.' + (Math.floor(beat % p.num) + 1));
 }
 // Громкость клипа и затухания записи (в долях)
+// Квантизация с силой (0…100 %) и «живость» (сдвиг времени и громкости) — шторка из меню клипа
+function quantSheet(c) {
+  const { t, ui } = ctx, p = proj(), total = dataBeats(p, c.data);
+  let strength = 100, time = 5, vel = 10;
+  const rng = (k, v, min, max, lab, unit) => '<div class="cellcol"><span>' + ui.esc(lab) + ' · <b class="num" id="qv-' + k + '">' + v + unit + '</b></span><input type="range" min="' + min + '" max="' + max + '" step="5" value="' + v + '" data-q="' + k + '" aria-label="' + ui.esc(lab) + '"></div>';
+  ui.sheet(() => ui.snav(t('clip.quantize')) +
+    '<div class="group">' + rng('str', strength, 0, 100, t('q.strength'), ' %') + '<button class="cell act" data-qgo="q">' + ui.esc(t('q.apply')) + '</button></div><p class="ftr">' + ui.esc(t('q.strengthHint')) + '</p>' +
+    '<div class="hdr">' + ui.esc(t('q.human')) + '</div><div class="group">' + rng('time', time, 0, 25, t('q.time'), ' %') + rng('vel', vel, 0, 40, t('q.vel'), ' %') + '<button class="cell act" data-qgo="h">' + ui.esc(t('q.applyHuman')) + '</button></div><p class="ftr">' + ui.esc(t('q.humanHint')) + '</p>',
+  (el, sh) => {
+    el.addEventListener('input', (e) => { const k = e.target.dataset.q; if (!k) return; const v = +e.target.value; if (k === 'str') strength = v; else if (k === 'time') time = v; else vel = v; el.querySelector('#qv-' + k).textContent = v + ' %'; });
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-qgo]'); if (!b) return;
+      if (b.dataset.qgo === 'q') quantizeNotes(c.data, grid(), total, strength / 100); else humanizeNotes(c.data, total, { time: time / 100, vel: vel / 100 });
+      save(); seq.audioChanged(); ctx.ui.toast(t('q.done')); sh.close(); render();
+    });
+  }, { onClose: render });
+}
 function clipSheet(c) {
   const { t, ui } = ctx, p = proj(), tr = trackOf(p, c), audio = tr.kind === 'audio';
   const stepF = (k, v) => '<span class="stepper"><button type="button" data-fd="' + k + '" data-d="-1" aria-label="' + ui.esc(t('clip.' + k) + ' −') + '">−</button><b class="num stv">' + v + '</b><button type="button" data-fd="' + k + '" data-d="1" aria-label="' + ui.esc(t('clip.' + k) + ' +') + '">+</button></span>';

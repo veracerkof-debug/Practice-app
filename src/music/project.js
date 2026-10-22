@@ -296,10 +296,27 @@ export function moveNote(total, n, dt, dm, grid) {
 }
 export function resizeNote(total, n, len, grid) { n.d = Math.max(grid, Math.min(total - n.t, Math.round(len / grid) * grid)); }
 // Квантовать: начала нот — к сетке (длина не короче сетки, в пределах куска); совпавшие — слить
-export function quantizeNotes(d, grid, total) {
-  d.notes.forEach((n) => { n.t = Math.max(0, Math.min(total - grid, Math.round(n.t / grid) * grid)); n.d = Math.max(grid, Math.min(total - n.t, Math.round(n.d / grid) * grid)); });
+// strength 0…1 — сила: 1 — ровно на сетку, 0,5 — на полпути (живость игры остаётся); длина — к сетке при полной силе
+export function quantizeNotes(d, grid, total, strength = 1) {
+  const k = Math.max(0, Math.min(1, +strength || 0)), snap = (t) => Math.round(t / grid) * grid;
+  d.notes.forEach((n) => {
+    n.t = Math.max(0, Math.min(total - grid, k >= 1 ? snap(n.t) : n.t + (snap(n.t) - n.t) * k));
+    n.d = Math.max(grid, Math.min(total - n.t, k >= 1 ? snap(n.d) : n.d + (snap(n.d) - n.d) * k));
+    if (k < 1) { n.t = Math.round(n.t * 1000) / 1000; n.d = Math.round(n.d * 1000) / 1000; }
+  });
   const seen = new Set();
   d.notes = d.notes.filter((n) => { const k = n.t + ':' + n.m; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => a.t - b.t || a.m - b.m);
+  return d;
+}
+// «Живость»: случайный сдвиг начала (±time долей) и громкости (±vel, доля от 1) — запрограммированная партия не звучит машинно.
+// rnd — источник случайных чисел (тесты передают свой)
+export function humanizeNotes(d, total, { time = 0.05, vel = 0.1 } = {}, rnd = Math.random) {
+  const j = (a) => (rnd() * 2 - 1) * a;
+  d.notes.forEach((n) => {
+    n.t = Math.round(Math.max(0, Math.min(total - 0.05, n.t + j(time))) * 1000) / 1000;
+    n.v = Math.round(Math.max(0.05, Math.min(1, (n.v == null ? 0.8 : n.v) + j(vel))) * 100) / 100;
+  });
+  d.notes.sort((a, b) => a.t - b.t || a.m - b.m);
   return d;
 }
 // Сыгранная нота (время в долях куска, без сетки) → в кусок: начало к сетке, длина не короче сетки; по кругу куска

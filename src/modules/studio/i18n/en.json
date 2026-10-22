@@ -191,5 +191,14 @@
   "tr.kit": "Own drum recordings",
   "tr.kitSynth": "Built-in sound",
   "tr.kitHint": "A drum lane can play a library recording as is instead of the built-in sound.",
-  "rec.input": "Input"
+  "rec.input": "Input",
+  "q.strength": "Strength",
+  "q.apply": "Quantize",
+  "q.strengthHint": "100% snaps exactly to the grid; less pulls notes only part of the way, keeping the feel.",
+  "q.human": "Humanize",
+  "q.time": "Timing jitter",
+  "q.vel": "Velocity jitter",
+  "q.applyHuman": "Add humanize",
+  "q.humanHint": "Random shift of every note in time (fraction of a beat) and velocity, so a programmed part does not sound mechanical.",
+  "q.done": "Done"
 }

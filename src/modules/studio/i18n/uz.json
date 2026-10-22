@@ -188,5 +188,14 @@
   "tr.kit": "Zarbli asboblarning oʻz yozuvlari",
   "tr.kitSynth": "Oʻrnatilgan tovush",
   "tr.kitHint": "Zarb qatori oʻrnatilgan tovush oʻrniga mediatekadagi yozuvni borligicha chalishi mumkin.",
-  "rec.input": "Kirish"
+  "rec.input": "Kirish",
+  "q.strength": "Kuch",
+  "q.apply": "Tekislash",
+  "q.strengthHint": "100 % — aynan toʻrga, kamroq — notalar toʻrga toʻliq tortilmaydi, ijro jonliligi saqlanadi.",
+  "q.human": "Jonlilik",
+  "q.time": "Vaqt tebranishi",
+  "q.vel": "Ovoz tebranishi",
+  "q.applyHuman": "Jonlilik qoʻshish",
+  "q.humanHint": "Har bir notaning vaqti (hissa ulushi) va balandligi tasodifiy suriladi — dasturlangan partiya mexanik eshitilmaydi.",
+  "q.done": "Tayyor"
 }

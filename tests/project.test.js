@@ -183,3 +183,27 @@ describe('студия: проект', () => {
     expect(p.clips.map((c) => [c.at, c.len, c.data.fileId])).toEqual([[0, 16, 'a'], [0, 16, 'b'], [0, 16, 'c'], [0, 16, 'd']]); // 10 с при 90 bpm = 15 долей → 4 такта
   });
 });
+
+// Квантизация с силой и «живость» (ночь 22.10.2026)
+import { humanizeNotes } from '../src/music/project.js';
+describe('квантизация с силой, живость', () => {
+  it('сила 50 % — на полпути к сетке, 100 % — ровно; 0 % — без изменений', () => {
+    const p = newProject(), mk = () => { const d = newData('notes', 1); d.notes = [{ t: 0.3, d: 0.4, m: 60, v: 0.8 }]; return d; };
+    const half = quantizeNotes(mk(), 0.5, dataBeats(p, mk()), 0.5);
+    expect(half.notes[0].t).toBeCloseTo(0.4, 3); expect(half.notes[0].d).toBeCloseTo(0.5, 3);
+    const zero = quantizeNotes(mk(), 0.5, 4, 0);
+    expect([zero.notes[0].t, zero.notes[0].d]).toEqual([0.3, 0.5]); // длина — не короче сетки
+    const full = quantizeNotes(mk(), 0.5, 4);
+    expect([full.notes[0].t, full.notes[0].d]).toEqual([0.5, 0.5]);
+  });
+  it('живость: сдвиг в пределах заданного, громкость 0,05…1, порядок сохраняется', () => {
+    const d = newData('notes', 1); d.notes = [{ t: 0, d: 1, m: 60, v: 0.8 }, { t: 1, d: 1, m: 64, v: 1 }, { t: 2, d: 1, m: 67, v: 0.05 }];
+    let s = 3; const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32);
+    humanizeNotes(d, 4, { time: 0.1, vel: 0.2 }, rnd);
+    d.notes.forEach((n, i) => { expect(Math.abs(n.t - [0, 1, 2][i])).toBeLessThanOrEqual(0.1 + 1e-9); expect(n.v).toBeGreaterThanOrEqual(0.05); expect(n.v).toBeLessThanOrEqual(1); });
+    expect(d.notes.map((n) => n.m)).toEqual([60, 64, 67]);
+    const same = newData('notes', 1); same.notes = [{ t: 0.5, d: 1, m: 60, v: 0.8 }];
+    humanizeNotes(same, 4, { time: 0, vel: 0 }, rnd);
+    expect(same.notes[0]).toEqual({ t: 0.5, d: 1, m: 60, v: 0.8 });
+  });
+});
