@@ -84,6 +84,7 @@ function tempoChart(pts, target) {
 }
 
 export function songHTML(app, id) {
+  if (app.guest) queueMicrotask(() => app.guest.hostAt(id)); // раздача: хозяин открыл песню — гости, что следуют, тоже (guest.js)
   const s = app.store.songById(id);
   if (!s) return null;
   const L = ensureLib(app.store.state, t), st = songStats(app.store.sessions(), id), p = getPct(s), plain = !!app.store.state.settings.toolsOnly;

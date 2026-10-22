@@ -97,6 +97,8 @@ pub fn sync_stop(st: State<'_, SyncSrv>) {
     st.on.store(false, Ordering::Relaxed);
     if let Ok(mut w) = st.waits.lock() { for (_, tx) in w.drain() { let _ = tx.send((503, "text/plain".into(), Vec::new())); } }
 }
+// Адреса компьютера в сети и его имя — и для раздачи гостям (guest.rs)
+pub fn sync_status_plain() -> (Vec<String>, String) { (local_ips(), host_name()) }
 #[tauri::command]
 pub fn sync_status(st: State<'_, SyncSrv>) -> Status { Status { on: st.on.load(Ordering::Relaxed), port: PORT, ips: local_ips(), name: host_name() } }
 

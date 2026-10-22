@@ -1,0 +1,42 @@
+/* Гостевая страница раздачи — тот же дизайн-код (tokens.css): тёплый фон, карточки, охра; текст песни — во всю ширину */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 17px; line-height: 1.35; -webkit-text-size-adjust: 100%; }
+button, select, input { font: inherit; color: inherit; }
+button { background: none; border: 0; cursor: pointer; }
+.gtop { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 10px 16px calc(10px); padding-top: max(10px, env(safe-area-inset-top)); background: var(--bar); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: .5px solid var(--sep); }
+.gbrand { font-family: Georgia, 'Times New Roman', serif; font-size: 20px; color: var(--tint-text); }
+.gbrand.big { font-size: 44px; }
+.ghost { flex: 1; min-width: 0; color: var(--l2); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gic { width: 44px; height: 44px; margin: -6px 0 -6px -10px; font-size: 32px; line-height: 1; color: var(--tint-text); }
+.gchip { flex: none; min-height: 34px; padding: 0 14px; border-radius: 999px; background: var(--fill); font-size: 14px; font-weight: 600; color: var(--l2); }
+.gchip.on { background: var(--tint); color: var(--on-tint); }
+.glost { padding: 8px 16px; background: color-mix(in srgb, var(--red) 14%, var(--bg)); color: var(--red); font-size: 14px; text-align: center; }
+.gmain { max-width: 900px; margin: 0 auto; padding: 12px 16px 48px; }
+.gmain h2 { font-size: 15px; font-weight: 600; color: var(--l2); text-transform: uppercase; letter-spacing: .04em; margin: 8px 4px; }
+.gsearch { width: 100%; min-height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--fill); margin-bottom: 12px; }
+.glist { background: var(--cell); border-radius: 12px; overflow: hidden; }
+.grow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 16px; text-align: left; border-bottom: .5px solid var(--sep); }
+.grow:last-child { border-bottom: 0; }
+.gnum { width: 22px; color: var(--l2); font-variant-numeric: tabular-nums; }
+.gt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.gt b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gt i { font-style: normal; color: var(--l2); font-size: 14px; }
+.gmeta { flex: none; color: var(--l2); font-size: 14px; }
+.gempty { color: var(--l2); text-align: center; padding: 24px; }
+.gsong h1 { font-size: 26px; margin: 8px 0 2px; }
+.gart { margin: 0 0 10px; color: var(--l2); }
+.gctl { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 8px 0 12px; font-size: 14px; color: var(--l2); }
+.gctl label { display: inline-flex; align-items: center; gap: 6px; }
+.gctl select { min-height: 36px; border-radius: 9px; border: 0; background: var(--fill); padding: 0 8px; color: var(--ink); }
+.gstep { display: inline-flex; align-items: center; background: var(--fill); border-radius: 9px; overflow: hidden; color: var(--ink); }
+.gstep button { width: 40px; height: 36px; font-size: 20px; color: var(--tint-text); }
+.gstep b { min-width: 28px; text-align: center; font-weight: 600; padding: 0 4px; font-variant-numeric: tabular-nums; }
+.gaudio { display: flex; flex-direction: column; gap: 8px; margin: 0 0 14px; }
+.gaudio audio { width: 100%; }
+.gaudio select { min-height: 40px; border-radius: 10px; border: 0; background: var(--fill); padding: 0 10px; }
+/* аккорды строкой над словами (chordsAbove): моноширинный шрифт держит аккорд над своим слогом; длинная строка — прокрутка вбок, не перенос */
+.gtext { margin: 0 -16px; padding: 0 16px; white-space: pre; overflow-x: auto; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace; font-size: var(--fs, 18px); line-height: 1.45; }
+.gtext .chd { color: var(--tint-text); font-weight: 700; }
+.gcenter { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px 16px; text-align: center; color: var(--l2); }
+.gcenter .gsearch { max-width: 360px; margin: 0; }
+.gbtn { min-height: 50px; padding: 0 28px; border-radius: 14px; background: var(--tint); color: var(--on-tint); font-weight: 600; }

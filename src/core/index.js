@@ -45,6 +45,7 @@ import { createJobs } from './jobs.js';
 import { createAutoStems } from './autostems.js';
 import { createMidi } from './midi.js';
 import { createSyncServer, createSyncClient } from './sync.js';
+import { createGuestServer } from './guest.js';
 import { isDesktop } from './desktop.js';
 import { reschedule, rescheduleEvents } from './reminders.js';
 import { ensureCal, eventReminders, liveEvents, kindOf } from './calendar.js';
@@ -273,6 +274,11 @@ export function boot(root) {
   // телефон: фоновая синхронизация и «Считать на компьютере» (sync.js); компьютер сам — сервер
   app.syncCli = createSyncClient(app);
   if (!app.syncSrv.avail) app.syncCli.start();
+  // раздача в своей сети: гости открывают песни в браузере (guest.js, только Windows)
+  app.guest = createGuestServer(app, { isDesktop });
+  if (app.guest.avail && app.guest.wasOn()) app.guest.start().catch(() => {});
+  // закрытая раздача: гость просится — спросить хозяина, где бы он ни был (отказ — кнопкой в списке гостей)
+  app.guest.onJoin((id) => { const g = app.guest.guests().find((x) => x.id === id); if (g) confirm(t('gs.askTitle'), t('gs.askText', { name: g.name }), t('gs.allow')).then((ok) => { if (ok) app.guest.approve(id, true); }); });
   app.localSend.init();
   // прошлый запуск закрылся неожиданно — предложить отправить отчёт
   crashOffer(app);

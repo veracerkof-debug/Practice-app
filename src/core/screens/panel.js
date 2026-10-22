@@ -46,6 +46,7 @@ import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
 import { planSheet } from './bibleplan.js';
 import { pcOf, pair, syncNow, forgetPc } from '../sync.js';
+import { setlistsOf } from '../guest.js';
 
 // Значки страниц — оттенки палитры (settings.palette)
 const iconBg = (st, hue) => '--tc:' + hueColor(st, hue);
@@ -342,6 +343,7 @@ function dataHTML(app) {
   return '<div class="large">' + t('data.title') + '</div><div class="group"><button class="cell act" data-act="export">' + t('data.export') + '</button><button class="cell act" data-act="import">' + t('data.import') + '</button></div>' +
     '<p class="ftr">' + t('data.hint') + '</p>' +
     syncHTML(app) +
+    guestHTML(app) +
     folderHTML(app) +
     // демо-набор: песни, табулатуры, ноты, записи и события — показать, как всё устроено; убирается одной кнопкой
     // демо-набор ставится при регистрации; здесь — только убрать (решение автора)
@@ -376,6 +378,34 @@ function syncHTML(app) {
     '<div class="cell"><span class="grow">' + t('sy.pcWork') + '</span>' + psw('pcWork', st.pcWork !== false, t('sy.pcWork')) + '</div>' +
     '<div class="cell"><span class="grow">' + t('sy.auto') + '</span>' + psw('syncAuto', st.syncAuto !== false, t('sy.auto')) + '</div>' +
     '<button class="cell act danger" data-act="sypcforget">' + t('sy.forgetPc') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t('sy.what') + ' ' + t('sy.pcWorkHint') + '</p>';
+}
+// Раздача в своей сети (src/core/guest.js, docs/guest-web.md): гости открывают песни в браузере телефона.
+// Открытая — вбил адрес, и внутри; закрытая — только по QR-коду и с подтверждением здесь. Ведёт хозяин, можно передать гостю
+let qrSvg = null; // генератор QR-кода — по требованию (лёгкий, MIT)
+function qrHTML(text) {
+  if (!qrSvg) { import('qrcode-generator').then((m) => { qrSvg = m.default || m; const el = document.querySelector('[data-qr]'); if (el) el.innerHTML = qrHTML(el.dataset.qr); }); return ''; }
+  const q = qrSvg(0, 'M'); q.addData(text); q.make();
+  const n = q.getModuleCount(), c = 6, m = 4 * c, W = n * c + 2 * m;
+  let d = '';
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) d += 'M' + (m + x * c) + ' ' + (m + y * c) + 'h' + c + 'v' + c + 'h-' + c + 'z';
+  return '<svg viewBox="0 0 ' + W + ' ' + W + '" role="img" aria-label="QR"><rect width="' + W + '" height="' + W + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+}
+function guestHTML(app) {
+  const G = app.guest;
+  if (!G || !G.avail) return '';
+  const c = G.cfg, on = G.status.on, sets = setlistsOf(app.store.state), url = G.url(c.mode === 'closed');
+  const guests = on ? G.guests() : [];
+  return '<div class="hdr">' + t('gs.title') + '</div><div class="group"><div class="cell"><span class="grow">' + t('gs.on') + '</span>' + psw('guestOn', on, t('gs.on')) + '</div>' +
+    '<div class="cellcol">' + seg('gmode', [['open', t('gs.open')], ['closed', t('gs.closed')]], c.mode, t('gs.mode')) + '<div class="segcap">' + t(c.mode === 'closed' ? 'gs.closedHint' : 'gs.openHint') + '</div></div>' +
+    '<div class="cellcol">' + seg('gscope', [['all', t('gs.all')], ['set', t('gs.set')]], c.scope, t('gs.what')) +
+      (c.scope === 'set' ? (sets.length ? '<select class="inp" data-gset aria-label="' + esc(t('gs.set')) + '">' + sets.map((x) => '<option value="' + esc(x.id) + '"' + (x.id === c.set ? ' selected' : '') + '>' + esc((x.title || t('gs.set')) + (x.at ? ' · ' + new Date(x.at).toLocaleDateString() : '') + ' · ' + x.n) + '</option>').join('') + '</select>' : '<div class="segcap">' + t('gs.noSets') + '</div>') : '') + '</div>' +
+    '<div class="cell"><span class="grow">' + t('gs.audio') + '<span class="bksub">' + t('gs.audioHint') + '</span></span>' + psw('guestAudio', c.audio, t('gs.audio')) + '</div>' +
+    (on ? '<div class="cellcol gsqr"><div class="gsqrimg" data-qr="' + esc(url) + '">' + qrHTML(url) + '</div><b class="num sybig">' + esc(url.replace(/\?t=.*$/, '').replace(/\/$/, '')) + '</b><span class="l2">' + t(c.mode === 'closed' ? 'gs.qrOnly' : 'gs.addr') + '</span></div>' +
+      '<div class="cell"><span class="grow">' + t('gs.leader') + '<span class="psub">' + esc(G.leader === 'host' ? t('gs.host') : ((guests.find((x) => x.lead) || {}).name || '')) + '</span></span>' + (G.leader !== 'host' ? '<button class="link" data-act="glead" data-k="host">' + t('gs.takeBack') + '</button>' : '') + '</div>' +
+      guests.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t(x.ok ? (x.lead ? 'gs.leading' : 'gs.in') : 'gs.asks') + '</span></span>' +
+        (x.ok ? (x.lead ? '' : '<button class="link" data-act="glead" data-k="' + esc(x.id) + '">' + t('gs.giveLead') + '</button>') + '<button class="link danger" data-act="gkick" data-k="' + esc(x.id) + '">' + t('gs.kick') + '</button>'
+          : '<button class="link" data-act="gok" data-k="' + esc(x.id) + '">' + t('gs.allow') + '</button><button class="link danger" data-act="gno" data-k="' + esc(x.id) + '">' + t('gs.deny') + '</button>') + '</div>').join('') : '') +
+    '</div><p class="ftr">' + t('gs.hint') + '</p>';
 }
 const syncErr = (e) => t('sy.err.' + ((e && e.reason) || 'unreachable'));
 
@@ -545,6 +575,7 @@ export function createPanel(app, onChange) {
     if (app.folder) app.folder.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
     if (app.localSend) app.localSend.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
     if (app.syncSrv) app.syncSrv.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
+    if (app.guest) app.guest.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
     if (app.syncCli) app.syncCli.subscribe(() => { if (page === 'data' && layer && layer.isConnected && !syncBusy) render(); });
     // характер Мелеты (страница «Уведомления»)
     bindMelete(layer, () => app.store.state.settings, { save: () => { app.store.settingsChanged(); onChange(); }, rerender: () => render() });
@@ -618,6 +649,12 @@ export function createPanel(app, onChange) {
         }
         return;
       }
+      if ((b = g('[data-seg="gmode"] [data-v]'))) { app.guest.set({ mode: b.dataset.v }); return; }
+      if ((b = g('[data-seg="gscope"] [data-v]'))) { const c = app.guest.cfg; app.guest.set({ scope: b.dataset.v, set: c.set || ((setlistsOf(app.store.state)[0] || {}).id || '') }); return; }
+      if ((b = g('[data-act="gok"]'))) { app.guest.approve(b.dataset.k, true); return; }
+      if ((b = g('[data-act="gno"]'))) { app.guest.approve(b.dataset.k, false); return; }
+      if ((b = g('[data-act="gkick"]'))) { app.guest.kick(b.dataset.k); return; }
+      if ((b = g('[data-act="glead"]'))) { app.guest.lead(b.dataset.k); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
       if (g('[data-act="sypcforget"]')) { forgetPc(); syncMsg = ''; render(); return; }
       if (g('[data-act="sypair"]') && !syncBusy) {
@@ -708,6 +745,9 @@ export function createPanel(app, onChange) {
         return;
       }
       if (d.psw === 'localSend') { app.localSend.set(e.target.checked).then(() => render()); return; }
+      if (d.psw === 'guestOn') { (e.target.checked ? app.guest.start() : app.guest.stop()).then(() => render()).catch(() => { toast(t('sy.err.port')); render(); }); return; }
+      if (d.psw === 'guestAudio') { app.guest.set({ audio: e.target.checked }); return; }
+      if (e.target.matches('[data-gset]')) { app.guest.set({ set: e.target.value }); return; }
       if (d.psw === 'syncSrv') { (e.target.checked ? app.syncSrv.start() : app.syncSrv.stop()).then(() => render()).catch(() => { toast(t('sy.err.port')); render(); }); return; }
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq' || d.psw === 'autoLyr' || d.psw === 'pcWork') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {
@@ -787,6 +827,7 @@ export function legalSheet(kind) {
       lic(t('lic.bible.title'), t('lic.bible.sub'), '<p>' + t('lic.bible.text') + '</p>') +
       lic(t('lic.verses.title'), t('lic.verses.sub'), '<p>' + t('lic.verses.text') + '</p>') +
       lic('fflate', t('lic.fflate.sub'), '<p>© Arjun Barrett</p><p>' + t('lic.mit') + '</p>') +
+      lic('qrcode-generator', t('lic.qr.sub'), '<p>© Kazuhiko Arase</p><p>' + t('lic.mit') + '</p><p>' + t('lic.qr.tm') + '</p>') +
       lic('Signalsmith Stretch', t('lic.stretch.sub'), '<p>© Signalsmith Audio Ltd</p><p>' + t('lic.mit') + '</p>') +
       lic('ONNX Runtime', t('lic.ort.sub'), '<p>© Microsoft Corporation</p><p>' + t('lic.mit') + '</p>') +
       lic('HTDemucs', t('lic.dm.sub'), '<p>© Meta Platforms, Inc. ' + t('lic.andContrib') + '</p><p>' + t('lic.dm.text') + '</p>') +

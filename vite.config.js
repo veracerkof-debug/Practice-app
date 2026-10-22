@@ -105,5 +105,7 @@ export default defineConfig(({ mode }) => ({
     outDir: 'dist',
     target: 'es2022',
     chunkSizeWarningLimit: 1300, // alphaTab (~1,2 МБ) грузится отдельно, только при открытии табулатуры
+    // вторая страница — гостевая страница раздачи в своей сети (docs/guest-web.md): её отдаёт программа для Windows
+    rollupOptions: { input: { main: 'index.html', guest: 'guest.html' } },
   },
 }));

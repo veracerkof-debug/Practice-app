@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F3F2EE">
+<!-- Гостевая страница раздачи (docs/guest-web.md): её отдаёт компьютер с Melete в своей сети; ходит только к нему -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; media-src 'self' blob:; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+<title>Melete</title>
+</head>
+<body>
+<div id="g"></div>
+<script type="module" src="/src/guest/main.js"></script>
+</body>
+</html>

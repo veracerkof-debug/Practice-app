@@ -256,6 +256,7 @@ export function openStage(app, evId, i = 0) {
     const L = list(), x = item();
     if (!x) { close(true); return; }
     const { s, it } = x, next = L[S.i + 1];
+    if (app.guest) app.guest.hostAt(s.id, it.tr); // раздача: пункт сцены — у гостей, что следуют (guest.js)
     const chip = (k, on, label, avail = true) => avail ? '<button class="sgchip' + (on ? ' on' : '') + '" data-sgt="' + k + '" aria-pressed="' + on + '">' + esc(label) + '</button>' : '';
     const trName = it.track ? (audioFiles(app).find((r) => r.id === it.track) || {}).name || '' : '';
     S.el.classList.toggle('night', !!S.night);
