@@ -6,7 +6,7 @@ name: Windows pre-release
 
 on:
   push:
-    branches: [main, 'claude/**']
+    branches: [main] # выпускные сборки — только из основной ветки: ветки чатов перетирали бы общий релиз «pre» (CLAUDE.md: несколько чатов)
     paths-ignore: ['**.md', 'docs/**', 'android/**']
   workflow_dispatch:
 
