@@ -96,3 +96,5 @@
 @keyframes epop{50%{transform:scale(1.06)}}
 @keyframes eshake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .tvhost .edash{background:var(--bg)}
+.eslot.cur{outline:2px solid var(--c,var(--tint));outline-offset:-2px}
+.ecard,.egrid,.eslots{touch-action:pan-y} /* смахивание влево-вправо по карточке «Ступеней» — вид вопроса; вертикаль остаётся прокрутке */

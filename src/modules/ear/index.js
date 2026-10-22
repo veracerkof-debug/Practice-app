@@ -10,8 +10,9 @@ import { SH, MAJI, MAJ_NAMES, MIN_NAMES, spell, mName } from '../../music/notes.
 import { SCALES } from '../../music/theory.js';
 import {
   DRILLS, EIV, ECH, EDG, RANGES, NT_COLORS, NT_TIMBRES, NT_GOAL, LEVELS, TEMPOS, EAR_TIMBRES, normalizeEar, setLevel, toggleInSet, ntSet, generate, playPlan, comparePlan,
-  normalizeEarData, record, accuracy, earStreak, ntProgress, dictationStep, pitchCents, pitchTol,
+  normalizeEarData, record, accuracy, earStreak, ntProgress, dictationStep, pitchCents, pitchTol, DG_KINDS, DG_MODES, romanOf, dgScale,
 } from '../../music/ear.js';
+import { swipe } from '../../ui/gestures.js';
 import { yin, createPitchSmoother } from '../../audio/pitch.js';
 import { noiseBuf } from '../../audio/waves.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
@@ -38,8 +39,8 @@ const dayKey = (ts) => { const d = new Date(ts); return d.getFullYear() + '-' + 
 const DAY = 86400000;
 
 // Состояние занятия (не сохраняется): вопросы, ответы, серии, таймеры звука
-const EAR = { q: {}, res: {}, sess: {}, timers: [], playing: false, hold: 0, reveal: false, ntPlayed: false, listen: false, mixTim: 'piano' };
-let host = null, ctx = null, size = 'full', onClick = null, onDown = null;
+const EAR = { q: {}, res: {}, sess: {}, timers: [], playing: false, hold: 0, reveal: false, ntPlayed: false, listen: false, mixTim: 'piano', chain: [] };
+let host = null, ctx = null, size = 'full', onClick = null, onDown = null, unswipe = null;
 let mic = null, micTimer = 0, smooth = null, lastT = 0;
 
 const EC = () => normalizeEar(ctx.store.all());
@@ -89,6 +90,7 @@ function gen(sec) {
   const q = generate(sec, EC(), Math.random, sec === 'nt' ? EAR.q.nt : null);
   EAR.q[sec] = q;
   EAR.res[sec] = null;
+  EAR.chain = [];
   EAR.hold = 0;
   EAR.mixTim = NT_TIMBRES[Math.floor(Math.random() * NT_TIMBRES.length)];
   EAR.listen = sec === 'nt' && EC().listen; // новый вопрос «Нот» — сначала можно послушать клавиши (если так настроено)
@@ -130,6 +132,16 @@ function answer(sec, v) {
   const q = EAR.q[sec];
   if (!q) return;
   if (EAR.res[sec]) { compare(sec, v); return; }
+  if (q.degs) {
+    // цепочка ступеней: ответы копятся по порядку, каждая ступень — в статистику отдельно
+    EAR.chain.push(String(v));
+    if (EAR.chain.length < q.degs.length) return;
+    let all = true;
+    q.degs.forEach((d, i) => { const o = EAR.chain[i] === String(d); if (!o) all = false; rec(sec, d, o); });
+    EAR.res[sec] = { ok: all, picked: EAR.chain.join(',') };
+    if (all) autoNext(sec);
+    return;
+  }
   const ok = String(v) === String(q.ans);
   EAR.res[sec] = { ok, picked: String(v) };
   rec(sec, q.ans, ok);
@@ -236,7 +248,11 @@ function label(sec, key) {
   if (sec === 'iv') return EIV.includes(+key) ? t('iv.' + key) : key;
   if (sec === 'ch') return ECH.some((c) => c[0] === key) ? t('ch.' + key) : key;
   if (sec === 'sc') return SCALES[key] ? t('scale.' + key).replace(/^./, (c) => c.toUpperCase()) : key;
-  if (sec === 'dg') { const x = EDG.find((d) => d[0] === +key); return x ? t('st.degree', { d: x[1] }) : key; }
+  if (sec === 'dg') {
+    if (String(key).includes(',')) return String(key).split(',').map((k) => { const x = EDG.find((d) => d[0] === +k); return x ? x[1] : k; }).join(' → ');
+    if (isNaN(+key)) return String(key); // аккорд ступени — римская цифра
+    const x = EDG.find((d) => d[0] === +key); return x ? t('st.degree', { d: x[1] }) : key;
+  }
   if (sec === 'nt') return SH[+key] ?? key;
   if (sec === 'dc') { const n = parseInt(key, 10); return n ? tn('st.dcLen', n) : key; }
   return isNaN(+key) ? key : mName(+key);
@@ -306,7 +322,7 @@ function drillHTML(sec) {
   // «Дальше» — всегда после ответа: сравнение вариантов на слух отменяет автопереход (на телефоне упражнение застревало)
   const next = res ? '<button class="btn fill block enext" data-x="enext">' + t('next') + '</button>' : '';
   const fb = () => (res ? '<div class="efb ' + (res.ok ? 'ok' : 'bad') + '" aria-live="polite">' + t(res.ok ? 'right' : 'answer') + '<b>' + esc(label(sec, q.ans)) + '</b>' +
-    (sec === 'dg' ? ' — ' + spell((q.minor ? MIN_NAMES : MAJ_NAMES)[q.pc], [q.ans], [EDG.find((d) => d[0] === q.ans)[3]])[0] : '') + '</div>' : '<div class="efb" aria-live="polite"></div>');
+    (sec === 'dg' && q.m != null ? ' — ' + spell((q.minor ? MIN_NAMES : MAJ_NAMES)[q.pc], [q.ans], [EDG.find((d) => d[0] === q.ans)[3]])[0] : '') + '</div>' : '<div class="efb" aria-live="polite"></div>');
 
   if (sec === 'pt') {
     return '<div class="ewrap">' + head + '<div class="ecard pt" style="--c:' + color + '"><div class="eq2">' + t('rng.' + e.rng) + (e.oct ? t('anyOct') : '') + '</div><div class="etarget num">' +
@@ -320,12 +336,12 @@ function drillHTML(sec) {
 
   const prompts = {
     iv: [t('q.iv'), t('dir.' + q.dir)], ch: [t('q.ch'), t(e.arp ? 'p.arp' : 'p.chord')], sc: [t('q.sc'), t(e.scDir === 'both' ? 'p.both' : 'p.up')],
-    dg: [t('q.dg'), t('p.dg')], nt: [t('q.nt'), t('p.nt', { range: t(e.ntRange === '1' ? 'oct1' : 'oct3'), timbre: t(e.ntTimbre === 'mix' ? 'tim.mix' : 'tim.piano') })],
+    dg: [t(q.chord ? 'q.dgch' : q.degs ? 'q.dgchain' : 'q.dg'), q.mode && q.mode !== 'major' && q.mode !== 'minor' ? t('p.dgMode', { mode: t('md.' + q.mode) }) : t('p.dg')], nt: [t('q.nt'), t('p.nt', { range: t(e.ntRange === '1' ? 'oct1' : 'oct3'), timbre: t(e.ntTimbre === 'mix' ? 'tim.mix' : 'tim.piano') })],
     dc: [t('q.dc'), t('p.dc')],
   };
   const [pq, ps] = prompts[sec];
   const card = '<div class="ecard" style="--c:' + color + '">' + playBtn() + '<div class="eq1">' + pq + '</div><div class="eq2">' + ps + ' · ' + lvl +
-    (sec === 'dg' && res ? ' · ' + t(q.minor ? 'key.min' : 'key.maj', { root: (q.minor ? MIN_NAMES : MAJ_NAMES)[q.pc] }) : '') + '</div>' + (sec === 'dc' ? '' : fb()) + '</div>';
+    (sec === 'dg' && res ? ' · ' + (q.mode && q.mode !== 'major' && q.mode !== 'minor' ? MAJ_NAMES[q.pc] + ' ' + t('md.' + q.mode) : t(q.minor ? 'key.min' : 'key.maj', { root: (q.minor ? MIN_NAMES : MAJ_NAMES)[q.pc] })) : '') + '</div>' + (sec === 'dc' ? '' : fb()) + '</div>';
 
   if (sec === 'nt') {
     const mk = {};
@@ -351,9 +367,13 @@ function drillHTML(sec) {
   if (sec === 'iv') opts = EIV.filter((i) => e.ivSet.includes(i)).map((i) => [i, t('ivs.' + i), t('iv.' + i)]);
   else if (sec === 'ch') opts = ECH.filter((c) => e.chSet.includes(c[0])).map((c) => [c[0], c[1] || 'maj', t('ch.' + c[0])]);
   else if (sec === 'sc') opts = e.scSet.filter((k) => SCALES[k]).map((k) => [k, label('sc', k), '']);
+  else if (sec === 'dg' && q.chord) { const sc = dgScale(q.mode); opts = [0, 1, 2, 3, 4, 5, 6].map((d) => [romanOf(sc, d), romanOf(sc, d), d === 0 ? t('fn.tonic') : d === 3 ? t('fn.subdom') : d === 4 ? t('fn.dom') : '']); }
   else if (sec === 'dg') opts = EDG.filter((d) => e.dgSet.includes(d[0])).map((d) => [d[0], d[1], d[2] ? t('fn.' + d[2]) : '']);
+  // цепочка ступеней: ячейки ответов над кнопками — «?» до ответа, затем верно/ошибка с подсказкой
+  const chain = sec === 'dg' && q.degs ? '<div class="eslots">' + q.degs.map((d, i) => { const got = res ? res.picked.split(',')[i] : EAR.chain[i], ok = got != null && String(got) === String(d), dl = (k) => (EDG.find((x) => x[0] === +k) || [0, k])[1];
+    return '<span class="eslot' + (got != null ? (ok ? ' ok' : ' bad') : i === EAR.chain.length && !res ? ' cur' : '') + '">' + (got != null ? dl(got) : '?') + (res && !ok ? '<small>' + dl(d) + '</small>' : '') + '</span>'; }).join('') + '</div>' : '';
   const cols = sec === 'sc' ? 2 : opts.length <= 4 ? 2 : opts.length <= 9 ? 3 : 4;
-  return '<div class="ewrap">' + head + card + '<div class="egrid' + (sec === 'sc' ? ' esc' : '') + (opts.length <= 4 ? ' few' : '') + '" style="--cols:' + cols + ';--c:' + color + '">' + opts.map(([v, s, l]) => {
+  return '<div class="ewrap">' + head + card + chain + '<div class="egrid' + (sec === 'sc' ? ' esc' : '') + (opts.length <= 4 ? ' few' : '') + '" style="--cols:' + cols + ';--c:' + color + '">' + opts.map(([v, s, l]) => {
     const st = res ? (String(v) === String(q.ans) ? ' ok' : res.picked === String(v) ? ' bad' : ' dim') : '';
     return '<button class="eopt' + st + '" data-x="eans" data-v="' + v + '" aria-label="' + esc(l || s) + '"><b>' + esc(s) + '</b>' + (l ? '<small>' + esc(l) + '</small>' : '') + '</button>';
   }).join('') + '</div>' + next + (res ? '<p class="ftr" style="text-align:center;margin-top:2px">' + t('compare') + '</p>' : '') + '</div>';
@@ -379,7 +399,8 @@ function settingsSheet() {
       '<div class="hdr" style="margin-top:4px">' + t('set.level') + '</div><div class="group"><div class="cellcol">' + seg('lv', ['easy', 'mid', 'hard'].map((k) => [k, t('lv.' + k)]), e.level, t('set.level')) + (e.level === 'custom' ? '<div class="segcap">' + t('lv.customNow') + '</div>' : '') + '</div></div>' +
       (sec === 'iv' ? '<div class="hdr">' + t('set.dir') + '</div><div class="group"><div class="cellcol">' + seg('dir', ['up', 'down', 'harm', 'mix'].map((k) => [k, t('d.' + k)]), e.dir, t('set.dir')) + '</div></div>' : '') +
       (sec === 'ch' ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('set.arp') + '</span>' + ui.sw('earp', e.arp, t('set.arp')) + '</div></div>' : '') +
-      (sec === 'dg' ? '<div class="hdr">' + t('set.mode') + '</div><div class="group"><div class="cellcol">' + seg('md', ['major', 'minor', 'mix'].map((k) => [k, t('md.' + k)]), e.mode, t('set.mode')) + '</div></div>' : '') +
+      (sec === 'dg' ? '<div class="hdr">' + t('set.kind') + '</div><div class="group"><div class="cellcol">' + seg('kd', DG_KINDS.map((k) => [k, t('kd.' + k)]), e.dgKind, t('set.kind')) + '</div></div><p class="ftr">' + t('ftr.kind') + '</p>' +
+        '<div class="hdr">' + t('set.mode') + '</div><div class="group"><div class="cellcol">' + seg('md', DG_MODES.slice(0, 3).map((k) => [k, t('md.' + k)]), e.mode, t('set.mode')) + '</div><div class="cellcol">' + seg('md', DG_MODES.slice(3).map((k) => [k, t('md.' + k)]), e.mode, t('set.mode')) + '</div></div>' : '') +
       (sec === 'pt' ? '<div class="hdr">' + t('set.range') + '</div><div class="group">' + Object.entries(RANGES).map(([k, v]) => '<button class="cell" data-rg="' + k + '" aria-pressed="' + (e.rng === k) +
         '"><span class="grow">' + t('rng.' + k) + '</span><span class="val">' + mName(v[0]) + '–' + mName(v[1]) + '</span>' + (e.rng === k ? ui.icons.check : '') + '</button>').join('') +
         '</div><div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('set.anyOct') + '</span>' + ui.sw('eoct', e.oct, t('set.anyOctShort')) + '</div></div>' : '') +
@@ -414,6 +435,7 @@ function settingsSheet() {
       else if (g('[data-ntreset]')) { e.ntLvl = 0; e.ntHist = []; ui.toast(t('restarted')); }
       else if ((b = g('[data-sd]'))) e.scDir = b.dataset.sd;
       else if ((b = g('[data-md]'))) e.mode = b.dataset.md;
+      else if ((b = g('[data-kd]'))) e.dgKind = b.dataset.kd;
       else if ((b = g('[data-rg]'))) e.rng = b.dataset.rg;
       else if ((b = g('[data-tempo]'))) e.tempo = b.dataset.tempo;
       else if ((b = g('[data-tim]'))) e.timbre = b.dataset.tim;
@@ -528,6 +550,9 @@ function bind() {
   };
   host.addEventListener('click', onClick);
   host.addEventListener('pointerdown', onDown);
+  // «Ступени»: смахивание по карточке или кнопкам влево — следующий вид вопроса (нота → аккорд → цепочка), вправо — предыдущий
+  const kindStep = (d) => { const e = EC(); if (e.sec !== 'dg') return; const i = DG_KINDS.indexOf(e.dgKind); e.dgKind = DG_KINDS[(i + d + DG_KINDS.length) % DG_KINDS.length]; ctx.store.save(); clearTimers(); gen('dg'); render(); ctx.ui.toast(ctx.t('kd.' + e.dgKind)); };
+  unswipe = swipe(host, { left: () => kindStep(1), right: () => kindStep(-1), ok: (ev) => EC().sec === 'dg' && !!ev.target.closest('.ecard, .egrid, .eslots') });
 }
 
 export default {
@@ -554,6 +579,7 @@ export default {
     clearTimers();
     micStop();
     if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onDown); }
+    if (unswipe) { unswipe(); unswipe = null; }
     host = null;
   },
 };

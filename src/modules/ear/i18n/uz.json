@@ -214,5 +214,16 @@
   "help.1": "Mashq — trenajyor bosh ekranidagi kartochka; «▶» — savolni takrorlash.",
   "help.2": "Variantlar toʻplami, temp va tembr — sozlamalarda; oʻz toʻplami — variantlarga bosish bilan.",
   "help.3": "«Notalar»: «Tinglash» — klavishlar faqat yangraydi, «Javob berish» — bosish hisoblanadi.",
-  "help.tip": "Haftada bir soatdan har kuni 10 daqiqa yaxshiroq."
+  "help.tip": "Haftada bir soatdan har kuni 10 daqiqa yaxshiroq.",
+  "set.kind": "Savol",
+  "kd.note": "Pog‘ona",
+  "kd.chord": "Akkord",
+  "kd.chain": "Zanjir",
+  "ftr.kind": "Akkord — pog‘ona uchtovushi, javob rim raqami bilan. Zanjir — ketma-ket ikki-uch pog‘ona, javoblar tartib bilan. Turini kartani surib almashtiring.",
+  "md.dorian": "Doriy",
+  "md.lydian": "Lidiy",
+  "md.mixo": "Miksolidiy",
+  "q.dgch": "Qaysi akkord?",
+  "q.dgchain": "Qaysi pog‘onalar?",
+  "p.dgMode": "lad aylanmasidan keyin ({mode})"
 }

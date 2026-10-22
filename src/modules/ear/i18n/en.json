@@ -229,5 +229,16 @@
   "help.1": "Each drill is a card on the trainer’s home screen; “▶” repeats the question.",
   "help.2": "Answer set, tempo and timbre are in settings (gear); tap options to build a custom set.",
   "help.3": "“Notes”: “Listen” — keys only sound, “Answer” — a tap counts as the answer.",
-  "help.tip": "Ten minutes every day beats an hour once a week."
+  "help.tip": "Ten minutes every day beats an hour once a week.",
+  "set.kind": "Question",
+  "kd.note": "Degree",
+  "kd.chord": "Chord",
+  "kd.chain": "Chain",
+  "ftr.kind": "Chord — the triad on a degree, answer with a Roman numeral. Chain — two or three degrees in a row, answer in order. Swipe the card to change the kind.",
+  "md.dorian": "Dorian",
+  "md.lydian": "Lydian",
+  "md.mixo": "Mixolydian",
+  "q.dgch": "Which chord?",
+  "q.dgchain": "Which degrees?",
+  "p.dgMode": "after a cadence in the mode ({mode})"
 }

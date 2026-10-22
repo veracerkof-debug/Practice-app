@@ -121,3 +121,45 @@ describe('тренажёр слуха — учёт', () => {
     expect([e.chSet, e.level]).toEqual([['maj', 'min', '7'], 'custom']);
   });
 });
+
+// Ступени: аккорд ступени римской цифрой, цепочка ступеней, лады с характерным оборотом (ночь 22.10.2026)
+import { romanOf, dgScale, DG_MODES, DG_KINDS } from '../src/music/ear.js';
+describe('ступени: аккорды, цепочки, лады', () => {
+  const base = () => normalizeEar({ sec: 'dg', level: 'mid' });
+  it('римские цифры с качеством трезвучия', () => {
+    expect([0, 1, 2, 3, 4, 5, 6].map((d) => romanOf(dgScale('major'), d))).toEqual(['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°']);
+    expect([0, 1, 2, 3, 4, 5, 6].map((d) => romanOf(dgScale('minor'), d))).toEqual(['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII']);
+    expect(romanOf(dgScale('lydian'), 1)).toBe('II');
+    expect(romanOf(dgScale('mixo'), 6)).toBe('VII');
+  });
+  it('аккорд: оборот, затем трезвучие ступени; сравнение — другой аккорд той же тональности', () => {
+    const e = base(); e.dgKind = 'chord';
+    const q = generate('dg', e, seq(7));
+    expect(q.chord.length).toBe(3); expect(q.ans).toMatch(/^[ivIV]+°?\+?$/);
+    const plan = playPlan('dg', q, e);
+    expect(plan.ev.filter((x) => x.chord).length).toBe(5); // 4 аккорда оборота + ответ
+    expect(plan.ev[4].chord).toEqual(q.chord);
+    const c = comparePlan('dg', q, 'V');
+    expect(c.chord).toEqual([q.ton + 7, q.ton + 11, q.ton + 14]);
+  });
+  it('цепочка: две ступени на среднем уровне, три на сложном; ответ через запятую, звучат по очереди', () => {
+    const e = base(); e.dgKind = 'chain';
+    const q = generate('dg', e, seq(3));
+    expect(q.degs.length).toBe(2); expect(q.ans).toBe(q.degs.join(','));
+    expect(playPlan('dg', q, e).ev.find((x) => x.seq).seq).toEqual(q.ms);
+    setLevel(e, 'hard'); e.dgKind = 'chain';
+    expect(generate('dg', e, seq(3)).degs.length).toBe(3);
+    expect(comparePlan('dg', q, '4')).toBe(null);
+  });
+  it('лады: свой оборот (дорийский i–IV–i, лидийский I–II–I, миксолидийский I–♭VII–I)', () => {
+    for (const [mode, n, second] of [['dorian', 3, 5], ['lydian', 3, 2], ['mixo', 3, 10]]) {
+      const e = base(); e.mode = mode;
+      const q = generate('dg', e, seq(11));
+      expect(q.mode).toBe(mode);
+      const plan = playPlan('dg', q, e), chords = plan.ev.filter((x) => x.chord);
+      expect(chords.length).toBe(n);
+      expect(chords[1].chord[0] - chords[0].chord[0]).toBe(second);
+    }
+    expect(DG_MODES.length).toBe(6); expect(DG_KINDS).toEqual(['note', 'chord', 'chain']);
+  });
+});

@@ -16,6 +16,24 @@ export const ECH = [['maj', '', [0, 4, 7]], ['min', 'm', [0, 3, 7]], ['dim', 'di
 // Ступени: [полутоны от тоники, обозначение, функция (i18n fn.<…>) или '', номер буквы]
 export const EDG = [[0, '1', 'tonic', 0], [1, '♭2', '', 1], [2, '2', '', 1], [3, '♭3', '', 2], [4, '3', '', 2], [5, '4', 'subdom', 3], [6, '♯4', '', 3],
   [7, '5', 'dom', 4], [8, '♭6', '', 5], [9, '6', '', 5], [10, '♭7', '', 6], [11, '7', 'leading', 6]];
+// Ступени: вид вопроса (нота / аккорд ступени римской цифрой / цепочка ступеней) и лады с характерным оборотом
+export const DG_KINDS = ['note', 'chord', 'chain'];
+export const DG_MODES = ['major', 'minor', 'mix', 'dorian', 'lydian', 'mixo'];
+const CADENCE = { major: [0, 3, 4, 0], minor: [0, 3, 4, 0], dorian: [0, 3, 0], lydian: [0, 1, 0], mixo: [0, 6, 0] }; // ступени (0 — тоника) по гамме лада
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+export const dgScale = (mode) => (mode === 'minor' ? NAT_MIN : SCALES[mode] ? SCALES[mode][0] : MAJI);
+// Трезвучие ступени d (0…6) от тоники ton по гамме sc
+export const dgTriad = (ton, sc, d) => [0, 2, 4].map((k) => ton + sc[(d + k) % 7] + 12 * Math.floor((d + k) / 7));
+// Римская цифра с качеством: мажор — прописные, минор — строчные, уменьшённое — °, увеличенное — +
+export function romanOf(sc, d) {
+  const [a, b, c] = dgTriad(0, sc, d), t3 = b - a, t5 = c - a, r = ROMAN[d];
+  if (t3 === 4 && t5 === 7) return r;
+  if (t3 === 3 && t5 === 7) return r.toLowerCase();
+  if (t3 === 3 && t5 === 6) return r.toLowerCase() + '°';
+  if (t3 === 4 && t5 === 8) return r + '+';
+  return r;
+}
+export const dgChainLen = (e) => (e.level === 'easy' || e.level === 'mid' ? 2 : 3);
 // Гаммы: ключи SCALES (src/music/theory.js)
 export const LEVELS = {
   iv: { easy: [3, 4, 5, 7, 12], mid: [1, 2, 3, 4, 5, 7, 8, 9, 12], hard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
@@ -47,7 +65,8 @@ export function normalizeEar(e) {
   e.dir = e.dir || 'up';
   e.arp = e.arp !== false;
   e.auto = e.auto !== false;
-  e.mode = e.mode || 'major';
+  e.mode = DG_MODES.includes(e.mode) ? e.mode : 'major';
+  e.dgKind = DG_KINDS.includes(e.dgKind) ? e.dgKind : 'note';
   e.rng = e.rng || 'high';
   e.oct = e.oct !== false;
   e.ref = e.ref !== false;
@@ -99,8 +118,17 @@ export function generate(sec, e, rnd = Math.random, prev = null) {
   if (sec === 'ch') return { ans: pick(e.chSet), r: rint(48, 59) };
   if (sec === 'sc') return { ans: pick(e.scSet), r: rint(52, 62) };
   if (sec === 'dg') {
+    // порядок случайных чисел для вида «нота» в мажоре/миноре — как в прототипе (сверяется тестом)
     const minor = e.mode === 'minor' || (e.mode === 'mix' && rnd() < 0.5), pc = rint(0, 11), deg = pick(e.dgSet), ton = (pc < 5 ? 60 : 48) + pc, oct = rnd() < 0.35 ? 12 : 0;
-    return { ans: deg, pc, minor, ton, m: ton + deg + oct };
+    const mode = e.mode === 'mix' ? (minor ? 'minor' : 'major') : e.mode, sc = dgScale(mode), kind = e.dgKind || 'note';
+    if (kind === 'chord') { const d = rint(0, 6); return { ans: romanOf(sc, d), d, pc, minor, mode, ton, chord: dgTriad(ton, sc, d) }; }
+    if (kind === 'chain') {
+      const n = dgChainLen(e), degs = [deg];
+      while (degs.length < n) { let x = pick(e.dgSet), k = 0; while (x === degs[degs.length - 1] && e.dgSet.length > 1 && k++ < 8) x = pick(e.dgSet); degs.push(x); }
+      return { ans: degs.join(','), degs, pc, minor, mode, ton, ms: degs.map((x) => ton + x + oct) };
+    }
+    // mode хранится только для ладов — вопрос мажора/минора совпадает с прототипом поле в поле
+    return mode === 'major' || mode === 'minor' ? { ans: deg, pc, minor, ton, m: ton + deg + oct } : { ans: deg, pc, minor, mode, ton, m: ton + deg + oct };
   }
   if (sec === 'nt') {
     const set = ntSet(e);
@@ -146,11 +174,13 @@ export function playPlan(sec, q, e, { masked = false } = {}) {
     ev.push({ at: 0, seq, step: 0.26 });
     end = seq.length * 260 + 400;
   } else if (sec === 'dg') {
-    // оборот I–IV–V–I, затем нота
-    const sc = q.minor ? NAT_MIN : MAJI, tri = (d) => [0, 2, 4].map((k) => q.ton - 12 + sc[(d + k) % 7] + 12 * Math.floor((d + k) / 7));
-    [0, 3, 4, 0].forEach((d, i) => ev.push({ at: i * 650, chord: tri(d) }));
-    ev.push({ at: 4 * 650 + 500, seq: [q.m], step: 0.9 });
-    end = 4 * 650 + 1500;
+    // оборот лада (мажор и минор — I–IV–V–I), затем нота, аккорд ступени или цепочка нот
+    const sc = dgScale(q.mode || (q.minor ? 'minor' : 'major')), cad = CADENCE[q.mode] || CADENCE.major;
+    cad.forEach((d, i) => ev.push({ at: i * 650, chord: dgTriad(q.ton - 12, sc, d) }));
+    const t0 = cad.length * 650 + 500;
+    if (q.chord) { ev.push({ at: t0, chord: q.chord }); end = t0 + 1200; }
+    else if (q.ms) { ev.push({ at: t0, seq: q.ms, step: 0.9 }); end = t0 + q.ms.length * 900 + 300; }
+    else { ev.push({ at: t0, seq: [q.m], step: 0.9 }); end = t0 + 1000; }
   } else if (sec === 'nt') {
     const d = e.ntMask !== false && masked ? 1300 : 0;
     if (d) ev.push({ at: 0, mask: true });
@@ -178,7 +208,11 @@ export function comparePlan(sec, q, v) {
   }
   if (sec === 'ch') return { chord: ECH.find((c) => c[0] === v)[2].map((x) => q.r + x) };
   if (sec === 'sc') return { seq: SCALES[v][0].map((x) => q.r + x).concat(q.r + 12), step: 0.22 };
-  if (sec === 'dg') return { seq: [q.ton + +v], step: 0.8 };
+  if (sec === 'dg') {
+    if (q.chord) { const d = ROMAN.indexOf(String(v).replace(/[°+]/g, '').toUpperCase()); return d < 0 ? null : { chord: dgTriad(q.ton, dgScale(q.mode), d) }; }
+    if (q.ms) return null;
+    return { seq: [q.ton + +v], step: 0.8 };
+  }
   return null;
 }
 

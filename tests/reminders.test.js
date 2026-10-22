@@ -148,7 +148,7 @@ describe('характеры Мелеты', () => {
     expect(remindText({ slot: 'morning', mode: 'pushy' }, { lang: 'en' }).title).toMatch(/Good morning/);
     // без подписи источника; маскот с лицом по поводу — картинка есть в res/drawable-nodpi
     const q = remindText({ slot: 'lead:60', mode: 'classic' }, { lang: 'ru', sets: ['classic'] });
-    expect(q.body).not.toMatch(/ — /);
+    expect(q.body).not.toMatch(/ — [^.!?…]+$/); // подпись «— Автор» в конце; тире внутри самого текста допустимо
     for (const [slot, mode] of [['lead:60', 'classic'], ['lead:5', 'pushy'], ['after', 'classic'], ['late', 'pushy'], ['soon:15', 'classic'], ['abs', 'custom']]) {
       const ic = remindText({ slot, mode }, { lang: 'ru' }).icon;
       expect(existsSync('android/app/src/main/res/drawable-nodpi/' + ic + '.png'), slot).toBe(true);
