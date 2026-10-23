@@ -11,16 +11,15 @@ import { curTuning } from '../../music/tuning.js';
 import { kbHTML } from '../../ui/keyboard.js';
 import { chordsOf, familiesOf, ladderOf, degreesOf, colorNote, familyOfType, parentOf, rotateMode, modeChords, onFifths, FIFTHS, FAMILIES, LADDER } from '../../music/identify.js';
 import { chroma } from '../../music/analyze.js';
-import { jazzHTML, jazzAct, jstop } from './jazz.js';
 import { keyShift, keyTo, diatonic, transposeLine, capoOptions } from '../../music/keycalc.js';
 import { tonicName, keyLabel } from '../../music/transpose.js';
 
 const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v4.5"/></svg>';
-const SECS = ['circle', 'scales', 'chords', 'keys', 'intervals', 'jazz'];
+const SECS = ['circle', 'scales', 'chords', 'keys', 'intervals', 'book'];
 // Определитель — в «Минимале» по умолчанию, в обычном виде включается в «Модулях и функциях» (settings.theory.find)
 const findOn = () => { const d = ctx.data(); return ctx.mono ? d.find !== false : d.find === true; };
 const secs = () => (findOn() ? [...SECS, 'find'] : SECS);
-const curSec = () => { const s = TH().sec || 'circle'; return secs().includes(s) ? s : 'circle'; };
+const curSec = () => { let s = TH().sec || 'circle'; if (s === 'jazz') s = 'book'; return secs().includes(s) ? s : 'circle'; };
 const I = {
   play: '<svg viewBox="0 0 24 24" class="f" style="width:18px"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z"/></svg>',
   wave: '<svg viewBox="0 0 24 24"><path d="M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0"/></svg>',
@@ -30,6 +29,26 @@ const I = {
   mic: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>',
   fret: '<svg viewBox="0 0 24 24"><path d="M3 6h18M3 10h18M3 14h18M3 18h18M8 4v16M14 4v16"/></svg>',
 };
+
+/* ---------- учебник (book/): грузится по требованию, язык — языка интерфейса ---------- */
+
+let BK = null, bkLoading = null; // { lang, book }
+function bookReady() {
+  const lang = ctx.lang();
+  if (BK && BK.lang === lang) return BK.book;
+  if (!bkLoading) {
+    bkLoading = import('./book/index.js').then(async (m) => {
+      const L = await m.loadLang(lang);
+      if (BK) BK.book.stop();
+      BK = { lang, book: m.createBook(ctx, L, { save: () => { ctx.store.save(); render(); } }) };
+    }).catch((e) => { ctx.log('учебник не загрузился: ' + (e && e.message), 'w'); }).finally(() => { bkLoading = null; if (host) render(); });
+  }
+  return null;
+}
+function bookHTML() { const b = bookReady(); return b ? b.html(TH()) : '<div class="bkload" aria-busy="true"></div>'; }
+// Ссылка из раздела в главу учебника
+const BOOKI = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5v13c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg>';
+const bookLink = (ch) => '<button class="bklink" data-x="bookgo" data-v="' + ch + '">' + BOOKI + '<span>' + ctx.t('bookMore') + '</span><b>›</b></button>';
 
 let host = null, ctx = null, size = 'full', onClick = null, onKey = null, onDown = null, onInput = null, lis = null;
 
@@ -122,7 +141,7 @@ function keysHTML() {
       '<button data-x="kcplay" data-k="a" data-i="' + i + '">' + ui.esc(c.name) + '</button><button class="b" data-x="kcplay" data-k="b" data-i="' + i + '">' + ui.esc(B[i].name) + '</button></div>').join('') + '</div>' +
     '<div class="hdr">' + t('kc.yours') + '</div><input class="inp left kcinp" data-kctext value="' + ui.esc(k.text) + '" placeholder="G C D Em" aria-label="' + ui.esc(t('kc.yours')) + '" autocomplete="off" autocapitalize="characters" spellcheck="false">' +
     '<div class="kcout num" id="kcout">' + res(k.text) + '</div>' +
-    '<div class="hdr">' + t('kc.capo', { key: keyLabel(to) }) + '</div><div class="group">' + capo.map((c) => '<div class="cell"><span class="grow">' + (c.capo ? ctx.tn('kc.fret', c.capo) : t('kc.noCapo')) + '</span><b>' + ui.esc(t('kc.shape', { shape: c.shape })) + '</b></div>').join('') + '</div></div>';
+    '<div class="hdr">' + t('kc.capo', { key: keyLabel(to) }) + '</div><div class="group">' + capo.map((c) => '<div class="cell"><span class="grow">' + (c.capo ? ctx.tn('kc.fret', c.capo) : t('kc.noCapo')) + '</span><b>' + ui.esc(t('kc.shape', { shape: c.shape })) + '</b></div>').join('') + '</div>' + bookLink('mod') + '</div>';
 }
 
 function circleHTML() {
@@ -142,7 +161,7 @@ function circleHTML() {
   return '<div class="cwrap f"><div class="csvg">' + circleSVG(k) + '</div><div class="prow" style="margin:8px 0 4px;justify-content:center">' + modes + '</div>' + cgrid +
     '<p class="ftr">' + (k.signs.length ? k.signs.join(' ') : t('noSignsCap')) + ' · ' + t('rel', { key: rel }) + (th.minor ? ' · ' + t('harmV', { note: k.notes[4] }) : '') + '</p>' +
     '<div class="ctrl4">' + icb('data-x="kscale"', I.play, t('playScale')) + icb('data-x="kdrone"', I.drone, t('droneTonic')) + icb('data-x="kpiano"', I.piano, t('pianoHl')) +
-    icb('data-x="kscales"', I.scales, t('openScales')) + '</div>' + modesCircleHTML() + '</div>';
+    icb('data-x="kscales"', I.scales, t('openScales')) + '</div>' + modesCircleHTML() + bookLink('key') + '</div>';
 }
 
 /* ---------- гаммы ---------- */
@@ -168,7 +187,7 @@ function scalesHTML() {
   const tog = '<div class="vtog"><div class="seg" style="width:auto"><button data-x="tview" data-v="fret" aria-pressed="' + (vw === 'fret') + '">' + t('fret') +
     '</button><button data-x="tview" data-v="keys" aria-pressed="' + (vw === 'keys') + '">' + t('keys') + '</button></div></div>';
   return '<div class="swrap">' + head + '<div class="ch2"><b>' + ui.esc(title) + '</b><span class="num l2">' + k.steps.map(stepTxt).join(' ') + '</span></div>' + notes + tog +
-    (vw === 'fret' ? fretHTML(new Set(k.pcs), k.rootPc, 15) : '<div style="margin-top:8px">' + kbHTML(60, 15, new Set(k.pcs), k.rootPc) + '</div>') + acts + schemeHTML(sc) + '</div>';
+    (vw === 'fret' ? fretHTML(new Set(k.pcs), k.rootPc, 15) : '<div style="margin-top:8px">' + kbHTML(60, 15, new Set(k.pcs), k.rootPc) + '</div>') + acts + schemeHTML(sc) + bookLink('scales') + '</div>';
 }
 
 /* ---------- как устроена гамма: круг из 12 нот, повороты лада, лестница, семья ---------- */
@@ -277,7 +296,7 @@ function chordsHTML() {
   return '<div class="swrap"><div class="hscroll">' + SH.map((n, i) => '<button class="pill" data-x="croot" data-v="' + i + '" aria-pressed="' + (k.pc === i) + '">' + enh(i) + '</button>').join('') + '</div>' +
     '<div class="hscroll">' + CHORDS.map((c) => '<button class="pill" data-x="ctype" data-v="' + c[0] + '" aria-pressed="' + (c[0] === k.id) + '" aria-label="' + ui.esc(t('chord.' + c[0])) + '">' + (c[1] || 'maj') + '</button>').join('') + '</div>' +
     '<div class="ch2"><b class="cname">' + k.name + '</b><span class="l2">' + ui.esc(desc) + '</span></div>' + notes + fretHTML(new Set(k.pcs), k.pc, 15) +
-    '<div class="ctrl4" style="margin-top:10px">' + play + icb('data-x="carp"', I.wave, t('arp')) + icb('data-x="cpiano"', I.piano, t('onPiano')) + icb('data-x="cdrone"', I.drone, t('droneTonic')) + '</div></div>';
+    '<div class="ctrl4" style="margin-top:10px">' + play + icb('data-x="carp"', I.wave, t('arp')) + icb('data-x="cpiano"', I.piano, t('onPiano')) + icb('data-x="cdrone"', I.drone, t('droneTonic')) + '</div>' + bookLink('chords') + '</div>';
 }
 
 /* ---------- интервалы ---------- */
@@ -295,7 +314,7 @@ function intervalsHTML() {
   return '<div class="swrap"><div class="hscroll">' + SH.map((n, i) => '<button class="pill" data-x="croot" data-v="' + i + '" aria-pressed="' + (pc === i) + '">' + enh(i) + '</button>').join('') + '</div>' +
     '<div class="group" style="margin-top:6px">' + INTERVALS.map((iv, i) => '<button class="cell" data-x="iplay" data-i="' + i + '"><span class="fnb fS" style="width:34px">' + t('ivs.' + i) +
       '</span><span class="grow">' + t('iv.' + i) + '</span><span class="val num">' + t('ivSemis', { n: iv[0], a: root, b: nt(i) }) + '</span></button>').join('') + '</div>' +
-    '<p class="ftr">' + t('ivFtr') + '</p></div>';
+    '<p class="ftr">' + t('ivFtr') + '</p>' + bookLink('iv') + '</div>';
 }
 
 /* ---------- определитель: аккорд и гамма по нотам, лады как одна семья ---------- */
@@ -377,7 +396,7 @@ function view() {
   const sw = big ? '<div class="tsw" role="tablist">' + secs().map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' +
     t('sec.' + k) + '</button>').join('') + '</div>'
     : '<div class="csw"><button class="cswb on txt" data-x="tsecnext" aria-label="' + t('secNext') + '">' + t('sec.' + s) + ' ›</button></div>';
-  const body = s === 'circle' ? circleHTML() : s === 'keys' ? keysHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : s === 'jazz' ? jazzHTML({ ctx, th: TH(), size }) : intervalsHTML();
+  const body = s === 'circle' ? circleHTML() : s === 'keys' ? keysHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : s === 'book' ? bookHTML() : intervalsHTML();
   return '<div class="comp ' + size + '">' + sw + '<div class="cbody">' + body + '</div></div>';
 }
 
@@ -400,6 +419,7 @@ function render() {
   const nb = host.querySelector('.swrap, .cwrap.f');
   if (nb && y) nb.scrollTop = y;
   if (hy) host.scrollTop = hy;
+  if (sec === 'book' && BK) BK.book.mount(host);
   // выбранная вкладка не уходит за край полосы (вкладок пять — «Определитель» последний)
   const on = host.querySelector('.tswb.on'), bar = on && on.parentElement;
   if (bar && on.offsetLeft + on.offsetWidth > bar.clientWidth) bar.scrollLeft = on.offsetLeft + on.offsetWidth - bar.clientWidth + 4;
@@ -437,9 +457,8 @@ function droneOn(pc, note) {
 
 function act(a, el) {
   const th = TH(), A = ctx.audio, save = () => { ctx.store.save(); render(); };
-  // раздел «Джаз» (jazz.js): свои действия начинаются с «j»
-  if (a[0] === 'j') { const r = jazzAct({ ctx, th, size }, a, el); if (r === 'save') save(); if (r) return; }
   switch (a) {
+    case 'bookgo': th.sec = 'book'; th.book = { ch: el.dataset.v }; save(); break;
     case 'tsec': th.sec = el.dataset.v; save(); break;
     case 'kcfrom': KC().from.pc = +el.dataset.v; save(); break;
     case 'kcto': KC().to = +el.dataset.v; save(); break;
@@ -573,7 +592,7 @@ export default {
   resize(sz) { size = sz; render(); },
   unmount() {
     stopListen();
-    jstop();
+    if (BK) BK.book.stop();
     if (host) {
       host.removeEventListener('input', onInput);
       host.removeEventListener('click', onClick);

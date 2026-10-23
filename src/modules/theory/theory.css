@@ -162,91 +162,11 @@
 .cwrap.f>*,.swrap>*{flex-shrink:0}
 .cwrap.f .circle{max-height:none;max-width:min(100%,420px)}
 .cwrap.f .hscroll{padding-bottom:8px}
-/* «Джаз» (jazz.js): таблицы и схемы — строки, чипы аккордов, мини-клавиатура, такты, сетка ритма */
-.jazz .jsubs{margin-bottom:4px}
-.jazz .jsubs .pill[aria-pressed="true"]{background:var(--tint);color:var(--on-tint,#fff)}
-.jkey{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 6px}
-.jsel{background:var(--fill);border-radius:14px;padding:10px;margin:8px 0}
-.jsel .cname{font-size:22px;display:block;margin-bottom:6px}
-.jsel .ch2{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}
-.jkb{display:block;width:100%;max-width:420px;height:auto;margin:6px auto 0}
-.jkb .w{fill:#fff;stroke:var(--sep,#ccc);stroke-width:.6}
-.jkb .b{fill:#2b2a28}
-.jkb .on{fill:var(--tint);stroke:var(--tint);stroke-width:.6}
-.jtable{display:flex;flex-direction:column;gap:4px}
-.jrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 8px;border-radius:12px;background:var(--fill);min-height:44px}
-.jrow.on{box-shadow:inset 0 0 0 1.5px var(--tint)}
-.jrow.jth{background:none;min-height:0;padding:0 8px;font-size:11.5px;color:var(--l2);font-weight:600}
-.jrow.jth span{flex:1;text-align:center}
-.jrow>.ic:last-child{margin-left:auto}
-.jsym{font-weight:700;font-size:16px;min-width:74px;text-align:left;min-height:36px}
-.jdeg{font-size:13px;color:var(--l2);flex:1;min-width:90px}
-.jsc{display:flex;flex-wrap:wrap;gap:4px}
-.jrn{font-weight:700;font-size:13.5px;min-width:52px;color:var(--tint-text,var(--tint))}
-.jkn{font-weight:700;min-width:34px}
-.jkn2{font-size:13px;min-width:120px;flex:1}
-.jc{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;min-width:56px;min-height:40px;padding:3px 8px;border-radius:10px;background:var(--cell);line-height:1.15}
-.jc b{font-size:14.5px;font-weight:700;white-space:nowrap}
-.jc span{font-size:11px;color:var(--l2);white-space:nowrap}
-.jc:active,.jvc:active,.jbar:active{transform:scale(.96)}
-.jc.on{background:var(--tint);color:var(--on-tint,#fff)}
-.jflow{display:flex;flex-wrap:wrap;gap:4px;align-items:center;flex:1}
-.jflow i{font-style:normal;padding:2px 6px;border-radius:7px;background:var(--cell);font-size:13.5px}
-.jflow.was .jc{opacity:.72}
-.jbig{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin:8px 0}
-.jbig .jc{min-width:76px;min-height:52px}
-.jbig .jc b{font-size:18px}
-.jbig>i{font-style:normal;color:var(--l3)}
-.jacts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0}
-.jpills{display:flex;flex-wrap:wrap;gap:6px}
-.jfams{display:flex;flex-direction:column;gap:4px}
-.jfam{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.jfam span:not(.fnb){font-weight:600;font-size:14px}
-.jvoice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0}
-.jvc{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--fill);border-radius:12px;padding:8px 4px}
-.jvc b{font-size:15px}
-.jvc .jkb{max-width:none}
-.jvc .jdeg{text-align:center;line-height:1.35;flex:none;min-width:0}
-.jrow .jkb{width:auto;height:34px;margin:0;flex:none}
-.jsub{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
-.jsubh{font-weight:600;font-size:14px;padding:0 4px}
-.jbars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:6px 0}
-.jbar{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:58px;border-radius:10px;background:var(--fill);padding:12px 2px 4px}
-.jbar i{position:absolute;top:2px;left:5px;font-style:normal;font-size:10px;color:var(--l3)}
-.jbar b{font-size:13.5px;white-space:nowrap}
-.jbar span{font-size:10.5px;color:var(--l2)}
-.jshape{display:flex;align-items:center;gap:8px;margin:4px 0}
-.jshape>span{min-width:92px;font-size:13px;font-weight:600}
-.jshape>div{flex:1;display:flex;gap:2px}
-.jshape>div i{font-style:normal;font-size:11.5px;font-weight:700;text-align:center;padding:5px 0;border-radius:6px;background:color-mix(in srgb,var(--tint) 18%,var(--cell));display:flex;flex-direction:column;line-height:1.1;min-width:0;overflow:hidden}
-.jshape>div i.pB{background:color-mix(in srgb,#567198 22%,var(--cell))}
-.jshape>div i.pC,.jshape>div i.pT{background:color-mix(in srgb,#A75750 20%,var(--cell))}
-.jshape>div i.pD{background:color-mix(in srgb,#5F8568 22%,var(--cell))}
-.jshape>div i.pI{background:var(--fill)}
-.jshape small{font-size:9.5px;font-weight:500;color:var(--l2)}
-.jgrid{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:3px;margin:6px 0}
-.jgrid i{font-style:normal;text-align:center;font-size:12px;padding:12px 0;border-radius:8px;background:var(--cell);color:var(--l3)}
-.jgrid i.beat{color:var(--l2);font-weight:700}
-.jgrid i.hit{background:var(--tint);color:var(--on-tint,#fff)}
-.pane.quarter .jazz .jkb,.pane.strip .jazz .jkb{display:none}
-.pane.quarter .jvoice{grid-template-columns:1fr}
-.jvoice{grid-template-columns:1fr}
-.jvc{flex-direction:row;gap:8px;padding:6px 10px;text-align:left}
-.jvc .jvn{display:flex;flex-direction:column;min-width:76px}
-.jvc .jkb{flex:1;width:auto;min-width:0;height:auto;max-height:46px;margin:0}
-.jvc .jdeg{min-width:64px;flex:none;text-align:right;font-size:12.5px}
-.jrow.g5{display:grid;grid-template-columns:46px repeat(4,minmax(0,1fr)) 40px;gap:4px}
-.jrow.g5 .jc{min-width:0;padding:3px 2px}
-.jrow.g5 .jc b{font-size:13px}
-.jrow.jth.g5 span{text-align:center}
-.jsc button{background:var(--cell);border-radius:999px;padding:3px 9px;font-size:12px;font-weight:500;min-height:28px}
-.jrh{background:var(--fill);border-radius:12px;padding:8px 10px;margin-bottom:6px}
-.jrhh{display:flex;align-items:center;gap:8px}
-.jrhh b{font-size:14.5px}
-.jrhh span{font-size:12px;flex:1}
-.jgrid i{display:block;padding:9px 0}
-.jgrid i.bar{box-shadow:-3px 0 0 var(--bg,#fff)}
-.jrow.g5 .jrn{font-size:12px;min-width:0}
+/* ссылка из раздела в главу учебника и ожидание загрузки учебника */
+.bklink{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:10px 14px;min-height:46px;border-radius:14px;background:color-mix(in srgb,var(--tint) 12%,var(--cell));color:var(--tint-text);font-weight:600;text-align:left}
+.bklink svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;flex:none}
+.bklink span{flex:1}
+.bkload{flex:1;min-height:120px}
 /* транспонирование */
 .kclab{white-space:nowrap;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--l2);text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
 .kclab .seg{max-width:220px;text-transform:none;letter-spacing:0}

@@ -1,0 +1,460 @@
+// Darslik: oʻzbekcha matn (lotin yozuvi; tuzilishi — ru.js da)
+const lab = (id) => '{{lab:' + id + '}}';
+const tip = (t) => '<aside class="btip"><b>Cholgʻu yonida</b>' + t + '</aside>';
+const key = (t) => '<aside class="bkey"><b>Asosiysi</b>' + t + '</aside>';
+
+export default {
+  S: {
+    'bk.title': 'Darslik', 'bk.lead': 'Garmoniya va jaz — yangraydigan misollar bilan. Matndagi atamalar havola: bosilganda taʼrif ochiladi.',
+    'bk.part0': 'Asoslar', 'bk.part1': 'Jaz garmoniyasi', 'bk.part2': 'Ijro', 'bk.part3': 'Mashq va maʼlumotnoma',
+    'bk.toc': 'Mundarija', 'bk.ch': '{n}-bob', 'bk.prev': 'Orqaga', 'bk.next': 'Keyingi', 'bk.read': 'Bobni oʻqish', 'bk.terms': 'Atamalar',
+    'bk.inBook': 'Darslikda: {t}', 'bk.find': 'Atama', 'bk.none': 'Hech narsa topilmadi', 'bk.of': '{n} dan', 'bk.kb': 'Klaviatura', 'bk.circle': 'Kvinta doirasi', 'bk.signs': 'belgi',
+    'ui.root': 'Tonika', 'ui.interval': 'Interval', 'ui.chord': 'Akkord', 'ui.chords': 'Akkordlar', 'ui.scale': 'Gamma', 'ui.key': 'Tonallik', 'ui.step': 'Qadam',
+    'ui.example': 'Misol', 'ui.voicing': 'Joylashuv', 'ui.rhythm': 'Ritm', 'ui.form': 'Shakl', 'ui.pattern': 'Figura', 'ui.group': 'Guruh', 'ui.search': 'Qidirish', 'ui.play': 'Tinglash',
+    'sig.none': 'belgisiz', 'sig.gflat': '(yoki 6♭: G♭)',
+    'iv.abbr': 'Qisqa', 'iv.semis': 'Yarim tonlar', 'iv.semisShort': 'Yt', 'iv.sound': 'Yangrashi', 'iv.inv': 'Aylanmasi', 'iv.from': '{n} dan', 'iv.mel': 'Melodik', 'iv.harm': 'Garmonik',
+    'ch.inv0': 'asosiy', 'ch.inv1': '1-ayl.', 'ch.inv2': '2-ayl.', 'ch.inv3': '3-ayl.',
+    'ch.invLong0': 'asosiy koʻrinish', 'ch.invLong1': '1-aylanma', 'ch.invLong2': '2-aylanma', 'ch.invLong3': '3-aylanma',
+    'ch.name': 'Nomi', 'ch.degs': 'Pogʻonalar', 'ch.notes': 'Notalar', 'ch.alt': 'Yoziladi', 'ch.bass': 'Bas', 'ch.block': 'Akkord bilan', 'ch.arp': 'Arpedjio',
+    'ust.lh': 'chap qoʻl: {c} dominantasining 1 · 3 · ♭7', 'ust.bad': 'Bu uchtovushda 11 yoki katta septima bor — tersiyali dominanta ustida ular akkord bilan toʻqnashadi. Bunday tuzilmalar odatda olinmaydi.', 'ust.ok': 'Hosil boʻladigan taranglik: {t}.',
+    'sc.kb': 'Klavishlar', 'sc.fret': 'Grif', 'sc.staff': 'Notalar', 'sc.up': 'Yuqoriga', 'sc.down': 'Pastga', 'sc.over': 'Akkord ustida', 'sc.harm': 'Gamma akkordlari',
+    'sc.char': 'Xarakterli pogʻona — <b>{d}</b>', 'sc.chord': '; asosiy akkord — <b>{c}</b>', 'sc.avoid': '; akkord ustida «noqulay» notalar — {d}',
+    'br.hint': 'yorqinroq ↑ · qorongʻiroq ↓ — har qadam bitta pogʻonani pasaytiradi',
+    'dim.text': 'Bitta sakkiz tovushli gamma: <b>{wh} dan «ton — yarim ton»</b> va <b>{hw} dan «yarim ton — ton»</b>. U {wh} dagi °7 ga va {hw} dagi 7♭9 dominantalarga mos.',
+    'fn.T': 'Tonika', 'fn.S': 'Subdominanta', 'fn.D': 'Dominanta',
+    'key.major': 'Major', 'key.minor': 'Minor', 'key.natural': 'Tabiiy minor', 'key.harmonic': 'Garmonik minor', 'key.melodic': 'Melodik minor', 'key.cad': 'Kadensiyalar',
+    'key.majOf': '{k} major', 'key.minOf': '{k} minor', 'key.sig': 'Belgilar', 'key.rel': 'Parallel', 'key.near': 'Qoʻshnilar',
+    'cad.auth': 'V–I (autentik)', 'cad.plag': 'IV–I (plagal)', 'cad.dec': 'V–vi (uzilgan)', 'cad.iivi': 'ii–V–I', 'cad.full': 'I–IV–V–I',
+    'circ.note': 'Soat strelkasi boʻyicha — kvintaga yuqoriga (diyezlar koʻpayadi), teskari — kvintaga pastga: jazdagi deyarli barcha aylanmalar shunday harakatlanadi. Sektorga bosish — tonallikni tanlash.',
+    'gd.dom': 'Dominantalar', 'gd.min': 'Minorlar', 'gd.maj': 'Majorlar', 'gd.note': 'Bir akkordning tersiyasi keyingisining septimasiga aylanadi (yoki deyarli — yarim ton pastroq). Ikki chiziq har qadamda oʻrin almashadi, qoʻl esa deyarli qimirlamaydi.',
+    'turn.t1': 'I – vi – ii – V', 'turn.t2': 'iii – vi – ii – V', 'turn.t3': 'I – VI7alt – ii – V', 'turn.t4': 'iiiø – VI7alt – ii – V', 'turn.t5': 'I – ♯I°7 – ii – V',
+    'turn.t6': 'Hammasi dominanta: I – VI7 – II7 – V7', 'turn.t7': 'Triton almashtirishlar: I – ♭III7 – ♭VI7 – ♭II7', 'turn.t8': 'Major septakkordlar: I – ♭III – ♭VI – ♭II', 'turn.t9': 'Minor: i – ♭viø – iiø – V7alt',
+    'step.-2': 'tonga pastga', 'step.+2': 'tonga yuqoriga', 'step.-1': 'yarim tonga pastga', 'step.+1': 'yarim tonga yuqoriga', 'step.-3': 'kichik tersiyaga pastga', 'step.+3': 'kichik tersiyaga yuqoriga', 'step.-4': 'katta tersiyaga pastga', 'step.+4': 'katta tersiyaga yuqoriga',
+    'chain.note': 'Dominanta kutilgan tonikaga yechilmaydi: keyingi ii allaqachon boshqa tonallikdan. Quloq yangi tonalliklarga qisqa «ishoralar» qatorini eshitadi.',
+    'tbl.hint': 'kvinta doirasi boʻyicha; bosilganda yangraydi',
+    'ana.a1': 'Ikkilamchi dominantalar', 'ana.a2': 'ii–V zanjiri', 'ana.a3': 'Triton almashtirishlar', 'ana.a4': 'Minor tonallik', 'ana.a5': 'Oʻtuvchi kamaytirilganlar', 'ana.a6': 'Jaz bluzi', 'ana.a7': 'Bekdor va oʻzlashtirish',
+    'ana.backdoor': 'bekdor', 'ana.none': 'Akkordlar yoʻq', 'ana.borrow': '* — tonallikka kirmaydigan akkord: oʻzlashtirish yoki modulyatsiya.',
+    'ana.lgS': 'dominanta → kvintaga pastga', 'ana.lgD': '→ yarim tonga pastga (triton almashtirish)', 'ana.lgB': 'ii–V juftligi', 'ana.hint': 'akkordlar boʻsh joy bilan, taktlar — «|»',
+    'vt.shellA': 'Asos 1–3–7', 'vt.shellB': 'Asos 1–7–3', 'vt.guide': 'Yoʻnaltiruvchi 3 va 7', 'vt.three': 'Asosiy tonsiz, 3 tovush', 'vt.A': 'Asosiy tonsiz, A turi', 'vt.B': 'Asosiy tonsiz, B turi',
+    'vt.drop2': 'Drop 2', 'vt.drop24': 'Drop 2-4', 'vt.quart': 'Kvartali (So What)', 'vt.ust': 'Yuqori tuzilma',
+    'vc.qual': 'Bitta asosda turlar', 'vc.ab': 'A va B almashinadi — ovozlar qadam bilan yuradi', 'vc.type': '{t} turi', 'vc.play': 'Ketma-ketlik',
+    'mi.hint': 'nomdosh minor va qoʻshni ladlar akkordlari', 'mi.note': 'Bosilganda I → akkord → I: oʻzlashtirilgan rang qanday «qorongʻilashib» qaytishi eshitiladi.',
+    'tt.text': '<b>{a}</b> va <b>{b}</b> {x}–{y} tritonini boʻlishadi: birining tersiyasi — ikkinchisining septimasi (enharmonik). Ikkalasi ham <b>{t}</b> ga intiladi; {b} unga yuqoridan yarim ton bilan keladi.',
+    'tt.note': 'Almashtirish gammasi — {a} dan lidiy dominanta — {b} dan alteratsiyalangan gamma bilan bir xil tovushlardan iborat.',
+    'rh.before': 'Edi', 'rh.after': 'Boʻldi',
+    'rh.r1': 'Triton almashtirish', 'rh.r1n': 'Dominanta triton yuqoridagi dominanta bilan almashtirildi: bas yarim tonlab pastga yuradi.',
+    'rh.r2': 'Almashtirishga bogʻliq ii', 'rh.r2n': 'Triton almashtirishdan oldin — oʻz ii si: yarim ton farqli ikki ii–V.',
+    'rh.r3': 'Ikkilamchi dominantalar', 'rh.r3n': 'vi va ii dominantaga aylandi: har bir akkord keyingisiga tortadi.',
+    'rh.r4': 'Almashtirishli aylanma', 'rh.r4n': 'Asoslar yarim ton va kvintalar boʻylab yuradi — aylanma yangi yangraydi.',
+    'rh.r5': 'Oʻtuvchi kamaytirilgan', 'rh.r5n': 'I va ii orasidagi °7 bas qadamini yarim ton bilan toʻldiradi.',
+    'rh.r6': 'Yordamchi °7', 'rh.r6n': 'Uzun tonika jonlanadi: oʻsha asosdagi °7 va qaytish.',
+    'rh.r7': 'Minor IV', 'rh.r7n': 'Minordan oʻzlashtirish: IV I ga qaytishdan oldin qorongʻilashadi.',
+    'rh.r8': 'Bekdor', 'rh.r8n': 'V–I oʻrniga — iv–♭VII7–I: «orqa eshik» orqali yumshoq kelish.',
+    'rh.r9': 'Qoʻshilgan ii', 'rh.r9n': 'Uzun dominanta ii–V ga boʻlinadi.',
+    'rh.r10': 'Saydstep', 'rh.r10n': 'Yarim tonga siljish va qaytish — tonallikdan qisqa «chiqish».',
+    'rh.r11': 'Xromatik chiziq', 'rh.r11n': 'Minor akkord ichida bitta ovoz yarim tonlab yuradi: 1 → 7 → ♭7 → 6.',
+    'rh.r12': 'Sifatni almashtirish', 'rh.r12n': 'Aylanmaning barcha akkordlari maj7 boʻldi — bas oʻsha, rang boshqa.',
+    'ds.text': '{d} — kichik tersiya oraligʻidagi toʻrt tovush. {list} ning istalgani ustida u asosiy tonsiz dominanta kabi yangraydi: tersiya, kvinta, septima va ♭9. Shuning uchun °7 toʻrt xil tonikaga yechiladi, toʻrt dominantaning esa umumiy kamaytirilgan gammasi bor.',
+    'ct.text': 'ii–V–I oʻrniga — oktavani katta tersiyalarga boʻluvchi uchta tonika orqali yoʻl: {path}. Har biridan oldin oʻz dominantasi keladi.',
+    'v7.v1': 'kvintaga pastga — asosiy yechilish', 'v7.v2': 'minor akkordga (V7/ii, V7/vi …)', 'v7.v3': 'yarim tonga pastga — triton almashtirish kabi', 'v7.v4': 'tonga yuqoriga — uzilgan (V–vi)',
+    'v7.v5': 'tonga yuqoriga — ♭VII7–I bekdor kabi', 'v7.v6': 'katta tersiyaga pastga — kutilmagan yorugʻlik', 'v7.v7': 'kichik tersiyaga yuqoriga', 'v7.v8': 'katta tersiyaga yuqoriga (Koltreyn qadami)', 'v7.v9': 'tonga pastga', 'v7.v10': 'kvintaga yuqoriga',
+    'cp.c1': 'Charlston', 'cp.c2': 'Teskari charlston', 'cp.c3': 'Oldindan (4&)', 'cp.c4': 'Ikkinchi va toʻrtinchi', 'cp.c5': 'Kuchsiz sakkizliklar', 'cp.c6': '«Bir» va «uch» ga', 'cp.c7': 'Savol-javob', 'cp.c8': 'Oʻzimniki',
+    'cp.hint': 'Toʻrning ikki takti takrorlanadi: ii–V, keyin I. Katakka bosish — shu sakkizlikda akkord zarbasi; sakkizliklar sving bilan, bas qadam tashlaydi.', 'cp.play': '4 taktni chalish',
+    'av.notes': 'Noqulay notalar', 'av.alt': 'Variant',
+    'av.r1.0': 'maj7', 'av.r1.1': 'Ioniy', 'av.r1.2': '4 (11) — tersiyadan yarim ton yuqori', 'av.r1.3': 'lidiy ♯4 toʻqnashuvni yoʻqotadi',
+    'av.r2.0': 'm7 (ii)', 'av.r2.1': 'Doriy', 'av.r2.2': 'yoʻq; 6 — ehtiyot boʻling (♭3 bilan triton)', 'av.r2.3': 'tonikadagi m7/m6 da — erkin',
+    'av.r3.0': 'm7 (iii)', 'av.r3.1': 'Frigiy', 'av.r3.2': '♭2 va ♭6', 'av.r3.3': '—',
+    'av.r4.0': 'm7 (vi)', 'av.r4.1': 'Eoliy', 'av.r4.2': '♭6 — kvintadan yarim ton yuqori', 'av.r4.3': 'garmoniya ruxsat bersa — doriy',
+    'av.r5.0': '7', 'av.r5.1': 'Miksolidiy', 'av.r5.2': '4 (11) — tersiyaga qarshi', 'av.r5.3': '7sus4 — 3 oʻrniga 4; lidiy dominanta — ♯11',
+    'av.r6.0': 'm7♭5', 'av.r6.1': 'Lokriy', 'av.r6.2': '♭2 (♭9)', 'av.r6.3': 'lokriy ♮2 — ♭9 oʻrniga 9',
+    'av.r7.0': '7alt', 'av.r7.1': 'Alteratsiyalangan', 'av.r7.2': 'yoʻq — barcha alteratsiyalar mumkin', 'av.r7.3': '—',
+    'av.r8.0': '°7', 'av.r8.1': 'Kamaytirilgan «ton — yarim ton»', 'av.r8.2': 'yoʻq: tarangliklar har bir tovushdan ton yuqori', 'av.r8.3': '—',
+    'tn.head': 'Mumkin boʻlgan tarangliklar',
+    'tn.r1.0': 'maj7 / 6', 'tn.r1.1': '9, ♯11, 13', 'tn.r2.0': 'm7', 'tn.r2.1': '9, 11, 13 (tonikada); 9 va 11 (ii da)', 'tn.r3.0': 'm6 / m(maj7)', 'tn.r3.1': '9, 11',
+    'tn.r4.0': '7', 'tn.r4.1': '9, 13 — tabiiy; ♭9, ♯9, ♯11, ♭13 — alteratsiyalangan', 'tn.r5.0': '7sus4', 'tn.r5.1': '9, 13, ♭9 (frigiy rangi)',
+    'tn.r6.0': 'm7♭5', 'tn.r6.1': '9 (kuy ruxsat bersa), 11, ♭13', 'tn.r7.0': '°7', 'tn.r7.1': 'har bir tovushdan ton yuqori: 9, 11, ♭13, maj7',
+    'fm.b3': 'Bluz — uchta akkord', 'fm.bq': 'Bluz — tez IV', 'fm.bj': 'Jaz bluzi', 'fm.bb': 'Bibop-bluz (tushuvchi ii–V)', 'fm.bm': 'Minor bluz', 'fm.rc': 'Ritm-cheynjes, A qismi', 'fm.rb': 'Ritm-cheynjes, brij',
+    'ab.aaba': 'AABA — 32 takt (qoʻshiq shakli)', 'ab.aba': 'ABA', 'ab.abac': 'ABAC — 32 takt', 'ab.ab': 'AB — ikki qismli', 'ab.blues': 'Bluz — 12 takt', 'ab.bars': '{n} takt', 'ab.bridge': 'brij',
+    'cs.hint': 'masalan: Dm7, G7♭9, Bø, Fmaj7♯11, E7alt', 'cs.bad': 'Akkord tanilmadi.', 'cs.note': 'Toʻq — akkord tovushlari, och — gamma tarangliklari', 'cs.avoid': '; kuchli hissada {d} bilan ehtiyot boʻling',
+    'pt.src': 'Manba — {r} dan {s}. Toʻliq uning ichida yotgan pentatonikalar:', 'pt.name': '{a} major = {b} minor', 'pt.degs': '{c} ustidagi pogʻonalar: {d}',
+    'en.t1': 'asosiy ton', 'en.t3': 'tersiya', 'en.t5': 'kvinta', 'en.t7': 'septima',
+    'en.e1': 'Pastdan xromatik', 'en.e2': 'Yuqoridan diatonik', 'en.e3': 'Yuqoridan (diat.) va pastdan (xrom.)', 'en.e4': 'Pastdan (xrom.) va yuqoridan (diat.)', 'en.e5': 'Yuqoridan va pastdan xromatik',
+    'en.e6': 'Pastdan ikki xromatik', 'en.e7': 'Yuqoridan diat., xromatik tushish', 'en.e8': 'Oʻrab olish: yuqoridan, pastdan, pastdan xrom.',
+    'ex.t.ivname': 'Interval notalar boʻyicha', 'ex.t.ivear': 'Interval eshitib', 'ex.t.chear': 'Septakkord eshitib', 'ex.t.spell': 'Akkord notalari', 'ex.t.iivi': 'Tonallikda ii–V–I',
+    'ex.t.subv': 'Triton almashtirish', 'ex.t.rn': 'Akkord pogʻonasi', 'ex.t.scale': 'Akkordga gamma', 'ex.t.sig': 'Tonallik belgilari', 'ex.t.func': 'Akkord funksiyasi',
+    'ex.q.ivname': 'Bu qaysi interval?', 'ex.q.ivear': 'Nima yangradi?', 'ex.q.chear': 'Qaysi septakkord?', 'ex.q.spell': '{c} qaysi notalardan iborat?', 'ex.q.iivi': '{k} majorda ii–V–I?', 'ex.q.iivim': '{k} minorda ii–V–i?',
+    'ex.q.subv': '{c} uchun triton almashtirish?', 'ex.q.rn': '{k} majorda {c} qaysi pogʻona?', 'ex.q.scale': '{c} uchun asosiy gamma?', 'ex.q.sig': '{k} majorda nechta belgi?', 'ex.q.func': '{k} majorda {c} — qaysi funksiya?',
+    'ex.again': 'Yana tinglash', 'ex.next': 'Keyingi', 'ex.pick': 'Kamida bitta turni tanlang.', 'ex.score': 'Bu urinishda: {n} dan {ok}',
+    'pl.harm': 'Garmoniya', 'pl.impro': 'Improvizatsiya', 'pl.ear': 'Eshitish', 'pl.rep': 'Repertuar', 'pl.min': '{n} daq',
+    'pl.harm0': 'Uch tonallikda ii–V–I joylashuvlari (A/B)', 'pl.harm1': 'Doira boʻylab yoʻnaltiruvchi tonlar', 'pl.harm2': 'Qoʻshiq: chapda akkordlar, oʻngda kuy', 'pl.harm3': 'Eshitish: septakkordlar',
+    'pl.impro0': 'Qoʻshiq akkordlariga gammalar, ikki oktava', 'pl.impro1': 'Tersiyalarga yondashuvlar', 'pl.impro2': 'ii–V–I da improvizatsiya: kuchli hissalarda faqat 3 va 7', 'pl.impro3': 'Yozuvdan iborani oʻrganish',
+    'pl.ear0': 'Intervallar va akkordlarni eshitib', 'pl.ear1': 'Qoʻshiq basi va garmoniyasini topish', 'pl.ear2': 'Akkordlar ustida yoʻnaltiruvchi tonlarni kuylash',
+    'pl.rep0': 'Yangi qoʻshiq: shakl va tahlil', 'pl.rep1': 'Kuyni barcha qismlarda yoddan', 'pl.rep2': 'Turli ritmlar bilan akkompanement', 'pl.rep3': 'Eski qoʻshiqni takrorlash',
+    'pl.keys': 'Hafta tonalliklari — doira boʻylab: {list}. Yakshanba — erkin ijro.', 'pl.d0': 'Du', 'pl.d1': 'Se', 'pl.d2': 'Cho', 'pl.d3': 'Pa', 'pl.d4': 'Ju', 'pl.d5': 'Sha',
+    'fam.all': 'Hammasi', 'fam.maj': 'Majorlar', 'fam.min': 'Minorlar', 'fam.dom': 'Dominantalar', 'fam.hdim': 'ø va °', 'fam.sus': 'sus', 'fam.aug': '+', 'rf.sym': 'Belgi',
+  },
+  IV: {
+    1: ['Sof prima', 's1'], b2: ['Kichik sekunda', 'k2 · ♭2'], 2: ['Katta sekunda', 'K2 · 2'], '#2': ['Orttirilgan sekunda', 'ort2 · ♯2'], b3: ['Kichik tersiya', 'k3 · ♭3'], 3: ['Katta tersiya', 'K3 · 3'],
+    4: ['Sof kvarta', 's4 · 4'], '#4': ['Orttirilgan kvarta (triton)', 'ort4 · ♯4'], b5: ['Kamaytirilgan kvinta (triton)', 'kam5 · ♭5'], 5: ['Sof kvinta', 's5 · 5'], '#5': ['Orttirilgan kvinta', 'ort5 · ♯5'],
+    b6: ['Kichik seksta', 'k6 · ♭6'], 6: ['Katta seksta', 'K6 · 6'], bb7: ['Kamaytirilgan septima', 'kam7 · 𝄫7'], b7: ['Kichik septima', 'k7 · ♭7'], 7: ['Katta septima', 'K7 · 7'], 8: ['Sof oktava', 's8 · 8'],
+    b9: ['Kichik nona', '♭9'], 9: ['Katta nona', '9'], '#9': ['Orttirilgan nona', '♯9'], 11: ['Sof undesima', '11'], '#11': ['Orttirilgan undesima', '♯11'], b13: ['Kichik tersdesima', '♭13'], 13: ['Katta tersdesima', '13'],
+  },
+  CONS: { perf: 'mukammal konsonans', imperf: 'nomukammal konsonans', ctx: 'kontekstga bogʻliq', diss: 'dissonans' },
+  CHN: {
+    '': 'Major uchtovush', m: 'Minor uchtovush', '+': 'Orttirilgan uchtovush', '°': 'Kamaytirilgan uchtovush', sus4: 'Ushlab turilgan (sus)', 6: 'Major sekstakkord', '6/9': 'Olti-toʻqqiz',
+    m6: 'Minor sekstakkord', maj7: 'Katta major septakkord', 'm(maj7)': 'Katta septimali minor', m7: 'Kichik minor septakkord', 'm7♭5': 'Yarim kamaytirilgan', '°7': 'Kamaytirilgan septakkord',
+    7: 'Dominantseptakkord', '7sus4': 'Dominanta sus', 'maj7♯5': 'Orttirilgan kvintali major', '7♯5': 'Orttirilgan kvintali dominanta', maj9: 'Katta nonakkord', 'maj7♯11': 'Lidiy major',
+    maj13: 'Major tersdesimakkord', m9: 'Minor nonakkord', m11: 'Minor undesimakkord', 'm6/9': 'Minor olti-toʻqqiz', 'm9♭5': 'Nonali yarim kamaytirilgan', 9: 'Dominanta nonakkord',
+    13: 'Dominanta tersdesimakkord', '7♭9': 'Kichik nonali dominanta', '7♯9': 'Orttirilgan nonali dominanta', '13♭9': 'Kichik nonali oʻn uchlik', '7♯11': 'Lidiy dominanta',
+    '7♭13': 'Kichik tersdesimali dominanta', '7alt': 'Alteratsiyalangan dominanta', '9sus4': 'Nonakkord sus', '7sus4♭9': 'Frigiy sus',
+  },
+  SCN: {
+    ionian: 'Ioniy (major)', dorian: 'Doriy', phrygian: 'Frigiy', lydian: 'Lidiy', mixolydian: 'Miksolidiy', aeolian: 'Eoliy (tabiiy minor)', locrian: 'Lokriy',
+    melmin: 'Melodik minor (jaz)', dorb2: 'Doriy ♭2', lydaug: 'Orttirilgan lidiy', lyddom: 'Lidiy dominanta', mixob13: 'Miksolidiy ♭13', locnat2: 'Lokriy ♮2', altered: 'Alteratsiyalangan (superlokriy)',
+    harmmin: 'Garmonik minor', locnat6: 'Lokriy ♮6', ion5: 'Ioniy ♯5', dor4: 'Doriy ♯4', phrdom: 'Frigiy dominanta (miksolidiy ♭9 ♭13)', lyd2: 'Lidiy ♯2', ultraloc: 'Ultralokriy',
+    dimwh: 'Kamaytirilgan «ton — yarim ton»', dimhw: 'Kamaytirilgan «yarim ton — ton»', whole: 'Butun tonli',
+    pentmaj: 'Major pentatonika', pentmin: 'Minor pentatonika', bluesmin: 'Bluz (minor)', bluesmaj: 'Major bluz', kumoi: 'Kumoi', insen: 'In-sen', hirajoshi: 'Xiradzyosi',
+    bebopdom: 'Bibop dominanta', bebopmaj: 'Bibop major', bebopdor: 'Bibop doriy',
+    dblharm: 'Qoʻsh garmonik', hungmin: 'Vengr minori', hungmaj: 'Vengr majori', gypsy: 'Loʻli gammasi', neapmin: 'Neapol minori', neapmaj: 'Neapol majori', enigma: 'Enigmatik',
+    persian: 'Fors gammasi', oriental: 'Sharq gammasi', arabian: 'Arab gammasi', lydmin: 'Lidiy minor', leadwt: 'Yetakchi tonli butun tonli', spanish8: 'Ispan sakkiz pogʻonali', balinese: 'Bali (pelog)',
+    iwato: 'Ivato', egyptian: 'Misr gammasi', chinese: 'Xitoy gammasi', mongol: 'Moʻgʻul gammasi',
+  },
+  SG: { maj: 'Major ladlari', mel: 'Melodik minor ladlari', harm: 'Garmonik minor ladlari', sym: 'Simmetrik', pent: 'Pentatonikalar va bluz', bebop: 'Bibop', world: 'Dunyo gammalari' },
+  TERMS: {
+    interval: ['Interval', 'ikki tovush orasidagi masofa: pogʻonalar soni (nomi) va yarim tonlar soni (sifati).', 'iv'],
+    tritone: ['Triton', 'uch tonlik interval (6 yarim ton): oktavani teng ikkiga boʻladi; dominantaning «motori».', 'iv'],
+    inversion: ['Aylanma', 'pastki tovushi oktava yuqoriga koʻchirilgan interval yoki akkord.', 'chords'],
+    consonance: ['Konsonans va dissonans', 'intervalning barqaror va tarang yangrashi; jazda dissonans — rang.', 'iv'],
+    triad: ['Uchtovush', 'tersiyalar boʻylab uch tovushli akkord: major, minor, kamaytirilgan, orttirilgan.', 'chords'],
+    seventh: ['Septakkord', 'tersiyalar boʻylab toʻrt tovushli akkord; asosiy beshtasi: maj7, m7, 7, m7♭5, °7.', 'chords'],
+    sus: ['Sus-akkord', 'tersiya kvarta (sus4) yoki sekunda (sus2) bilan almashtirilgan akkord.', 'chords'],
+    tension: ['Taranglik', 'septimadan yuqori tovush — 9, 11, 13 va ularning alteratsiyalari; akkordga rang beradi.', 'chords'],
+    altered: ['Alteratsiyalangan dominanta', '♭9/♯9 va ♭5/♯5 (♭13) li dominanta: yechilishga eng kuchli intilish.', 'chords'],
+    ust: ['Yuqori tuzilma', 'dominanta tritoni ustidagi uchtovush — birdaniga uchta taranglik beradi.', 'chords'],
+    slash: ['Basli akkord', 'qiya chiziq bilan yozuv (C/E): koʻrsatilgan bas notasi ustidagi akkord.', 'chords'],
+    poly: ['Poliakkord', 'bir vaqtda ikki akkord, biri ikkinchisi ustida (kasr shaklida yoziladi).', 'chords'],
+    scale: ['Gamma', 'akkord ustidagi kuy uchun tovushlar toʻplami; jazda har bir akkordga — oʻz gammasi.', 'scales'],
+    mode: ['Lad', 'oʻsha tovushqatorning boshqa pogʻonasidan gamma: doriy, lidiy va h.k.', 'scales'],
+    chartone: ['Xarakterli pogʻona', 'ladni tanitadigan tovush (doriy — 6, lidiy — ♯4…).', 'scales'],
+    melmin: ['Melodik minor', 'katta seksta va septimali minor; jazda yuqoriga va pastga bir xil.', 'scales'],
+    harmmin: ['Garmonik minor', 'katta septimali minor; uning 5-ladi minordagi dominanta uchun.', 'scales'],
+    dimscale: ['Kamaytirilgan gamma', '«ton — yarim ton» sakkiz tovushli gamma; hammasi boʻlib uchta.', 'scales'],
+    wholetone: ['Butun tonli gamma', 'ton oraligʻidagi olti tovush; 7♯5 ga mos.', 'scales'],
+    pentatonic: ['Pentatonika', 'yarim tonsiz besh tovushli gamma (major va minor).', 'scales'],
+    blues: ['Bluz gammasi', '♭5 qoʻshilgan minor pentatonika.', 'scales'],
+    bebop: ['Bibop gammasi', 'bitta xromatik tovush qoʻshilgan yetti pogʻonali gamma: akkord tovushlari kuchli hissalarga tushadi.', 'scales'],
+    roman: ['Rim raqamlari', 'akkordni tonallik pogʻonasi bilan yozish: istalgan tonallikda ii–V–I.', 'key'],
+    function: ['Funksiya', 'akkord roli: tonika (osoyishtalik), subdominanta (harakat), dominanta (taranglik).', 'key'],
+    tonic: ['Tonika', 'tonallikning osoyishta akkordi: I (va oʻrinbosarlari iii, vi).', 'key'],
+    dominant: ['Dominanta', 'taranglik akkordi: V7, tonikaga intiladi.', 'key'],
+    cadence: ['Kadensiya', 'iborani yakunlovchi garmonik aylanma.', 'key'],
+    circle: ['Kvinta doirasi', 'kvinta oraligʻida doira boʻylab tonalliklar; jazda asoslar odatda kvintalab pastga yuradi.', 'key'],
+    iivi: ['ii–V–I', 'jazning asosiy aylanmasi: subdominanta → dominanta → tonika.', 'iivi'],
+    guide: ['Yoʻnaltiruvchi tonlar', '3 va 7 — akkord turini belgilovchi va keyingisiga olib boruvchi tovushlar.', 'iivi'],
+    turnaround: ['Aylanma (turnaround)', 'qism oxiridagi, boshiga qaytaruvchi akkordlar.', 'iivi'],
+    secdom: ['Ikkilamchi dominanta', 'tonikadan tashqari tonallikning istalgan akkordiga V7: V7/ii, V7/V…', 'ana'],
+    backcycle: ['Orqaga yurish', 'maqsaddan orqaga dominantalar zanjiri: har biri keyingisining dominantasi.', 'ana'],
+    relii: ['Bogʻliq ii', 'ii–V juftligida dominantadan oldingi minor septakkord.', 'ana'],
+    voicing: ['Joylashuv (voicing)', 'akkordning qaysi tovushlarini va qanday tartibda chalish.', 'voice'],
+    shell: ['Asos (shell)', 'asosiy ton + 3 + 7 (yoki 1 + 7 + 3) — eng kichik akkord.', 'voice'],
+    rootless: ['Asosiy tonsiz', 'asosiy tonsiz joylashuv (uni bas chaladi): A turi 3–5–7–9, B turi 7–9–3–5.', 'voice'],
+    drop2: ['Drop 2', 'yuqoridan ikkinchi ovozi oktavaga tushirilgan zich joylashuv.', 'voice'],
+    quartal: ['Kvartali akkord', 'kvartalar boʻylab qurilgan akkord; ochiq va zamonaviy yangraydi.', 'voice'],
+    cluster: ['Klaster', 'sekundalari bor zich akkord.', 'voice'],
+    modulation: ['Modulyatsiya', 'boshqa tonallikka oʻtish va unda mustahkamlanish.', 'mod'],
+    pivot: ['Umumiy akkord', 'ikki tonallikka tegishli, modulyatsiya u orqali oʻtadigan akkord.', 'mod'],
+    backdoor: ['Bekdor', 'I ga yechiladigan ♭VII7 (yoki iv–♭VII7): «orqa eshik» orqali kelish.', 'mod'],
+    interchange: ['Oʻzlashtirish', 'nomdosh tonallik yoki oʻsha tonikadagi boshqa laddan olingan akkord.', 'mod'],
+    picardy: ['Pikardiya tersiyasi', 'minor asar oxiridagi major tonika.', 'mod'],
+    reharm: ['Reharmonizatsiya', 'oʻsha kuy ostida yangi akkordlar.', 'reharm'],
+    tritsub: ['Triton almashtirish', 'dominantani triton yuqoridagi dominanta bilan almashtirish (G7 → D♭7).', 'reharm'],
+    dimsub: ['Kamaytirilgan almashtirish', '7♭9 oʻrniga °7 va aksincha; toʻrt dominantaning umumiy °7 si bor.', 'reharm'],
+    passdim: ['Oʻtuvchi °7', 'bir-biridan ton oraligʻidagi akkordlar orasidagi kamaytirilgan septakkord.', 'reharm'],
+    sidestep: ['Saydstep', 'yarim tonga vaqtincha siljish va qaytish.', 'reharm'],
+    cesh: ['Xromatik chiziq', 'bitta akkord ichidagi xromatik chiziq: 1–7–♭7–6 yoki 5–♯5–6–♭7.', 'reharm'],
+    coltrane: ['Koltreyn almashtirishlari', 'katta tersiya oraligʻidagi uchta tonika orqali yoʻl.', 'reharm'],
+    comping: ['Akkompanement (komp)', 'solistga javob beruvchi ritm bilan akkordlar chalish.', 'comp'],
+    avoid: ['Noqulay nota', 'kuchli hissada akkord bilan toʻqnashadigan gamma tovushi (odatda akkord tovushidan yarim ton yuqori).', 'comp'],
+    form: ['Shakl', 'asar rejasi: qismlar va ularning takrorlanishi.', 'forms'],
+    aaba: ['AABA', '32 taktli qoʻshiq shakli: uchta oʻxshash qism va qarama-qarshi brij.', 'forms'],
+    bridge: ['Brij', 'AABA shaklidagi qarama-qarshi B qismi.', 'forms'],
+    bluesform: ['Bluz', 'toʻrt taktdan uch iboradan iborat 12 taktli shakl.', 'forms'],
+    rhythmch: ['Ritm-cheynjes', '32 taktli AABA: A da I–vi–ii–V aylanmalari, brijda dominantalar zanjiri.', 'forms'],
+    modaltune: ['Modal asar', 'garmoniya kam oʻzgaradi: 8–16 taktga bitta lad.', 'forms'],
+    constant: ['Doimiy tuzilma', 'parallel siljitiladigan bitta turdagi akkord.', 'arr'],
+    pedal: ['Pedal', 'oʻzgaruvchan garmoniya ostidagi choʻzilgan bas.', 'arr'],
+    ostinato: ['Ostinato', 'basda yoki akkompanementda takrorlanuvchi figura.', 'arr'],
+    enclosure: ['Oʻrab olish (enclosure)', 'maqsadli notaga yuqoridan va pastdan yondashish.', 'impro'],
+    generalize: ['Garmonik umumlashtirish', 'akkordlar guruhiga bitta gamma bilan chalish: ii–V ni bitta V7 kabi.', 'impro'],
+    stride: ['Strayd', 'fortepiano akkompanementi: «bas — akkord — bas — akkord».', 'trad'],
+  },
+  CH: [
+{ id: 'iv', t: 'Intervallar', s: 'Garmoniyaning qurilish materiali', h: `
+<p>[[interval|Interval]] — ikki tovush orasidagi masofa. U ikki son bilan oʻlchanadi: nechta <b>harf</b> (pogʻona) qamrab olishi va unda nechta <b>yarim ton</b> borligi. Birinchisi nomini beradi (sekunda, tersiya, kvarta…), ikkinchisi — sifatini (kichik, katta, sof, orttirilgan, kamaytirilgan). Shuning uchun C–E♯ va C–F klaviaturada bitta klavish boʻlsa ham, turli intervallar: birinchisi — orttirilgan tersiya, ikkinchisi — sof kvarta.</p>
+<p>Jazda intervallar koʻpincha akkord asosidan pogʻona sifatida ataladi: ♭3, ♯11, ♭13. Bu oʻsha til: «♭9» — oktava orqali kichik sekunda, «13» — oktava orqali katta seksta.</p>
+${lab('iv')}
+<h3>Tersdesimagacha barcha intervallar</h3>
+<p>Oktavadan keng intervallar <b>murakkab</b> deyiladi: nona — sekunda va oktava, undesima — kvarta va oktava, tersdesima — seksta va oktava. Aynan ular akkordlarga [[tension|taranglik]] beradi — 9, 11, 13.</p>
+${lab('ivtable')}
+<h3>Intervalning aylanmasi</h3>
+<p>Pastki tovush oktava yuqoriga koʻchirilsa, interval «aylanadi». Nomlar yigʻindisi doim 9 (tersiya ↔ seksta, sekunda ↔ septima, kvarta ↔ kvinta), sifat esa teskarisiga oʻzgaradi: katta ↔ kichik, orttirilgan ↔ kamaytirilgan, sof — sof qoladi. Yarim tonlar yigʻindisi — 12.</p>
+${key('[[tritone|Triton]] (6 yarim ton) oktavani teng ikkiga boʻladi va aylanganda ham triton qoladi. Bu dominantaning «motori» va triton almashtirishning asosi.')}
+<h3>Konsonans va dissonans</h3>
+<p>[[consonance|Mukammal konsonanslar]] — prima, oktava, kvinta, kvarta; nomukammallari — tersiya va sekstalar; dissonanslar — sekunda, septima va triton. Jazda dissonans xato emas, balki rang: maj7 dagi katta septima, 7♭9 dagi kichik nona. Muhimi — u qayerda turishi va qayerga yechilishi.</p>
+${tip('Intervalni chalishdan oldin kuylang. Jaz uchun eng foydalilari — tersiya va septimalar: [[guide|yoʻnaltiruvchi tonlar]] ulardan iborat.')}
+` },
+{ id: 'chords', t: 'Akkordlar', s: 'Uchtovushdan tersdesimakkordgacha', h: `
+<p>Jaz akkordi asosdan tersiyalar boʻylab quriladi: 1–3–5–7, keyin — 9, 11, 13. Pastki toʻrt tovush akkord <b>turini</b>, yuqorilari — <b>rangini</b> belgilaydi. Standartlar garmoniyasining deyarli hammasi beshta [[seventh|septakkordga]] borib taqaladi: maj7, m7, 7, m7♭5 va °7.</p>
+<h3>Uchtovushlar</h3>
+<p>[[triad|Uchtovushlar]]: major (K3 + k3), minor (k3 + K3), kamaytirilgan (k3 + k3) va orttirilgan (K3 + K3). Alohida — [[sus|sus-akkordlar]], ularda tersiya kvarta yoki sekunda bilan almashtirilgan: ochiq yangraydi va na majorga, na minorga intiladi.</p>
+<h3>Aylanmalar</h3>
+<p>Asosiy koʻrinishda asos pastda. [[inversion|Birinchi aylanmada]] pastda tersiya, ikkinchisida — kvinta, uchinchisida (septakkordda) — septima. Aylanmalar ovozlar silliq yurishi va bas chiziqlari uchun kerak.</p>
+${lab('chord')}
+<h3>Yettita septakkord</h3>
+<p>Ularni bitta asosdan solishtiring. Bitta nota oʻzgaradi — u bilan xarakter ham: maj7 → 7 (septima pasayadi), 7 → m7 (tersiya pasayadi), m7 → m7♭5 (kvinta pasayadi), m7♭5 → °7 (septima yana yarim ton pasayadi).</p>
+${lab('seventh')}
+${key('Bu qanday akkord ekanini tersiya va septima hal qiladi. Kvintani deyarli doim tushirib qoldirish mumkin (♭5 va ♯5 dan tashqari), asosni — bas chalganda.')}
+<h3>Sekstakkordlar</h3>
+<p>C6 (1–3–5–6) va Cm6 (1–♭3–5–6) — koʻpincha maj7 va m7 oʻrniga olinadigan tonikalar, ayniqsa kuy asosda turganda: kuydagi asos ostidagi katta septima keskin kichik sekunda beradi. 6/9 — nonali oʻsha sekstakkord, eng osoyishta major yangrash.</p>
+<h3>Tarangliklar</h3>
+<p>9, 11 va 13 tovushlari akkordga rang qoʻshadi. Hammasi ham mumkin emas: taranglik akkord tovushidan yarim ton yuqori boʻlsa (dominantadagi ♭9 dan tashqari), u bilan toʻqnashadi. Masalan, major tersiya ustidagi 11 (Cmaj7 da E ustidagi F) xato kabi yangraydi, shuning uchun major akkordlar ustida ♯11 olinadi.</p>
+${lab('tens')}
+<p><b>Dominanta</b> — eng moslashuvchan akkord: unga tabiiy (9, 13) yoki alteratsiyalangan (♭9, ♯9, ♯11, ♭13) tarangliklar qoʻshiladi. ♭9/♯9 va ♭13 birikmasi [[altered|alteratsiyalangan dominantani]] — 7alt ni beradi, u yechilishga hammadan kuchli tortadi.</p>
+<h3>Yuqori tuzilmalar</h3>
+<p>Murakkab dominantani olishning qulay yoʻli: chap qoʻl 1–3–♭7 ni ushlaydi, oʻng qoʻl oddiy uchtovush chaladi. Yuqoridagi uchtovush birdaniga uchta taranglik beradi — bu [[ust|yuqori tuzilma]]. 24 uchtovushdan istalganini tanlang va dominanta ustida nima qilishini tinglang. Qizil kataklar — 11 yoki katta septimali uchtovushlar: ular dominanta bilan toʻqnashadi.</p>
+${lab('ust')}
+${tip('G7 ustidagi eng koʻp ishlatiladigan yuqori tuzilmalar: A (9, ♯11, 13), E♭ (♭13, 1, ♯9 — alteratsiyalangan rang), E (13, ♭9, 3), D♭ (♭5, ♭7, ♭9). Pogʻonalar boʻyicha: II, ♭VI, VI, ♭V.')}
+<h3>Basli akkord va poliakkord</h3>
+<p>Qiya chiziq bilan yozuv (C/E, D/C) — [[slash|bas notasi ustidagi akkord]]. Gorizontal chiziqli kasr bilan yozuv — [[poly|poliakkord]]: bir vaqtda ikki akkord. Keng tarqalgan misol: bas ustidagi uchtovush sifatidagi dominanta sus — F/G = G9sus4.</p>
+` },
+{ id: 'scales', t: 'Gammalar va ladlar', s: 'Major, melodik va garmonik minor, simmetrik gammalar', h: `
+<p>[[scale|Gamma]] — akkord ustidagi kuy quriladigan tovushlar toʻplami. Jazcha yondashuv oddiy: <b>har bir akkordga — gamma</b>, unda akkordning barcha tovushlari va mos tarangliklari bor. Gammalar koʻp, lekin ular uchta «ota-ona»dan kelib chiqadi: major, melodik va garmonik minor — hamda bir nechta simmetrik gamma.</p>
+<h3>Major ladlari</h3>
+<p>C-major tovushlarini D dan D gacha chalsangiz, doriy [[mode|lad]] chiqadi, E dan — frigiy va hokazo. Tovushlar oʻsha, markaz oʻzgaradi — xarakter ham. Ladni bitta pogʻonasi oʻzgargan major yoki minor deb oʻylash qulayroq: doriy — katta sekstali minor, lidiy — ♯4 li major, miksolidiy — ♭7 li major.</p>
+${lab('scale')}
+<h3>Yorqinlik zinapoyasi</h3>
+<p>Bitta asosdan yettita ladni yorqinlik boʻyicha joylashtiring: lidiydan lokriygacha har keyingisi aniq bitta pogʻonani pasaytiradi. Zinapoya pogʻonalarini bosing va yorugʻlik bir notadan qanday ketishini tinglang.</p>
+${lab('bright')}
+${key('Lad [[chartone|xarakterli pogʻonasi]] bilan taniladi: doriy — 6, frigiy — ♭2, lidiy — ♯4, miksolidiy — ♭7, eoliy — ♭6, lokriy — ♭5. Uni kuyda taʼkidlang — lad eshitiladi.')}
+<h3>Melodik minor va uning ladlari</h3>
+<p>Jazdagi [[melmin|melodik minor]] yuqoriga va pastga bir xil: katta seksta va katta septimali minor. Uning ladlari majorda yoʻq yangrashlarni beradi: <b>lidiy dominanta</b> (4-lad — 7♯11 va triton almashtirishlar uchun), <b>alteratsiyalangan</b> (7-lad — 7alt uchun), <b>lokriy ♮2</b> (6-lad — m7♭5 uchun), <b>orttirilgan lidiy</b> (3-lad — maj7♯5 uchun).</p>
+<h3>Garmonik minor</h3>
+<p>[[harmmin|Garmonik minor]] — katta septimali minor. Uning beshinchi ladi — <b>frigiy dominanta</b> (miksolidiy ♭9 ♭13) — minordagi dominantaning asosiy gammasi: C-minordagi G7♭9.</p>
+<h3>Simmetrik gammalar</h3>
+<p>[[dimscale|Kamaytirilgan gamma]] ton va yarim tonni almashtiradi. Boshini oʻzgartirsangiz, hammasi boʻlib uchta turli gamma chiqadi va har biri birdaniga toʻrtta °7 ga va toʻrtta 7♭9 dominantaga mos keladi. [[wholetone|Butun tonli]] — ton oraligʻidagi olti tovush, ular faqat ikkita; 7♯5 ga mos.</p>
+${lab('dimeq')}
+<h3>Pentatonikalar va bluz gammasi</h3>
+<p>[[pentatonic|Pentatonika]] — yarim tonsiz besh tovush: major (1 2 3 5 6) va minor (1 ♭3 4 5 ♭7) — turli tovushdan boshlangan bir xil gamma. [[blues|Bluz gammasi]] — ♭5 qoʻshilgan minor pentatonika. Yapon ladlari kumoi, in-sen, xiradzyosi — yarim tonli pentatonikalar, m6, sus va maj7♯11 ustida zamonaviy yangraydi.</p>
+<h3>Bibop gammalari</h3>
+<p>[[bebop|Bibop gammasi]] — yetti pogʻonali gamma va bitta xromatik tovush. Akkord tovushidan sakkizliklar bilan yurilganda kuchli hissalarga akkord tovushlari tushadi. Bibop dominanta — katta septimali miksolidiy; major — ♯5 li major; doriy — katta tersiyali doriy.</p>
+${tip('Gammani akkord orqali oʻrganing: akkord — chap qoʻlda, gamma — oʻngda, va nafaqat asosdan, balki akkordning har bir tovushidan. Yuqoridagi sxemada «Akkord ustida» tugmasi bor.')}
+<h3>Barcha gammalar</h3>
+<p>Toʻliq roʻyxat: major, melodik va garmonik minor ladlari, simmetrik gammalar, pentatonikalar, bibop va dunyo gammalari — vengr, loʻli, fors, arab, bali va boshqalar.</p>
+${lab('refsc')}
+` },
+{ id: 'key', t: 'Tonallik va funksiyalar', s: 'Pogʻonalar, rim raqamlari, kadensiyalar, kvinta doirasi', h: `
+<p>Gammaning har bir pogʻonasida septakkord qurilsa, tonallik akkordlari oilasi hosil boʻladi. Majorda: Imaj7, iim7, iiim7, IVmaj7, V7, vim7, viiø. Raqamlar [[roman|rim raqamlari]] bilan yoziladi: bosh harflar — major akkordlar, kichiklari — minor. Shunday qilib ketma-ketlik tonallikka bogʻlanmasdan yoziladi: oʻn ikkitadan istalganida «ii–V–I».</p>
+${lab('key')}
+<h3>Uchta funksiya</h3>
+<p>Akkordlar roli boʻyicha uchta guruhga boʻlinadi — [[function|funksiyalar]]: [[tonic|tonika]] (osoyishtalik: I, iii, vi), subdominanta (osoyishtalikdan harakat: ii, IV) va [[dominant|dominanta]] (yechilishni talab qiluvchi taranglik: V, vii). Bir guruh akkordlari bir-birini almashtira oladi — diatonik almashtirish shunga asoslanadi.</p>
+${key('Deyarli har qanday jaz ketma-ketligi — «subdominanta → dominanta → tonika» almashinuvi. ii–V–I — uning eng zich shakli.')}
+<h3>Minor</h3>
+<p>Jazdagi minor — uchta gamma qorishmasi: tabiiy, garmonik va melodik minor. Tonika odatda m6 yoki m(maj7), ii — m7♭5, V — 7♭9 yoki 7alt. Sxemani garmonik va melodik minorga oʻtkazing — bu akkordlar qayerdan kelishi koʻrinadi.</p>
+<h3>Kadensiyalar</h3>
+<p>[[cadence|Kadensiya]] iborani yakunlaydi. Autentik (V–I) — asosiysi. Plagal (IV–I) — «omin». Uzilgan (V–vi) — kutishni aldash: tonika oʻrniga uning oʻrinbosari yangraydi. Yarim kadensiya — V da toʻxtash.</p>
+<h3>Kvinta doirasi</h3>
+<p>[[circle|Kvinta doirasida]] tonalliklar kvinta oraligʻida turadi, qoʻshnilar bitta belgi bilan farqlanadi. Jaz uchun asosiysi: asoslar odatda <b>soat strelkasiga teskari</b> — kvintaga pastga yuradi: D → G → C → F.</p>
+${lab('circle')}
+` },
+{ id: 'iivi', t: 'ii–V–I', s: 'Jazning asosiy aylanmasi', h: `
+<p>[[iivi|ii–V–I]] — standartlarning katta qismining karkasi. Asoslar kvintalab pastga yuradi, funksiyalar — S → D → T. ii–V–I ni barcha tonalliklarda eshitib, chalib va improvizatsiya qila olgan kishi ishning yarmini bajargan.</p>
+<h3>Yoʻnaltiruvchi tonlar</h3>
+<p>ii–V–I dagi har bir akkordning tersiya va septimasi qadam bilan bogʻlanadi: ii ning septimasi V ning tersiyasiga aylanadi (yarim ton pastroq), V ning septimasi — I ning tersiyasiga. Bular [[guide|yoʻnaltiruvchi tonlar]]: ikki chiziq bir-birini almashtiradi, qoʻl deyarli qimirlamaydi. Jazdagi ovoz yetaklashning asosiy mexanizmi.</p>
+${lab('guide')}
+${tip('Klavishlarga qaramasdan chap qoʻl bilan butun doira boʻylab 3 va 7 ni chaling. Keyin basda asosni qoʻshing. Keyin — xuddi shuni bas ustida oʻng qoʻl bilan.')}
+<h3>Barcha tonalliklarda ii–V–I</h3>
+${lab('iivitable')}
+<h3>Aylanmalar</h3>
+<p>Qism oxirida garmoniya boshiga qaytadi — bu [[turnaround|aylanma]]. Asosiy I–vi–ii–V oʻnlab variantlarga aylanadi: vi VI7 ga (ikkilamchi dominanta), I — iii ga, dominantalar — triton almashtirishlarga oʻzgaradi.</p>
+${lab('turn')}
+<h3>ii–V zanjirlari</h3>
+<p>ii–V yechilishi shart emas: dominantadan keyin darhol boshqa tonallikdan yangi ii–V boshlanadi. Koʻpincha zanjir tonga yoki yarim tonga pastga yuradi, quloqni esa yoʻnaltiruvchi tonlar yetaklaydi.</p>
+${lab('chain')}
+<h3>Toʻliq boʻlmagan ii–V</h3>
+<p>Baʼzan maqsaddan faqat ii yoki faqat V yangraydi. Bu baribir maqsadga harakat va tahlilda xuddi shunday — strelka yoki qavs bilan belgilanadi.</p>
+` },
+{ id: 'ana', t: 'Tahlil', s: 'Strelkalar, qavslar, ikkilamchi dominantalar', h: `
+<p>Tahlil — garmoniyani til kabi oʻqish. Belgilar: <b>yaxlit strelka</b> — kvintaga pastga yechilgan dominanta; <b>uzuq-uzuq</b> — yarim tonga pastga (triton almashtirish); juftlik ostidagi <b>qavs</b> — ii–V. Akkord ostida uning roli yoziladi: pogʻona yoki V7/x («x ga dominanta»). Oʻz ketma-ketligingizni yozing — sxema uni belgilaydi.</p>
+${lab('ana')}
+<h3>Ikkilamchi dominantalar</h3>
+<p>Tonallikning viiø dan boshqa har bir akkordining oʻz dominantasi boʻlishi mumkin — [[secdom|ikkilamchi dominanta]]: V7/ii, V7/iii, V7/IV, V7/V, V7/vi. U oʻsha pogʻonadagi akkorddan bitta nota bilan farqlanadi — koʻtarilgan tersiya (yoki V7/IV da ♭7). Majorda: VI7 → ii, VII7 → iii, I7 → IV, II7 → V, III7 → vi.</p>
+<h3>Orqaga yurish</h3>
+<p>Maqsadni orqaga dominantalar zanjiri bilan tayyorlash mumkin — [[backcycle|orqaga yurish]]: E7 → A7 → D7 → G7 → C. Yanada zichroq — har bir dominantadan oldin [[relii|bogʻliq ii]]: Bm7 E7 | Em7 A7 | Am7 D7 | Dm7 G7.</p>
+<h3>Qoʻshni dominantalar</h3>
+<p>Kvinta yurishisiz ketma-ket ikki dominanta (A♭7 → G7) triton almashtirish (A♭7 = SubV7/C) yoki yon siljish deb oʻqiladi.</p>
+<h3>Dominanta sifatida °7</h3>
+<p>Maqsaddan yarim ton pastdagi kamaytirilgan septakkord — asosiy tonsiz 7♭9 dominanta: C♯°7 → Dm7 = A7♭9 → Dm7. Tahlilda «°7 → ii» yoziladi.</p>
+${key('Avval ii–V juftliklarini (qavslar), keyin dominantalarni (strelkalar), keyin tonikani qidiring. Strelkasiz va tonallikdan tashqari akkord — oʻzlashtirish yoki yangi tonallik.')}
+` },
+{ id: 'voice', t: 'Ovozlar', s: 'Joylashuvlar: asos, asosiy tonsiz, drop 2, kvartalar', h: `
+<p>[[voicing|Joylashuv]] — akkordning qaysi tovushlarini va qanday tartibda chalish. Yaxshi joylashuv toʻliq yangraydi, basga va solistga xalaqit bermaydi va keyingisiga silliq oʻtadi.</p>
+<h3>Asos</h3>
+<p>[[shell|Asos]]: asosiy ton + 3 + 7 yoki asosiy ton + 7 + 3. Turni aniq belgilaydigan eng kichik akkord. Ikki variant ii–V–I da almashinadi, shunda 3 va 7 qadam bilan yuradi.</p>
+<h3>Asosiy tonsiz</h3>
+<p>Basist boʻlsa, akkordda asosiy ton kerak emas. Toʻrt tovushli [[rootless|asosiy tonsiz]] joylashuvlar — fortepiano akkompanementining asosi: <b>A turi</b> (pastdan yuqoriga 3–5–7–9) va <b>B turi</b> (7–9–3–5). ii–V–I da ular almashinadi — A–B–A yoki B–A–B, — va har bir ovoz tondan uzoq yurmaydi.</p>
+${lab('voice')}
+${key('Ovoz yetaklash: umumiy tovushlar qoladi, qolganlari keyingi akkordning eng yaqin tovushiga yuradi. Septimaning yarim ton pastdagi tersiyaga oʻtishi — har qanday ii–V ning asosiy yurishi.')}
+<h3>Diapazon</h3>
+<p>Chap qoʻl akkordi taxminan kichik oktava re sidan birinchi oktava sol igacha toza yangraydi. Pastroqda — gʻuvillash (ayniqsa tersiyalar), yuqoriroqda akkord solist registriga kirib ketadi.</p>
+<h3>Drop 2 va drop 2-4</h3>
+<p>Zich toʻrt tovushlini oling va yuqoridan ikkinchi ovozni oktavaga tushiring — [[drop2|drop 2]] chiqadi: kengroq, saksofonlar seksiyasi kabi yangraydi. Drop 2-4 — ikkinchi va toʻrtinchi ovozlar tushirilgan. Bu joylashuvlar gitarachilar va ikki qoʻl bilan chalish uchun qulay.</p>
+<h3>Kvartali joylashuvlar</h3>
+<p>[[quartal|Kvartali akkord]] ochiq va zamonaviy yangraydi. Mashhur modal misol — minor asos ustida toʻrtta kvarta va yuqorida katta tersiya. Kvartali akkordlar koʻp maʼnoli: bitta joylashuv bir nechta akkordga mos keladi.</p>
+<h3>Klasterlar va fragmentlar</h3>
+<p>[[cluster|Klaster]] — sekundali zich akkord (9 va 3, 13 va ♭7 yonma-yon). Fragment — toʻliq joylashuvdan ikki-uch tovush, koʻpincha 3–7 va bitta taranglik: tez templarda shu yetarli.</p>
+${tip('A turi — kvinta doirasi boʻylab, keyin B turi. Bir haftadan keyin — minor ii–V–i. Maqsad — notalar haqida oʻylamaslik, akkord shaklini qoʻl ostida koʻrish.')}
+` },
+{ id: 'mod', t: 'Modulyatsiya va oʻzlashtirish', s: 'Tonalliklar orasidagi oʻtishlar, ladlarni aralashtirish', h: `
+<p>[[modulation|Modulyatsiya]] — boshqa tonallikka oʻtish va unda mustahkamlanish. <b>Tonikallashtirish</b> — qisqa tashrif, undan keyin garmoniya qaytadi. Jazda chegara xira: yangi tonallikka bir taktli ii–V — allaqachon tonikallashtirish.</p>
+<h3>Modulyatsiya turlari</h3>
+<p><b>Toʻgʻridan-toʻgʻri</b> — tayyorgarliksiz: yangi tonallik shunchaki boshlanadi (koʻpincha qism boshida). <b>Tayyorlangan</b> — yangi tonallikning ii–V si yoki °7 orqali. <b>[[pivot|Umumiy akkord]] orqali</b> — ikki tonallikka tegishli akkord qayta tushuniladi: Am7 C da — vi, G da — ii. <b>Oʻtuvchi</b> — qisqa zanjir, undan keyin tonallik butunlay oʻzgaradi.</p>
+<h3>Bekdor</h3>
+<p>V7–I oʻrniga ♭VII7–I (B♭7 → C) yoki iv–♭VII7–I (Fm7 B♭7 → Cmaj7) yangraydi — bu [[backdoor|bekdor]], nomdosh minordan oʻzlashtirish: yumshoq, iliq yechilish.</p>
+<h3>Modal oʻzlashtirish</h3>
+<p>Majorda nomdosh minor va oʻsha tonikadagi boshqa ladlar akkordlarini olish mumkin: iv, ♭VI, ♭VII, ♭III, iiø — bu [[interchange|oʻzlashtirish]]. Odatda kuy paytni koʻrsatadi: kuydagi ♭6 yoki ♭3 — sabab.</p>
+${lab('mi')}
+<h3>Pikardiya tersiyasi</h3>
+<p>[[picardy|Pikardiya tersiyasi]] — major tonika bilan tugaydigan minor asar. Jazda — tez-tez uchraydigan yakuniy imo.</p>
+` },
+{ id: 'reharm', t: 'Reharmonizatsiya', s: 'Almashtirishlar, oʻtuvchi akkordlar, Koltreyn yurishlari', h: `
+<p>[[reharm|Reharmonizatsiya]] — oʻsha kuy ostida yangi akkordlar. Asosiy qoida: <b>kuy akkord tovushi yoki mumkin boʻlgan taranglik boʻlib qolishi kerak</b>. Kuy notasi «noqulay» boʻlib qolsa, almashtirish yaramaydi.</p>
+<h3>Diatonik almashtirish</h3>
+<p>Bir funksiyadagi akkordlar bir-birini almashtiradi: I ↔ iii ↔ vi, ii ↔ IV. Cmaj7 → Em7 — uchta umumiy tovush.</p>
+<h3>Triton almashtirish</h3>
+<p>[[tritsub|Triton almashtirish]]: dominanta triton yuqoridagi dominanta bilan almashtiriladi, G7 → D♭7. Umumiy triton (B–F / C♭–F) qoladi, ikkalasi ham C ga tortadi, bas esa kvintaga sakrash oʻrniga yarim tonga pastga yuradi.</p>
+${lab('tritone')}
+<h3>Kamaytirilgan almashtirish</h3>
+<p>Har qanday °7 — toʻrt xil asosdan asosiy tonsiz 7♭9 dominanta. Demak, G7♭9 ni B♭7♭9, D♭7♭9 yoki E7♭9 bilan almashtirish mumkin — ularning ustida bir xil kamaytirilgan akkord. Bu [[dimsub|kamaytirilgan almashtirish]].</p>
+${lab('dimsub')}
+<h3>Edi va boʻldi</h3>
+<p>Dastlabki ketma-ketlik va reharmonizatsiyani eshitib solishtiring. Har bir misol — bitta usul.</p>
+${lab('reharm')}
+<h3>Oʻtuvchi va yordamchi °7</h3>
+<p>[[passdim|Oʻtuvchi °7]] bir-biridan ton oraligʻidagi akkordlar orasida turadi: Cmaj7 C♯°7 Dm7. <b>Yordamchi</b> — ikki bir xil akkord orasida oʻsha asosda: Cmaj7 C°7 Cmaj7 — uzun tonikani jonlantiradi.</p>
+<h3>Saydstep</h3>
+<p>[[sidestep|Saydstep]] — akkord yoki ii–V ni yarim ton yuqoriga yoki pastga siljitish va qaytish: tonallikdan qisqa «chiqish».</p>
+<h3>Xromatik chiziq</h3>
+<p>Uzun akkord ichida bitta ovoz yarim tonlab yuradi — [[cesh|xromatik chiziq]]: minorda 1 → 7 → ♭7 → 6 (Cm → Cm(maj7) → Cm7 → Cm6), majorda 5 → ♯5 → 6 → ♭7.</p>
+<h3>Koltreyn almashtirishlari</h3>
+<p>Oktava uchta katta tersiyaga boʻlinadi, ii–V–I esa har biridan oldin oʻz dominantasi keladigan uchta tonika orqali yoʻlga aylanadi — [[coltrane|Koltreyn almashtirishlari]]. Kaleydoskopning tez burilishi kabi yangraydi.</p>
+${lab('coltrane')}
+<h3>Dominanta istalgan joyga yechilishi mumkin</h3>
+<p>V7 yechilishini kutish shu qadar kuchliki, kutilmagan akkord xato emas, voqea kabi yangraydi. Turli yoʻllarni tinglang.</p>
+${lab('v7res')}
+${tip('Bitta qoʻshiqni bir vaqtda bitta usul bilan reharmonizatsiya qiling: avval faqat triton almashtirishlar, keyin faqat ikkilamchi dominantalar. Kuyni qoʻllab-quvvatlaydiganini qoldiring.')}
+` },
+{ id: 'comp', t: 'Akkompanement', s: 'Ritm, registr, solist bilan suhbat', h: `
+<p>[[comping|Akkompanement]] — solistga javob, fon emas. Pianinochi yoki gitarachi <b>nima</b> chalishni (joylashuvlar), <b>qayerda</b> (registr) va <b>qachon</b> (ritm) tanlaydi. Eng muhimi — ritm.</p>
+<h3>Tamoyillar</h3>
+<p>Joy qoldiring: qisqa akkordlar, pauzalar, takrorlanuvchi ritmik figuralar. Solist kuyini takrorlamang. Oldinga oʻting: kuchli hissadan bir sakkizlik oldin chalingan akkord harakat beradi. Barabanchini tinglang: akkompanement zarbalari uning naqshini toʻldiradi.</p>
+<h3>Ritmik figuralar</h3>
+<p>Figurani tanlang yoki oʻzingiznikini yaratish uchun kataklarni bosing. Qadamlovchi bas bilan ii–V–I yangraydi.</p>
+${lab('comp')}
+<h3>Noqulay notalar</h3>
+<p>[[avoid|Noqulay nota]] — kuchli hissada akkord bilan toʻqnashadigan gamma tovushi.</p>
+${lab('avoid')}
+${key('Temp qanchalik tez boʻlsa, tovushlar shunchalik kam: tez tempda 3 va 7 yetarli. Balladada — toʻliq joylashuvlar va arpedjiolar.')}
+` },
+{ id: 'forms', t: 'Shakllar', s: 'Bluz, AABA, ritm-cheynjes, modal asarlar', h: `
+<p>[[form|Shakl]] — asar rejasi: qanday qismlardan iboratligi va ular qanday takrorlanishi. Improvizatsiya ham oʻsha shakl — «kvadrat» boʻylab boradi, shuning uchun uni yoddan bilish kerak.</p>
+<h3>Qoʻshiq shakllari</h3>
+<p>Standartlarning koʻpi — 32 takt: [[aaba|AABA]] ([[bridge|brij]] B qarama-qarshi va odatda boshqa tonallikka oʻtadi) yoki ABAC. Kamroq — AB, ABA va qismlari nostandart uzunlikdagi shakllar.</p>
+${lab('aaba')}
+<h3>Bluz</h3>
+<p>[[bluesform|Bluz]] — 12 takt, toʻrt taktdan uchta ibora. Asosiy shakl — uchta dominanta I7, IV7, V7. Jaz bluzi ii–V, ikkilamchi dominantalar va °7 qoʻshadi; bibop varianti — tushuvchi ii–V zanjirlari; minor bluz — i, iv va ♭VI7–V7 da. «Tinglash» ni bosing — taktlar yangragan sari yonadi.</p>
+${lab('form')}
+<h3>Ritm-cheynjes</h3>
+<p>[[rhythmch|Ritm-cheynjes]] — bluzdan keyin mashhurligi boʻyicha ikkinchi shakl: 32 taktli AABA. A qismi — IV ga chiqishli tez I–vi–ii–V aylanmalari; brij — kvinta doirasi boʻylab dominantalar zanjiri, har biri ikki takt: III7–VI7–II7–V7. Yuqoridagi sxemadagi oxirgi ikki shakl shuni koʻrsatadi.</p>
+<h3>Modal asarlar</h3>
+<p>[[modaltune|Modal asarda]] garmoniya kam oʻzgaradi — 8–16 taktga bitta lad. Harakatni improvizatorning oʻzi yaratadi: kvartali akkordlar, saydsteplar, pentatonikalar bilan.</p>
+<h3>Politonallik</h3>
+<p>Bir vaqtda ikkita tonal markaz: masalan, C akkordi ustidagi D uchtovushi. Kichik dozalarda — bu yuqori tuzilmalar.</p>
+` },
+{ id: 'arr', t: 'Aranjirovka', s: 'Doimiy tuzilmalar, pedal, ostinato', h: `
+<p>[[constant|Doimiy tuzilma]] — turli asoslar boʻylab parallel siljitiladigan bitta turdagi akkord (koʻpincha maj7 yoki m11). Garmoniya funksional boʻlishdan toʻxtab, rangga aylanadi.</p>
+<p>[[pedal|Pedal]] — ustida akkordlar oʻzgaradigan choʻzilgan bas (koʻpincha tonika yoki dominanta). U ham taranglik, ham yaxlitlik yaratadi. Kirish va yakunlarning odatiy usuli.</p>
+<p>[[ostinato|Ostinato]] — basda yoki akkompanementda takrorlanuvchi figura. Lotin amerika uslublarida — ritm asosi.</p>
+<h3>Kuy uchun yangi garmoniya</h3>
+<p>Beshta qoida. (1) Kuyning muhim notalarini toping — uzun va kuchli hissadagilarini. (2) Har biri uchun u akkord tovushi yoki mumkin boʻlgan taranglik boʻladigan akkordlarni tanlang. (3) Akkordlarni bas maʼnoli yuradigan qilib bogʻlang: kvintalar, qadamlar, xromatizm bilan. (4) Kadensiyalarda funksiyani saqlang. (5) Hammasini birdaniga oʻzgartirmang: tanish garmoniya fonida bitta yangi ibora kuchliroq yangraydi.</p>
+${tip('Sekin kuyni oling va har bir uzun nota ustiga uchta akkord yozing: diatonik, ikkilamchi dominanta va oʻzlashtirilgan. Chalib koʻring va har bir joy uchun eng yaxshisini tanlang.')}
+` },
+{ id: 'impro', t: 'Improvizatsiya', s: 'Akkordlarga gammalar, pentatonikalar, yondashuvlar', h: `
+<p>Improvizatsiya uchta asosga tayanadi: <b>eshitish</b> (nimani eshitmoqchisiz), <b>garmoniya</b> (hozir nima yangrayapti) va <b>lugʻat</b> (barmoqlardagi iboralar va usullar). Nazariya material beradi, lekin asosiy ustoz — yozuvlar.</p>
+<h3>Akkordga gamma</h3>
+<p>Istalgan akkordni yozing — sxema uning barcha tovushlari bor gammalarni topadi. Eng tabiiy variantlar — yuqorida.</p>
+${lab('cscale')}
+<h3>Garmonik umumlashtirish</h3>
+<p>Tez almashinuvlarda har bir akkordni chalish shart emas: ii–V ni bitta V7, butun ii–V–I ni esa bitta tonallik deb oʻylash mumkin. Bu [[generalize|garmonik umumlashtirish]]: quloq kuy uchun boʻshaydi.</p>
+<h3>Akkord ustidagi pentatonikalar</h3>
+<p>Bitta akkord ustida bir nechta [[pentatonic|pentatonika]] mos keladi va har biri oʻz tarangliklar toʻplamini beradi: Cmaj7 ustida D dan pentatonika 9, 3, ♯11, 13, 7 ni beradi — lidiy rangi.</p>
+${lab('penta')}
+<h3>Maqsadli notaga yondashuv</h3>
+<p>[[enclosure|Oʻrab olish]] — akkord tovushini «nishonga olish» usuli: unga yuqoridan va pastdan, diatonik yoki xromatik yondashish, shunda maqsad kuchli hissaga tushadi.</p>
+${lab('encl')}
+<h3>Andozalar va simmetriya</h3>
+<p>Sekvensiyalar (turli pogʻonalardan motiv), kamaytirilgan va butun tonli gammalar boʻyicha simmetrik figuralar, yarim tonlab yuruvchi uchtovushlar — tonallikdan chiqib, mantiqan qaytish usullari.</p>
+<h3>Yuqori uchtovushlar</h3>
+<p>Akkord ustida uning yuqori tovushlaridan uchtovush chalish mumkin: Cmaj7 ustida — G (5–7–9) va D (9–♯11–13), Dm7 ustida — F va C, G7alt ustida — E♭ va D♭. Uchtovushdan kuy aniq yangraydi va shu bilan birga taranglik beradi.</p>
+${key('Akkord tovushlari — kuchli hissalarga, oʻtuvchilari — kuchsizlarga. Akkord almashinuvida 3 va 7 ni nishonga oling — chiziq akkompanementsiz ham garmoniyani «aytib beradi».')}
+${tip('Bitta ii–V–I da cheklov bilan improvizatsiya qiling: faqat sakkizliklar, faqat akkord tovushlari, faqat ikkinchi hissadan boshlanadigan iboralar. Cheklov lugʻatni erkinlikdan tezroq rivojlantiradi.')}
+` },
+{ id: 'trad', t: 'Anʼanaviy jaz', s: 'Yangi Orlean, regtaym, ilk bluz', h: `
+<p>Ilk jaz oddiy funksional garmoniyaga tayanadi: uchtovushlar va dominanta septakkordlar, kvinta doirasi boʻylab ikkilamchi dominantalar (I–VI7–II7–V7–I), oʻtuvchi akkord sifatida °7.</p>
+<h3>Shakllar</h3>
+<p>Regtaym va marsh — 16 taktdan iborat koʻp qismli shakllar (AABBACCDD), koʻpincha trioda subdominanta tonalligiga modulyatsiya bilan. Ilk bluz — 12 takt, lekin soddalashtirilgan garmoniya va uzunlikda erkinliklar bilan.</p>
+<h3>Akkompanement va ansambl</h3>
+<p>Ritm-guruh «toʻrtga» yoki «ikkiga» chaladi (bas 1 va 3 da), fortepiano — [[stride|strayd]]: bas — akkord — bas — akkord. Ansambl — jamoaviy improvizatsiya: truba kuyni yetaklaydi, klarnet yuqoridan bezaydi, trombon pastdan javob beradi.</p>
+<h3>Oʻnta moʻljal</h3>
+<p>(1) Tonikada septakkordlar oʻrniga uchtovushlar va sekstakkordlar. (2) Dominantalar — alteratsiyasiz oddiy 7. (3) Doira boʻylab ikkilamchi dominantalar. (4) °7 — oʻtuvchi. (5) Bas — asoslar va kvintalar. (6) Kuy — arpedjio va pentatonika. (7) Bluz notalari (♭3, ♭7) — rang sifatida. (8) Breyklar — qisqa solo uchun ansamblning toʻxtashi. (9) Sving sakkizliklar, lekin yengil. (10) Ansambl bir-birini eshitadi: hech kim doim chalmaydi.</p>
+` },
+{ id: 'practice', t: 'Amaliyot', s: 'Qanday shugʻullanish, barcha mashqlar, trening', h: `
+<p>Nazariya faqat cholgʻu va eshitish orqali musiqaga aylanadi. Bir nechta qoida: faqat qulaylari emas, <b>barcha 12 tonallik</b>; <b>sekin va toʻgʻri</b>, keyin tezroq; <b>qoʻshiqlar</b> — asosiy material (har bir mashq — aniq qoʻshiq uchun); har kuni yozuvlarni <b>tinglash</b>.</p>
+<h3>Mashqlar toʻplami</h3>
+<p>Qoʻl bilan bajarish kerak boʻlgan hamma narsa. Yutuqni belgilash shart emas — cholgʻu yonidagi vaqt muhim.</p>
+<ol class="bexl">
+<li><b>Intervallar.</b> Barcha intervallarni bitta tovushdan yuqoriga va pastga kuylash va chalish, keyin oʻn ikkitasining har biridan.</li>
+<li><b>Septakkordlar.</b> Har bir asosdan beshta asosiy septakkord, asosiy koʻrinishda va aylanmalarda.</li>
+<li><b>Garmonizatsiya.</b> Major, garmonik va melodik minor septakkordlari barcha tonalliklarda.</li>
+<li><b>Ladlar.</b> Bitta asosdan yettita lad yorqinlik zinapoyasi boʻylab; xarakterli pogʻonani taʼkidlash.</li>
+<li><b>Yoʻnaltiruvchi tonlar.</b> Kvinta doirasi boʻylab 3 va 7: dominantalar, minorlar, majorlar.</li>
+<li><b>ii–V–I.</b> Asos, keyin asosiy tonsiz (A/B) — doira boʻylab va tonlab pastga; major va minor.</li>
+<li><b>Aylanmalar.</b> I–vi–ii–V ning barcha variantlari uchta tonallikda.</li>
+<li><b>Tahlil.</b> Uchta qoʻshiq: strelkalar, qavslar, pogʻonalar — akkordlar ustida qalam bilan.</li>
+<li><b>Ovozlar.</b> ii–V–I da drop 2 va kvartali joylashuvlar.</li>
+<li><b>Reharmonizatsiya.</b> Bitta qoʻshiq — beshta versiya, har birida bitta usul.</li>
+<li><b>Akkompanement.</b> Uchta turli ritmik figura bilan F dagi bluz.</li>
+<li><b>Akkordga gamma.</b> Qoʻshiqning har bir akkordi uchun — akkordning turli tovushlaridan gamma.</li>
+<li><b>Pentatonikalar.</b> maj7, m7 va 7alt ustida barcha mos pentatonikalar.</li>
+<li><b>Yondashuvlar.</b> ii–V–I dagi har bir akkordning 3 va 7 iga oʻrab olishlar.</li>
+<li><b>Eshitish.</b> Quyidagi trening — chalishdan oldin bir necha daqiqa.</li>
+</ol>
+<h3>Trening</h3>
+<p>Savollar belgilangan turlardan tasodifiy tanlanadi. Hisob — faqat shu urinish uchun, seriyalar va reytinglarsiz.</p>
+${lab('ex')}
+<h3>Hafta rejasi</h3>
+${lab('plan')}
+` },
+{ id: 'ref', t: 'Maʼlumotnoma', s: 'Akkordlar, gammalar, tarangliklar, atamalar', h: `
+<h3>Akkordlar</h3>
+${lab('refch')}
+<h3>Gammalar</h3>
+${lab('refsc')}
+<h3>Mumkin boʻlgan tarangliklar</h3>
+${lab('tens')}
+<h3>Noqulay notalar</h3>
+${lab('avoid')}
+<h3>Atamalar</h3>
+${lab('gloss')}
+` },
+  ],
+};
