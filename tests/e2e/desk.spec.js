@@ -35,3 +35,40 @@ test('пианино с клавиатуры компьютера', async ({ pag
   await page.keyboard.press('ArrowDown');
   expect(errors).toEqual([]);
 });
+
+// Окно Windows (Tauri подменён): «Телефон и компьютер» — один раздел; «Принимать телефон» показывает адрес и код
+test('телефон и компьютер — одно место в настройках', async ({ page, melete, errors }) => {
+  await page.addInitScript(() => {
+    let cb = 0;
+    const st = { on: false, port: 53319, ips: ['192.168.1.23'], name: 'PC' };
+    window.__TAURI_INTERNALS__ = {
+      transformCallback: () => ++cb,
+      unregisterCallback: () => {},
+      convertFileSrc: (p) => p,
+      metadata: { currentWindow: { label: 'main' }, currentWebview: { windowLabel: 'main', label: 'main' } },
+      invoke: async (cmd) => {
+        if (cmd === 'sync_start') { st.on = true; return st; }
+        if (cmd === 'sync_status') return st;
+        if (cmd === 'sync_stop') { st.on = false; return null; }
+        if (cmd === 'guest_status') return { on: false, ips: st.ips, name: 'PC', port: 53320 };
+        if (cmd === 'localsend_status') return { on: false, ips: st.ips, alias: 'Melete · PC' };
+        if (cmd === 'startup_files') return [];
+        return null;
+      },
+    };
+  });
+  await melete.open();
+  await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
+  await melete.click('.pdnav [data-pp="link"]'); await page.waitForTimeout(400);
+  const pg = page.locator('.pdpage');
+  await expect(pg.locator('[data-psw="syncSrv"]')).toHaveCount(1);
+  await expect(pg.locator('[data-act="ens"]')).toHaveCount(1);
+  await expect(pg.locator('[data-psw="guestOn"]')).toHaveCount(1);
+  await pg.locator('[data-psw="syncSrv"]').check({ force: true }); await page.waitForTimeout(400);
+  await expect(pg.locator('.sypair')).toContainText('192.168.1.23');
+  await page.screenshot({ path: 'test-results/link-page.png' });
+  // «Данные и копии» — без связи
+  await melete.click('.pdnav [data-pp="data"]'); await page.waitForTimeout(400);
+  await expect(page.locator('.pdpage [data-psw="syncSrv"]')).toHaveCount(0);
+  void errors;
+});

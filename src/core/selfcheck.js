@@ -154,6 +154,9 @@ const checks = {
       } catch { return false; }
     };
     const want = [['дорожки', 'models/demucs/htdemucs_embedded.onnx'], ['тональность', 'models/mir/skey.onnx'], ['доли', 'models/mir/small0.onnx'], ['аккорды', 'models/mir/chordnet.onnx'], ['рояль', 'models/piano/pack.json'], ['ноты', 'bp/model.json']];
+    // Windows: файлы зашиты в программу сжатыми, запрос отдаёт файл целиком — 180 МБ дорожек не укладываются в 9 с
+    // (отчёт 23.10.2026); там модель дорожек читает сам движок, и её отсутствие видно по первому разделению
+    if (isDesktop()) want.shift();
     const got = await Promise.all(want.map(([, p]) => have(p)));
     const missing = want.filter((_, i) => !got[i]).map(([n]) => n);
     const eng = stemsNative() ? (isDesktop() ? 'нативный (Windows)' : 'нативный (Android)') : 'веб (WebAssembly)';

@@ -415,7 +415,7 @@ a.cell{color:inherit;text-decoration:none}
 .ckrow[data-st="fail"] .ckst{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
 @keyframes ckspin{to{transform:rotate(360deg)}}
 /* связь с телефоном (настройки «Данные и копии», компьютер): адрес и код — крупно, чтобы списать с экрана */
-.sypair{padding:14px 16px;gap:2px}
+.sypair{display:flex;flex-direction:column;align-items:flex-start;padding:14px 16px;gap:2px}
 .sybig{font-size:30px;font-weight:700;letter-spacing:.04em}
 /* ансамбль (screens/ensemble.js): большой счёт и время записи, строка состояния, кнопка записи */
 .ensp{margin:4px 4px 10px;font-size:15px;line-height:1.45}

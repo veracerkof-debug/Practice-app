@@ -283,12 +283,11 @@
   "qw.octave": "Z tugmasi — {n}",
   "sy.pcTitle": "Telefon bilan aloqa",
   "sy.pcSw": "Telefonni qabul qilish",
-  "sy.pcHint": "Telefonda: Profil → Maʼlumotlar va nusxalar → Kompyuter — manzil va kodni kiriting. Faqat oʻz Wi-Fi tarmogʻida. Qoʻshiqlar, mashgʻulotlar, taqvim, oʻqish va yozuvlar sinxronlanadi; telefon yozuvlarini kompyuter oʻzi ishlaydi — yoʻlaklar, matn, tonallik va akkordlar qaytib boradi. Sozlamalar har qurilmada oʻziniki.",
+  "sy.pcHint": "Qoʻshiqlar, mashgʻulotlar, taqvim, oʻqish va yozuvlar sinxronlanadi; telefon yozuvlarini kompyuter oʻzi ishlaydi — yoʻlaklar, matn, tonallik va akkordlar qaytib boradi. Sozlamalar har qurilmada oʻziniki.",
   "sy.phTitle": "Kompyuter",
   "sy.addr": "Manzil",
   "sy.code": "Kod",
   "sy.pair": "Ulash",
-  "sy.phHint": "Kompyuterda: Profil → Maʼlumotlar va nusxalar → «Telefonni qabul qilish» — manzil va kod oʻsha yerda. Telefon va kompyuter bir Wi-Fi tarmogʻida.",
   "sy.now": "Sinxronlash",
   "sy.busy": "Sinxronlanmoqda…",
   "sy.forget": "Unutish",
@@ -1803,5 +1802,11 @@
   "stage.scrollOn": "Avto-aylantirishni yoqish",
   "stage.scrollOff": "Avto-aylantirishni oʻchirish",
   "stage.scrollPaused": "Aylantirish toʻxtatildi",
-  "stage.scrollResumed": "Aylantirish davom etadi"
+  "stage.scrollResumed": "Aylantirish davom etadi",
+  "page.link": "Telefon va kompyuter",
+  "page.link.sub": "Ulanish, ansambl, qoʻshiqlarni tarqatish, fayllar",
+  "page.link.subPh": "Kompyuterga ulanish va ansambl",
+  "pg.link": "Aloqa",
+  "link.howPc": "1. Telefon va kompyuter bir Wi-Fi tarmogʻida. 2. Shu yerda «Telefonni qabul qilish»ni yoqing — manzil va kod chiqadi. 3. Telefonda: Profil → Telefon va kompyuter — manzil va kodni kiriting.",
+  "link.howPh": "1. Telefon va kompyuter bir Wi-Fi tarmogʻida. 2. Kompyuterda: Profil → Telefon va kompyuter → «Telefonni qabul qilish» — manzil va kod oʻsha yerda. 3. Shu yerda ularni kiritib, «Ulash»ni bosing."
 }

@@ -295,12 +295,11 @@
   "qw.octave": "Key Z — {n}",
   "sy.pcTitle": "Phone link",
   "sy.pcSw": "Accept the phone",
-  "sy.pcHint": "On the phone: Profile → Data and backups → Computer — enter the address and code. Same Wi-Fi network only. Songs, sessions, calendar, reading and recordings are synced; the computer processes the phone’s recordings itself — stems, lyrics, key and chords go back. Settings stay per device.",
+  "sy.pcHint": "Songs, sessions, calendar, reading and recordings are synced; the computer processes the phone’s recordings itself — stems, lyrics, key and chords go back. Settings stay per device.",
   "sy.phTitle": "Computer",
   "sy.addr": "Address",
   "sy.code": "Code",
   "sy.pair": "Connect",
-  "sy.phHint": "On the computer: Profile → Data and backups → “Accept the phone” shows the address and code. Phone and computer on the same Wi-Fi.",
   "sy.now": "Sync",
   "sy.busy": "Syncing…",
   "sy.forget": "Forget",
@@ -1839,5 +1838,11 @@
   "stage.scrollOn": "Turn auto-scroll on",
   "stage.scrollOff": "Turn auto-scroll off",
   "stage.scrollPaused": "Scroll paused",
-  "stage.scrollResumed": "Scrolling"
+  "stage.scrollResumed": "Scrolling",
+  "page.link": "Phone and computer",
+  "page.link.sub": "Connection, ensemble, song sharing, files",
+  "page.link.subPh": "Computer connection and ensemble",
+  "pg.link": "Connection",
+  "link.howPc": "1. Phone and computer on the same Wi-Fi network. 2. Turn on “Accept the phone” here — the address and code appear. 3. On the phone: Profile → Phone and computer — enter the address and code.",
+  "link.howPh": "1. Phone and computer on the same Wi-Fi network. 2. On the computer: Profile → Phone and computer → “Accept the phone” shows the address and code. 3. Enter them here and tap “Connect”."
 }

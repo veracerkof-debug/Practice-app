@@ -106,7 +106,10 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
   });
   const audio = {
     // Нагрузка звукового потока (load.js): создаётся с контекстом, читают микшер и настройки
-    get load() { const c = peekContext(); if (!c) return null; if (!loadMeter) { loadMeter = createLoadMeter(c, (m) => audio.onLoadLog && audio.onLoadLog(m), diag); loadMeter.start(); } return loadMeter; },
+    get load() { const c = peekContext(); if (!c) return null; if (!loadMeter) { loadMeter = createLoadMeter(c, (m) => audio.onLoadLog && audio.onLoadLog(m), diag, () => {
+      // голоса уже ужаты, а поток не успевает: свёртка — самое дорогое из постоянного; лёгкая — в десятки раз дешевле
+      if (mixer.verb === 'conv') { mixer.setVerb('light'); if (audio.onLoadLog) audio.onLoadLog('перегрузка — реверберация переключена на лёгкую'); }
+    }); loadMeter.start(); } return loadMeter; },
     onLoadLog: null, // ядро подставляет запись в журнал
     mixer, synth, drone, metro,
     unlock: () => !!getContext(device.mix.mode),   // вызвать на первом жесте пользователя

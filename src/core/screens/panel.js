@@ -4,6 +4,7 @@
 // barsSVG, hbars, legalSheet, doExport, импорт копии).
 import { Capacitor } from '@capacitor/core';
 import { isDesktop } from '../desktop.js';
+import { logErr } from '../log.js';
 import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
 import { autoMode, autoAna, autoHq, autoPower, autoLyr } from '../autostems.js';
@@ -61,10 +62,11 @@ const PAGES = {
   notif: ['red', '<svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>'],
   look: ['indigo', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" style="fill:var(--on,#fff)"/></svg>'],
   help: ['blue', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.6M12 16.8v.2"/></svg>'],
+  link: ['teal', '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="13" height="9.5" rx="1.6"/><path d="M6 18h6M9 14.5V18"/><rect x="16.5" y="8" width="5" height="10" rx="1.4"/></svg>'],
   data: ['green', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
 // Страницы группами: я и практика, экран, инструменты и подсказки, помощь и данные
-const PAGE_GROUPS = [['me', ['me', 'week', 'stats']], ['screen', ['look', 'tabs']], ['tools', ['feat', 'mascot', 'notif']], ['help', ['help', 'data']]]; // главная правится на самой главной (удержание блока)
+const PAGE_GROUPS = [['me', ['me', 'week', 'stats']], ['screen', ['look', 'tabs']], ['tools', ['feat', 'mascot', 'notif']], ['link', ['link']], ['help', ['help', 'data']]]; // главная правится на самой главной (удержание блока)
 // Страницы, которых нет в режиме «Только инструменты»
 const PLAIN_HIDE = ['stats', 'week', 'notif', 'mascot'];
 // «Сообщить о проблеме» — лист со строчками журнала
@@ -316,12 +318,13 @@ function folderHTML(app) {
     (s.ok ? '<span class="st l2" style="display:block;font-size:13px">' + (F.busy ? t('fold.busy') : F.last ? t('fold.last', { t: new Date(F.last).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit' }) }) : t('fold.ready')) + '</span>' : '') + '</span></div>' +
     '<button class="cell act" data-fold="pick">' + t(s.ok ? 'fold.change' : 'fold.pick') + '</button>' +
     (s.ok ? '<button class="cell act" data-fold="sync">' + t('fold.sync') + '</button><button class="cell act" data-fold="restore">' + t('fold.restore') + '</button><button class="cell act danger" data-fold="forget">' + t('fold.forget') + '</button>' : '') +
-    '</div><p class="ftr">' + t('fold.hint') + '</p>' + (s.ok ? localSendHTML(app) + copiesHTML() : '');
+    '</div><p class="ftr">' + t('fold.hint') + '</p>' + (s.ok ? copiesHTML() : '');
 }
 // Приём файлов с телефона по протоколу LocalSend (Windows): переключатель, адреса компьютера, как слать с телефона
 function localSendHTML(app) {
   const L = app.localSend;
   if (!L || !L.available) return '';
+  if (!(app.folder && app.folder.state.ok)) return '<div class="hdr">' + t('ls.title') + '</div><p class="ftr" style="margin-top:0">' + t('ls.needFolder') + '</p>';
   const on = L.enabled() && L.state.on;
   return '<div class="hdr">' + t('ls.title') + '</div><div class="group"><div class="cell"><span class="grow">' + t('ls.sw') + (on ? '<span class="bksub">' + esc(L.state.alias) + ' · ' + esc(L.state.ips.join(', ')) + ':53317</span>' : '') + '</span>' + psw('localSend', L.enabled(), t('ls.sw')) + '</div></div><p class="ftr">' + t('ls.hint') + '</p>';
 }
@@ -342,14 +345,20 @@ function dataHTML(app) {
   const demo = demoLeft(app);
   return '<div class="large">' + t('data.title') + '</div><div class="group"><button class="cell act" data-act="export">' + t('data.export') + '</button><button class="cell act" data-act="import">' + t('data.import') + '</button></div>' +
     '<p class="ftr">' + t('data.hint') + '</p>' +
-    syncHTML(app) +
-    guestHTML(app) +
     folderHTML(app) +
     // демо-набор: песни, табулатуры, ноты, записи и события — показать, как всё устроено; убирается одной кнопкой
     // демо-набор ставится при регистрации; здесь — только убрать (решение автора)
     (demo ? '<div class="hdr">' + t('demo.title') + '</div><div class="group"><button class="cell act danger" data-act="demo">' + t('demo.remove') + '</button></div>' +
     '<p class="ftr">' + t('demo.hint') + '</p>' : '') +
     '<div class="group" style="margin-top:28px"><button class="cell danger center" data-act="reset">' + t('data.reset') + '</button></div>';
+}
+
+// «Телефон и компьютер» — всё, что их связывает, в одном месте: подключение и синхронизация, ансамбль, раздача песен
+// в сети и приём файлов (LocalSend)
+const linkAvail = (app) => !!((app.syncSrv && app.syncSrv.avail) || Capacitor.isNativePlatform());
+function linkHTML(app) {
+  return '<div class="large">' + t('page.link') + '</div><p class="ftr" style="margin-top:0">' + t(isDesktop() ? 'link.howPc' : 'link.howPh') + '</p>' +
+    syncHTML(app) + guestHTML(app) + localSendHTML(app);
 }
 
 // Связь с компьютером (src/core/sync.js): на компьютере — включить и показать адрес с кодом, на телефоне — ввести их
@@ -372,7 +381,7 @@ function syncHTML(app) {
   if (!pc) return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group">' +
     '<label class="cell"><span>' + t('sy.addr') + '</span><input class="inp" data-sy="addr" inputmode="decimal" placeholder="192.168.1.23" aria-label="' + esc(t('sy.addr')) + '"></label>' +
     '<label class="cell"><span>' + t('sy.code') + '</span><input class="inp" data-sy="code" inputmode="numeric" maxlength="7" placeholder="000 000" aria-label="' + esc(t('sy.code')) + '"></label>' +
-    '<button class="cell act" data-act="sypair"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.pair') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) : t('sy.phHint')) + '</p>';
+    '<button class="cell act" data-act="sypair"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.pair') + '</button></div>' + (syncMsg ? '<p class="ftr">' + esc(syncMsg) + '</p>' : ''); // как подключить — вверху раздела (link.howPh)
   const C = app.syncCli, busy = syncBusy || !!(C && C.busy), st = app.store.state.settings, wait = C ? C.waiting() : 0;
   return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + esc(pc.name) + '<span class="psub">' + t('sy.last', { when: ago(pc.last) }) + (wait ? ' · ' + t('sy.waiting', { n: wait }) : '') + '</span></span></div>' +
     '<button class="cell act" data-act="synow"' + (busy ? ' disabled' : '') + '>' + t(busy ? 'sy.busy' : 'sy.now') + '</button>' +
@@ -516,8 +525,8 @@ function rootHTML(app) {
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
     PAGE_GROUPS.map(([g, ks]) => {
-      const list = ks.filter((k) => !plain || !PLAIN_HIDE.includes(k));
-      return list.length ? '<div class="hdr">' + t('pg.' + g) + '</div><div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t('page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + '</div>' : '';
+      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)));
+      return list.length ? '<div class="hdr">' + t('pg.' + g) + '</div><div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t(k === 'link' && !isDesktop() ? 'page.link.subPh' : 'page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + '</div>' : '';
     }).join('') +
     '<div class="group" style="margin-top:20px"><a class="cell" href="' + TG_CHAT + '" target="_blank" rel="noopener"><span class="ticon" style="' + iconBg(app.store.state.settings, 'blue') + '">' + PLANE + '</span><span class="grow">' + t('panel.tg') + '<span class="psub">' + t('panel.tgSub') + '</span></span>' + CHEV + '</a>' +
       '<button class="cell" data-act="check"><span class="ticon" style="' + iconBg(app.store.state.settings, 'green') + '">' + icons.check + '</span><span class="grow">' + t('check.title') + '<span class="psub">' + t('check.sub') + '</span></span>' + CHEV + '</button>' +
@@ -548,7 +557,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML };
+    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML };
     // Компьютер (ui/desk.js): две колонки, как настройки системы — слева профиль и разделы, справа выбранный раздел
     const desk = isDesk(), shown = desk && page === 'root' ? 'me' : page;
     const body = desk ? '<div class="pdesk"><aside class="pdnav">' + rootHTML(app) + '</aside><section class="pdpage" data-shown="' + shown + '">' + PAGE_HTML[shown](app) + '</section></div>' : PAGE_HTML[page](app);
@@ -574,11 +583,11 @@ export function createPanel(app, onChange) {
   const changed = () => { app.store.settingsChanged(); render(); onChange(); };
   function bind() {
     // папка Melete: состояние синхронизации — на странице «Данные и копии»
-    if (app.folder) app.folder.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
-    if (app.localSend) app.localSend.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
-    if (app.syncSrv) app.syncSrv.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
-    if (app.guest) app.guest.subscribe(() => { if (page === 'data' && layer && layer.isConnected) render(); });
-    if (app.syncCli) app.syncCli.subscribe(() => { if (page === 'data' && layer && layer.isConnected && !syncBusy) render(); });
+    if (app.folder) app.folder.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
+    if (app.localSend) app.localSend.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
+    if (app.syncSrv) app.syncSrv.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
+    if (app.guest) app.guest.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
+    if (app.syncCli) app.syncCli.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected && !syncBusy) render(); });
     // характер Мелеты (страница «Уведомления»)
     bindMelete(layer, () => app.store.state.settings, { save: () => { app.store.settingsChanged(); onChange(); }, rerender: () => render() });
     // свои цвета: при выборе — сразу на экране, сохраняется по закрытию палитры (change)
@@ -748,10 +757,10 @@ export function createPanel(app, onChange) {
         return;
       }
       if (d.psw === 'localSend') { app.localSend.set(e.target.checked).then(() => render()); return; }
-      if (d.psw === 'guestOn') { (e.target.checked ? app.guest.start() : app.guest.stop()).then(() => render()).catch(() => { toast(t('sy.err.port')); render(); }); return; }
+      if (d.psw === 'guestOn') { (e.target.checked ? app.guest.start() : app.guest.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw === 'guestAudio') { app.guest.set({ audio: e.target.checked }); return; }
       if (e.target.matches('[data-gset]')) { app.guest.set({ set: e.target.value }); return; }
-      if (d.psw === 'syncSrv') { (e.target.checked ? app.syncSrv.start() : app.syncSrv.stop()).then(() => render()).catch(() => { toast(t('sy.err.port')); render(); }); return; }
+      if (d.psw === 'syncSrv') { (e.target.checked ? app.syncSrv.start() : app.syncSrv.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq' || d.psw === 'autoLyr' || d.psw === 'pcWork') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });

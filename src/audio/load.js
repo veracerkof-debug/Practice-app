@@ -16,9 +16,10 @@ export function foldLoad(state, { load, peak = load }) {
 }
 export const loadLevel = (v) => (v >= LOAD_HIGH ? 'high' : v >= LOAD_WARN ? 'warn' : 'ok');
 
-// detail() — строка с подробностями для журнала (буфер, голоса, экран) — подставляет ядро
-export function createLoadMeter(c, logger = () => {}, detail = () => '') {
-  let state = null, subs = new Set(), node = null, cap = null, warned = false, lowSince = 0, lastStep = 0;
+// detail() — строка с подробностями для журнала (буфер, голоса, экран) — подставляет ядро; onHeavy() — ужатие уже
+// предельное, а нагрузка выше 90 %: звук облегчает то, что не голоса (реверберация), — один раз
+export function createLoadMeter(c, logger = () => {}, detail = () => '', onHeavy = () => {}) {
+  let state = null, subs = new Set(), node = null, cap = null, warned = false, lowSince = 0, lastStep = 0, heavy = false;
   const emit = () => subs.forEach((fn) => { try { fn(api); } catch { /* */ } });
   const take = (m) => {
     state = foldLoad(state, m);
@@ -27,6 +28,7 @@ export function createLoadMeter(c, logger = () => {}, detail = () => '') {
     // ужатие (perf.js): выше 90 % — шаг вверх не чаще раза в 4 с; ниже 55 % подряд 15 с — шаг вниз
     const now = Date.now();
     if (state.avg > 0.9 && PERF.squeeze < 2 && now - lastStep > 4000) { setSqueeze(PERF.squeeze + 1); lastStep = now; lowSince = 0; logger('нагрузка ' + Math.round(state.avg * 100) + ' % — голосов меньше (ужатие ' + PERF.squeeze + ')'); }
+    else if (state.avg > 0.9 && PERF.squeeze >= 2 && !heavy && now - lastStep > 4000) { heavy = true; try { onHeavy(); } catch { /* */ } }
     else if (state.avg < 0.55 && PERF.squeeze > 0) { if (!lowSince) lowSince = now; else if (now - lowSince > 15000) { setSqueeze(PERF.squeeze - 1); lastStep = now; lowSince = 0; logger('нагрузка спала — голоса возвращены (ужатие ' + PERF.squeeze + ')'); } }
     else lowSince = 0;
     emit();

@@ -4,6 +4,7 @@ import { t } from '../../i18n/index.js';
 import { esc, sheet, snav, seg, sw, toast } from '../../ui/index.js';
 import { PARTS, countNum } from '../ensemble.js';
 import { pcOf } from '../sync.js';
+import { logErr } from '../log.js';
 
 const mmss = (s) => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const partSeg = (cur) => seg('enspart', PARTS.map((p) => [p, t('ens.part.' + p)]), cur, t('ens.partLbl'));
@@ -61,7 +62,7 @@ function hostSheet(app) {
     const b = e.target.closest('[data-ens]');
     if (!b) return;
     const a = b.dataset.ens;
-    if (a === 'srv') S.start().then(() => api.update()).catch(() => toast(t('sy.err.port')));
+    if (a === 'srv') S.start().then(() => api.update()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); });
     else if (a === 'rec') E.record();
     else if (a === 'stop') E.stop();
     else if (a === 'now') E.assemble().catch(() => toast(t('ens.failed')));

@@ -16,3 +16,14 @@ describe('измеритель нагрузки звука', () => {
     expect([loadLevel(0.3), loadLevel(0.75), loadLevel(0.95)]).toEqual(['ok', 'warn', 'high']);
   });
 });
+
+import { defaultVerb, weakPC } from '../src/audio/perf.js';
+describe('слабый компьютер (отчёт 23.10.2026)', () => {
+  it('не больше 4 ядер — лёгкая реверберация', () => {
+    const win = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
+    expect(weakPC({ hardwareConcurrency: 4 })).toBe(true);
+    expect(defaultVerb({ userAgent: win, hardwareConcurrency: 4 })).toBe('light');
+    expect(defaultVerb({ userAgent: win, hardwareConcurrency: 12 })).toBe('conv');
+    expect(defaultVerb({ userAgent: 'Linux; Android 14', hardwareConcurrency: 8 })).toBe('light');
+  });
+});

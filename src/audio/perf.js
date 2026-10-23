@@ -25,7 +25,10 @@ export const verbLight = () => PERF.verb === 'light';
 // Умолчание: телефон — лёгкая (процессор слабее и режется при погашенном экране), компьютер — свёртка
 // Приложение для компьютера (Tauri): тот же признак, что core/desktop.js, — звуку без зависимости от ядра
 export const desktopApp = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-export const defaultVerb = (nav = typeof navigator !== 'undefined' ? navigator : {}) => (/Android|iPhone|iPad|Mobile/.test(nav.userAgent || '') ? 'light' : 'conv');
+// Слабый компьютер — не больше 4 ядер (ноутбуки с энергосберегающим процессором): свёртка и малый буфер там дают
+// 95 % нагрузки в тишине (отчёт 23.10.2026, 4 ядра, 8 ГБ)
+export const weakPC = (nav = typeof navigator !== 'undefined' ? navigator : {}) => { const n = +nav.hardwareConcurrency || 0; return !!n && n <= 4; };
+export const defaultVerb = (nav = typeof navigator !== 'undefined' ? navigator : {}) => (/Android|iPhone|iPad|Mobile/.test(nav.userAgent || '') || weakPC(nav) ? 'light' : 'conv');
 export const eco = () => PERF.level === 'eco';
 export const maxVoices = () => Math.max(8, (eco() ? 10 : 22) - PERF.squeeze * 6);      // голосов синтезатора
 export const uniCap = (n) => (eco() || PERF.squeeze >= 2 ? Math.min(n || 1, 1) : PERF.squeeze ? Math.min(n || 1, 2) : n); // унисон пэдов: в экономном и под нагрузкой — меньше
