@@ -111,6 +111,8 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
   // фоновая синхронизация телефона ждёт, пока на компьютере звучит музыка или идёт занятие: приём файлов нагружает окно
   if ((req.query.auto || (req.json && req.json.auto)) && ctx.busy && ctx.busy()) return { status: 503, json: { error: 'busy' } };
   const F = app.files;
+  // ансамбль (ensemble.js): опрос участника и сверка часов — без ожидания тишины
+  if (req.path === '/melete/v1/ens') return ctx.ens ? ctx.ens.poll(req.key, peer.name, req.json || {}) : { status: 409, json: { error: 'off' } };
   if (req.path === '/melete/v1/sync') {
     const p = req.json && req.json.data;
     if (p) app.store.replaceState(applyParts(app.store.state, p, SYNC_PARTS));
@@ -142,7 +144,7 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
   if (req.path === '/melete/v1/put') {
     const j = req.json || {}, meta = j.meta || {};
     if (!meta.id || !syncable({ ...meta, size: meta.size || 1 })) return { status: 400, json: {} };
-    if (F.get(meta.id)) return { status: 200, json: { done: true, have: true } };
+    if (F.get(meta.id)) { if (meta.ens && ctx.ens) ctx.ens.gotFile(req.key, meta); return { status: 200, json: { done: true, have: true } }; }
     const cur = incoming.get(meta.id) || { meta, parts: [], got: 0 };
     if ((+j.off || 0) !== cur.got) return { status: 200, json: { got: cur.got } }; // кусок не по порядку (прерванная передача) — с какого продолжить
     const u8 = b64.to(j.b64 || '');
@@ -151,6 +153,7 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
     if (cur.got >= (meta.size || 0)) {
       incoming.delete(meta.id);
       await F.add({ ...meta, blob: new Blob(cur.parts, { type: meta.type || '' }) });
+      if (meta.ens && ctx.ens) ctx.ens.gotFile(req.key, meta);
       return { status: 200, json: { done: true } };
     }
     return { status: 200, json: { got: cur.got } };
@@ -173,7 +176,7 @@ export function createSyncServer(app, { isDesktop }) {
       const u = new URL(r.url, 'http://x'), raw = r.len ? new Uint8Array(await invoke('sync_body', { rid: r.rid })) : new Uint8Array();
       let json = null;
       if (raw.length) { try { json = JSON.parse(new TextDecoder().decode(raw)); } catch { json = null; } }
-      res = await handleRequest({ app, mem, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
+      res = await handleRequest({ app, mem, ens: app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
       writeLS({ peers: mem.peers, on: mem.on });
       if (u.pathname === '/melete/v1/sync' || u.pathname === '/melete/v1/put' || u.pathname === '/melete/v1/setmeta') { if (app.render) app.render(); emit(); }
     } catch (err) { log('sync', 'ошибка: ' + (err && err.message), 'w'); res = { status: 500, json: { error: String(err && err.message) } }; }
@@ -212,7 +215,7 @@ export function createSyncServer(app, { isDesktop }) {
 /* ---------- телефон: клиент ---------- */
 
 // HTTP: на телефоне — нативный (страница по https, компьютер — http в своей сети), в браузере — fetch
-async function http(method, url, { key = '', json = null, bin = false, timeout = 60000 } = {}) {
+export async function http(method, url, { key = '', json = null, bin = false, timeout = 60000 } = {}) {
   const headers = { 'Content-Type': 'application/json', ...(key ? { 'X-Melete-Key': key } : {}) };
   if (Capacitor.isNativePlatform()) {
     const r = await CapacitorHttp.request({ method, url, headers, data: json || undefined, responseType: bin ? 'arraybuffer' : 'json', connectTimeout: 6000, readTimeout: timeout });

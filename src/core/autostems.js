@@ -37,7 +37,7 @@ export function createAutoStems(app) {
   let lastInput = Date.now();
   const idle = () => Date.now() - lastInput >= IDLE_MS;
   const playing = () => !!app.active || app.soundingAudio() || !!(app.rec && app.rec.active) || !!(app.audio.metro && app.audio.metro.running);
-  const quiet = () => idle() && !app.active && !app.soundingAudio() && !(app.rec && app.rec.active) && !jobs.busy() && !(app.audio.metro && app.audio.metro.running);
+  const quiet = () => idle() && !app.active && !app.soundingAudio() && !(app.rec && app.rec.active) && !(app.ens && app.ens.recording) && !(app.ensCli && app.ensCli.S.recording) && !jobs.busy() && !(app.audio.metro && app.audio.metro.running);
   // Зарядка: Battery Status API (Chrome, Android WebView); где его нет (Windows, другие браузеры) — считается, что питание есть
   let bat = null, charging = true;
   if (typeof navigator !== 'undefined' && navigator.getBattery) navigator.getBattery().then((b) => { bat = b; charging = b.charging; b.addEventListener('chargingchange', () => { charging = b.charging; schedule(1000); }); }).catch(() => {});

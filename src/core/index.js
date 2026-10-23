@@ -274,6 +274,15 @@ export function boot(root) {
   // телефон: фоновая синхронизация и «Считать на компьютере» (sync.js); компьютер сам — сервер
   app.syncCli = createSyncClient(app);
   if (!app.syncSrv.avail) app.syncCli.start();
+  // ансамбль (ensemble.js): компьютер ведёт дубль и собирает записи, телефон пишет свою партию; модули — по требованию
+  app.ensemble = async () => {
+    const E = await import('./ensemble.js');
+    if (app.syncSrv.avail) {
+      if (!app.ens) { const C = await import('../audio/context.js'); app.ens = E.createEnsembleHost(app, { sound: E.hostSound(() => C.getContext(), C.directOut) }); }
+    } else if (!app.ensCli) { const V = await import('../audio/voiceengine.js'); app.ensCli = E.createEnsembleClient(app, { rec: V.engine() }); }
+    const S = await import('./screens/ensemble.js');
+    return S.ensembleSheet(app);
+  };
   // раздача в своей сети: гости открывают песни в браузере (guest.js, только Windows)
   app.guest = createGuestServer(app, { isDesktop });
   if (app.guest.avail && app.guest.wasOn()) app.guest.start().catch(() => {});

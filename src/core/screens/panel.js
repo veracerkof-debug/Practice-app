@@ -364,6 +364,7 @@ function syncHTML(app) {
       (st.on ? '<div class="cellcol sypair"><span class="l2">' + t('sy.addr') + '</span><b class="num sybig">' + esc((st.ips[0] || '—')) + '</b>' + (st.ips.length > 1 ? '<span class="l2">' + esc(st.ips.slice(1).join(', ')) + '</span>' : '') +
         '<span class="l2" style="margin-top:8px">' + t('sy.code') + '</span><b class="num sybig">' + esc(st.code.slice(0, 3) + ' ' + st.code.slice(3)) + '</b></div>' : '') +
       peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="syforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>').join('') +
+      '<button class="cell act" data-act="ens">' + t('ens.open') + '</button>' +
       '</div><p class="ftr">' + t('sy.pcHint') + '</p>';
   }
   if (!Capacitor.isNativePlatform()) return '';
@@ -375,6 +376,7 @@ function syncHTML(app) {
   const C = app.syncCli, busy = syncBusy || !!(C && C.busy), st = app.store.state.settings, wait = C ? C.waiting() : 0;
   return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + esc(pc.name) + '<span class="psub">' + t('sy.last', { when: ago(pc.last) }) + (wait ? ' · ' + t('sy.waiting', { n: wait }) : '') + '</span></span></div>' +
     '<button class="cell act" data-act="synow"' + (busy ? ' disabled' : '') + '>' + t(busy ? 'sy.busy' : 'sy.now') + '</button>' +
+    '<button class="cell act" data-act="ens">' + t('ens.open') + '</button>' +
     '<div class="cell"><span class="grow">' + t('sy.pcWork') + '</span>' + psw('pcWork', st.pcWork !== false, t('sy.pcWork')) + '</div>' +
     '<div class="cell"><span class="grow">' + t('sy.auto') + '</span>' + psw('syncAuto', st.syncAuto !== false, t('sy.auto')) + '</div>' +
     '<button class="cell act danger" data-act="sypcforget">' + t('sy.forgetPc') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t('sy.what') + ' ' + t('sy.pcWorkHint') + '</p>';
@@ -655,6 +657,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-act="gno"]'))) { app.guest.approve(b.dataset.k, false); return; }
       if ((b = g('[data-act="gkick"]'))) { app.guest.kick(b.dataset.k); return; }
       if ((b = g('[data-act="glead"]'))) { app.guest.lead(b.dataset.k); return; }
+      if (g('[data-act="ens"]')) { app.ensemble(); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
       if (g('[data-act="sypcforget"]')) { forgetPc(); syncMsg = ''; render(); return; }
       if (g('[data-act="sypair"]') && !syncBusy) {
