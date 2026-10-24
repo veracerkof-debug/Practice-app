@@ -54,6 +54,9 @@ import { initShareIn } from './screens/share.js';
 import { initFolder } from './foldersync.js';
 import { initLocalSend } from './localsend.js';
 import { initDesktop } from './desktop.js';
+import { createUpdater } from './update.js';
+import { mountUpdateBar } from './screens/update.js';
+import { initWhatsNew } from './screens/whatsnew.js';
 
 export function boot(root) {
   // журнал — первым: ошибки запуска тоже попадут в него
@@ -289,6 +292,11 @@ export function boot(root) {
   // закрытая раздача: гость просится — спросить хозяина, где бы он ни был (отказ — кнопкой в списке гостей)
   app.guest.onJoin((id) => { const g = app.guest.guests().find((x) => x.id === id); if (g) confirm(t('gs.askTitle'), t('gs.askText', { name: g.name }), t('gs.allow')).then((ok) => { if (ok) app.guest.approve(id, true); }); });
   app.localSend.init();
+  // обновление из GitHub (update.js): свой канал — dev или pre; раз в сутки при запуске, полоса «есть новая версия»
+  app.updater = createUpdater(app);
+  mountUpdateBar(app);
+  app.updater.auto();
+  initWhatsNew(app); // после обновления — «Что нового» один раз
   // прошлый запуск закрылся неожиданно — предложить отправить отчёт
   crashOffer(app);
   // касание названия раздела — его стих (в обоих видах)

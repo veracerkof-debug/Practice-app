@@ -1,11 +1,13 @@
-# Предрелиз для Android: собирает APK и кладёт его в релиз «pre» (releases/download/pre/Melete-PreRelease.apk);
-# тот же файл — и в старый релиз «beta» (releases/download/beta/Melete-Beta.apk), чтобы старая ссылка давала свежую сборку.
+# Android: два канала (src/core/update.js, DECISIONS 2026-10-24). main → dev: релиз «dev», файл Melete-Dev.apk, отдельное
+# приложение «Melete DEV» (app.melete.dev). Ветка pre (по слову автора «выпускай»: git push origin main:pre) → релиз «pre»,
+# файл Melete-PreRelease.apk (app.melete), тот же файл — и в старый релиз «beta» (Melete-Beta.apk). Последним в релиз
+# кладётся метка сборки android-<номер>.ver — по ней приложение видит, что новая сборка выложена целиком.
 # Сборка — на серверах GitHub, там уже есть Android SDK.
-name: Android pre-release APK
+name: Android APK (dev и pre)
 
 on:
   push:
-    branches: [main] # выпускные сборки — только из основной ветки: ветки чатов перетирали бы общий релиз «pre» (CLAUDE.md: несколько чатов)
+    branches: [main, pre] # выпускные сборки — только из основной ветки (dev) и ветки pre: ветки чатов перетирали бы общие релизы (CLAUDE.md: несколько чатов)
     paths-ignore: ['**.md', 'docs/**']
   workflow_dispatch:
 
@@ -13,8 +15,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: android-beta
+  group: android-${{ github.ref_name }}
   cancel-in-progress: true
+
+env:
+  MELETE_CHANNEL: ${{ github.ref_name == 'pre' && 'pre' || 'dev' }}
+  BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:
   apk:
@@ -48,6 +54,11 @@ jobs:
       - name: Модели
         run: npm run models
 
+      # dev — отдельное приложение рядом с основным: своё название (applicationId — в build.gradle по MELETE_CHANNEL)
+      - name: Название dev-сборки
+        if: env.MELETE_CHANNEL == 'dev'
+        run: sed -i 's#>Melete</string>#>Melete DEV</string>#g' android/app/src/main/res/values/strings.xml
+
       - name: Веб-сборка и перенос в Android
         run: |
           npm run build
@@ -70,24 +81,48 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
-          cp app/build/outputs/apk/debug/app-debug.apk ../Melete-PreRelease.apk
-          cp ../Melete-PreRelease.apk ../Melete-Beta.apk
+          if [ "$MELETE_CHANNEL" = pre ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk ../Melete-PreRelease.apk
+            cp ../Melete-PreRelease.apk ../Melete-Beta.apk
+          else
+            cp app/build/outputs/apk/debug/app-debug.apk ../Melete-Dev.apk
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Melete-PreRelease-${{ github.run_number }}
-          path: Melete-PreRelease.apk
+          name: Melete-${{ env.MELETE_CHANNEL }}-${{ github.run_number }}
+          path: Melete-*.apk
 
-      - name: Выложить в релиз «pre» (и в старый «beta»)
+      # dev: файл, затем метка сборки (последней — приложение не предложит недокачанное)
+      - name: Выложить в релиз «dev»
+        if: env.MELETE_CHANNEL == 'dev'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PNOTES="Melete 1.2 — предрелиз, сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ветка ${GITHUB_REF_NAME}). Скачать на телефон: Melete-PreRelease.apk. С 18.10.2026 новое имя пакета (app.melete): ставится без конфликтов рядом со старой бетой. Данные из старой — через копию (Профиль → Данные → Резервная копия, затем «Восстановить» в новой); старую после этого можно удалить. Веб-версия — отдельная, по ссылке в README."
+          NOTES="$(node build/whatsnew-notes.mjs dev ${{ github.run_number }})"
+          if ! gh release view dev >/dev/null 2>&1; then
+            gh release create dev --prerelease --title "Melete DEV" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+          gh release edit dev --title "Melete DEV" --notes "$NOTES"
+          gh release upload dev Melete-Dev.apk --clobber
+          N=${{ github.run_number }}; echo "$N" > "android-$N.ver"
+          gh release upload dev "android-$N.ver" --clobber
+          for a in $(gh release view dev --json assets -q '.assets[].name' | grep -E '^android-[0-9]+\.ver$'); do [ "$a" = "android-$N.ver" ] || gh release delete-asset dev "$a" -y; done
+
+      - name: Выложить в релиз «pre» (и в старый «beta»)
+        if: env.MELETE_CHANNEL == 'pre'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PNOTES="$(node build/whatsnew-notes.mjs pre ${{ github.run_number }})"
           if ! gh release view pre >/dev/null 2>&1; then
             gh release create pre --prerelease --title "Melete 1.2 Pre-release" --notes "$PNOTES" --target "$GITHUB_SHA"
           fi
           gh release edit pre --title "Melete 1.2 Pre-release" --notes "$PNOTES"
           gh release upload pre Melete-PreRelease.apk --clobber
+          N=${{ github.run_number }}; echo "$N" > "android-$N.ver"
+          gh release upload pre "android-$N.ver" --clobber
+          for a in $(gh release view pre --json assets -q '.assets[].name' | grep -E '^android-[0-9]+\.ver$'); do [ "$a" = "android-$N.ver" ] || gh release delete-asset pre "$a" -y; done
           NOTES="Бета завершена — это уже предрелиз Melete 1.2, сборка ${{ github.run_number }} (${GITHUB_SHA::7}). Новая ссылка: релиз «pre», файл Melete-PreRelease.apk"
           if ! gh release view beta >/dev/null 2>&1; then
             gh release create beta --prerelease --title "Melete Beta" --notes "$NOTES" --target "$GITHUB_SHA"

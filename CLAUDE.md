@@ -86,6 +86,7 @@
   `ensemble.js` — ансамбль: каждый пишет свою партию телефоном, компьютер ведёт дубль (сигнал и счёт), собирает и выравнивает дорожки по сигналу (`src/audio/align.js`: смещение и ход часов), проект студии и по желанию чистые дорожки; экран — `screens/ensemble.js`.
   `folder.js` — папка Melete на устройстве (Data, Media, Tabs, PDF, Lyrics; синхронизация в обе стороны), `foldersync.js` — когда синхронизировать; Android — `FolderPlugin.java`.
   `appicon.js` — иконка приложения на выбор (рисунки — `src/ui/appicons.js`, PNG — `build/appicons.mjs`, Android — `IconPlugin.java` и activity-ярлыки `IconActivities.java`).
+  `update.js` — обновление из GitHub по каналу (dev/pre; «автоматически» или «только по кнопке»; Android — `UpdatePlugin.java`, Windows — `src-tauri/src/update.rs`, ставит при закрытии), `whatsnew.js` — «Что нового» после обновления.
   `log.js` — технический журнал на устройстве (3 ч, без личного); `report.js` — отчёт о проблеме (отправляет человек через «Поделиться»).
   `selfcheck.js` — самопроверка на устройстве (звук, часы, нагрузка, движок плеера, микрофон, запись, IndexedDB, место, модели, экран; экран — `screens/selfcheck.js`, панель рядом с отчётом; итог — в журнал).
   `mastery.js` — лиги (самоцвет по часам практики в приложении; званий нет); `tama.js` — Мелета-тамагочи на занятии (`tamatexts.js` — реплики, экран — `src/ui/tama.js`).
@@ -139,7 +140,7 @@
 2. **Не ломать существующее.** Перед изменением поведения — сверка с прототипом.
 3. **Только офлайн-ресурсы.** Никаких CDN в рантайме: всё кладём в проект.
    Обращения к сети — только по нажатию кнопки: поиск песни в MusicBrainz (`src/core/songinfo.js`), проверка часов
-   (`src/core/clock.js`) и загрузка песен из Holyrics в своей сети Wi-Fi (`src/core/holyrics.js`, нативный HTTP на Android). `index.html` пропускает соединения только к своим файлам и MusicBrainz (Content-Security-Policy).
+   (`src/core/clock.js`) и загрузка песен из Holyrics в своей сети Wi-Fi (`src/core/holyrics.js`, нативный HTTP на Android). Исключение — обновление (`src/core/update.js`): в режиме «автоматически» раз в сутки при запуске запрос к api.github.com (решение автора 24.10.2026). `index.html` пропускает соединения только к своим файлам, MusicBrainz и api.github.com (Content-Security-Policy).
    У MediaPipe (терменвокс) встроенный сборщик статистики вырезается при сборке (`build/mediapipe.js`), сборка проверяет это.
 4. **Зависимости — только GPL-совместимые.** Каждую новую добавлять в экран «Лицензии» и `LICENSES.md`.
 5. **Никакой аналитики, рекламы, трекеров, сбора данных.** Микрофон и камера — только локальная обработка.
@@ -157,8 +158,11 @@
 
 ## Несколько чатов
 Разработка идёт в нескольких чатах Claude: **общий** (принципы, решения, связь частей, вливание) и **тематические**
-(модуль, идея, отдел). Общая линия — ветка `main`: из неё и только из неё собираются APK, установщик Windows и
-веб-версия (релиз «pre», gh-pages). Каждый чат работает в своей ветке `claude/…`, начатой от свежей `main`; там же идут
+(модуль, идея, отдел). Общая линия — ветка `main`: из неё собираются сборки **dev** (релиз «dev»: «Melete DEV» —
+отдельное приложение автора, `app.melete.dev`). Тестерам — **pre** (релиз «pre», `app.melete`, и веб-версия gh-pages):
+только из ветки `pre` и только по слову автора «выпускай» (`git push origin main:pre` — то, что автор уже проверил в dev).
+Всё новое сначала идёт в dev, потом в pre (DECISIONS 2026-10-24). Обновление — само из релиза своего канала
+(`src/core/update.js`); заметное новое для людей — запись в `src/core/whatsnew.js` (окно «Что нового» и описание релиза). Каждый чат работает в своей ветке `claude/…`, начатой от свежей `main`; там же идут
 проверки в браузере (e2e). По слову автора «отправляй» работа чата вливается в `main` (сначала `git merge origin/main`
 в свою ветку, проверки, потом в `main`), после этого собираются общие сборки. Тематический чат держится своей области
 и общих файлов (`src/i18n/*.json`, `settings.js`, `index.js` ядра, стили, `DECISIONS.md`) касается точечно — строками,
@@ -173,7 +177,7 @@
 Коды доступа, проверка создателем (правка чисел), фиктивная история занятий и личные обращения удалены (2026-10);
 «Минимал» доступен всем. `src/core/cleanup.js` один раз возвращает настоящие данные из копии, если на устройстве шла проверка.
 Новых механизмов, меняющих данные в обход обычного интерфейса, не добавлять. Исключение — отдельная сборка-демонстрация
-(`src/showcase/`, …/Practice-app/show/): выдуманный музыкант и его история, своё хранилище, в APK не попадает. Приложение светское: всё христианское (Библия, стихи, цитаты, духовные песни) — только в церковном режиме
+(`src/showcase/`, …/melete-app/show/): выдуманный музыкант и его история, своё хранилище, в APK не попадает. Приложение светское: всё христианское (Библия, стихи, цитаты, духовные песни) — только в церковном режиме
 (`settings.church`, по умолчанию выключен). Демо-набор (`src/core/demo.js`,
 `demoaudio.js`, `public/demo/`) — для всех, остаётся и в выпуске.
 
@@ -188,7 +192,7 @@
 - `npm test` — тесты (Vitest). `tests/parity.test.js` сверяет ядро с функциями из `legacy/practice.html`
 - `npm run e2e` — сквозные проверки в браузере (Playwright + Chromium, `tests/e2e/*.spec.js`, общее — `tests/e2e/melete.js`; сервер Vite поднимается сам). Идут в GitHub Actions при каждом пуше (`.github/workflows/e2e.yml`); красное — чинить до того, как автор возьмёт сборку. В контейнере Claude: `PW_CHROMIUM=/opt/pw-browsers/chromium npm run e2e`. Новая функция — строка-проверка туда же.
 - `npx cap sync android` / `npx cap run android -l --external` — Android с живой перезагрузкой
-- Веб-версия (отдельная от APK, для знакомства; память — в браузере: постоянное хранилище и service worker, `src/core/webmemory.js`, `public/sw.js`) собирается GitHub Actions (`.github/workflows/web.yml`) → ветка `gh-pages` → https://veracerkof-debug.github.io/Practice-app/
-- Windows-установщик собирает GitHub Actions (`.github/workflows/windows.yml`, Tauri) при каждом пуше → релиз «pre», файл `Melete-Setup.exe`; локально — `npm run win` (нужны Rust и Windows), `npm run win:dev` — окно с живой перезагрузкой
+- Веб-версия (отдельная от APK, для знакомства; память — в браузере: постоянное хранилище и service worker, `src/core/webmemory.js`, `public/sw.js`) собирается GitHub Actions (`.github/workflows/web.yml`) → ветка `gh-pages` → https://veracerkof-debug.github.io/melete-app/
+- Windows-установщик собирает GitHub Actions (`.github/workflows/windows.yml`, Tauri): `main` → релиз «dev», `Melete-Dev-Setup.exe` («Melete DEV», `src-tauri/tauri.dev.conf.json`); ветка `pre` → релиз «pre», `Melete-Setup.exe`; локально — `npm run win` (нужны Rust и Windows), `npm run win:dev` — окно с живой перезагрузкой
 - Ключ подписи APK — только в секретах GitHub (`BETA_KEYSTORE_B64`, `BETA_STORE_PASSWORD`), в репозитории его нет (репозиторий открытый)
-- Предрелизный APK собирает GitHub Actions (`.github/workflows/android-beta.yml`) при каждом пуше → релиз «pre», файл `Melete-PreRelease.apk` (Melete, версия 1.2-pre); тот же файл — и в старом релизе «beta» (`Melete-Beta.apk`), чтобы старая ссылка давала свежую сборку
+- APK собирает GitHub Actions (`.github/workflows/android-beta.yml`): `main` → релиз «dev», `Melete-Dev.apk` («Melete DEV», `app.melete.dev`); ветка `pre` → релиз «pre», `Melete-PreRelease.apk` (Melete, версия 1.2-pre); последней в релиз — метка сборки `android-<N>.ver` (`windows-<N>.ver`), по ней приложение видит готовую сборку; тот же файл pre — и в старом релизе «beta» (`Melete-Beta.apk`), чтобы старая ссылка давала свежую сборку

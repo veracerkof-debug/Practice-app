@@ -3,6 +3,27 @@ import { test, expect } from './melete.js';
 
 test.use({ viewport: { width: 1536, height: 790 }, hasTouch: false });
 
+// Окно Windows: Tauri подменён — команды отвечают как на компьютере без сети
+const fakeTauri = (page) => page.addInitScript(() => {
+  let cb = 0;
+  const st = { on: false, port: 53319, ips: ['192.168.1.23'], name: 'PC' };
+  window.__TAURI_INTERNALS__ = {
+    transformCallback: () => ++cb,
+    unregisterCallback: () => {},
+    convertFileSrc: (p) => p,
+    metadata: { currentWindow: { label: 'main' }, currentWebview: { windowLabel: 'main', label: 'main' } },
+    invoke: async (cmd) => {
+      if (cmd === 'sync_start') { st.on = true; return st; }
+      if (cmd === 'sync_status') return st;
+      if (cmd === 'sync_stop') { st.on = false; return null; }
+      if (cmd === 'guest_status') return { on: false, ips: st.ips, name: 'PC', port: 53320 };
+      if (cmd === 'localsend_status') return { on: false, ips: st.ips, alias: 'Melete · PC' };
+      if (cmd === 'startup_files') return [];
+      return null;
+    },
+  };
+});
+
 test('настольная раскладка', async ({ page, melete, errors }) => {
   await melete.open();
   expect(await page.evaluate(() => document.documentElement.classList.contains('desk'))).toBe(true);
@@ -38,25 +59,7 @@ test('пианино с клавиатуры компьютера', async ({ pag
 
 // Окно Windows (Tauri подменён): «Телефон и компьютер» — один раздел; «Принимать телефон» показывает адрес и код
 test('телефон и компьютер — одно место в настройках', async ({ page, melete, errors }) => {
-  await page.addInitScript(() => {
-    let cb = 0;
-    const st = { on: false, port: 53319, ips: ['192.168.1.23'], name: 'PC' };
-    window.__TAURI_INTERNALS__ = {
-      transformCallback: () => ++cb,
-      unregisterCallback: () => {},
-      convertFileSrc: (p) => p,
-      metadata: { currentWindow: { label: 'main' }, currentWebview: { windowLabel: 'main', label: 'main' } },
-      invoke: async (cmd) => {
-        if (cmd === 'sync_start') { st.on = true; return st; }
-        if (cmd === 'sync_status') return st;
-        if (cmd === 'sync_stop') { st.on = false; return null; }
-        if (cmd === 'guest_status') return { on: false, ips: st.ips, name: 'PC', port: 53320 };
-        if (cmd === 'localsend_status') return { on: false, ips: st.ips, alias: 'Melete · PC' };
-        if (cmd === 'startup_files') return [];
-        return null;
-      },
-    };
-  });
+  await fakeTauri(page);
   await melete.open();
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
   await melete.click('.pdnav [data-pp="link"]'); await page.waitForTimeout(400);
@@ -70,5 +73,24 @@ test('телефон и компьютер — одно место в настр
   // «Данные и копии» — без связи
   await melete.click('.pdnav [data-pp="data"]'); await page.waitForTimeout(400);
   await expect(page.locator('.pdpage [data-psw="syncSrv"]')).toHaveCount(0);
+  void errors;
+});
+
+// Обновления: строка в профиле, шторка — режим «автоматически / по кнопке», проверка на GitHub (ответ подменён)
+test('обновления: режим и проверка', async ({ page, melete, errors }) => {
+  await fakeTauri(page);
+  await page.route('https://api.github.com/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+    body: JSON.stringify({ assets: [{ name: 'Melete-Dev-Setup.exe', state: 'uploaded', size: 1, browser_download_url: 'https://github.com/veracerkof-debug/melete-app/releases/download/dev/Melete-Dev-Setup.exe' }, { name: 'windows-7.ver', state: 'uploaded' }] }) }));
+  await melete.open();
+  await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
+  await melete.click('[data-act="upd"]'); await page.waitForTimeout(500);
+  const sh = page.locator('.sheet');
+  await expect(sh.locator('[data-seg="updMode"] [data-v="auto"]')).toHaveAttribute('aria-pressed', 'true');
+  await sh.locator('[data-seg="updMode"] [data-v="button"]').click();
+  await expect(sh.locator('[data-seg="updMode"] [data-v="button"]')).toHaveAttribute('aria-pressed', 'true');
+  await sh.locator('[data-u="check"]').click(); await page.waitForTimeout(800);
+  // собрано у себя (сборка 0) — не обновляется: «установлена последняя»
+  await expect(sh.locator('.ftr')).toContainText(/последняя/);
+  await page.screenshot({ path: 'test-results/update-sheet.png' });
   void errors;
 });

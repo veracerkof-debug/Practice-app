@@ -85,7 +85,9 @@ export default defineConfig(({ mode }) => ({
   base: './',
   // дата сборки: часы устройства раньше неё — сбиты (src/core/clock.js)
   // версия — в отчёт о проблеме (src/core/report.js)
-  define: { __WEB_BUILD__: mode === 'web', __BUILD_TIME__: Date.now(), __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version) },
+  define: { __WEB_BUILD__: mode === 'web', __BUILD_TIME__: Date.now(), __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version),
+    // канал и номер сборки — от GitHub Actions (src/core/update.js): dev — каждая отправка в main, pre — тестерам; у себя — dev, 0
+    __CHANNEL__: JSON.stringify(process.env.MELETE_CHANNEL === 'pre' ? 'pre' : 'dev'), __BUILD__: JSON.stringify(+process.env.BUILD_NUMBER || 0) },
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
   plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), showcase(mode), lightWeb(mode), ortAssets(mode)],
   // onnxruntime-web грузит свои .wasm сам (ort/…), предсборка Vite ему не нужна

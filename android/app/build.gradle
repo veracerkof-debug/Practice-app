@@ -5,12 +5,14 @@ android {
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         // app.melete — с 2026-10: прежняя бета (app.practice.beta) была подписана старым ключом и мешала установке
-        applicationId "app.melete"
+        // Канал (src/core/update.js): dev — отдельное приложение рядом с основным (свои данные, название «Melete DEV»
+        // — подставляет сборка в strings.xml), pre и сборка у себя — app.melete
+        applicationId(System.getenv('MELETE_CHANNEL') == 'dev' ? "app.melete.dev" : "app.melete")
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Номер сборки — от GitHub Actions (каждая следующая больше, чтобы ставилась поверх прежней)
         versionCode((System.getenv('VERSION_CODE') ?: '1') as int)
-        versionName "1.2-pre"
+        versionName(System.getenv('MELETE_CHANNEL') == 'dev' ? "1.2-dev" : "1.2-pre")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

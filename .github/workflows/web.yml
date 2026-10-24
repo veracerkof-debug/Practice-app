@@ -1,13 +1,13 @@
 # Веб-версия Melete — для знакомства, с любого телефона и компьютера (iPhone, Android, браузер):
-# https://veracerkof-debug.github.io/Practice-app/  (демонстрация с выдуманным музыкантом — …/Practice-app/show/)
-# Собирается при каждом пуше и выкладывается в ветку gh-pages (Settings → Pages → Deploy from a branch → gh-pages).
+# https://veracerkof-debug.github.io/melete-app/  (демонстрация с выдуманным музыкантом — …/melete-app/show/)
+# Собирается при выпуске в pre и выкладывается в ветку gh-pages (Settings → Pages → Deploy from a branch → gh-pages).
 # Это отдельная от APK версия: без напоминаний, папки и управления звуком из шторки; данные — только в браузере
 # (постоянное хранилище и service worker — src/core/webmemory.js, public/sw.js: работает без сети, ставится на главный экран).
 name: Web version (GitHub Pages)
 
 on:
   push:
-    branches: [main] # выпускные сборки — только из основной ветки: ветки чатов перетирали бы общий релиз «pre» (CLAUDE.md: несколько чатов)
+    branches: [pre] # веб-версия — для знакомства, как у тестеров: только из ветки pre (по слову автора «выпускай»), не из каждой отправки в main
     paths-ignore: ['**.md', 'docs/**', 'android/**']
   workflow_dispatch:
 
@@ -52,7 +52,7 @@ jobs:
           ffmpeg -loglevel error -y -i "$RUNNER_TEMP/grace.webm" -vn -c:a aac -b:a 128k showcase/media/amazing-grace-iss.m4a
           ls -la showcase/media
 
-      # Демонстрация — выдуманный музыкант без регистрации (src/showcase/): рядом, по адресу …/Practice-app/show/
+      # Демонстрация — выдуманный музыкант без регистрации (src/showcase/): рядом, по адресу …/melete-app/show/
       - name: Демонстрация
         run: |
           npx vite build --mode showcase --outDir dist-show

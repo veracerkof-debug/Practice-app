@@ -187,6 +187,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Обновление из GitHub (UpdatePlugin.java): системный установщик со скачанным APK. В сборке для Google Play — убрать -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Микрофон: тюнер, спектр и шумомер. Звук обрабатывается только на устройстве -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />

@@ -5,6 +5,7 @@
 import { Capacitor } from '@capacitor/core';
 import { isDesktop } from '../desktop.js';
 import { logErr } from '../log.js';
+import { updateSheet } from './update.js';
 import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
 import { autoMode, autoAna, autoHq, autoPower, autoLyr } from '../autostems.js';
@@ -72,6 +73,7 @@ const PLAIN_HIDE = ['stats', 'week', 'notif', 'mascot'];
 // «Сообщить о проблеме» — лист со строчками журнала
 const BUG = '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 14h7M9 17h4"/></svg>';
 // Чат тестеров и обсуждения (Telegram) — открывается только по нажатию, в браузере или приложении Telegram
+const UPD_IC = '<svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg>';
 const TG_CHAT = 'https://t.me/+qP8rC1tAkvU1MjYy';
 const PLANE = '<svg viewBox="0 0 24 24"><path d="M21 4 3 11.2l6.3 2.3L18 7.5l-6.8 7.4V20l3.4-3.6 4 3L21 4z"/></svg>';
 const VERSION = APP_VERSION;
@@ -529,6 +531,7 @@ function rootHTML(app) {
       return list.length ? '<div class="hdr">' + t('pg.' + g) + '</div><div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t(k === 'link' && !isDesktop() ? 'page.link.subPh' : 'page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + '</div>' : '';
     }).join('') +
     '<div class="group" style="margin-top:20px"><a class="cell" href="' + TG_CHAT + '" target="_blank" rel="noopener"><span class="ticon" style="' + iconBg(app.store.state.settings, 'blue') + '">' + PLANE + '</span><span class="grow">' + t('panel.tg') + '<span class="psub">' + t('panel.tgSub') + '</span></span>' + CHEV + '</a>' +
+      (app.updater && app.updater.platform ? '<button class="cell" data-act="upd"><span class="ticon" style="' + iconBg(app.store.state.settings, 'teal') + '">' + UPD_IC + '</span><span class="grow">' + t('upd.title') + '<span class="psub">' + t('upd.sub', { b: app.updater.build || '—', ch: t(app.updater.channel === 'dev' ? 'upd.dev' : 'upd.pre') }) + '</span></span>' + CHEV + '</button>' : '') +
       '<button class="cell" data-act="check"><span class="ticon" style="' + iconBg(app.store.state.settings, 'green') + '">' + icons.check + '</span><span class="grow">' + t('check.title') + '<span class="psub">' + t('check.sub') + '</span></span>' + CHEV + '</button>' +
       '<button class="cell" data-act="report"><span class="ticon" style="' + iconBg(app.store.state.settings, 'graphite') + '">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button></div>' +
     '<div class="group" style="margin-top:12px">' + ['about', 'tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
@@ -667,6 +670,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-act="gkick"]'))) { app.guest.kick(b.dataset.k); return; }
       if ((b = g('[data-act="glead"]'))) { app.guest.lead(b.dataset.k); return; }
       if (g('[data-act="ens"]')) { app.ensemble(); return; }
+      if (g('[data-act="upd"]')) { updateSheet(app); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
       if (g('[data-act="sypcforget"]')) { forgetPc(); syncMsg = ''; render(); return; }
       if (g('[data-act="sypair"]') && !syncBusy) {
@@ -851,6 +855,7 @@ export function legalSheet(kind) {
       lic('YourMT3+', t('lic.ymt.sub'), '<p>© Sungkyun Chang, Emmanouil Benetos, Holger Kirchhoff, Simon Dixon</p><p>' + t('lic.ymt.text') + '</p>') +
       lic('Mel-Band RoFormer', t('lic.mr.sub'), '<p>© Kimberley Jensen; © Phil Wang, Roman Solovyev</p><p>' + t('lic.mit') + '</p><p>' + t('lic.mr.text') + '</p>') +
       lic('DeepFilterNet · tract', t('lic.df.sub'), '<p>© Hendrik Schröter; © Sonos, Inc.</p><p>' + t('lic.df.text') + '</p>') +
+      lic('ureq', t('lic.ureq.sub'), '<p>© Martin Algesten ' + t('lic.andContrib') + '</p><p>' + t('lic.ureq.text') + '</p>') +
       lic('whisper.cpp · Whisper', t('lic.wc.sub'), '<p>© Georgi Gerganov; © OpenAI</p><p>' + t('lic.mit') + '</p><p>' + t('lic.wh.text') + '</p>') +
       lic('TensorFlow.js', t('lic.tf.sub'), '<p>© Google LLC</p><p>' + t('lic.tf.text') + '</p>') +
       lic('@tonejs/midi', t('lic.tm.sub'), '<p>© Yotam Mann</p><p>' + t('lic.mit') + '</p>') +

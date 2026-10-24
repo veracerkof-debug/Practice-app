@@ -1,12 +1,14 @@
-# Версия для Windows (Tauri 2): установщик Melete-Setup.exe в релизе «pre» рядом с APK
-# (releases/download/pre/Melete-Setup.exe). Сборка — на серверах GitHub (Windows, Rust, WebView2 уже есть).
+# Версия для Windows (Tauri 2), два канала (src/core/update.js): main → релиз «dev», Melete-Dev-Setup.exe — отдельная
+# программа «Melete DEV» (app.melete.dev, tauri.dev.conf.json); ветка pre (по слову автора) → релиз «pre», Melete-Setup.exe.
+# Последней в релиз кладётся метка сборки windows-<номер>.ver — по ней программа видит, что сборка выложена целиком.
+# Сборка — на серверах GitHub (Windows, Rust, WebView2 уже есть).
 # Установка — для текущего пользователя, без прав администратора; нужен Windows 10/11 (WebView2 — часть системы,
 # при его отсутствии установщик скачает его).
-name: Windows pre-release
+name: Windows (dev и pre)
 
 on:
   push:
-    branches: [main] # выпускные сборки — только из основной ветки: ветки чатов перетирали бы общий релиз «pre» (CLAUDE.md: несколько чатов)
+    branches: [main, pre] # выпускные сборки — только из основной ветки (dev) и ветки pre: ветки чатов перетирали бы общие релизы (CLAUDE.md: несколько чатов)
     paths-ignore: ['**.md', 'docs/**', 'android/**']
   workflow_dispatch:
 
@@ -14,8 +16,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: windows-pre
+  group: windows-${{ github.ref_name }}
   cancel-in-progress: true
+
+env:
+  MELETE_CHANNEL: ${{ github.ref_name == 'pre' && 'pre' || 'dev' }}
+  BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:
   win:
@@ -61,25 +67,35 @@ jobs:
 
       # beforeBuildCommand в tauri.conf.json собирает веб-часть (npm run build)
       - name: Сборка установщика
-        run: npx tauri build --ci
+        shell: bash
+        run: |
+          if [ "$MELETE_CHANNEL" = dev ]; then npx tauri build --ci --config src-tauri/tauri.dev.conf.json; else npx tauri build --ci; fi
 
       - name: Переименовать
         shell: bash
         run: |
           ls -la src-tauri/target/release/bundle/nsis/
-          cp src-tauri/target/release/bundle/nsis/*-setup.exe Melete-Setup.exe
+          if [ "$MELETE_CHANNEL" = pre ]; then OUT=Melete-Setup.exe; else OUT=Melete-Dev-Setup.exe; fi
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe "$OUT"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Melete-Setup-${{ github.run_number }}
-          path: Melete-Setup.exe
+          name: Melete-${{ env.MELETE_CHANNEL }}-Setup-${{ github.run_number }}
+          path: ${{ env.OUT }}
 
-      - name: Выложить в релиз «pre»
+      # файл, затем метка сборки (последней — программа не предложит недокачанное)
+      - name: Выложить в релиз канала
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ! gh release view pre >/dev/null 2>&1; then
-            gh release create pre --prerelease --title "Melete 1.2 Pre-release" --notes "Melete 1.2 — предрелиз. Android: Melete-PreRelease.apk, Windows: Melete-Setup.exe" --target "$GITHUB_SHA"
+          TAG=$MELETE_CHANNEL
+          if [ "$TAG" = pre ]; then TITLE="Melete 1.2 Pre-release"; else TITLE="Melete DEV"; fi
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --prerelease --title "$TITLE" --notes "$(node build/whatsnew-notes.mjs $TAG ${{ github.run_number }})" --target "$GITHUB_SHA"
           fi
-          gh release upload pre Melete-Setup.exe --clobber
+          gh release upload "$TAG" "$OUT" --clobber
+          N=${{ github.run_number }}; echo "$N" > "windows-$N.ver"
+          gh release upload "$TAG" "windows-$N.ver" --clobber
+          for a in $(gh release view "$TAG" --json assets -q '.assets[].name' | grep -E '^windows-[0-9]+\.ver$'); do [ "$a" = "windows-$N.ver" ] || gh release delete-asset "$TAG" "$a" -y; done

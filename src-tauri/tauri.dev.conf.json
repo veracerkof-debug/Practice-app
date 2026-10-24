@@ -1,0 +1,19 @@
+{
+  "productName": "Melete DEV",
+  "identifier": "app.melete.dev",
+  "app": {
+    "windows": [
+      {
+        "title": "Melete DEV",
+        "label": "main",
+        "width": 1180,
+        "height": 800,
+        "minWidth": 420,
+        "minHeight": 600,
+        "center": true,
+        "dragDropEnabled": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --autoplay-policy=no-user-gesture-required"
+      }
+    ]
+  }
+}

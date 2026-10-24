@@ -40,13 +40,13 @@
 
 | | Веб-версия | Android (APK) | Windows |
 |---|---|---|---|
-| Где | **[veracerkof-debug.github.io/Practice-app](https://veracerkof-debug.github.io/Practice-app/)** — открыть в браузере на iPhone, Android или компьютере | [Releases → «pre» → `Melete-PreRelease.apk`](https://github.com/veracerkof-debug/Practice-app/releases/tag/pre) | [Releases → «pre» → `Melete-Setup.exe`](https://github.com/veracerkof-debug/Practice-app/releases/tag/pre) |
+| Где | **[veracerkof-debug.github.io/melete-app](https://veracerkof-debug.github.io/melete-app/)** — открыть в браузере на iPhone, Android или компьютере | [Releases → «pre» → `Melete-PreRelease.apk`](https://github.com/veracerkof-debug/Practice-app/releases/tag/pre) | [Releases → «pre» → `Melete-Setup.exe`](https://github.com/veracerkof-debug/Practice-app/releases/tag/pre) |
 | Для чего | познакомиться, потыкать, поиграть | полноценная работа каждый день | занятия за компьютером, студия и табы на большом экране |
 | Установка | не нужна; можно добавить на главный экран (Safari: «Поделиться» → «На экран „Домой“», Chrome: «Установить») | скачать и установить APK | скачать и запустить установщик (Windows 10/11, без прав администратора) |
 | Данные | только в этом браузере (Safari стирает их, если сайт не открывать неделю и он не на главном экране) | на телефоне и в папке Melete, резервные копии | в приложении на компьютере и в папке Melete (Документы), резервные копии |
 | Нет в веб-версии | напоминания, папка Melete, иконка на выбор, управление звуком из шторки, плавающая кнопка; MIDI-клавиатура на iPhone | — | напоминания, иконка на выбор, управление звуком из шторки; есть папка Melete, файлы открываются двойным щелчком, F11 — во весь экран |
 
-**Демонстрация** — [veracerkof-debug.github.io/Practice-app/show](https://veracerkof-debug.github.io/Practice-app/show/): без регистрации, сразу с выдуманным
+**Демонстрация** — [veracerkof-debug.github.io/melete-app/show](https://veracerkof-debug.github.io/melete-app/show/): без регистрации, сразу с выдуманным
 музыкантом — песни с аккордами, табы и ноты, записи и видео, календарь и почти два года занятий в статистике. Всё выдумано
 и хранится отдельно от настоящих данных веб-версии; можно трогать что угодно.
 

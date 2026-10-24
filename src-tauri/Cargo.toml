@@ -35,6 +35,8 @@ local-ip-address = "0.6"
 # отстал (0.2.5), берётся из репозитория по метке v0.5.6
 deep_filter = { git = "https://github.com/Rikorose/DeepFilterNet", rev = "978576aa8400552a4ce9730838c635aa30db5e61", default-features = false, features = ["tract", "default-model"] }
 ndarray = "0.15"
+# обновление из GitHub (src/update.rs): скачать установщик своего канала — HTTPS, rustls
+ureq = "2"
 
 [profile.release]
 codegen-units = 1
