@@ -1,0 +1,1 @@
+self.onmessage=()=>self.postMessage({k:`error`,msg:`web`});

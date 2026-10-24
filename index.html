@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7">
+<!-- веб-версия: установка на главный экран (Safari «На экран „Домой“», Chrome «Установить») -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Melete">
+<!-- Сеть: только свои файлы и поиск песни в MusicBrainz (по кнопке). Любые другие обращения браузер не пропустит —
+     вторая защита после вырезки статистики MediaPipe (build/mediapipe.js). ws — живая перезагрузка при разработке -->
+<meta http-equiv="Content-Security-Policy" content="connect-src 'self' blob: data: https://musicbrainz.org https://api.github.com ws://localhost:* ws://*:5173 wss://*:5173">
+<title>Melete</title>
+  <script type="module" crossorigin src="./assets/main-DR4KmWSG.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-B0Z9INg1.js">
+  <link rel="modulepreload" crossorigin href="./assets/stage-_eCkGJ15.js">
+  <link rel="modulepreload" crossorigin href="./assets/i18n-fEYPG641.js">
+  <link rel="modulepreload" crossorigin href="./assets/ui-DmqNH20a.js">
+  <link rel="modulepreload" crossorigin href="./assets/mascot-CVHgyHD9.js">
+  <link rel="modulepreload" crossorigin href="./assets/dist-C5Vgn5nD.js">
+  <link rel="modulepreload" crossorigin href="./assets/preload-helper-BaNbYf_w.js">
+  <link rel="modulepreload" crossorigin href="./assets/clock-DK2H7j5E.js">
+  <link rel="modulepreload" crossorigin href="./assets/context-CdyROA2K.js">
+  <link rel="modulepreload" crossorigin href="./assets/analyze-DXdV-PqG.js">
+  <link rel="modulepreload" crossorigin href="./assets/voicefx-8bzs2ngf.js">
+  <link rel="modulepreload" crossorigin href="./assets/time-CZ7zArwa.js">
+  <link rel="modulepreload" crossorigin href="./assets/integrity-DbrQnfPs.js">
+  <link rel="modulepreload" crossorigin href="./assets/stats-Cxn23blc.js">
+  <link rel="modulepreload" crossorigin href="./assets/library-D2XL4XmU.js">
+  <link rel="stylesheet" crossorigin href="./assets/stage-BgXxXfLu.css">
+  <link rel="stylesheet" crossorigin href="./assets/ui-C6gYt9Ur.css">
+  <link rel="stylesheet" crossorigin href="./assets/main-C87ncA2C.css">
+</head>
+<body>
+<div id="app"></div>
+</body>
+</html>
