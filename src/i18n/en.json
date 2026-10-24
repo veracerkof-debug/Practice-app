@@ -1858,7 +1858,7 @@
   "upd.get": "Update",
   "upd.later": "Later",
   "upd.down": "Downloading… {p} %",
-  "upd.wait": "Will download over Wi-Fi",
+  "upd.wait": "Waiting for Wi-Fi",
   "upd.ready": "New version downloaded",
   "upd.install": "Install",
   "upd.allow": "Allow installs from Melete, then tap “Install” again",
@@ -1866,7 +1866,7 @@
   "upd.mode": "Updates",
   "upd.mAuto": "Automatic",
   "upd.mButton": "Only on tap",
-  "upd.autoAnd": "Once a day at launch — a check; a new build downloads by itself over Wi-Fi. One tap remains: “Install” in the system window.",
+  "upd.autoAnd": "Once a day at launch — a check; a new build downloads by itself (over Wi-Fi or, if enabled, mobile data). One tap remains: “Install” in the system window.",
   "upd.autoWin": "Once a day at launch — a check; a new build downloads by itself and installs when the program closes: sound, recording and practice are not interrupted.",
   "upd.btnHint": "Nothing is checked or downloaded by itself — only with the button here.",
   "upd.onClose": "The new version installs on close",
@@ -1896,5 +1896,8 @@
   "variant.verb.galactic": "Galactic",
   "variant.verb.verbity": "Verbity",
   "variant.verb.hint": "Airwindows reverbs (open source, MIT): Galactic — a huge drifting “galactic” space for pads; Verbity — a dense natural hall. Applies to all spaces (room, hall, plate, cathedral) at once.",
-  "lic.aw.sub": "Galactic and Verbity2 reverbs (ported to JS)"
+  "lic.aw.sub": "Galactic and Verbity2 reverbs (ported to JS)",
+  "upd.mobile": "Mobile data",
+  "upd.mobileSub": "Download without Wi-Fi too — about {mb} MB of traffic",
+  "upd.mobileNow": "Now"
 }

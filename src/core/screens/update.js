@@ -2,14 +2,14 @@
 // шторка в профиле — сборка и канал, «Обновление»: автоматически или по кнопке, «Проверить сейчас». Полоса не перехватывает экран:
 // «Потом» убирает её до следующей сборки
 import { t } from '../../i18n/index.js';
-import { esc, sheet, snav, seg, toast } from '../../ui/index.js';
+import { esc, sheet, snav, seg, sw, toast } from '../../ui/index.js';
 import { VARIANTS, variant, setVariant } from '../variants.js';
 
 const pct = (f) => Math.round((f || 0) * 100);
 
 function barHTML(s, U) {
   if (s.st === 'avail' && !U.skipped) return '<span class="grow">' + t('upd.avail', { n: s.info.build }) + '</span><button class="link" data-upd="skip">' + t('upd.later') + '</button><button class="btn fill sm" data-upd="get">' + t('upd.get') + '</button>';
-  if (s.st === 'down') return '<span class="grow">' + (s.wait ? t('upd.wait') : t('upd.down', { p: pct(s.f) })) + '</span><i class="updprog" style="--f:' + pct(s.f) + '%"></i>';
+  if (s.st === 'down') return '<span class="grow">' + (s.wait ? t('upd.wait') : t('upd.down', { p: pct(s.f) })) + '</span>' + (s.wait ? '<button class="link" data-upd="now">' + t('upd.mobileNow') + '</button>' : '<i class="updprog" style="--f:' + pct(s.f) + '%"></i>');
   if (s.st === 'ready') return '<span class="grow">' + t(s.onClose ? 'upd.onClose' : 'upd.ready') + '</span><button class="btn fill sm" data-upd="install">' + t(s.onClose ? 'upd.now' : 'upd.install') + '</button>';
   return '';
 }
@@ -28,6 +28,7 @@ export function mountUpdateBar(app) {
     const b = e.target.closest('[data-upd]'); if (!b) return;
     if (b.dataset.upd === 'skip') U.skip();
     else if (b.dataset.upd === 'get') U.download();
+    else if (b.dataset.upd === 'now') U.now();
     else if (b.dataset.upd === 'install') U.install().then((r) => { if (r === 'allow') toast(t('upd.allow')); }).catch(() => toast(t('upd.err')));
   });
 }
@@ -51,6 +52,7 @@ export function updateSheet(app) {
     return snav(t('upd.title')) +
       '<div class="group"><div class="cell"><span class="grow">' + t('upd.ver', { b: U.build || '—', ch: U.channel === 'dev' ? t('upd.dev') : t('upd.pre') }) + '</span></div>' +
       '<div class="cellcol">' + seg('updMode', [['auto', t('upd.mAuto')], ['button', t('upd.mButton')]], U.mode, t('upd.mode')) + '<div class="segcap">' + t(U.mode === 'auto' ? (U.platform === 'android' ? 'upd.autoAnd' : 'upd.autoWin') : 'upd.btnHint') + '</div></div>' +
+      (U.platform === 'android' ? '<div class="cell"><span class="grow">' + t('upd.mobile') + '<span class="psub">' + t('upd.mobileSub', { mb: s.info && s.info.size ? Math.round(s.info.size / 1048576) : 330 }) + '</span></span>' + sw('updMobile', !!st.updMobile, t('upd.mobile')) + '</div>' : '') +
       '<button class="cell act" data-u="check"' + (s.st === 'checking' || s.st === 'down' ? ' disabled' : '') + '>' + t('upd.check') + '</button>' +
       (s.st === 'avail' ? '<button class="cell act" data-u="get">' + t('upd.get') + '</button>' : '') +
       (s.st === 'ready' ? '<button class="cell act" data-u="install">' + t('upd.install') + '</button>' : '') +
@@ -63,6 +65,7 @@ export function updateSheet(app) {
       else if (b.dataset.u === 'get') U.download();
       else if (b.dataset.u === 'install') U.install().then((r) => { if (r === 'allow') toast(t('upd.allow')); }).catch(() => toast(t('upd.err')));
     });
+    el.addEventListener('change', (e) => { if (e.target.dataset.sw === 'updMobile') { st.updMobile = e.target.checked; app.store.settingsChanged(); } });
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-seg="updMode"] [data-v]'); if (!b) return;
       st.updMode = b.dataset.v; app.store.settingsChanged(); sh.update();

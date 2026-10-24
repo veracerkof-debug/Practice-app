@@ -68,12 +68,15 @@ export function createUpdater(app) {
     return s;
   }
 
-  async function download() {
+  // mobile — качать и по мобильной сети: настройка «Мобильная сеть» (settings.updMobile) или «Сейчас» на полосе ожидания Wi-Fi
+  let dlId = null;
+  async function download({ mobile = !!app.store.state.settings.updMobile } = {}) {
     if (s.st !== 'avail' || !s.info) return;
     set({ st: 'down', f: 0, wait: false });
     try {
       if (platform === 'android') {
-        const { id } = await Native.download({ url: s.info.url, wifi: true });
+        const { id } = await Native.download({ url: s.info.url, wifi: !mobile });
+        dlId = id;
         clearInterval(poll);
         poll = setInterval(async () => {
           let r; try { r = await Native.status({ id }); } catch (e) { clearInterval(poll); logErr('upd', e); set({ st: 'avail' }); return; }
@@ -123,6 +126,8 @@ export function createUpdater(app) {
     skip() { if (s.info) writeMem({ ...readMem(), skip: s.info.build }); set({ st: 'none' }); },
     get skipped() { return !!s.info && readMem().skip === s.info.build; },
     check, download, install,
+    // ждёт Wi-Fi, а нужно сейчас: то же скачивание заново — по любой сети
+    async now() { if (platform !== 'android' || s.st !== 'down' || !s.wait) return; clearInterval(poll); try { await Native.cancel({ id: dlId }); } catch { /* уже нет */ } set({ st: 'avail' }); log('upd', 'скачивание по мобильной сети'); return download({ mobile: true }); },
     // при запуске: тихо, раз в сутки, не мешая звуку и занятию — через полминуты после старта
     // «автоматически»: найдено новое — сразу скачать (Android ждёт Wi-Fi сам)
     auto() {

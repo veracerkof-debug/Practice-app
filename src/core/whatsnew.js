@@ -12,6 +12,9 @@ export const NEWS = [
   { n: 3, d: '2026-10-24', ru: ['Копии на устройстве: сами раз в сутки и перед каждым обновлением (Профиль → Данные и копии)', 'Кнопка «Идея» в профиле — рядом с «Сообщить о проблеме»', 'После неожиданного закрытия отчёт отправляется одним касанием'],
     en: ['Copies on the device: automatic once a day and before every update (Profile → Data and backups)', 'An “Idea” button in the profile, next to “Report a problem”', 'After an unexpected close, the report is sent with one tap'],
     uz: ['Qurilmadagi nusxalar: kuniga bir marta va har bir yangilanishdan oldin oʻzi (Profil → Maʼlumotlar va nusxalar)', 'Profilda «Gʻoya» tugmasi — «Muammo haqida xabar berish» yonida', 'Kutilmagan yopilishdan keyin hisobot bitta bosish bilan yuboriladi'] },
+  { n: 4, d: '2026-10-24', ru: ['Обновление можно скачивать и по мобильной сети: Профиль → Обновления → «Мобильная сеть» или «Сейчас» на полосе ожидания Wi-Fi'],
+    en: ['Updates can download over mobile data too: Profile → Updates → “Mobile data”, or “Now” on the waiting-for-Wi-Fi bar'],
+    uz: ['Yangilanishni mobil tarmoq orqali ham yuklash mumkin: Profil → Yangilanishlar → «Mobil tarmoq» yoki Wi-Fi kutish satridagi «Hozir»'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);

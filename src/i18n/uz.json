@@ -1822,7 +1822,7 @@
   "upd.get": "Yangilash",
   "upd.later": "Keyin",
   "upd.down": "Yuklanmoqda… {p} %",
-  "upd.wait": "Wi-Fi orqali yuklanadi",
+  "upd.wait": "Wi-Fi kutilmoqda",
   "upd.ready": "Yangi versiya yuklandi",
   "upd.install": "Oʻrnatish",
   "upd.allow": "Melete’dan oʻrnatishga ruxsat bering va «Oʻrnatish»ni yana bosing",
@@ -1830,7 +1830,7 @@
   "upd.mode": "Yangilanish",
   "upd.mAuto": "Avtomatik",
   "upd.mButton": "Faqat tugma bilan",
-  "upd.autoAnd": "Kuniga bir marta ishga tushganda — tekshiruv; yangi yigʻma Wi-Fi orqali oʻzi yuklanadi. Bitta bosish qoladi: tizim oynasida «Oʻrnatish».",
+  "upd.autoAnd": "Kuniga bir marta ishga tushganda — tekshiruv; yangi yigʻma oʻzi yuklanadi (Wi-Fi yoki, yoqilgan boʻlsa, mobil tarmoq orqali). Bitta bosish qoladi: tizim oynasida «Oʻrnatish».",
   "upd.autoWin": "Kuniga bir marta ishga tushganda — tekshiruv; yangi yigʻma oʻzi yuklanadi va dastur yopilganda oʻrnatiladi: ovoz, yozuv va mashgʻulot uzilmaydi.",
   "upd.btnHint": "Oʻzi hech narsa tekshirilmaydi va yuklanmaydi — faqat shu yerdagi tugma bilan.",
   "upd.onClose": "Yangi versiya yopilganda oʻrnatiladi",
@@ -1860,5 +1860,8 @@
   "variant.verb.galactic": "Galactic",
   "variant.verb.verbity": "Verbity",
   "variant.verb.hint": "Airwindows reverblari (ochiq kod, MIT): Galactic — padlar uchun suzuvchi ulkan «koinot» fazosi; Verbity — zich tabiiy zal. Barcha fazolarga (xona, zal, plastina, sobor) birdaniga taʼsir qiladi.",
-  "lic.aw.sub": "Galactic va Verbity2 reverblari (JS’ga koʻchirilgan)"
+  "lic.aw.sub": "Galactic va Verbity2 reverblari (JS’ga koʻchirilgan)",
+  "upd.mobile": "Mobil tarmoq",
+  "upd.mobileSub": "Wi-Fi’siz ham yuklash — taxminan {mb} MB trafik",
+  "upd.mobileNow": "Hozir"
 }

@@ -68,6 +68,14 @@ public class UpdatePlugin extends Plugin {
         } catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
     }
 
+    // { id } — отменить скачивание (потом — заново, по другой сети)
+    @PluginMethod
+    public void cancel(PluginCall call) {
+        Object v = call.getData().opt("id");
+        if (v instanceof Number) { try { dm().remove(((Number) v).longValue()); } catch (Exception e) { /* уже нет */ } }
+        call.resolve();
+    }
+
     // Можно ли этому приложению ставить пакеты (Android 8+: разрешение «Установка неизвестных приложений»)
     @PluginMethod
     public void canInstall(PluginCall call) {
