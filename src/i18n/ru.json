@@ -1909,5 +1909,14 @@
   "idea.label": "Идея",
   "idea.subject": "Melete — идея",
   "idea.thanks": "Спасибо за идею",
-  "report.crashWhat": "Приложение закрылось неожиданно"
+  "report.crashWhat": "Приложение закрылось неожиданно",
+  "variant.title": "Варианты",
+  "variant.sub": "Только в версии для разработки",
+  "variant.intro": "Здесь — все варианты новых вещей. Тестерам уходит только выбранный автором, без переключателя.",
+  "variant.verb": "Реверберация пространств",
+  "variant.verb.melete": "Melete",
+  "variant.verb.galactic": "Galactic",
+  "variant.verb.verbity": "Verbity",
+  "variant.verb.hint": "Ревербы Airwindows (открытый код, MIT): Galactic — огромное «космическое» пространство с плаванием, для пэдов; Verbity — плотный естественный зал. Действует на все пространства (комната, зал, пластина, собор) сразу.",
+  "lic.aw.sub": "Ревербы Galactic и Verbity2 (порт на JS)"
 }

@@ -56,6 +56,7 @@ import { initLocalSend } from './localsend.js';
 import { initDesktop } from './desktop.js';
 import { createUpdater } from './update.js';
 import { createSnapshots } from './snapshots.js';
+import { applyVariants } from './variants.js';
 import { mountUpdateBar } from './screens/update.js';
 import { initWhatsNew } from './screens/whatsnew.js';
 
@@ -297,6 +298,8 @@ export function boot(root) {
   // копии на устройстве (snapshots.js): раз в сутки и перед обновлением
   app.snapshots = createSnapshots(app);
   app.snapshots.auto();
+  // варианты (variants.js): в dev — выбранные в профиле, в pre — решение автора
+  applyVariants(app);
   app.updater = createUpdater(app);
   mountUpdateBar(app);
   app.updater.auto();

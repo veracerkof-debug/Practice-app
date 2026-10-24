@@ -2,7 +2,7 @@
 // Состояние — объект device.mix (как в прототипе: { metro, piano, drone, audio, theory, mode, mute }).
 import { getContext, masterNode, reverbNode, directOut, spaceInput, rebuildSpaces } from './context.js';
 import { createFxChain, normalizeFx, fxIsFlat } from './fx.js';
-import { setPerf, resolvePerf, setEngine, ENGINES, VERBS, setVerb, defaultVerb, desktopApp, weakPC } from './perf.js';
+import { setPerf, resolvePerf, setEngine, ENGINES, VERBS, setVerb, defaultVerb, desktopApp, weakPC, setVerbAlgo } from './perf.js';
 
 // Шины по контракту модуля. 'media' хранится в mix под ключом 'audio' (совместимость с прототипом)
 // looper — лупер (слои и монитор), notes — табы и ноты (alphaTab играет своим звуком: шина зеркалит громкость и выключение в masterVolume)
@@ -134,6 +134,8 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
     get engine() { return mx.engine; },
     setVerb(v) { mx.verb = VERBS.includes(v) ? v : defaultVerb(); setVerb(mx.verb); rebuildSpaces(); onChange(mx); }, // сразу: пространства пересобираются
     get verb() { return mx.verb; },
+    // алгоритм пространств — вариант dev (core/variants.js): сразу, пространства пересобираются; не в настройках микшера
+    setVerbAlgo(a) { setVerbAlgo(a); rebuildSpaces(); },
     setMode(mode) {
       mx.mode = mode; // применится при следующем запуске (контекст уже создан)
       onChange(mx);

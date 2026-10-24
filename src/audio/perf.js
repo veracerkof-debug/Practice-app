@@ -22,6 +22,11 @@ export const setEngine = (e) => { PERF.engine = e === 'nodes' ? 'nodes' : 'wl'; 
 export const VERBS = ['conv', 'light'];
 export const setVerb = (v) => { PERF.verb = v === 'light' ? 'light' : 'conv'; };
 export const verbLight = () => PERF.verb === 'light';
+// Алгоритм пространств (вариант dev, src/core/variants.js): 'melete' — свои (свёртка или лёгкая по настройке),
+// 'galactic' и 'verbity' — ревербы Airwindows (wl/airwin.worklet.js). В pre — то, что выбрал автор
+export const VERB_ALGOS = ['melete', 'galactic', 'verbity'];
+export const setVerbAlgo = (a) => { PERF.verbAlgo = VERB_ALGOS.includes(a) ? a : 'melete'; };
+export const verbAlgo = () => PERF.verbAlgo || 'melete';
 // Умолчание: телефон — лёгкая (процессор слабее и режется при погашенном экране), компьютер — свёртка
 // Приложение для компьютера (Tauri): тот же признак, что core/desktop.js, — звуку без зависимости от ядра
 export const desktopApp = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;

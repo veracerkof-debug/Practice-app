@@ -1851,5 +1851,14 @@
   "idea.label": "Gʻoya",
   "idea.subject": "Melete — gʻoya",
   "idea.thanks": "Gʻoya uchun rahmat",
-  "report.crashWhat": "Ilova kutilmaganda yopildi"
+  "report.crashWhat": "Ilova kutilmaganda yopildi",
+  "variant.title": "Variantlar",
+  "variant.sub": "Faqat ishlab chiqish versiyasida",
+  "variant.intro": "Bu yerda yangi narsalarning barcha variantlari. Testerlarga faqat muallif tanlagani, almashtirgichsiz yuboriladi.",
+  "variant.verb": "Fazolar reverberatsiyasi",
+  "variant.verb.melete": "Melete",
+  "variant.verb.galactic": "Galactic",
+  "variant.verb.verbity": "Verbity",
+  "variant.verb.hint": "Airwindows reverblari (ochiq kod, MIT): Galactic — padlar uchun suzuvchi ulkan «koinot» fazosi; Verbity — zich tabiiy zal. Barcha fazolarga (xona, zal, plastina, sobor) birdaniga taʼsir qiladi.",
+  "lic.aw.sub": "Galactic va Verbity2 reverblari (JS’ga koʻchirilgan)"
 }

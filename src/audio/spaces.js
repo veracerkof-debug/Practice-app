@@ -7,7 +7,7 @@
 // переключение настройки действует сразу, посылы не переподключаются. Модуль worklet грузится один раз на контекст
 // (loadReverbWorklet); пока не готов или не загрузился — свёртка.
 import { makeIR } from './waves.js';
-import { verbLight } from './perf.js';
+import { verbLight, verbAlgo } from './perf.js';
 
 export const SPACES = ['room', 'hall', 'plate', 'cathedral'];
 // sec — длина импульса / RT60; damp — затухание верхов; pre — предзадержка; hp/lp — срезы; gain — уровень;
@@ -28,6 +28,20 @@ export function loadReverbWorklet(c) {
   WL.set(c, p);
   return p;
 }
+// Ревербы Airwindows (вариант dev): ручки оригинала на пространство и уровень — подобраны по энергии отклика к
+// лёгкому движку (замер в Node: шум 50 мс, 8 с), чтобы при переключении громкость не прыгала
+export const AIRWIN = {
+  galactic: { room: { a: 0.8, b: 0.45, c: 0.25, d: 0.2, lvl: 1.93 }, hall: { a: 0.55, b: 0.5, c: 0.4, d: 0.55, lvl: 3.0 }, plate: { a: 0.65, b: 0.7, c: 0.2, d: 0.35, lvl: 1.38 }, cathedral: { a: 0.4, b: 0.4, c: 0.55, d: 1, lvl: 8.47 } },
+  verbity: { room: { a: 0.3, b: 0.3, c: 0.5, lvl: 0.198 }, hall: { a: 0.65, b: 0.45, c: 0.45, lvl: 0.249 }, plate: { a: 0.45, b: 0.42, c: 0.2, lvl: 0.165 }, cathedral: { a: 0.95, b: 0.55, c: 0.55, lvl: 0.444 } },
+};
+const AWL = new WeakMap();
+export function loadAirwinWorklet(c) {
+  if (!c || !c.audioWorklet) return Promise.resolve(false);
+  if (AWL.has(c)) return AWL.get(c);
+  const p = c.audioWorklet.addModule(new URL('./wl/airwin.worklet.js', import.meta.url)).then(() => true).catch(() => false);
+  AWL.set(c, p);
+  return p;
+}
 export const reverbWorkletReady = (c) => WL.has(c) && WL.get(c).ready === true;
 
 export function makeSpace(c, type, dest) {
@@ -41,18 +55,23 @@ export function makeSpace(c, type, dest) {
   let core = null, gen = 0, lastErr = null;
   const conv = () => { const cv = c.createConvolver(); cv.buffer = makeIR(c, d.sec, { damp: d.damp, pre: d.pre }); return cv; };
   const light = () => new AudioWorkletNode(c, 'melete-reverb', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { sec: d.sec * (d.decay || 1), damp: d.damp, pre: d.pre, size: d.size, lvl: d.lvl } });
+  const airwin = (algo) => new AudioWorkletNode(c, 'melete-airwin', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { algo, ...AIRWIN[algo][type in AIRWIN[algo] ? type : 'hall'] } });
   const attach = (node) => {
     if (core) { try { hp.disconnect(core); core.disconnect(); } catch { /* */ } }
     core = node;
     hp.connect(core).connect(lp);
   };
   const build = () => {
-    const my = ++gen;
+    const my = ++gen, algo = verbAlgo();
+    if (algo !== 'melete' && AIRWIN[algo] && c.audioWorklet) { // Airwindows; не загрузился — свой движок
+      loadAirwinWorklet(c).then((ok) => { if (my !== gen) return; try { attach(ok ? airwin(algo) : conv()); } catch (e) { lastErr = e; attach(conv()); } });
+      return;
+    }
     if (verbLight() && c.audioWorklet) {
       const p = loadReverbWorklet(c);
       p.then((ok) => { if (my !== gen) return; try { attach(ok ? light() : conv()); } catch (e) { lastErr = e; attach(conv()); } });
     } else attach(conv());
   };
   build();
-  return { input, rebuild: build, get engine() { return core && core.buffer !== undefined ? 'conv' : core ? 'light' : null; }, get error() { return lastErr; } };
+  return { input, rebuild: build, get engine() { return core && core.buffer !== undefined ? 'conv' : core ? (verbAlgo() !== 'melete' ? verbAlgo() : 'light') : null; }, get error() { return lastErr; } };
 }

@@ -3,6 +3,7 @@
 // «Потом» убирает её до следующей сборки
 import { t } from '../../i18n/index.js';
 import { esc, sheet, snav, seg, toast } from '../../ui/index.js';
+import { VARIANTS, variant, setVariant } from '../variants.js';
 
 const pct = (f) => Math.round((f || 0) * 100);
 
@@ -67,5 +68,18 @@ export function updateSheet(app) {
       st.updMode = b.dataset.v; app.store.settingsChanged(); sh.update();
     });
   }, { onClose: () => un && un() });
+  return sh;
+}
+
+// Варианты (только dev, src/core/variants.js): у каждой точки выбора — переключатель; правка слышна сразу
+export function variantsSheet(app) {
+  const show = () => VARIANTS.map((v) => '<div class="hdr">' + t('variant.' + v.id) + '</div><div class="group"><div class="cellcol">' +
+    seg('var-' + v.id, v.options.map((o) => [o, t('variant.' + v.id + '.' + o)]), variant(v.id), t('variant.' + v.id)) + '</div></div><p class="ftr">' + t('variant.' + v.id + '.hint') + '</p>').join('');
+  const sh = sheet(() => snav(t('variant.title')) + '<p class="ftr" style="margin-top:0">' + t('variant.intro') + '</p>' + show(), (el) => {
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-seg^="var-"] [data-v]'); if (!b) return;
+      setVariant(app, b.parentElement.dataset.seg.slice(4), b.dataset.v); sh.update();
+    });
+  });
   return sh;
 }

@@ -1887,5 +1887,14 @@
   "idea.label": "Idea",
   "idea.subject": "Melete — idea",
   "idea.thanks": "Thank you for the idea",
-  "report.crashWhat": "The app closed unexpectedly"
+  "report.crashWhat": "The app closed unexpectedly",
+  "variant.title": "Variants",
+  "variant.sub": "Development version only",
+  "variant.intro": "All variants of new things are here. Testers get only the one the author chose, without a switch.",
+  "variant.verb": "Space reverb",
+  "variant.verb.melete": "Melete",
+  "variant.verb.galactic": "Galactic",
+  "variant.verb.verbity": "Verbity",
+  "variant.verb.hint": "Airwindows reverbs (open source, MIT): Galactic — a huge drifting “galactic” space for pads; Verbity — a dense natural hall. Applies to all spaces (room, hall, plate, cathedral) at once.",
+  "lic.aw.sub": "Galactic and Verbity2 reverbs (ported to JS)"
 }
