@@ -9,6 +9,9 @@ export const NEWS = [
   { n: 2, d: '2026-10-24', ru: ['Телефон и компьютер — один раздел в профиле: подключение, ансамбль, раздача песен, приём файлов', 'Windows: связь с телефоном и раздача песен включаются; на слабых компьютерах звук легче', 'Обновления: новая версия скачивается сама, после обновления — окно «Что нового»'],
     en: ['Phone and computer — one section in the profile: connection, ensemble, song sharing, file transfer', 'Windows: phone link and song sharing now turn on; lighter sound on weaker computers', 'Updates: a new version downloads by itself; after updating — a “What’s new” window'],
     uz: ['Telefon va kompyuter — profilda bitta boʻlim: ulanish, ansambl, qoʻshiqlarni tarqatish, fayllarni qabul qilish', 'Windows: telefon bilan aloqa va qoʻshiqlarni tarqatish yoqiladi; kuchsiz kompyuterlarda ovoz yengilroq', 'Yangilanishlar: yangi versiya oʻzi yuklanadi; yangilangandan keyin — «Nima yangi» oynasi'] },
+  { n: 3, d: '2026-10-24', ru: ['Копии на устройстве: сами раз в сутки и перед каждым обновлением (Профиль → Данные и копии)', 'Кнопка «Идея» в профиле — рядом с «Сообщить о проблеме»', 'После неожиданного закрытия отчёт отправляется одним касанием'],
+    en: ['Copies on the device: automatic once a day and before every update (Profile → Data and backups)', 'An “Idea” button in the profile, next to “Report a problem”', 'After an unexpected close, the report is sent with one tap'],
+    uz: ['Qurilmadagi nusxalar: kuniga bir marta va har bir yangilanishdan oldin oʻzi (Profil → Maʼlumotlar va nusxalar)', 'Profilda «Gʻoya» tugmasi — «Muammo haqida xabar berish» yonida', 'Kutilmagan yopilishdan keyin hisobot bitta bosish bilan yuboriladi'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);

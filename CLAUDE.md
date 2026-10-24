@@ -86,6 +86,7 @@
   `ensemble.js` — ансамбль: каждый пишет свою партию телефоном, компьютер ведёт дубль (сигнал и счёт), собирает и выравнивает дорожки по сигналу (`src/audio/align.js`: смещение и ход часов), проект студии и по желанию чистые дорожки; экран — `screens/ensemble.js`.
   `folder.js` — папка Melete на устройстве (Data, Media, Tabs, PDF, Lyrics; синхронизация в обе стороны), `foldersync.js` — когда синхронизировать; Android — `FolderPlugin.java`.
   `appicon.js` — иконка приложения на выбор (рисунки — `src/ui/appicons.js`, PNG — `build/appicons.mjs`, Android — `IconPlugin.java` и activity-ярлыки `IconActivities.java`).
+  `snapshots.js` — копии данных на устройстве (IndexedDB): раз в сутки и перед обновлением, 7 + 3, загрузка — «Данные и копии».
   `update.js` — обновление из GitHub по каналу (dev/pre; «автоматически» или «только по кнопке»; Android — `UpdatePlugin.java`, Windows — `src-tauri/src/update.rs`, ставит при закрытии), `whatsnew.js` — «Что нового» после обновления.
   `log.js` — технический журнал на устройстве (3 ч, без личного); `report.js` — отчёт о проблеме (отправляет человек через «Поделиться»).
   `selfcheck.js` — самопроверка на устройстве (звук, часы, нагрузка, движок плеера, микрофон, запись, IndexedDB, место, модели, экран; экран — `screens/selfcheck.js`, панель рядом с отчётом; итог — в журнал).
@@ -194,5 +195,6 @@
 - `npx cap sync android` / `npx cap run android -l --external` — Android с живой перезагрузкой
 - Веб-версия (отдельная от APK, для знакомства; память — в браузере: постоянное хранилище и service worker, `src/core/webmemory.js`, `public/sw.js`) собирается GitHub Actions (`.github/workflows/web.yml`) → ветка `gh-pages` → https://veracerkof-debug.github.io/melete-app/
 - Windows-установщик собирает GitHub Actions (`.github/workflows/windows.yml`, Tauri): `main` → релиз «dev», `Melete-Dev-Setup.exe` («Melete DEV», `src-tauri/tauri.dev.conf.json`); ветка `pre` → релиз «pre», `Melete-Setup.exe`; локально — `npm run win` (нужны Rust и Windows), `npm run win:dev` — окно с живой перезагрузкой
+- Откат pre: каждая сборка pre помечена `pre-<N>`; «откати pre на N» — `git push --force origin pre-N:pre` (та же программа с бóльшим номером приходит обновлением, данные остаются). Перед выкладкой APK проверяется на эмуляторе (`build/apk-smoke.sh`); данные прошлых версий — `tests/compat.test.js`
 - Ключ подписи APK — только в секретах GitHub (`BETA_KEYSTORE_B64`, `BETA_STORE_PASSWORD`), в репозитории его нет (репозиторий открытый)
 - APK собирает GitHub Actions (`.github/workflows/android-beta.yml`): `main` → релиз «dev», `Melete-Dev.apk` («Melete DEV», `app.melete.dev`); ветка `pre` → релиз «pre», `Melete-PreRelease.apk` (Melete, версия 1.2-pre); последней в релиз — метка сборки `android-<N>.ver` (`windows-<N>.ver`), по ней приложение видит готовую сборку; тот же файл pre — и в старом релизе «beta» (`Melete-Beta.apk`), чтобы старая ссылка давала свежую сборку

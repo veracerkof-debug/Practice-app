@@ -61,6 +61,36 @@ async function copyText(txt) {
   if (!ok) throw new Error('copy');
 }
 
+// Отчёт о падении одним касанием: текст уже собран (что было — «закрылось неожиданно», журнал, устройство), сразу
+// «Поделиться» — выбрать Telegram или почту
+async function sendCrash(app) {
+  try {
+    log('report', 'отчёт о падении — одним касанием');
+    const r = await sendReport(await reportText(app, t('report.crashWhat'), true), { title: t('report.subject'), caption: t('report.crashWhat') });
+    if (r === 'saved') toast(t('report.saved'));
+  } catch (err) { logErr('report', err); toast(t('report.fail')); }
+}
+
+// Идея: короткий текст — через «Поделиться» (подпись сообщения — сама идея, в файле — версия и устройство, без журнала)
+export function ideaSheet(app) {
+  const api = sheet(() => snav(t('idea.title')) +
+    '<p class="l2" style="margin:4px 4px 14px;font-size:15px;line-height:1.45">' + t('idea.intro') + '</p>' +
+    '<div class="group"><div class="cellcol"><textarea class="inp ideatext" rows="5" maxlength="2000" placeholder="' + esc(t('idea.ph')) + '" aria-label="' + esc(t('idea.title')) + '"></textarea></div></div>' +
+    '<button class="btn fill" data-idea style="width:100%;margin-top:16px">' + t('idea.send') + '</button>');
+  const el = api.el, ta = el.querySelector('.ideatext');
+  setTimeout(() => ta.focus(), 120);
+  el.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-idea]'); if (!b) return;
+    const v = ta.value.trim(); if (!v) { ta.focus(); return; }
+    b.disabled = true;
+    try {
+      const r = await sendReport(await reportText(app, t('idea.label') + ': ' + v, false), { title: t('idea.subject'), caption: t('idea.label') + ': ' + v.slice(0, 900) });
+      if (r === 'saved') toast(t('report.saved'));
+      if (r !== 'cancel') { toast(t('idea.thanks')); api.close(); }
+    } catch (err) { logErr('report', err); toast(t('report.fail')); } finally { b.disabled = false; }
+  });
+}
+
 // После неожиданного закрытия — одно предложение отправить отчёт (через пару секунд после запуска)
 export function crashOffer(app) {
   if (!crashedLast()) return;
@@ -76,7 +106,7 @@ export function crashOffer(app) {
       const k = e.target.closest('[data-k]');
       if (!k && e.target !== d) return;
       leave(d, 160);
-      if (k && k.dataset.k === 'yes') reportSheet(app);
+      if (k && k.dataset.k === 'yes') sendCrash(app);
     });
   }, 2500);
 }

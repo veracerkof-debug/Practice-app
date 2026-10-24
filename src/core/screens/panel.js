@@ -73,6 +73,7 @@ const PLAIN_HIDE = ['stats', 'week', 'notif', 'mascot'];
 // «Сообщить о проблеме» — лист со строчками журнала
 const BUG = '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 14h7M9 17h4"/></svg>';
 // Чат тестеров и обсуждения (Telegram) — открывается только по нажатию, в браузере или приложении Telegram
+const IDEA = '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>';
 const UPD_IC = '<svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg>';
 const TG_CHAT = 'https://t.me/+qP8rC1tAkvU1MjYy';
 const PLANE = '<svg viewBox="0 0 24 24"><path d="M21 4 3 11.2l6.3 2.3L18 7.5l-6.8 7.4V20l3.4-3.6 4 3L21 4z"/></svg>';
@@ -343,11 +344,22 @@ function copiesHTML() {
   return '<div class="hdr">' + t('bk.title') + '</div><div class="group">' + (copies.length ? copies.map(row).join('') : '<div class="cell"><span class="grow l2">' + t('bk.none') + '</span></div>') + '</div><p class="ftr">' + t('bk.hint') + '</p>';
 }
 
+// Копии на устройстве (snapshots.js): суточные и перед обновлением; касание — загрузить (выбор частей)
+let snaps = null;
+const loadSnaps = (app, done) => { if (!app.snapshots) return; app.snapshots.list().then((l) => { snaps = l; done(); }).catch(() => { snaps = []; }); };
+function snapsHTML() {
+  if (!snaps || !snaps.length) return '';
+  const fmt = (at) => new Date(at).toLocaleString(getLang() === 'uz' ? 'uz-Latn' : getLang(), { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  return '<div class="hdr">' + t('snap.title') + '</div><div class="group">' + snaps.map((x) => '<button class="cell" data-snap="' + esc(x.id) + '"><span class="grow"><span>' + esc(fmt(x.at)) + '</span><span class="st l2" style="display:block;font-size:13px">' +
+    esc(x.kind === 'update' ? t('snap.update') : t('snap.day')) + ' · ' + Math.max(1, Math.round((x.size || 0) / 1024)) + ' KB</span></span>' + icons.chev + '</button>').join('') + '</div><p class="ftr">' + t('snap.hint') + '</p>';
+}
+
 function dataHTML(app) {
   const demo = demoLeft(app);
   return '<div class="large">' + t('data.title') + '</div><div class="group"><button class="cell act" data-act="export">' + t('data.export') + '</button><button class="cell act" data-act="import">' + t('data.import') + '</button></div>' +
     '<p class="ftr">' + t('data.hint') + '</p>' +
     folderHTML(app) +
+    snapsHTML() +
     // демо-набор: песни, табулатуры, ноты, записи и события — показать, как всё устроено; убирается одной кнопкой
     // демо-набор ставится при регистрации; здесь — только убрать (решение автора)
     (demo ? '<div class="hdr">' + t('demo.title') + '</div><div class="group"><button class="cell act danger" data-act="demo">' + t('demo.remove') + '</button></div>' +
@@ -533,7 +545,8 @@ function rootHTML(app) {
     '<div class="group" style="margin-top:20px"><a class="cell" href="' + TG_CHAT + '" target="_blank" rel="noopener"><span class="ticon" style="' + iconBg(app.store.state.settings, 'blue') + '">' + PLANE + '</span><span class="grow">' + t('panel.tg') + '<span class="psub">' + t('panel.tgSub') + '</span></span>' + CHEV + '</a>' +
       (app.updater && app.updater.platform ? '<button class="cell" data-act="upd"><span class="ticon" style="' + iconBg(app.store.state.settings, 'teal') + '">' + UPD_IC + '</span><span class="grow">' + t('upd.title') + '<span class="psub">' + t('upd.sub', { b: app.updater.build || '—', ch: t(app.updater.channel === 'dev' ? 'upd.dev' : 'upd.pre') }) + '</span></span>' + CHEV + '</button>' : '') +
       '<button class="cell" data-act="check"><span class="ticon" style="' + iconBg(app.store.state.settings, 'green') + '">' + icons.check + '</span><span class="grow">' + t('check.title') + '<span class="psub">' + t('check.sub') + '</span></span>' + CHEV + '</button>' +
-      '<button class="cell" data-act="report"><span class="ticon" style="' + iconBg(app.store.state.settings, 'graphite') + '">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button></div>' +
+      '<button class="cell" data-act="report"><span class="ticon" style="' + iconBg(app.store.state.settings, 'graphite') + '">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button>' +
+      '<button class="cell" data-act="idea"><span class="ticon" style="' + iconBg(app.store.state.settings, 'orange') + '">' + IDEA + '</span><span class="grow">' + t('idea.title') + '<span class="psub">' + t('idea.sub') + '</span></span>' + CHEV + '</button></div>' +
     '<div class="group" style="margin-top:12px">' + ['about', 'tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + ' · ' + t(Capacitor.isNativePlatform() ? 'panel.kindApk' : isDesktop() ? 'panel.kindWin' : import.meta.env.MODE === 'showcase' ? 'panel.kindShow' : 'panel.kindWeb') + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
 }
@@ -574,7 +587,7 @@ export function createPanel(app, onChange) {
     if (page === 'look') mountSizePreview(app, layer);
     if (page === 'root' || desk) mountStones(app, layer);
     // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»
-    if (page === 'data') { coreHelp(app, 'folder'); if (copies === null) loadCopies(app, () => { if (page === 'data') render(); }); }
+    if (page === 'data') { coreHelp(app, 'folder'); if (copies === null) loadCopies(app, () => { if (page === 'data') render(); }); if (snaps === null) loadSnaps(app, () => { if (page === 'data') render(); }); }
     if (page === 'mascot') { coreHelp(app, 'melete'); mountMelete(layer); }
     // работа в фоне: отметки ✓ у выданных разрешений — после ответа системы
     const bb = page === 'feat' && layer.querySelector('[data-bgbox]');
@@ -699,6 +712,10 @@ export function createPanel(app, onChange) {
         return;
       }
       // копия из папки — сначала выбрать, что из неё загрузить
+      if ((b = g('[data-snap]'))) {
+        app.snapshots.read(b.dataset.snap).then((p) => { if (isBackup(p)) importSheet(app, p, () => { applyTheme(app.store.state.settings); onChange(); render(); }); else toast(t('data.notBackup')); }).catch(() => toast(t('data.notBackup')));
+        return;
+      }
       if ((b = g('[data-bk]'))) {
         app.folder.readFile(b.dataset.bk).then((p) => { if (isBackup(p)) importSheet(app, p, () => { applyTheme(app.store.state.settings); onChange(); render(); }); else toast(t('fold.noData')); })
           .catch(() => toast(t('data.notBackup')));

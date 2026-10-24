@@ -88,15 +88,21 @@ export function createUpdater(app) {
         log('upd', 'скачано: сборка ' + s.info.build);
         set({ st: 'ready', f: 1 });
         // «автоматически»: поставится само при закрытии программы
-        if (mode() === 'auto') { await invoke('update_pending', { path }); set({ onClose: true }); }
+        if (mode() === 'auto') { await safeCopy(); await invoke('update_pending', { path }); set({ onClose: true }); }
       }
     } catch (e) { logErr('upd', e); set({ st: 'err' }); }
   }
 
-  // Установка: данные приложения перед ней — на диск (хранилище пишется сразу; здесь — на всякий случай)
+  // Перед установкой — копия данных: на устройстве (snapshots.js) и в папку Melete, если выбрана
+  async function safeCopy() {
+    try { app.store.save(); } catch { /* */ }
+    if (app.snapshots) await app.snapshots.take('update', { build: s.info ? s.info.build : 0 });
+    if (app.folder && app.folder.state && app.folder.state.ok && app.folder.saveBackup) { try { await app.folder.saveBackup(); } catch { /* копия на устройстве уже есть */ } }
+  }
+  // Установка (данные остаются; копия — на всякий случай)
   async function install() {
     if (s.st !== 'ready') return;
-    try { app.store.save(); } catch { /* */ }
+    await safeCopy();
     log('upd', 'установка сборки ' + (s.info ? s.info.build : '?'));
     if (platform === 'android') {
       const { ok } = await Native.canInstall();

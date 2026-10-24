@@ -55,6 +55,7 @@ import { initFolder } from './foldersync.js';
 import { initLocalSend } from './localsend.js';
 import { initDesktop } from './desktop.js';
 import { createUpdater } from './update.js';
+import { createSnapshots } from './snapshots.js';
 import { mountUpdateBar } from './screens/update.js';
 import { initWhatsNew } from './screens/whatsnew.js';
 
@@ -293,6 +294,9 @@ export function boot(root) {
   app.guest.onJoin((id) => { const g = app.guest.guests().find((x) => x.id === id); if (g) confirm(t('gs.askTitle'), t('gs.askText', { name: g.name }), t('gs.allow')).then((ok) => { if (ok) app.guest.approve(id, true); }); });
   app.localSend.init();
   // обновление из GitHub (update.js): свой канал — dev или pre; раз в сутки при запуске, полоса «есть новая версия»
+  // копии на устройстве (snapshots.js): раз в сутки и перед обновлением
+  app.snapshots = createSnapshots(app);
+  app.snapshots.auto();
   app.updater = createUpdater(app);
   mountUpdateBar(app);
   app.updater.auto();

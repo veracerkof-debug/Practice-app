@@ -1,0 +1,238 @@
+{
+ "backupInfo": {
+  "by": "Тестер",
+  "at": 1791280800000,
+  "app": "Melete"
+ },
+ "version": 1,
+ "songs": [
+  {
+   "id": "sg1",
+   "title": "Велик Господь",
+   "artist": "Хвала",
+   "key": "G",
+   "bpm": 72,
+   "text": "[G]Велик Господь [D]и достоин [Em]хвалы",
+   "tags": [
+    "поклонение"
+   ],
+   "learn": 3,
+   "createdAt": 1790848800000,
+   "updatedAt": 1790848800000
+  },
+  {
+   "id": "sg2",
+   "title": "Этюд",
+   "key": "Am",
+   "bpm": 100,
+   "learn": 1,
+   "createdAt": 1790848800000,
+   "updatedAt": 1790848800000
+  },
+  {
+   "id": "sg3",
+   "title": "Удалённая",
+   "deleted": true,
+   "createdAt": 1790848800000,
+   "updatedAt": 1790848800000
+  }
+ ],
+ "sessions": [
+  {
+   "id": "ss0",
+   "start": 1790935200000,
+   "end": 1790937000000,
+   "dur": 1800,
+   "songs": [
+    "sg1"
+   ],
+   "tools": {
+    "metro": 600,
+    "tuner": 60
+   },
+   "note": "первое",
+   "sig": "03e83b421d79fa4e9f38dc836a6c72f1"
+  },
+  {
+   "id": "ss1",
+   "start": 1791021600000,
+   "end": 1791023400000,
+   "dur": 1800,
+   "songs": [
+    "sg1"
+   ],
+   "tools": {
+    "metro": 600,
+    "tuner": 60
+   },
+   "note": "",
+   "sig": "95c35f7a2bb8d7305f92ccc10d80ed19"
+  },
+  {
+   "id": "ss2",
+   "start": 1791108000000,
+   "end": 1791109800000,
+   "dur": 1800,
+   "songs": [
+    "sg1"
+   ],
+   "tools": {
+    "metro": 600,
+    "tuner": 60
+   },
+   "note": "",
+   "sig": "9b0bd0051b8f3e09d6b2d4ab761ac4fa"
+  },
+  {
+   "id": "ss3",
+   "start": 1791194400000,
+   "end": 1791196200000,
+   "dur": 1800,
+   "songs": [
+    "sg1"
+   ],
+   "tools": {
+    "metro": 600,
+    "tuner": 60
+   },
+   "note": "",
+   "sig": "a5e82fb41368f79144399f3c7950e645"
+  },
+  {
+   "id": "ss4",
+   "start": 1791280800000,
+   "end": 1791282600000,
+   "dur": 1800,
+   "songs": [
+    "sg1"
+   ],
+   "tools": {
+    "metro": 600,
+    "tuner": 60
+   },
+   "note": "",
+   "sig": "0d119534fa3741f431dcebb93bb99232"
+  }
+ ],
+ "settings": {
+  "goalMin": 240,
+  "days": [
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0
+  ],
+  "theme": "system",
+  "scale": "5",
+  "configured": true,
+  "updatedAt": 0,
+  "metro": {
+   "bpm": 90,
+   "num": 4,
+   "den": 4,
+   "sub": 1,
+   "swing": false,
+   "sound": "click",
+   "accents": [
+    3,
+    1,
+    1,
+    1
+   ],
+   "trainer": {
+    "on": false,
+    "step": 2,
+    "every": 4,
+    "max": 140
+   },
+   "gap": {
+    "on": false,
+    "play": 2,
+    "mute": 2
+   }
+  },
+  "sealed": 1,
+  "lang": "ru",
+  "profile": {
+   "name": "Тестер",
+   "instruments": [
+    "guitar"
+   ],
+   "level": "mid"
+  }
+ },
+ "updatedAt": 1791280800000,
+ "events": [
+  {
+   "id": "ev1",
+   "title": "Репетиция",
+   "start": 1791367200000,
+   "dur": 7200,
+   "repeat": "week",
+   "updatedAt": 1791280800000
+  }
+ ],
+ "projects": [
+  {
+   "id": "pj1",
+   "name": "Старый набросок",
+   "bpm": 90,
+   "num": 4,
+   "den": 4,
+   "key": {
+    "pc": 7,
+    "minor": false
+   },
+   "swing": 0,
+   "tracks": [
+    {
+     "id": "t1",
+     "kind": "chords",
+     "inst": "wair"
+    },
+    {
+     "id": "t2",
+     "kind": "notes",
+     "inst": "piano"
+    }
+   ],
+   "patterns": [
+    {
+     "id": "a",
+     "bars": 1,
+     "data": {
+      "t1": {
+       "chords": [
+        {
+         "t": 0,
+         "d": 4,
+         "pc": 7,
+         "type": "maj"
+        }
+       ]
+      },
+      "t2": {
+       "notes": [
+        {
+         "t": 0,
+         "d": 1,
+         "m": 67,
+         "v": 0.8
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "song": [
+    "a",
+    "a"
+   ],
+   "updatedAt": 1791280800000,
+   "createdAt": 1791280800000
+  }
+ ]
+}

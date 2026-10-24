@@ -93,7 +93,7 @@ jobs:
           TAG=$MELETE_CHANNEL
           if [ "$TAG" = pre ]; then TITLE="Melete 1.2 Pre-release"; else TITLE="Melete DEV"; fi
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --prerelease --title "$TITLE" --notes "$(node build/whatsnew-notes.mjs $TAG ${{ github.run_number }})" --target "$GITHUB_SHA"
+            gh release create "$TAG" --prerelease --title "$TITLE" --notes "$(node build/whatsnew-notes.mjs $TAG ${{ github.run_number }} ${GITHUB_SHA::7})" --target "$GITHUB_SHA"
           fi
           gh release upload "$TAG" "$OUT" --clobber
           N=${{ github.run_number }}; echo "$N" > "windows-$N.ver"
